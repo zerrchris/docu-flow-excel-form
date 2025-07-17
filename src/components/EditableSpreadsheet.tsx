@@ -461,9 +461,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                          </ContextMenuItem>
                        </ContextMenuContent>
                      </ContextMenu>
-                   </TableHead>
-                 ))}
-                <TableHead className="w-16 text-center font-bold border border-border">Actions</TableHead>
+                    </TableHead>
+                  ))}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -512,18 +511,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                         )}
                       </TableCell>
                     );
-                  })}
-                  
-                  <TableCell className="text-center bg-muted/20 border border-border">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => deleteRow(rowIndex)}
-                      className="h-8 w-8 text-destructive hover:bg-destructive/10"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
+                   })}
                 </TableRow>
               ))}
             </TableBody>
