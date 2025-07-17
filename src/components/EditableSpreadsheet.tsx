@@ -3,13 +3,14 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Trash2, Check, X, Columns, ArrowUp, ArrowDown } from 'lucide-react';
+import { Plus, Trash2, Check, X, ArrowUp, ArrowDown } from 'lucide-react';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 
 interface SpreadsheetProps {
   initialColumns: string[];
@@ -36,8 +37,6 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   });
   const [editingCell, setEditingCell] = useState<{rowIndex: number, column: string} | null>(null);
   const [cellValue, setCellValue] = useState<string>('');
-  const [showNewColumnInput, setShowNewColumnInput] = useState(false);
-  const [newColumnName, setNewColumnName] = useState('');
   const [selectedCell, setSelectedCell] = useState<{rowIndex: number, column: string} | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -64,7 +63,74 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     }
   }, [selectedCell, editingCell]);
 
-  // Handle cell selection and editing
+  // Column management
+  const insertColumnBefore = (columnName: string) => {
+    const newColumnName = prompt("Enter new column name");
+    if (newColumnName && !columns.includes(newColumnName)) {
+      const columnIndex = columns.indexOf(columnName);
+      const updatedColumns = [
+        ...columns.slice(0, columnIndex),
+        newColumnName,
+        ...columns.slice(columnIndex)
+      ];
+      setColumns(updatedColumns);
+      onColumnChange(updatedColumns);
+      
+      // Add the new column to all data rows
+      const updatedData = data.map(row => {
+        const newRow = { ...row };
+        // Reorder the object to maintain column order
+        return updatedColumns.reduce((acc, col) => {
+          acc[col] = newRow[col] || '';
+          return acc;
+        }, {} as Record<string, string>);
+      });
+      setData(updatedData);
+    }
+  };
+
+  const insertColumnAfter = (columnName: string) => {
+    const newColumnName = prompt("Enter new column name");
+    if (newColumnName && !columns.includes(newColumnName)) {
+      const columnIndex = columns.indexOf(columnName);
+      const updatedColumns = [
+        ...columns.slice(0, columnIndex + 1),
+        newColumnName,
+        ...columns.slice(columnIndex + 1)
+      ];
+      setColumns(updatedColumns);
+      onColumnChange(updatedColumns);
+      
+      // Add the new column to all data rows
+      const updatedData = data.map(row => {
+        const newRow = { ...row };
+        // Reorder the object to maintain column order
+        return updatedColumns.reduce((acc, col) => {
+          acc[col] = newRow[col] || '';
+          return acc;
+        }, {} as Record<string, string>);
+      });
+      setData(updatedData);
+    }
+  };
+
+  const removeColumn = (columnToRemove: string) => {
+    if (columns.length > 1) {
+      const updatedColumns = columns.filter(col => col !== columnToRemove);
+      setColumns(updatedColumns);
+      onColumnChange(updatedColumns);
+      
+      // Remove data for this column
+      const updatedData = data.map(row => {
+        const newRow = {...row};
+        delete newRow[columnToRemove];
+        return newRow;
+      });
+      setData(updatedData);
+    }
+  };
+
+  // Cell editing functions
   const selectCell = (rowIndex: number, column: string) => {
     setSelectedCell({ rowIndex, column });
   };
@@ -196,7 +262,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
   // Handle input key events during editing
   const handleInputKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && !e.shiftKey) {
       saveEdit();
       e.preventDefault();
     } else if (e.key === 'Escape') {
@@ -230,32 +296,6 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     }
   }, [saveEdit, cancelEdit, editingCell, columns, data, selectCell, startEditing]);
 
-  // Column management
-  const addColumn = () => {
-    if (newColumnName && !columns.includes(newColumnName)) {
-      const updatedColumns = [...columns, newColumnName];
-      setColumns(updatedColumns);
-      onColumnChange(updatedColumns);
-      setNewColumnName('');
-      setShowNewColumnInput(false);
-    }
-  };
-
-  const removeColumn = (columnToRemove: string) => {
-    const updatedColumns = columns.filter(col => col !== columnToRemove);
-    setColumns(updatedColumns);
-    onColumnChange(updatedColumns);
-    
-    // Remove data for this column
-    const updatedData = data.map(row => {
-      const newRow = {...row};
-      delete newRow[columnToRemove];
-      return newRow;
-    });
-    setData(updatedData);
-  };
-
-
   const deleteRow = (index: number) => {
     const newData = [...data];
     newData.splice(index, 1);
@@ -267,61 +307,10 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       <div className="flex flex-col space-y-4">
         <div className="flex justify-between items-center mb-2">
           <h3 className="text-lg font-semibold text-foreground">Data Spreadsheet</h3>
-          
-          <div className="flex space-x-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button size="sm" variant="outline" className="hover:bg-primary/10">
-                  <Columns className="h-4 w-4 mr-1" />
-                  Columns
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="min-w-[180px]">
-                <DropdownMenuItem onClick={() => setShowNewColumnInput(true)} className="hover:bg-primary/10">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Column
-                </DropdownMenuItem>
-                {columns.map(col => (
-                  <DropdownMenuItem 
-                    key={col} 
-                    onClick={() => removeColumn(col)}
-                    className="text-destructive hover:bg-destructive/10"
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Remove {col}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+          <div className="text-sm text-muted-foreground">
+            Right-click column headers to insert or remove columns
           </div>
         </div>
-
-        {showNewColumnInput && (
-            <div className="flex space-x-2 mb-2">
-              <Textarea
-                value={newColumnName}
-                onChange={(e) => setNewColumnName(e.target.value)}
-                placeholder="Column name"
-                className="max-w-xs"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    addColumn();
-                    e.preventDefault();
-                  } else if (e.key === 'Escape') {
-                    setShowNewColumnInput(false);
-                    e.preventDefault();
-                  }
-                }}
-                autoFocus
-              />
-            <Button variant="outline" size="sm" onClick={addColumn} className="hover:bg-primary/10">
-              <Check className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => setShowNewColumnInput(false)} className="hover:bg-muted/80">
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
 
         <div className="overflow-x-auto border rounded-md">
           <Table className="border-collapse">
@@ -329,12 +318,33 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
               <TableRow className="bg-muted/50 hover:bg-muted/50">
                 <TableHead className="w-12 text-center font-bold border border-border">#</TableHead>
                 {columns.map((column) => (
-                  <TableHead 
-                    key={column} 
-                    className="font-bold text-center border border-border relative min-w-[120px]"
-                  >
-                    {column}
-                  </TableHead>
+                  <ContextMenu key={column}>
+                    <ContextMenuTrigger>
+                      <TableHead 
+                        className="font-bold text-center border border-border relative min-w-[120px] select-none"
+                      >
+                        {column}
+                      </TableHead>
+                    </ContextMenuTrigger>
+                    <ContextMenuContent>
+                      <ContextMenuItem onClick={() => insertColumnBefore(column)}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Insert Column Before
+                      </ContextMenuItem>
+                      <ContextMenuItem onClick={() => insertColumnAfter(column)}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Insert Column After
+                      </ContextMenuItem>
+                      <ContextMenuSeparator />
+                      <ContextMenuItem 
+                        onClick={() => removeColumn(column)}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Remove Column
+                      </ContextMenuItem>
+                    </ContextMenuContent>
+                  </ContextMenu>
                 ))}
                 <TableHead className="w-16 text-center font-bold border border-border">Actions</TableHead>
               </TableRow>
@@ -346,49 +356,49 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                     {rowIndex + 1}
                   </TableCell>
                   
-                   {columns.map((column) => {
-                     const isSelected = selectedCell?.rowIndex === rowIndex && selectedCell?.column === column;
-                     const isEditing = editingCell?.rowIndex === rowIndex && editingCell?.column === column;
-                     
-                     return (
-                       <TableCell 
-                         key={`${rowIndex}-${column}`}
-                         className="p-0 relative"
-                       >
-                         {isEditing ? (
-                           <Textarea
-                             ref={textareaRef}
-                             value={cellValue}
-                             onChange={(e) => setCellValue(e.target.value)}
-                              onKeyDown={(e) => {
-                                // Allow Shift+Enter for line breaks, but handle Tab/Enter normally
-                                if ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Tab' || e.key === 'Escape') {
-                                  handleInputKeyDown(e);
-                                }
-                              }}
-                              className="h-full min-h-[2rem] border-none rounded-none bg-background focus:ring-2 focus:ring-primary resize-none overflow-hidden p-2"
-                              style={{ minHeight: '60px' }}
-                           />
-                         ) : (
-                           <div
-                             className={`min-h-[2rem] py-2 px-3 cursor-cell flex items-start transition-colors whitespace-pre-wrap
-                               ${isSelected 
-                                 ? 'bg-primary/10 border-2 border-primary ring-2 ring-primary/20' 
-                                 : 'hover:bg-muted/50 border-2 border-transparent'
-                               }`}
-                             onClick={() => selectCell(rowIndex, column)}
-                             onDoubleClick={() => startEditing(rowIndex, column, row[column] || '')}
-                             onKeyDown={(e) => handleKeyDown(e, rowIndex, column)}
-                             tabIndex={0}
-                           >
-                             {row[column] || (
-                               <span className="text-muted-foreground text-sm">Empty</span>
-                             )}
-                           </div>
-                         )}
-                       </TableCell>
-                     );
-                   })}
+                  {columns.map((column) => {
+                    const isSelected = selectedCell?.rowIndex === rowIndex && selectedCell?.column === column;
+                    const isEditing = editingCell?.rowIndex === rowIndex && editingCell?.column === column;
+                    
+                    return (
+                      <TableCell 
+                        key={`${rowIndex}-${column}`}
+                        className="p-0 relative"
+                      >
+                        {isEditing ? (
+                          <Textarea
+                            ref={textareaRef}
+                            value={cellValue}
+                            onChange={(e) => setCellValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              // Allow Shift+Enter for line breaks, but handle Tab/Enter normally
+                              if ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Tab' || e.key === 'Escape') {
+                                handleInputKeyDown(e);
+                              }
+                            }}
+                            className="h-full min-h-[2rem] border-none rounded-none bg-background focus:ring-2 focus:ring-primary resize-none overflow-hidden p-2"
+                            style={{ minHeight: '60px' }}
+                          />
+                        ) : (
+                          <div
+                            className={`min-h-[2rem] py-2 px-3 cursor-cell flex items-start transition-colors whitespace-pre-wrap
+                              ${isSelected 
+                                ? 'bg-primary/10 border-2 border-primary ring-2 ring-primary/20' 
+                                : 'hover:bg-muted/50 border-2 border-transparent'
+                              }`}
+                            onClick={() => selectCell(rowIndex, column)}
+                            onDoubleClick={() => startEditing(rowIndex, column, row[column] || '')}
+                            onKeyDown={(e) => handleKeyDown(e, rowIndex, column)}
+                            tabIndex={0}
+                          >
+                            {row[column] || (
+                              <span className="text-muted-foreground text-sm">Empty</span>
+                            )}
+                          </div>
+                        )}
+                      </TableCell>
+                    );
+                  })}
                   
                   <TableCell className="text-center bg-muted/20 border border-border">
                     <Button
