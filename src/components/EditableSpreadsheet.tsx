@@ -318,33 +318,34 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
               <TableRow className="bg-muted/50 hover:bg-muted/50">
                 <TableHead className="w-12 text-center font-bold border border-border">#</TableHead>
                 {columns.map((column) => (
-                  <ContextMenu key={column}>
-                    <ContextMenuTrigger>
-                      <TableHead 
-                        className="font-bold text-center border border-border relative min-w-[120px] select-none"
-                      >
+                  <TableHead 
+                    key={column}
+                    className="font-bold text-center border border-border relative min-w-[120px] p-0"
+                  >
+                    <ContextMenu>
+                      <ContextMenuTrigger className="w-full h-full px-4 py-2 select-none">
                         {column}
-                      </TableHead>
-                    </ContextMenuTrigger>
-                    <ContextMenuContent>
-                      <ContextMenuItem onClick={() => insertColumnBefore(column)}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Insert Column Before
-                      </ContextMenuItem>
-                      <ContextMenuItem onClick={() => insertColumnAfter(column)}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Insert Column After
-                      </ContextMenuItem>
-                      <ContextMenuSeparator />
-                      <ContextMenuItem 
-                        onClick={() => removeColumn(column)}
-                        className="text-destructive focus:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Remove Column
-                      </ContextMenuItem>
-                    </ContextMenuContent>
-                  </ContextMenu>
+                      </ContextMenuTrigger>
+                      <ContextMenuContent>
+                        <ContextMenuItem onClick={() => insertColumnBefore(column)}>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Insert Column Before
+                        </ContextMenuItem>
+                        <ContextMenuItem onClick={() => insertColumnAfter(column)}>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Insert Column After
+                        </ContextMenuItem>
+                        <ContextMenuSeparator />
+                        <ContextMenuItem 
+                          onClick={() => removeColumn(column)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Remove Column
+                        </ContextMenuItem>
+                      </ContextMenuContent>
+                    </ContextMenu>
+                  </TableHead>
                 ))}
                 <TableHead className="w-16 text-center font-bold border border-border">Actions</TableHead>
               </TableRow>
