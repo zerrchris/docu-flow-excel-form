@@ -55,6 +55,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [resizing, setResizing] = useState<{column: string, startX: number, startWidth: number} | null>(null);
   const [showAddRowsDialog, setShowAddRowsDialog] = useState(false);
   const [rowsToAdd, setRowsToAdd] = useState<number>(1);
+  const [spreadsheetHeight, setSpreadsheetHeight] = useState<number>(384); // 384px = h-96
+  const [resizingHeight, setResizingHeight] = useState<{startY: number, startHeight: number} | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const headerInputRef = useRef<HTMLInputElement>(null);
 
@@ -111,13 +113,20 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           [resizing.column]: newWidth
         }));
       }
+      
+      if (resizingHeight) {
+        const deltaY = e.clientY - resizingHeight.startY;
+        const newHeight = Math.max(200, Math.min(800, resizingHeight.startHeight + deltaY));
+        setSpreadsheetHeight(newHeight);
+      }
     };
 
     const handleMouseUp = () => {
       setResizing(null);
+      setResizingHeight(null);
     };
 
-    if (resizing) {
+    if (resizing || resizingHeight) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
       return () => {
@@ -125,7 +134,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         document.removeEventListener('mouseup', handleMouseUp);
       };
     }
-  }, [resizing]);
+  }, [resizing, resizingHeight]);
 
   // Header editing functions
   const startEditingHeader = (columnName: string) => {
@@ -414,6 +423,14 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     setRowsToAdd(1);
   };
 
+  // Height resizing function
+  const handleHeightMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const startY = e.clientY;
+    const startHeight = spreadsheetHeight;
+    setResizingHeight({ startY, startHeight });
+  };
+
   return (
     <Card className="p-6 mt-6">
       <div className="flex flex-col space-y-4">
@@ -424,8 +441,11 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           </div>
         </div>
 
-        {/* Fixed height container with scrolling */}
-        <div className="border rounded-md h-96 flex flex-col bg-background">
+        {/* Fixed height container with scrolling and resize handle */}
+        <div 
+          className="border rounded-md flex flex-col bg-background relative"
+          style={{ height: `${spreadsheetHeight}px` }}
+        >
           {/* Fixed Header */}
           <div className="border-b bg-muted/50 overflow-hidden">
             <Table className="border-collapse">
@@ -549,6 +569,12 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
               </TableBody>
             </Table>
           </div>
+
+          {/* Height resize handle */}
+          <div
+            className="absolute bottom-0 left-0 right-0 h-2 cursor-row-resize bg-border/30 hover:bg-primary/30 transition-colors rounded-b-md"
+            onMouseDown={handleHeightMouseDown}
+          />
         </div>
 
         <div className="flex justify-between items-center text-sm text-muted-foreground pt-2">
