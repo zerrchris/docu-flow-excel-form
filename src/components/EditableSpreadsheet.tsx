@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Trash2, Check, X, ArrowUp, ArrowDown } from 'lucide-react';
@@ -38,7 +39,10 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [editingCell, setEditingCell] = useState<{rowIndex: number, column: string} | null>(null);
   const [cellValue, setCellValue] = useState<string>('');
   const [selectedCell, setSelectedCell] = useState<{rowIndex: number, column: string} | null>(null);
+  const [editingHeader, setEditingHeader] = useState<string | null>(null);
+  const [headerValue, setHeaderValue] = useState<string>('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const headerInputRef = useRef<HTMLInputElement>(null);
 
   // Auto-focus input when editing starts
   useEffect(() => {
@@ -47,6 +51,14 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       textareaRef.current.select();
     }
   }, [editingCell]);
+
+  // Auto-focus header input when editing starts
+  useEffect(() => {
+    if (editingHeader && headerInputRef.current) {
+      headerInputRef.current.focus();
+      headerInputRef.current.select();
+    }
+  }, [editingHeader]);
 
   // Auto-start editing when a cell is selected and user types
   useEffect(() => {
@@ -62,6 +74,40 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       return () => document.removeEventListener('keydown', handleGlobalKeyDown);
     }
   }, [selectedCell, editingCell]);
+
+  // Header editing functions
+  const startEditingHeader = (columnName: string) => {
+    setEditingHeader(columnName);
+    setHeaderValue(columnName);
+  };
+
+  const saveHeaderEdit = () => {
+    if (editingHeader && headerValue.trim() && !columns.includes(headerValue.trim()) || headerValue.trim() === editingHeader) {
+      const updatedColumns = columns.map(col => col === editingHeader ? headerValue.trim() : col);
+      setColumns(updatedColumns);
+      onColumnChange(updatedColumns);
+      
+      // Update data to use new column name
+      const updatedData = data.map(row => {
+        if (editingHeader in row && headerValue.trim() !== editingHeader) {
+          const newRow = { ...row };
+          newRow[headerValue.trim()] = newRow[editingHeader];
+          delete newRow[editingHeader];
+          return newRow;
+        }
+        return row;
+      });
+      setData(updatedData);
+      
+      setEditingHeader(null);
+      setHeaderValue('');
+    }
+  };
+
+  const cancelHeaderEdit = () => {
+    setEditingHeader(null);
+    setHeaderValue('');
+  };
 
   // Column management
   const insertColumnBefore = (columnName: string) => {
@@ -322,10 +368,34 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                     key={column}
                     className="font-bold text-center border border-border relative min-w-[120px] p-0"
                   >
-                    <ContextMenu>
-                      <ContextMenuTrigger className="w-full h-full px-4 py-2 select-none">
-                        {column}
-                      </ContextMenuTrigger>
+                     <ContextMenu>
+                       <ContextMenuTrigger className="w-full h-full p-0 select-none">
+                         {editingHeader === column ? (
+                           <Input
+                             ref={headerInputRef}
+                             value={headerValue}
+                             onChange={(e) => setHeaderValue(e.target.value)}
+                             onKeyDown={(e) => {
+                               if (e.key === 'Enter') {
+                                 saveHeaderEdit();
+                                 e.preventDefault();
+                               } else if (e.key === 'Escape') {
+                                 cancelHeaderEdit();
+                                 e.preventDefault();
+                               }
+                             }}
+                             onBlur={saveHeaderEdit}
+                             className="h-full border-none rounded-none text-center font-bold focus:ring-2 focus:ring-primary"
+                           />
+                         ) : (
+                           <div 
+                             className="w-full h-full px-4 py-2 cursor-pointer hover:bg-primary/10 transition-colors"
+                             onClick={() => startEditingHeader(column)}
+                           >
+                             {column}
+                           </div>
+                         )}
+                       </ContextMenuTrigger>
                       <ContextMenuContent>
                         <ContextMenuItem onClick={() => insertColumnBefore(column)}>
                           <Plus className="h-4 w-4 mr-2" />
