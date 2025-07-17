@@ -12,41 +12,45 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
   const isPdf = file && file.type === 'application/pdf';
 
   return (
-    <Card className="p-6">
-      <h3 className="text-lg font-semibold text-foreground mb-4">Document Preview</h3>
-      <div className="relative border border-border rounded-lg min-h-[400px] flex items-center justify-center bg-muted/50">
-        {!file && (
-          <div className="text-center p-8 text-muted-foreground">
-            <div className="flex flex-col items-center space-y-2">
-              <AlertCircle className="h-10 w-10 text-muted-foreground/60" />
-              <p>No document selected</p>
-              <p className="text-xs">Upload a document to preview it here</p>
+    <Card className="h-full">
+      <div className="h-full flex flex-col">
+        <h3 className="text-xl font-semibold text-foreground p-6 pb-4">Document Preview</h3>
+        <div className="relative flex-grow border-t bg-muted/20 flex items-center justify-center">
+          {!file && (
+            <div className="text-center p-8 text-muted-foreground">
+              <div className="flex flex-col items-center space-y-2">
+                <AlertCircle className="h-12 w-12 text-muted-foreground/60" />
+                <p className="text-lg">No document selected</p>
+                <p className="text-sm">Upload a document to preview it here</p>
+              </div>
             </div>
-          </div>
-        )}
-        
-        {isImage && previewUrl && (
-          <img 
-            src={previewUrl} 
-            alt="Document Preview" 
-            className="max-h-[500px] max-w-full object-contain rounded-lg"
-          />
-        )}
-        
-        {isPdf && previewUrl && (
-          <iframe
-            src={`${previewUrl}#toolbar=0`}
-            className="w-full h-[500px] rounded-lg"
-            title="PDF Preview"
-          />
-        )}
-        
-        {file && !isImage && !isPdf && (
-          <div className="text-center p-8 text-muted-foreground">
-            <p>Preview not available</p>
-            <p className="text-xs mt-1">This file type cannot be previewed</p>
-          </div>
-        )}
+          )}
+          
+          {isImage && previewUrl && (
+            <div className="w-full h-full flex items-center justify-center p-6">
+              <img 
+                src={previewUrl} 
+                alt="Document Preview" 
+                className="max-h-[calc(100vh-20rem)] max-w-full object-contain rounded-lg"
+              />
+            </div>
+          )}
+          
+          {isPdf && previewUrl && (
+            <iframe
+              src={`${previewUrl}#toolbar=0`}
+              className="w-full h-[calc(100vh-20rem)] rounded-lg"
+              title="PDF Preview"
+            />
+          )}
+          
+          {file && !isImage && !isPdf && (
+            <div className="text-center p-8 text-muted-foreground">
+              <p className="text-lg">Preview not available</p>
+              <p className="text-sm mt-2">This file type cannot be previewed</p>
+            </div>
+          )}
+        </div>
       </div>
     </Card>
   );
