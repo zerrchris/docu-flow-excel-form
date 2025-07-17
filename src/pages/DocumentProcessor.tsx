@@ -8,7 +8,7 @@ import GoogleSheetEmbed from '@/components/GoogleSheetEmbed';
 import extractorLogo from '@/assets/document-extractor-logo.png';
 
 // Initial columns for the spreadsheet
-const DEFAULT_COLUMNS = ['Name', 'Date', 'Amount', 'Category'];
+const DEFAULT_COLUMNS = ['Inst Number', 'Book/Page', 'Inst Type', 'Recording Date', 'Document Date', 'Grantor', 'Grantee', 'Legal Description', 'Notes'];
 
 const DocumentProcessor: React.FC = () => {
   // Document state
