@@ -49,6 +49,21 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     }
   }, [editingCell]);
 
+  // Auto-start editing when a cell is selected and user types
+  useEffect(() => {
+    if (selectedCell && !editingCell) {
+      const handleGlobalKeyDown = (e: KeyboardEvent) => {
+        if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+          startEditing(selectedCell.rowIndex, selectedCell.column, e.key);
+          e.preventDefault();
+        }
+      };
+      
+      document.addEventListener('keydown', handleGlobalKeyDown);
+      return () => document.removeEventListener('keydown', handleGlobalKeyDown);
+    }
+  }, [selectedCell, editingCell]);
+
   // Handle cell selection and editing
   const selectCell = (rowIndex: number, column: string) => {
     setSelectedCell({ rowIndex, column });
@@ -118,6 +133,10 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         
         if (nextColumn && nextRowIndex >= 0 && nextRowIndex < data.length) {
           selectCell(nextRowIndex, nextColumn);
+          // Auto-start editing the next cell
+          setTimeout(() => {
+            startEditing(nextRowIndex, nextColumn, data[nextRowIndex]?.[nextColumn] || '');
+          }, 0);
         }
         break;
         
@@ -183,8 +202,33 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     } else if (e.key === 'Escape') {
       cancelEdit();
       e.preventDefault();
+    } else if (e.key === 'Tab') {
+      e.preventDefault();
+      saveEdit();
+      
+      if (editingCell) {
+        const columnIndex = columns.indexOf(editingCell.column);
+        const nextColumnIndex = e.shiftKey ? columnIndex - 1 : columnIndex + 1;
+        let nextRowIndex = editingCell.rowIndex;
+        let nextColumn = columns[nextColumnIndex];
+        
+        if (nextColumnIndex >= columns.length) {
+          nextColumn = columns[0];
+          nextRowIndex = Math.min(editingCell.rowIndex + 1, data.length - 1);
+        } else if (nextColumnIndex < 0) {
+          nextColumn = columns[columns.length - 1];
+          nextRowIndex = Math.max(editingCell.rowIndex - 1, 0);
+        }
+        
+        if (nextColumn && nextRowIndex >= 0 && nextRowIndex < data.length) {
+          setTimeout(() => {
+            selectCell(nextRowIndex, nextColumn);
+            startEditing(nextRowIndex, nextColumn, data[nextRowIndex]?.[nextColumn] || '');
+          }, 0);
+        }
+      }
     }
-  }, [saveEdit, cancelEdit]);
+  }, [saveEdit, cancelEdit, editingCell, columns, data, selectCell, startEditing]);
 
   // Column management
   const addColumn = () => {
