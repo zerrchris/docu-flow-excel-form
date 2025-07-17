@@ -173,20 +173,20 @@ const DocumentProcessor: React.FC = () => {
         </h1>
       </div>
       
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <DocumentUpload onFileSelect={handleFileSelect} selectedFile={file} />
-        <DocumentViewer file={file} previewUrl={previewUrl} />
-      </div>
+      <DocumentUpload onFileSelect={handleFileSelect} selectedFile={file} />
       
-      <div className="mt-6">
-        <DataForm 
-          fields={columns}
-          formData={formData}
-          onChange={handleFieldChange}
-          onAnalyze={analyzeDocument}
-          onAddToSpreadsheet={addToSpreadsheet}
-          isAnalyzing={isAnalyzing}
-        />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+        <DocumentViewer file={file} previewUrl={previewUrl} />
+        <div className="space-y-6">
+          <DataForm 
+            fields={columns}
+            formData={formData}
+            onChange={handleFieldChange}
+            onAnalyze={analyzeDocument}
+            onAddToSpreadsheet={addToSpreadsheet}
+            isAnalyzing={isAnalyzing}
+          />
+        </div>
       </div>
       
       <EditableSpreadsheet 
