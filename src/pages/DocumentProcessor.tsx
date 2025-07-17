@@ -173,24 +173,6 @@ const DocumentProcessor: React.FC = () => {
         </h1>
       </div>
       
-      <DocumentUpload onFileSelect={handleFileSelect} selectedFile={file} />
-      
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
-        <div className="lg:col-span-4 space-y-6 lg:sticky lg:top-6">
-          <DataForm 
-            fields={columns}
-            formData={formData}
-            onChange={handleFieldChange}
-            onAnalyze={analyzeDocument}
-            onAddToSpreadsheet={addToSpreadsheet}
-            isAnalyzing={isAnalyzing}
-          />
-        </div>
-        <div className="lg:col-span-8 lg:min-h-[600px]">
-          <DocumentViewer file={file} previewUrl={previewUrl} />
-        </div>
-      </div>
-      
       <EditableSpreadsheet 
         initialColumns={columns}
         initialData={spreadsheetData}
