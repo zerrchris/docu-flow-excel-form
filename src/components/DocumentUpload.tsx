@@ -51,10 +51,10 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onFileSelect, selectedF
         <div
           onDrop={handleDrop}
           onDragOver={handleDragOver}
-          className="border-2 border-dashed border-border rounded-lg p-12 text-center hover:border-primary transition-colors cursor-pointer bg-background/50"
+          className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-primary transition-colors cursor-pointer bg-background/50"
         >
-          <div className="flex flex-col items-center space-y-4">
-            <Upload className="h-16 w-16 text-muted-foreground" />
+          <div className="flex flex-col items-center space-y-3">
+            <Upload className="h-12 w-12 text-muted-foreground" />
             <div className="space-y-2">
               <p className="text-lg text-foreground">
                 Drag and drop your document here, or
