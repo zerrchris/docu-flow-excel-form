@@ -23,7 +23,17 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   onColumnChange
 }) => {
   const [columns, setColumns] = useState<string[]>(initialColumns);
-  const [data, setData] = useState<Record<string, string>[]>(initialData);
+  const [data, setData] = useState<Record<string, string>[]>(() => {
+    // Ensure we always have at least 20 rows
+    const minRows = 20;
+    const existingRows = initialData.length;
+    const emptyRows = Array.from({ length: Math.max(0, minRows - existingRows) }, () => {
+      const row: Record<string, string> = {};
+      initialColumns.forEach(col => row[col] = '');
+      return row;
+    });
+    return [...initialData, ...emptyRows];
+  });
   const [editingCell, setEditingCell] = useState<{rowIndex: number, column: string} | null>(null);
   const [cellValue, setCellValue] = useState<string>('');
   const [showNewColumnInput, setShowNewColumnInput] = useState(false);
@@ -201,12 +211,6 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     setData(updatedData);
   };
 
-  // Row management
-  const addRow = () => {
-    const newRow: Record<string, string> = {};
-    columns.forEach(col => newRow[col] = '');
-    setData([...data, newRow]);
-  };
 
   const deleteRow = (index: number) => {
     const newData = [...data];
@@ -221,11 +225,6 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           <h3 className="text-lg font-semibold text-foreground">Data Spreadsheet</h3>
           
           <div className="flex space-x-2">
-            <Button onClick={addRow} size="sm" variant="outline" className="hover:bg-primary/10">
-              <Plus className="h-4 w-4 mr-1" />
-              Add Row
-            </Button>
-            
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button size="sm" variant="outline" className="hover:bg-primary/10">
