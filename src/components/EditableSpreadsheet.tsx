@@ -219,6 +219,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   // Cell editing functions
   const selectCell = (rowIndex: number, column: string) => {
     setSelectedCell({ rowIndex, column });
+    // Automatically start editing when selecting a cell
+    startEditing(rowIndex, column, data[rowIndex]?.[column] || '');
   };
 
   const startEditing = useCallback((rowIndex: number, column: string, value: string) => {
@@ -508,9 +510,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                                  ? 'bg-primary/10 border-2 border-primary ring-2 ring-primary/20' 
                                  : 'hover:bg-muted/50 border-2 border-transparent'
                                }`}
-                             onClick={() => selectCell(rowIndex, column)}
-                             onDoubleClick={() => startEditing(rowIndex, column, row[column] || '')}
-                             onKeyDown={(e) => handleKeyDown(e, rowIndex, column)}
+                              onClick={() => selectCell(rowIndex, column)}
+                              onKeyDown={(e) => handleKeyDown(e, rowIndex, column)}
                              tabIndex={0}
                            >
                              {row[column] || (
@@ -533,7 +534,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             {data.length} rows × {columns.length} columns
           </div>
           <div className="space-x-4">
-            <span>Click to select • Double-click to edit • Tab to navigate</span>
+            <span>Click to edit • Tab to navigate • Esc to cancel</span>
           </div>
         </div>
       </div>
