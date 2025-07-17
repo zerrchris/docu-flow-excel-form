@@ -41,6 +41,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [selectedCell, setSelectedCell] = useState<{rowIndex: number, column: string} | null>(null);
   const [editingHeader, setEditingHeader] = useState<string | null>(null);
   const [headerValue, setHeaderValue] = useState<string>('');
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
+  const [resizing, setResizing] = useState<{column: string, startX: number, startWidth: number} | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const headerInputRef = useRef<HTMLInputElement>(null);
 
@@ -74,6 +76,44 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       return () => document.removeEventListener('keydown', handleGlobalKeyDown);
     }
   }, [selectedCell, editingCell]);
+
+  // Column resizing functions
+  const getColumnWidth = (column: string) => {
+    return columnWidths[column] || 120; // default width
+  };
+
+  const handleMouseDown = (e: React.MouseEvent, column: string) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = getColumnWidth(column);
+    setResizing({ column, startX, startWidth });
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (resizing) {
+        const deltaX = e.clientX - resizing.startX;
+        const newWidth = Math.max(80, resizing.startWidth + deltaX);
+        setColumnWidths(prev => ({
+          ...prev,
+          [resizing.column]: newWidth
+        }));
+      }
+    };
+
+    const handleMouseUp = () => {
+      setResizing(null);
+    };
+
+    if (resizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [resizing]);
 
   // Header editing functions
   const startEditingHeader = (columnName: string) => {
@@ -363,60 +403,67 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             <TableHeader>
               <TableRow className="bg-muted/50 hover:bg-muted/50">
                 <TableHead className="w-12 text-center font-bold border border-border">#</TableHead>
-                {columns.map((column) => (
-                  <TableHead 
-                    key={column}
-                    className="font-bold text-center border border-border relative min-w-[120px] p-0"
-                  >
-                     <ContextMenu>
-                       <ContextMenuTrigger className="w-full h-full p-0 select-none">
-                         {editingHeader === column ? (
-                           <Input
-                             ref={headerInputRef}
-                             value={headerValue}
-                             onChange={(e) => setHeaderValue(e.target.value)}
-                             onKeyDown={(e) => {
-                               if (e.key === 'Enter') {
-                                 saveHeaderEdit();
-                                 e.preventDefault();
-                               } else if (e.key === 'Escape') {
-                                 cancelHeaderEdit();
-                                 e.preventDefault();
-                               }
-                             }}
-                             onBlur={saveHeaderEdit}
-                             className="h-full border-none rounded-none text-center font-bold focus:ring-2 focus:ring-primary"
-                           />
-                         ) : (
-                           <div 
-                             className="w-full h-full px-4 py-2 cursor-pointer hover:bg-primary/10 transition-colors"
-                             onClick={() => startEditingHeader(column)}
-                           >
-                             {column}
-                           </div>
-                         )}
-                       </ContextMenuTrigger>
-                      <ContextMenuContent>
-                        <ContextMenuItem onClick={() => insertColumnBefore(column)}>
-                          <Plus className="h-4 w-4 mr-2" />
-                          Insert Column Before
-                        </ContextMenuItem>
-                        <ContextMenuItem onClick={() => insertColumnAfter(column)}>
-                          <Plus className="h-4 w-4 mr-2" />
-                          Insert Column After
-                        </ContextMenuItem>
-                        <ContextMenuSeparator />
-                        <ContextMenuItem 
-                          onClick={() => removeColumn(column)}
-                          className="text-destructive focus:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Remove Column
-                        </ContextMenuItem>
-                      </ContextMenuContent>
-                    </ContextMenu>
-                  </TableHead>
-                ))}
+                 {columns.map((column) => (
+                   <TableHead 
+                     key={column}
+                     className="font-bold text-center border border-border relative p-0"
+                     style={{ width: `${getColumnWidth(column)}px` }}
+                   >
+                      <ContextMenu>
+                        <ContextMenuTrigger className="w-full h-full p-0 select-none">
+                          {editingHeader === column ? (
+                            <Input
+                              ref={headerInputRef}
+                              value={headerValue}
+                              onChange={(e) => setHeaderValue(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  saveHeaderEdit();
+                                  e.preventDefault();
+                                } else if (e.key === 'Escape') {
+                                  cancelHeaderEdit();
+                                  e.preventDefault();
+                                }
+                              }}
+                              onBlur={saveHeaderEdit}
+                              className="h-full border-none rounded-none text-center font-bold focus:ring-2 focus:ring-primary"
+                            />
+                          ) : (
+                            <div 
+                              className="w-full h-full px-4 py-2 cursor-pointer hover:bg-primary/10 transition-colors relative"
+                              onClick={() => startEditingHeader(column)}
+                            >
+                              {column}
+                              {/* Resize handle */}
+                              <div
+                                className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/30 bg-border/50"
+                                onMouseDown={(e) => handleMouseDown(e, column)}
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            </div>
+                          )}
+                        </ContextMenuTrigger>
+                       <ContextMenuContent>
+                         <ContextMenuItem onClick={() => insertColumnBefore(column)}>
+                           <Plus className="h-4 w-4 mr-2" />
+                           Insert Column Before
+                         </ContextMenuItem>
+                         <ContextMenuItem onClick={() => insertColumnAfter(column)}>
+                           <Plus className="h-4 w-4 mr-2" />
+                           Insert Column After
+                         </ContextMenuItem>
+                         <ContextMenuSeparator />
+                         <ContextMenuItem 
+                           onClick={() => removeColumn(column)}
+                           className="text-destructive focus:text-destructive"
+                         >
+                           <Trash2 className="h-4 w-4 mr-2" />
+                           Remove Column
+                         </ContextMenuItem>
+                       </ContextMenuContent>
+                     </ContextMenu>
+                   </TableHead>
+                 ))}
                 <TableHead className="w-16 text-center font-bold border border-border">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -427,15 +474,16 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                     {rowIndex + 1}
                   </TableCell>
                   
-                  {columns.map((column) => {
-                    const isSelected = selectedCell?.rowIndex === rowIndex && selectedCell?.column === column;
-                    const isEditing = editingCell?.rowIndex === rowIndex && editingCell?.column === column;
-                    
-                    return (
-                      <TableCell 
-                        key={`${rowIndex}-${column}`}
-                        className="p-0 relative"
-                      >
+                   {columns.map((column) => {
+                     const isSelected = selectedCell?.rowIndex === rowIndex && selectedCell?.column === column;
+                     const isEditing = editingCell?.rowIndex === rowIndex && editingCell?.column === column;
+                     
+                     return (
+                       <TableCell 
+                         key={`${rowIndex}-${column}`}
+                         className="p-0 relative"
+                         style={{ width: `${getColumnWidth(column)}px` }}
+                       >
                         {isEditing ? (
                           <Textarea
                             ref={textareaRef}
