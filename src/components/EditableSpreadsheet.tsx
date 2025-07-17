@@ -552,19 +552,9 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         </div>
 
         <div className="flex justify-between items-center text-sm text-muted-foreground pt-2">
-          <div>
-            {data.length} rows × {columns.length} columns
-          </div>
-          <div className="space-x-4">
-            <span>Click to edit • Tab to navigate • Esc to cancel</span>
-          </div>
-        </div>
-
-        {/* Add Rows Button */}
-        <div className="flex justify-center pt-4">
           <Dialog open={showAddRowsDialog} onOpenChange={setShowAddRowsDialog}>
             <DialogTrigger asChild>
-              <Button variant="outline" className="gap-2">
+              <Button variant="outline" size="sm" className="gap-2">
                 <Plus className="h-4 w-4" />
                 Add Rows
               </Button>
@@ -600,6 +590,9 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          <div className="space-x-4">
+            <span>Click to edit • Tab to navigate • Esc to cancel</span>
+          </div>
         </div>
       </div>
     </Card>
