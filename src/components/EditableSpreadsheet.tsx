@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Trash2, Check, X, Columns, ArrowUp, ArrowDown } from 'lucide-react';
 import {
@@ -39,13 +39,13 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [showNewColumnInput, setShowNewColumnInput] = useState(false);
   const [newColumnName, setNewColumnName] = useState('');
   const [selectedCell, setSelectedCell] = useState<{rowIndex: number, column: string} | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-focus input when editing starts
   useEffect(() => {
-    if (editingCell && inputRef.current) {
-      inputRef.current.focus();
-      inputRef.current.select();
+    if (editingCell && textareaRef.current) {
+      textareaRef.current.focus();
+      textareaRef.current.select();
     }
   }, [editingCell]);
 
@@ -297,21 +297,23 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         </div>
 
         {showNewColumnInput && (
-          <div className="flex space-x-2 mb-2">
-            <Input
-              value={newColumnName}
-              onChange={(e) => setNewColumnName(e.target.value)}
-              placeholder="Column name"
-              className="max-w-xs"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  addColumn();
-                } else if (e.key === 'Escape') {
-                  setShowNewColumnInput(false);
-                }
-              }}
-              autoFocus
-            />
+            <div className="flex space-x-2 mb-2">
+              <Textarea
+                value={newColumnName}
+                onChange={(e) => setNewColumnName(e.target.value)}
+                placeholder="Column name"
+                className="max-w-xs"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    addColumn();
+                    e.preventDefault();
+                  } else if (e.key === 'Escape') {
+                    setShowNewColumnInput(false);
+                    e.preventDefault();
+                  }
+                }}
+                autoFocus
+              />
             <Button variant="outline" size="sm" onClick={addColumn} className="hover:bg-primary/10">
               <Check className="h-4 w-4" />
             </Button>
@@ -354,16 +356,22 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                          className="p-0 relative"
                        >
                          {isEditing ? (
-                           <Input
-                             ref={inputRef}
+                           <Textarea
+                             ref={textareaRef}
                              value={cellValue}
                              onChange={(e) => setCellValue(e.target.value)}
-                             onKeyDown={handleInputKeyDown}
-                             className="h-full min-h-[2rem] border-none rounded-none bg-background focus:ring-2 focus:ring-primary"
+                              onKeyDown={(e) => {
+                                // Allow Shift+Enter for line breaks, but handle Tab/Enter normally
+                                if ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Tab' || e.key === 'Escape') {
+                                  handleInputKeyDown(e);
+                                }
+                              }}
+                              className="h-full min-h-[2rem] border-none rounded-none bg-background focus:ring-2 focus:ring-primary resize-none overflow-hidden p-2"
+                              style={{ minHeight: '60px' }}
                            />
                          ) : (
                            <div
-                             className={`min-h-[2rem] py-2 px-3 cursor-cell flex items-center transition-colors
+                             className={`min-h-[2rem] py-2 px-3 cursor-cell flex items-start transition-colors whitespace-pre-wrap
                                ${isSelected 
                                  ? 'bg-primary/10 border-2 border-primary ring-2 ring-primary/20' 
                                  : 'hover:bg-muted/50 border-2 border-transparent'
