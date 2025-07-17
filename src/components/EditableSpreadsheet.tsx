@@ -402,7 +402,6 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           <Table className="border-collapse">
             <TableHeader>
               <TableRow className="bg-muted/50 hover:bg-muted/50">
-                <TableHead className="w-12 text-center font-bold border border-border">#</TableHead>
                  {columns.map((column) => (
                    <TableHead 
                      key={column}
@@ -469,11 +468,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             </TableHeader>
             <TableBody>
               {data.map((row, rowIndex) => (
-                <TableRow key={rowIndex} className="hover:bg-muted/30">
-                  <TableCell className="font-medium text-center bg-muted/20 border border-border sticky left-0">
-                    {rowIndex + 1}
-                  </TableCell>
-                  
+               <TableRow key={rowIndex} className="hover:bg-muted/30">
                    {columns.map((column) => {
                      const isSelected = selectedCell?.rowIndex === rowIndex && selectedCell?.column === column;
                      const isEditing = editingCell?.rowIndex === rowIndex && editingCell?.column === column;
