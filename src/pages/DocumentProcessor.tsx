@@ -175,8 +175,8 @@ const DocumentProcessor: React.FC = () => {
       
       <DocumentUpload onFileSelect={handleFileSelect} selectedFile={file} />
       
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-        <div className="space-y-6 lg:sticky lg:top-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6">
+        <div className="lg:col-span-4 space-y-6 lg:sticky lg:top-6">
           <DataForm 
             fields={columns}
             formData={formData}
@@ -186,7 +186,7 @@ const DocumentProcessor: React.FC = () => {
             isAnalyzing={isAnalyzing}
           />
         </div>
-        <div className="lg:min-h-[600px]">
+        <div className="lg:col-span-8 lg:min-h-[600px]">
           <DocumentViewer file={file} previewUrl={previewUrl} />
         </div>
       </div>
