@@ -514,9 +514,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                               onKeyDown={(e) => handleKeyDown(e, rowIndex, column)}
                              tabIndex={0}
                            >
-                             {row[column] || (
-                               <span className="text-muted-foreground text-sm">Empty</span>
-                             )}
+                             {row[column] || ''}
                            </div>
                          )}
                        </TableCell>
