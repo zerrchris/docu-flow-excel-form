@@ -4,7 +4,7 @@ import DocumentUpload from '@/components/DocumentUpload';
 import DocumentViewer from '@/components/DocumentViewer';
 import DataForm from '@/components/DataForm';
 import EditableSpreadsheet from '@/components/EditableSpreadsheet';
-import GoogleSheetEmbed from '@/components/GoogleSheetEmbed';
+
 import extractorLogo from '@/assets/document-extractor-logo.png';
 
 // Initial columns for the spreadsheet
@@ -197,7 +197,7 @@ const DocumentProcessor: React.FC = () => {
         onColumnChange={setColumns}
       />
       
-      <GoogleSheetEmbed />
+      
     </div>
   );
 };
