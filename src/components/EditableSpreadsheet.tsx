@@ -12,6 +12,16 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
 interface SpreadsheetProps {
   initialColumns: string[];
@@ -43,6 +53,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [headerValue, setHeaderValue] = useState<string>('');
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
   const [resizing, setResizing] = useState<{column: string, startX: number, startWidth: number} | null>(null);
+  const [showAddRowsDialog, setShowAddRowsDialog] = useState(false);
+  const [rowsToAdd, setRowsToAdd] = useState<number>(1);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const headerInputRef = useRef<HTMLInputElement>(null);
 
@@ -390,6 +402,18 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     setData(newData);
   };
 
+  // Add rows function
+  const addRows = () => {
+    const newRows = Array.from({ length: rowsToAdd }, () => {
+      const row: Record<string, string> = {};
+      columns.forEach(col => row[col] = '');
+      return row;
+    });
+    setData(prev => [...prev, ...newRows]);
+    setShowAddRowsDialog(false);
+    setRowsToAdd(1);
+  };
+
   return (
     <Card className="p-6 mt-6">
       <div className="flex flex-col space-y-4">
@@ -534,6 +558,48 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           <div className="space-x-4">
             <span>Click to edit • Tab to navigate • Esc to cancel</span>
           </div>
+        </div>
+
+        {/* Add Rows Button */}
+        <div className="flex justify-center pt-4">
+          <Dialog open={showAddRowsDialog} onOpenChange={setShowAddRowsDialog}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <Plus className="h-4 w-4" />
+                Add Rows
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Add Rows</DialogTitle>
+                <DialogDescription>
+                  Choose how many rows to add to the spreadsheet.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="rows" className="text-right">
+                    Rows
+                  </Label>
+                  <Input
+                    id="rows"
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={rowsToAdd}
+                    onChange={(e) => setRowsToAdd(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="col-span-3"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowAddRowsDialog(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={addRows}>Add Rows</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
     </Card>
