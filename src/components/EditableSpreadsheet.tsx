@@ -398,124 +398,143 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           </div>
         </div>
 
-        <div className="overflow-x-auto border rounded-md">
-          <Table className="border-collapse">
-            <TableHeader>
-              <TableRow className="bg-muted/50 hover:bg-muted/50">
-                 {columns.map((column) => (
-                   <TableHead 
-                     key={column}
-                     className="font-bold text-center border border-border relative p-0"
-                     style={{ width: `${getColumnWidth(column)}px` }}
-                   >
-                      <ContextMenu>
-                        <ContextMenuTrigger className="w-full h-full p-0 select-none">
-                          {editingHeader === column ? (
-                            <Input
-                              ref={headerInputRef}
-                              value={headerValue}
-                              onChange={(e) => setHeaderValue(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  saveHeaderEdit();
-                                  e.preventDefault();
-                                } else if (e.key === 'Escape') {
-                                  cancelHeaderEdit();
-                                  e.preventDefault();
-                                }
-                              }}
-                              onBlur={saveHeaderEdit}
-                              className="h-full border-none rounded-none text-center font-bold focus:ring-2 focus:ring-primary"
-                            />
-                          ) : (
-                            <div 
-                              className="w-full h-full px-4 py-2 cursor-pointer hover:bg-primary/10 transition-colors relative"
-                              onClick={() => startEditingHeader(column)}
-                            >
-                              {column}
-                              {/* Resize handle */}
-                              <div
-                                className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/30 bg-border/50"
-                                onMouseDown={(e) => handleMouseDown(e, column)}
-                                onClick={(e) => e.stopPropagation()}
-                              />
-                            </div>
-                          )}
-                        </ContextMenuTrigger>
-                       <ContextMenuContent>
-                         <ContextMenuItem onClick={() => insertColumnBefore(column)}>
-                           <Plus className="h-4 w-4 mr-2" />
-                           Insert Column Before
-                         </ContextMenuItem>
-                         <ContextMenuItem onClick={() => insertColumnAfter(column)}>
-                           <Plus className="h-4 w-4 mr-2" />
-                           Insert Column After
-                         </ContextMenuItem>
-                         <ContextMenuSeparator />
-                         <ContextMenuItem 
-                           onClick={() => removeColumn(column)}
-                           className="text-destructive focus:text-destructive"
-                         >
-                           <Trash2 className="h-4 w-4 mr-2" />
-                           Remove Column
-                         </ContextMenuItem>
-                       </ContextMenuContent>
-                     </ContextMenu>
+        {/* Fixed height container with scrolling */}
+        <div className="border rounded-md h-96 flex flex-col bg-background">
+          {/* Fixed Header */}
+          <div className="border-b bg-muted/50 overflow-hidden">
+            <Table className="border-collapse">
+              <TableHeader>
+                <TableRow className="hover:bg-muted/50">
+                  {columns.map((column) => (
+                    <TableHead 
+                      key={column}
+                      className="font-bold text-center border-r border-border relative p-0 last:border-r-0"
+                      style={{ width: `${getColumnWidth(column)}px`, minWidth: `${getColumnWidth(column)}px` }}
+                    >
+                       <ContextMenu>
+                         <ContextMenuTrigger className="w-full h-full p-0 select-none">
+                           {editingHeader === column ? (
+                             <Input
+                               ref={headerInputRef}
+                               value={headerValue}
+                               onChange={(e) => setHeaderValue(e.target.value)}
+                               onKeyDown={(e) => {
+                                 if (e.key === 'Enter') {
+                                   saveHeaderEdit();
+                                   e.preventDefault();
+                                 } else if (e.key === 'Escape') {
+                                   cancelHeaderEdit();
+                                   e.preventDefault();
+                                 }
+                               }}
+                               onBlur={saveHeaderEdit}
+                               className="h-full border-none rounded-none text-center font-bold focus:ring-2 focus:ring-primary"
+                             />
+                           ) : (
+                             <div 
+                               className="w-full h-full px-4 py-2 cursor-pointer hover:bg-primary/10 transition-colors relative"
+                               onClick={() => startEditingHeader(column)}
+                             >
+                               {column}
+                               {/* Resize handle */}
+                               <div
+                                 className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/30 bg-border/50"
+                                 onMouseDown={(e) => handleMouseDown(e, column)}
+                                 onClick={(e) => e.stopPropagation()}
+                               />
+                             </div>
+                           )}
+                         </ContextMenuTrigger>
+                        <ContextMenuContent>
+                          <ContextMenuItem onClick={() => insertColumnBefore(column)}>
+                            <Plus className="h-4 w-4 mr-2" />
+                            Insert Column Before
+                          </ContextMenuItem>
+                          <ContextMenuItem onClick={() => insertColumnAfter(column)}>
+                            <Plus className="h-4 w-4 mr-2" />
+                            Insert Column After
+                          </ContextMenuItem>
+                          <ContextMenuSeparator />
+                          <ContextMenuItem 
+                            onClick={() => removeColumn(column)}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Remove Column
+                          </ContextMenuItem>
+                        </ContextMenuContent>
+                      </ContextMenu>
                     </TableHead>
                   ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.map((row, rowIndex) => (
-               <TableRow key={rowIndex} className="hover:bg-muted/30">
-                   {columns.map((column) => {
-                     const isSelected = selectedCell?.rowIndex === rowIndex && selectedCell?.column === column;
-                     const isEditing = editingCell?.rowIndex === rowIndex && editingCell?.column === column;
-                     
-                     return (
-                       <TableCell 
-                         key={`${rowIndex}-${column}`}
-                         className="p-0 relative"
-                         style={{ width: `${getColumnWidth(column)}px` }}
-                       >
-                        {isEditing ? (
-                          <Textarea
-                            ref={textareaRef}
-                            value={cellValue}
-                            onChange={(e) => setCellValue(e.target.value)}
-                            onKeyDown={(e) => {
-                              // Allow Shift+Enter for line breaks, but handle Tab/Enter normally
-                              if ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Tab' || e.key === 'Escape') {
-                                handleInputKeyDown(e);
-                              }
-                            }}
-                            className="h-full min-h-[2rem] border-none rounded-none bg-background focus:ring-2 focus:ring-primary resize-none overflow-hidden p-2"
-                            style={{ minHeight: '60px' }}
-                          />
-                        ) : (
-                          <div
-                            className={`min-h-[2rem] py-2 px-3 cursor-cell flex items-start transition-colors whitespace-pre-wrap
-                              ${isSelected 
-                                ? 'bg-primary/10 border-2 border-primary ring-2 ring-primary/20' 
-                                : 'hover:bg-muted/50 border-2 border-transparent'
-                              }`}
-                            onClick={() => selectCell(rowIndex, column)}
-                            onDoubleClick={() => startEditing(rowIndex, column, row[column] || '')}
-                            onKeyDown={(e) => handleKeyDown(e, rowIndex, column)}
-                            tabIndex={0}
-                          >
-                            {row[column] || (
-                              <span className="text-muted-foreground text-sm">Empty</span>
-                            )}
-                          </div>
-                        )}
-                      </TableCell>
-                    );
-                   })}
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+            </Table>
+          </div>
+
+          {/* Scrollable Body */}
+          <div className="flex-1 overflow-auto">
+            <Table className="border-collapse">
+              <TableBody>
+                {data.map((row, rowIndex) => (
+                  <TableRow key={rowIndex} className="hover:bg-muted/30">
+                     {columns.map((column) => {
+                      const isSelected = selectedCell?.rowIndex === rowIndex && selectedCell?.column === column;
+                      const isEditing = editingCell?.rowIndex === rowIndex && editingCell?.column === column;
+                      
+                      return (
+                        <TableCell 
+                          key={`${rowIndex}-${column}`}
+                          className="border-r border-border p-0 last:border-r-0 relative"
+                          style={{ width: `${getColumnWidth(column)}px`, minWidth: `${getColumnWidth(column)}px` }}
+                        >
+                         {isEditing ? (
+                           <Textarea
+                             ref={textareaRef}
+                             value={cellValue}
+                             onChange={(e) => setCellValue(e.target.value)}
+                             onKeyDown={(e) => {
+                               // Allow Shift+Enter for line breaks, but handle Tab/Enter normally
+                               if ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Tab' || e.key === 'Escape') {
+                                 handleInputKeyDown(e);
+                               }
+                             }}
+                             className="h-full min-h-[2rem] border-none rounded-none bg-background focus:ring-2 focus:ring-primary resize-none overflow-hidden p-2"
+                             style={{ minHeight: '60px' }}
+                           />
+                         ) : (
+                           <div
+                             className={`min-h-[2rem] py-2 px-3 cursor-cell flex items-start transition-colors whitespace-pre-wrap
+                               ${isSelected 
+                                 ? 'bg-primary/10 border-2 border-primary ring-2 ring-primary/20' 
+                                 : 'hover:bg-muted/50 border-2 border-transparent'
+                               }`}
+                             onClick={() => selectCell(rowIndex, column)}
+                             onDoubleClick={() => startEditing(rowIndex, column, row[column] || '')}
+                             onKeyDown={(e) => handleKeyDown(e, rowIndex, column)}
+                             tabIndex={0}
+                           >
+                             {row[column] || (
+                               <span className="text-muted-foreground text-sm">Empty</span>
+                             )}
+                           </div>
+                         )}
+                       </TableCell>
+                     );
+                    })}
+                 </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+
+        <div className="flex justify-between items-center text-sm text-muted-foreground pt-2">
+          <div>
+            {data.length} rows × {columns.length} columns
+          </div>
+          <div className="space-x-4">
+            <span>Click to select • Double-click to edit • Tab to navigate</span>
+          </div>
         </div>
       </div>
     </Card>
