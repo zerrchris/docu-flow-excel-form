@@ -34,6 +34,7 @@ interface SpreadsheetProps {
   onColumnChange: (columns: string[]) => void;
   onDataChange?: (data: Record<string, string>[]) => void;
   onColumnInstructionsChange?: (columnInstructions: Record<string, string>) => void;
+  onUnsavedChanges?: (hasUnsavedChanges: boolean) => void;
   missingColumns?: string[];
 }
 
@@ -43,6 +44,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   onColumnChange,
   onDataChange,
   onColumnInstructionsChange,
+  onUnsavedChanges,
   missingColumns = []
 }) => {
   const { toast } = useToast();
@@ -167,6 +169,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       if (!error) {
         setHasUnsavedChanges(false);
         setLastSaveTime(new Date());
+        onUnsavedChanges?.(false); // Notify parent component
       }
     } catch (error) {
       console.error('Autosave failed:', error);
@@ -176,6 +179,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   // Track changes and trigger immediate auto-save with debouncing
   useEffect(() => {
     setHasUnsavedChanges(true);
+    onUnsavedChanges?.(true); // Notify parent component
     
     // Debounced auto-save: save 2 seconds after the last change
     if (!user) return;
@@ -185,7 +189,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     }, 2000); // 2 second debounce
     
     return () => clearTimeout(timeoutId);
-  }, [data, columns, runsheetName, user, autoSaveRunsheet]);
+  }, [data, columns, runsheetName, user, autoSaveRunsheet, onUnsavedChanges]);
 
   // Fallback auto-save every 30 seconds for any missed changes
   useEffect(() => {
@@ -261,6 +265,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       console.log('Save successful!');
       setHasUnsavedChanges(false);
       setLastSaveTime(new Date());
+      onUnsavedChanges?.(false); // Notify parent component
       toast({
         title: "Runsheet saved",
         description: `"${runsheetName}" has been saved successfully.`,

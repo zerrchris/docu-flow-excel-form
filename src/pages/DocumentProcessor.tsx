@@ -78,12 +78,35 @@ const DocumentProcessor: React.FC = () => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (hasUnsavedChanges) {
         e.preventDefault();
-        e.returnValue = '';
+        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+        return e.returnValue;
+      }
+    };
+
+    const handlePopState = (e: PopStateEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        const confirmed = window.confirm('You have unsaved changes. Are you sure you want to leave?');
+        if (!confirmed) {
+          // Push the current state back to prevent navigation
+          window.history.pushState(null, '', window.location.href);
+          return;
+        }
       }
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('popstate', handlePopState);
+    
+    // Block the initial history state if there are unsaved changes
+    if (hasUnsavedChanges) {
+      window.history.pushState(null, '', window.location.href);
+    }
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('popstate', handlePopState);
+    };
   }, [hasUnsavedChanges]);
 
   // Handle navigation blocking for React Router
@@ -117,6 +140,11 @@ const DocumentProcessor: React.FC = () => {
     setSpreadsheetData(data);
     setHasUnsavedChanges(true);
   };
+
+  // Handle unsaved changes from EditableSpreadsheet
+  const handleUnsavedChanges = useCallback((hasChanges: boolean) => {
+    setHasUnsavedChanges(hasChanges);
+  }, []);
 
   // Update unsaved changes when columns change
   const handleColumnsChange = (newColumns: string[]) => {
@@ -542,6 +570,7 @@ Image: [base64 image data]`;
         onColumnChange={handleColumnsChange}
         onDataChange={handleSpreadsheetDataChange}
         onColumnInstructionsChange={setColumnInstructions}
+        onUnsavedChanges={handleUnsavedChanges}
         missingColumns={highlightMissingColumns ? missingColumns : []}
       />
       
