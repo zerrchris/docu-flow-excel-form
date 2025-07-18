@@ -66,11 +66,11 @@ const DocumentProcessor: React.FC = () => {
           block: 'center' 
         });
         
-        // Highlight missing columns for 3 seconds
+        // Highlight missing columns for 10 seconds
         setHighlightMissingColumns(true);
         setTimeout(() => {
           setHighlightMissingColumns(false);
-        }, 3000);
+        }, 10000);
       }
     }, 100);
   };
