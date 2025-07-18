@@ -145,7 +145,7 @@ const SignIn: React.FC = () => {
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl">
-              {isSignUp ? 'Create Account' : 'Sign In'}
+              {isSignUp ? 'Create Account' : 'Welcome Back'}
             </CardTitle>
             <CardDescription>
               {isSignUp 
