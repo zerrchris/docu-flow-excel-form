@@ -56,6 +56,7 @@ const BatchDocumentRow: React.FC<BatchDocumentRowProps> = ({
     setIsAnalyzingLocal(true);
     try {
       const analyzedData = await onAnalyze(file);
+      console.log('Setting analyzed data:', analyzedData);
       setFormData(analyzedData);
     } finally {
       setIsAnalyzingLocal(false);
