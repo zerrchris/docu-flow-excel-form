@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Trash2, Check, X, ArrowUp, ArrowDown, Save, FolderOpen, Download } from 'lucide-react';
+import { Plus, Trash2, Check, X, ArrowUp, ArrowDown, Save, FolderOpen, Download, Upload } from 'lucide-react';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -262,6 +262,116 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       title: "Spreadsheet downloaded",
       description: `"${runsheetName}" has been downloaded as a CSV file.`,
     });
+  };
+
+  // Upload and parse CSV file
+  const uploadSpreadsheet = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.csv';
+    input.style.visibility = 'hidden';
+    
+    input.onchange = (event) => {
+      const file = (event.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const csvContent = e.target?.result as string;
+          if (!csvContent) {
+            toast({
+              title: "Error reading file",
+              description: "The file appears to be empty or corrupted.",
+              variant: "destructive",
+            });
+            return;
+          }
+
+          // Parse CSV content
+          const lines = csvContent.split('\n').filter(line => line.trim() !== '');
+          if (lines.length === 0) {
+            toast({
+              title: "Empty file",
+              description: "The CSV file is empty.",
+              variant: "destructive",
+            });
+            return;
+          }
+
+          // Parse headers
+          const headers = lines[0].split(',').map(header => 
+            header.trim().replace(/^["']|["']$/g, '') // Remove surrounding quotes
+          );
+
+          // Parse data rows
+          const csvData = lines.slice(1).map(line => {
+            const values = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < line.length; i++) {
+              const char = line[i];
+              
+              if (char === '"' && (i === 0 || line[i-1] === ',')) {
+                inQuotes = true;
+              } else if (char === '"' && inQuotes && (i === line.length - 1 || line[i+1] === ',')) {
+                inQuotes = false;
+              } else if (char === ',' && !inQuotes) {
+                values.push(current.trim());
+                current = '';
+              } else {
+                current += char;
+              }
+            }
+            values.push(current.trim()); // Add the last value
+
+            // Create row object
+            const row: Record<string, string> = {};
+            headers.forEach((header, index) => {
+              row[header] = values[index] || '';
+            });
+            return row;
+          });
+
+          // Add empty rows to reach minimum of 20 rows
+          const minRows = 20;
+          const emptyRows = Array.from({ length: Math.max(0, minRows - csvData.length) }, () => {
+            const row: Record<string, string> = {};
+            headers.forEach(col => row[col] = '');
+            return row;
+          });
+
+          // Update spreadsheet
+          setColumns(headers);
+          onColumnChange(headers);
+          setData([...csvData, ...emptyRows]);
+          
+          // Update runsheet name based on filename
+          const fileName = file.name.replace(/\.[^/.]+$/, ""); // Remove extension
+          setRunsheetName(fileName || 'Imported Runsheet');
+
+          toast({
+            title: "Spreadsheet uploaded",
+            description: `Successfully imported ${csvData.length} rows with ${headers.length} columns.`,
+          });
+
+        } catch (error) {
+          console.error('Error parsing CSV:', error);
+          toast({
+            title: "Error parsing file",
+            description: "There was an error parsing the CSV file. Please check the format.",
+            variant: "destructive",
+          });
+        }
+      };
+      
+      reader.readAsText(file);
+    };
+    
+    document.body.appendChild(input);
+    input.click();
+    document.body.removeChild(input);
   };
 
   // Auto-focus input when editing starts
@@ -770,6 +880,17 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             >
               <Download className="h-4 w-4" />
               Download
+            </Button>
+            
+            {/* Upload Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={uploadSpreadsheet}
+              className="gap-2"
+            >
+              <Upload className="h-4 w-4" />
+              Upload
             </Button>
           </div>
           <div className="text-sm text-muted-foreground">
