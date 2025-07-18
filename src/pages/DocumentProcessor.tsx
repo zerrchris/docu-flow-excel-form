@@ -7,6 +7,7 @@ import { Upload, FolderOpen, Plus } from 'lucide-react';
 import DocumentFrame from '@/components/DocumentFrame';
 import EditableSpreadsheet from '@/components/EditableSpreadsheet';
 import AuthButton from '@/components/AuthButton';
+import ImageCombiner from '@/components/ImageCombiner';
 
 import extractorLogo from '@/assets/document-extractor-logo.png';
 
@@ -17,6 +18,8 @@ const DocumentProcessor: React.FC = () => {
   // Document state
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [showImageCombiner, setShowImageCombiner] = useState(false);
   
   // Form and analysis state
   const [columns, setColumns] = useState<string[]>(DEFAULT_COLUMNS);
@@ -45,7 +48,7 @@ const DocumentProcessor: React.FC = () => {
     setFormData(newFormData);
   }, [columns]);
 
-  // Handle file selection
+  // Handle single file selection
   const handleFileSelect = (selectedFile: File) => {
     // Revoke any previous object URL to avoid memory leaks
     if (previewUrl) {
@@ -65,10 +68,72 @@ const DocumentProcessor: React.FC = () => {
     });
     setFormData(emptyFormData);
     
+    // Clear any pending files
+    setPendingFiles([]);
+    setShowImageCombiner(false);
+    
     toast({
       title: "Document uploaded",
       description: `${selectedFile.name} has been uploaded. Click 'Analyze Document' to extract data.`,
     });
+  };
+
+  // Handle multiple file selection
+  const handleMultipleFilesSelect = (files: File[]) => {
+    // Check if all files are images
+    const imageFiles = files.filter(file => file.type.startsWith('image/'));
+    
+    if (imageFiles.length !== files.length) {
+      toast({
+        title: "Invalid file types",
+        description: "Multiple file combination only supports image files. Please select only images.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (imageFiles.length < 2) {
+      toast({
+        title: "Not enough files",
+        description: "Please select at least 2 images to combine.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setPendingFiles(imageFiles);
+    setShowImageCombiner(true);
+    
+    toast({
+      title: "Multiple images selected",
+      description: `${imageFiles.length} images ready to combine. Choose your combination method.`,
+    });
+  };
+
+  // Handle combined file result
+  const handleCombinedFile = (combinedFile: File, combinedPreviewUrl: string) => {
+    // Revoke any previous object URL
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    
+    setFile(combinedFile);
+    setPreviewUrl(combinedPreviewUrl);
+    setShowImageCombiner(false);
+    setPendingFiles([]);
+    
+    // Reset form data
+    const emptyFormData: Record<string, string> = {};
+    columns.forEach(column => {
+      emptyFormData[column] = '';
+    });
+    setFormData(emptyFormData);
+  };
+
+  // Handle image combiner cancel
+  const handleCombinerCancel = () => {
+    setShowImageCombiner(false);
+    setPendingFiles([]);
   };
 
   // Handle form field changes
@@ -214,17 +279,26 @@ const DocumentProcessor: React.FC = () => {
       </div>
       
       <div className="mt-6">
-        <DocumentFrame 
-          file={file}
-          previewUrl={previewUrl}
-          fields={columns}
-          formData={formData}
-          onChange={handleFieldChange}
-          onAnalyze={analyzeDocument}
-          onAddToSpreadsheet={addToSpreadsheet}
-          onFileSelect={handleFileSelect}
-          isAnalyzing={isAnalyzing}
-        />
+        {showImageCombiner ? (
+          <ImageCombiner 
+            files={pendingFiles}
+            onCombined={handleCombinedFile}
+            onCancel={handleCombinerCancel}
+          />
+        ) : (
+          <DocumentFrame 
+            file={file}
+            previewUrl={previewUrl}
+            fields={columns}
+            formData={formData}
+            onChange={handleFieldChange}
+            onAnalyze={analyzeDocument}
+            onAddToSpreadsheet={addToSpreadsheet}
+            onFileSelect={handleFileSelect}
+            onMultipleFilesSelect={handleMultipleFilesSelect}
+            isAnalyzing={isAnalyzing}
+          />
+        )}
       </div>
       
       <EditableSpreadsheet 

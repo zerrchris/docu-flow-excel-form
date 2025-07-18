@@ -16,6 +16,7 @@ interface DocumentFrameProps {
   onAnalyze: () => void;
   onAddToSpreadsheet: () => void;
   onFileSelect: (file: File) => void;
+  onMultipleFilesSelect?: (files: File[]) => void;
   isAnalyzing: boolean;
 }
 
@@ -28,6 +29,7 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
   onAnalyze,
   onAddToSpreadsheet,
   onFileSelect,
+  onMultipleFilesSelect,
   isAnalyzing
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -80,7 +82,12 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
                 ) : (
                   <div className="p-6 h-full min-h-[400px] flex items-center justify-center">
                     <div className="w-full">
-                      <DocumentUpload onFileSelect={onFileSelect} selectedFile={file} />
+                      <DocumentUpload 
+                        onFileSelect={onFileSelect} 
+                        onMultipleFilesSelect={onMultipleFilesSelect}
+                        selectedFile={file}
+                        allowMultiple={true}
+                      />
                     </div>
                   </div>
                 )}

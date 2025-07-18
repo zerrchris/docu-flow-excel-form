@@ -5,18 +5,31 @@ import { Button } from '@/components/ui/button';
 
 interface DocumentUploadProps {
   onFileSelect: (file: File) => void;
+  onMultipleFilesSelect?: (files: File[]) => void;
   selectedFile?: File | null;
+  selectedFiles?: File[];
+  allowMultiple?: boolean;
 }
 
-const DocumentUpload: React.FC<DocumentUploadProps> = ({ onFileSelect, selectedFile }) => {
+const DocumentUpload: React.FC<DocumentUploadProps> = ({ 
+  onFileSelect, 
+  onMultipleFilesSelect,
+  selectedFile, 
+  selectedFiles,
+  allowMultiple = false 
+}) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     const files = Array.from(e.dataTransfer.files);
     if (files.length > 0) {
-      onFileSelect(files[0]);
+      if (allowMultiple && files.length > 1 && onMultipleFilesSelect) {
+        onMultipleFilesSelect(files);
+      } else {
+        onFileSelect(files[0]);
+      }
     }
-  }, [onFileSelect]);
+  }, [onFileSelect, onMultipleFilesSelect, allowMultiple]);
 
   const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -25,9 +38,13 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onFileSelect, selectedF
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      onFileSelect(files[0]);
+      if (allowMultiple && files.length > 1 && onMultipleFilesSelect) {
+        onMultipleFilesSelect(Array.from(files));
+      } else {
+        onFileSelect(files[0]);
+      }
     }
-  }, [onFileSelect]);
+  }, [onFileSelect, onMultipleFilesSelect, allowMultiple]);
 
   const handleClear = useCallback(() => {
     onFileSelect(null as any);
@@ -68,7 +85,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onFileSelect, selectedF
                 <Upload className="h-12 w-12 text-muted-foreground" />
                 <div className="space-y-2">
                   <p className="text-lg text-foreground">
-                    Drag and drop your document here, or
+                    Drag and drop your document{allowMultiple ? 's' : ''} here, or
                   </p>
                   <Button variant="outline" size="lg" asChild className="font-semibold">
                     <label htmlFor="file-upload" className="cursor-pointer">
@@ -81,15 +98,31 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onFileSelect, selectedF
                     className="sr-only"
                     accept="image/*,.pdf,.doc,.docx"
                     onChange={handleFileChange}
+                    multiple={allowMultiple}
                   />
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Supports: Images, PDF, Word documents
+                  Supports: Images, PDF, Word documents{allowMultiple ? ' - Multiple images can be combined' : ''}
                 </p>
               </div>
             </div>
 
-            {selectedFile && (
+            {selectedFiles && selectedFiles.length > 0 ? (
+              <div className="mt-4 space-y-2">
+                <p className="text-sm font-medium">{selectedFiles.length} files selected:</p>
+                <div className="max-h-32 overflow-y-auto space-y-1">
+                  {selectedFiles.map((file, index) => (
+                    <div key={index} className="flex items-center space-x-2 p-2 bg-background rounded border">
+                      <File className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-medium">{file.name}</span>
+                      <span className="text-xs text-muted-foreground">
+                        ({(file.size / 1024).toFixed(1)} KB)
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : selectedFile && (
               <div className="flex items-center space-x-2 p-4 bg-background rounded-lg mt-4 border">
                 <File className="h-5 w-5 text-primary" />
                 <span className="text-base text-foreground font-medium">{selectedFile.name}</span>
