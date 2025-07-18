@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, GripHorizontal } from 'lucide-react';
 import DataForm from './DataForm';
 import DocumentViewer from './DocumentViewer';
 import DocumentUpload from './DocumentUpload';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 
 interface DocumentFrameProps {
   file: File | null;
@@ -68,41 +69,48 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
 
         <CollapsibleContent className="data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
           <div className="border-t">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 min-h-0">
-              <div className="lg:col-span-4 border-r border-border flex flex-col">
-                <div className="p-6 flex-1">
-                  <div className="space-y-2">
-                    <h4 className="text-md font-medium text-foreground">Document Data</h4>
-                    <DataForm 
-                      fields={fields}
-                      formData={formData}
-                      onChange={onChange}
-                      onAnalyze={handleAnalyze}
-                      onAddToSpreadsheet={onAddToSpreadsheet}
-                      onResetDocument={onResetDocument}
-                      isAnalyzing={isAnalyzing}
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="lg:col-span-8 flex flex-col">
-                {file ? (
-                  <div className="w-full flex-1">
-                    <DocumentViewer file={file} previewUrl={previewUrl} />
-                  </div>
-                ) : (
-                  <div className="p-6 flex items-center justify-center w-full flex-1">
-                    <div className="w-full">
-                      <DocumentUpload 
-                        onFileSelect={onFileSelect} 
-                        onMultipleFilesSelect={onMultipleFilesSelect}
-                        selectedFile={file}
-                        allowMultiple={true}
-                      />
+            <div className="h-[600px]">
+              <ResizablePanelGroup direction="horizontal" className="w-full h-full">
+                <ResizablePanel defaultSize={33} minSize={25} maxSize={50}>
+                  <div className="h-full border-r border-border">
+                    <div className="p-6 h-full overflow-auto">
+                      <div className="space-y-2">
+                        <h4 className="text-md font-medium text-foreground">Document Data</h4>
+                        <DataForm 
+                          fields={fields}
+                          formData={formData}
+                          onChange={onChange}
+                          onAnalyze={handleAnalyze}
+                          onAddToSpreadsheet={onAddToSpreadsheet}
+                          onResetDocument={onResetDocument}
+                          isAnalyzing={isAnalyzing}
+                        />
+                      </div>
                     </div>
                   </div>
-                )}
-              </div>
+                </ResizablePanel>
+                
+                <ResizableHandle withHandle />
+                
+                <ResizablePanel defaultSize={67}>
+                  <div className="h-full">
+                    {file ? (
+                      <DocumentViewer file={file} previewUrl={previewUrl} />
+                    ) : (
+                      <div className="p-6 flex items-center justify-center h-full">
+                        <div className="w-full">
+                          <DocumentUpload 
+                            onFileSelect={onFileSelect} 
+                            onMultipleFilesSelect={onMultipleFilesSelect}
+                            selectedFile={file}
+                            allowMultiple={true}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </ResizablePanel>
+              </ResizablePanelGroup>
             </div>
           </div>
         </CollapsibleContent>
