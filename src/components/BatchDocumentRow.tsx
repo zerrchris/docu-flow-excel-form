@@ -120,7 +120,10 @@ const BatchDocumentRow: React.FC<BatchDocumentRowProps> = ({
                   <DataForm 
                     fields={fields}
                     formData={formData}
-                    onChange={handleFieldChange}
+                    onChange={(field, value) => {
+                      console.log('DataForm onChange called:', field, value);
+                      handleFieldChange(field, value);
+                    }}
                     onAnalyze={handleAnalyze}
                     onAddToSpreadsheet={handleAddToSpreadsheet}
                     isAnalyzing={isAnalyzingLocal}
