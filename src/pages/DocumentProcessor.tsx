@@ -283,7 +283,23 @@ const DocumentProcessor: React.FC = () => {
     console.log('Current spreadsheetData before adding:', spreadsheetData);
     
     setSpreadsheetData(prev => {
-      const newData = [...prev, { ...targetData }];
+      // Find the first completely empty row
+      const firstEmptyRowIndex = prev.findIndex(row => 
+        Object.values(row).every(value => value.trim() === '')
+      );
+      
+      let newData;
+      if (firstEmptyRowIndex >= 0) {
+        // Insert data into the first empty row
+        newData = [...prev];
+        newData[firstEmptyRowIndex] = { ...targetData };
+        console.log('Inserted data at row index:', firstEmptyRowIndex);
+      } else {
+        // If no empty row found, append to the end
+        newData = [...prev, { ...targetData }];
+        console.log('Appended data to end of spreadsheet');
+      }
+      
       console.log('New spreadsheetData after adding:', newData);
       return newData;
     });
