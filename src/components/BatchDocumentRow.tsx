@@ -64,6 +64,7 @@ const BatchDocumentRow: React.FC<BatchDocumentRowProps> = ({
   };
 
   const handleAddToSpreadsheet = () => {
+    console.log('handleAddToSpreadsheet called with formData:', formData);
     onAddToSpreadsheet(formData);
     onRemove(); // Remove this row after adding to spreadsheet
   };
