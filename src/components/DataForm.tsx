@@ -129,16 +129,6 @@ const DataForm: React.FC<DataFormProps> = ({
           )}
         </Button>
         
-        {onResetDocument && (
-          <Button
-            variant="outline"
-            onClick={onResetDocument}
-            className="w-full sm:w-auto"
-          >
-            Upload New Document
-          </Button>
-        )}
-        
         <Button
           variant="success"
           onClick={() => onAddToSpreadsheet()}
@@ -148,6 +138,16 @@ const DataForm: React.FC<DataFormProps> = ({
           <Plus className="h-4 w-4 mr-1" />
           Add to Spreadsheet
         </Button>
+        
+        {onResetDocument && (
+          <Button
+            variant="outline"
+            onClick={onResetDocument}
+            className="w-full sm:w-auto"
+          >
+            Upload New Document
+          </Button>
+        )}
       </div>
     </div>
   );
