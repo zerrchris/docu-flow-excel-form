@@ -129,17 +129,17 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
             onTouchEnd={handleTouchEnd}
           >
             <div 
-              className="w-full h-full flex items-center justify-center p-6"
+              className="w-full h-full flex items-center justify-center"
               onWheel={handleWheel}
             >
               <img 
                 src={previewUrl} 
                 alt="Document Preview" 
-                className="rounded-lg transition-transform duration-200 max-w-full max-h-full select-none cursor-grab active:cursor-grabbing"
+                className="rounded-lg transition-transform duration-200 select-none cursor-grab active:cursor-grabbing"
                 style={{ 
                   transform: `scale(${zoom}) translate(${panX / zoom}px, ${panY / zoom}px)`,
                   width: '100%',
-                  height: 'auto',
+                  height: '100%',
                   objectFit: 'contain'
                 }}
                 draggable={false}
@@ -153,7 +153,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
         )}
         
         {isPdf && previewUrl && (
-          <div className="absolute inset-0 w-full h-full">
+          <div className="w-full h-full overflow-hidden">
             <div 
               className="w-full h-full"
               onWheel={handleWheel}
