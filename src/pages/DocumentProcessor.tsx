@@ -31,7 +31,6 @@ const DocumentProcessor: React.FC = () => {
   const [showValidationDialog, setShowValidationDialog] = useState(false);
   const [missingColumns, setMissingColumns] = useState<string[]>([]);
   const [highlightMissingColumns, setHighlightMissingColumns] = useState(false);
-  const [highlightedColumn, setHighlightedColumn] = useState<string | null>(null);
   // Get started dialog state
   
   const [showGetStarted, setShowGetStarted] = useState(true);
@@ -58,7 +57,7 @@ const DocumentProcessor: React.FC = () => {
   const handleValidationDialogClose = () => {
     setShowValidationDialog(false);
     
-    // Scroll to spreadsheet and highlight the first missing column
+    // Scroll to spreadsheet and highlight missing columns
     setTimeout(() => {
       const spreadsheetElement = document.querySelector('[data-spreadsheet-container]');
       if (spreadsheetElement) {
@@ -67,28 +66,13 @@ const DocumentProcessor: React.FC = () => {
           block: 'center' 
         });
         
-        // Highlight only the first missing column persistently
-        if (missingColumns.length > 0) {
-          setHighlightedColumn(missingColumns[0]);
-        }
+        // Highlight missing columns for 3 seconds
+        setHighlightMissingColumns(true);
+        setTimeout(() => {
+          setHighlightMissingColumns(false);
+        }, 3000);
       }
     }, 100);
-  };
-
-  // Handle column configuration completion
-  const handleColumnConfigured = (columnName: string) => {
-    if (highlightedColumn === columnName) {
-      // Move to next missing column or clear highlight if all done
-      const remainingMissing = missingColumns.filter(col => 
-        col !== columnName && (!columnInstructions[col] || columnInstructions[col].trim() === '')
-      );
-      
-      if (remainingMissing.length > 0) {
-        setHighlightedColumn(remainingMissing[0]);
-      } else {
-        setHighlightedColumn(null);
-      }
-    }
   };
 
   // Handle document reset - clear file and form data
@@ -503,8 +487,7 @@ ${Object.keys(columnInstructions).map(col => `  "${col}": "extracted value"`).jo
         onColumnChange={setColumns}
         onDataChange={setSpreadsheetData}
         onColumnInstructionsChange={setColumnInstructions}
-        highlightedColumn={highlightedColumn}
-        onColumnConfigured={handleColumnConfigured}
+        missingColumns={highlightMissingColumns ? missingColumns : []}
       />
       
       {/* Get Started Dialog */}
