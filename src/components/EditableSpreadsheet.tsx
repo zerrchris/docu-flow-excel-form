@@ -1406,7 +1406,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                 </Label>
                 <Textarea
                   id="column-instructions"
-                  placeholder="Example: Extract the Grantor's name as it appears on the document and include the address"
+                  placeholder="Example: Extract the Grantor's name as it appears on the document and include the address..."
                   value={editingColumnInstructions}
                   onChange={(e) => setEditingColumnInstructions(e.target.value)}
                   className="mt-2 min-h-[120px]"
