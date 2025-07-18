@@ -227,6 +227,9 @@ const DocumentProcessor: React.FC = () => {
         }
       });
       
+      console.log('Generated mock data:', mockData);
+      console.log('fileToAnalyze parameter:', fileToAnalyze);
+      
       // Only update the main form data if no specific file was passed (main document)
       if (!fileToAnalyze) {
         setFormData(mockData);
