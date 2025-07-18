@@ -82,7 +82,7 @@ const Home: React.FC = () => {
       <section className="py-20 px-4">
         <div className="container mx-auto text-center max-w-4xl">
           <h2 className="text-5xl font-bold tracking-tight mb-6">
-            Professional Document Data Extraction
+            Document Data Extraction
           </h2>
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
             Transform your document processing workflow with RunsheetPro. Extract data from documents, 
