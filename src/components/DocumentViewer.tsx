@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
-import { AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { AlertCircle, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 
 interface DocumentViewerProps {
   file: File | null;
@@ -8,16 +9,39 @@ interface DocumentViewerProps {
 }
 
 const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => {
+  const [zoom, setZoom] = useState(1);
   const isImage = file && file.type.startsWith('image/');
   const isPdf = file && file.type === 'application/pdf';
+
+  const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.25, 3));
+  const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.25, 0.25));
+  const handleZoomReset = () => setZoom(1);
 
   
 
   return (
     <Card className="h-full rounded-l-none lg:rounded-l-none rounded-r-lg">
       <div className="h-full flex flex-col">
-        <h3 className="text-xl font-semibold text-foreground p-6 pb-4">Document Preview</h3>
-        <div className="relative flex-grow border-t bg-muted/20 flex items-center justify-center">
+        <div className="flex items-center justify-between p-6 pb-4">
+          <h3 className="text-xl font-semibold text-foreground">Document Preview</h3>
+          {file && (
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={handleZoomOut} disabled={zoom <= 0.25}>
+                <ZoomOut className="h-4 w-4" />
+              </Button>
+              <span className="text-sm text-muted-foreground min-w-[4rem] text-center">
+                {Math.round(zoom * 100)}%
+              </span>
+              <Button variant="outline" size="sm" onClick={handleZoomIn} disabled={zoom >= 3}>
+                <ZoomIn className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleZoomReset}>
+                <RotateCcw className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+        </div>
+        <div className="relative flex-grow border-t bg-muted/20 flex items-center justify-center overflow-auto">
           {!file && (
             <div className="text-center p-8 text-muted-foreground">
               <div className="flex flex-col items-center space-y-2">
@@ -33,25 +57,31 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
               <img 
                 src={previewUrl} 
                 alt="Document Preview" 
-                className="max-h-[calc(100vh-20rem)] max-w-full object-contain rounded-lg"
+                className="max-h-[calc(100vh-20rem)] max-w-full object-contain rounded-lg transition-transform duration-200"
+                style={{ transform: `scale(${zoom})` }}
               />
             </div>
           )}
           
           {isPdf && previewUrl && (
             <div className="w-full h-full flex items-center justify-center p-6">
-              <object
-                data={previewUrl}
-                type="application/pdf"
-                className="w-full h-[calc(100vh-20rem)] rounded-lg border"
-                title="PDF Preview"
+              <div 
+                className="transition-transform duration-200"
+                style={{ transform: `scale(${zoom})` }}
               >
-                <iframe
-                  src={previewUrl}
+                <object
+                  data={previewUrl}
+                  type="application/pdf"
                   className="w-full h-[calc(100vh-20rem)] rounded-lg border"
-                  title="PDF Preview Fallback"
-                />
-              </object>
+                  title="PDF Preview"
+                >
+                  <iframe
+                    src={previewUrl}
+                    className="w-full h-[calc(100vh-20rem)] rounded-lg border"
+                    title="PDF Preview Fallback"
+                  />
+                </object>
+              </div>
             </div>
           )}
           
