@@ -45,6 +45,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showOpenDialog, setShowOpenDialog] = useState(false);
+  const [showUploadWarningDialog, setShowUploadWarningDialog] = useState(false);
   const [savedRunsheets, setSavedRunsheets] = useState<any[]>([]);
   const [runsheetName, setRunsheetName] = useState<string>('Untitled Runsheet');
   const [editingRunsheetName, setEditingRunsheetName] = useState<boolean>(false);
@@ -267,8 +268,19 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     });
   };
 
-  // Upload and parse CSV/Excel file
-  const uploadSpreadsheet = () => {
+  // Show upload warning dialog
+  const handleUploadClick = () => {
+    setShowUploadWarningDialog(true);
+  };
+
+  // Proceed with actual upload after confirmation
+  const proceedWithUpload = () => {
+    setShowUploadWarningDialog(false);
+    performUpload();
+  };
+
+  // Actual upload function
+  const performUpload = () => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.csv,.xlsx,.xls';
@@ -974,7 +986,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             <Button
               variant="outline"
               size="sm"
-              onClick={uploadSpreadsheet}
+              onClick={handleUploadClick}
               className="gap-2"
             >
               <Upload className="h-4 w-4" />
@@ -1216,6 +1228,31 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowOpenDialog(false)}>
                 Cancel
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Upload Warning Dialog */}
+        <Dialog open={showUploadWarningDialog} onOpenChange={setShowUploadWarningDialog}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Replace Current Runsheet?</DialogTitle>
+              <DialogDescription>
+                Uploading a file will replace all data in the current runsheet. This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <p className="text-sm text-muted-foreground">
+                Are you sure you want to continue? All existing data in "{runsheetName}" will be lost.
+              </p>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowUploadWarningDialog(false)}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={proceedWithUpload}>
+                Replace Data
               </Button>
             </DialogFooter>
           </DialogContent>
