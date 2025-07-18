@@ -145,7 +145,7 @@ const DataForm: React.FC<DataFormProps> = ({
           <Button
             variant="outline"
             onClick={onResetDocument}
-            className="w-full"
+            className="w-full sm:w-auto"
           >
             Upload New Document
           </Button>
