@@ -230,10 +230,13 @@ const DocumentProcessor: React.FC = () => {
 
   // Add current form data to spreadsheet
   const addToSpreadsheet = (dataToAdd?: Record<string, string>) => {
+    console.log('addToSpreadsheet called with dataToAdd:', dataToAdd);
     const targetData = dataToAdd || formData;
+    console.log('targetData:', targetData);
     
     // Check if any field has data
     const hasData = Object.values(targetData).some(value => value.trim() !== '');
+    console.log('hasData:', hasData);
     
     if (!hasData) {
       toast({
