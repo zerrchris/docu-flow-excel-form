@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { RotateCw, CheckCircle, Plus } from 'lucide-react';
+import { RotateCw, CheckCircle, Plus, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface DataFormProps {
   fields: string[];
@@ -22,53 +22,68 @@ const DataForm: React.FC<DataFormProps> = ({
   onAddToSpreadsheet,
   isAnalyzing 
 }) => {
+  const [isExpanded, setIsExpanded] = useState(true);
   return (
     <Card className="p-6 rounded-r-none lg:rounded-r-none rounded-l-lg">
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-foreground">Document Data</h3>
-        
-        <div className="space-y-2">
-          {fields.map((field) => (
-            <div key={field}>
-              <Label htmlFor={field} className="text-sm font-medium">
-                {field}
-              </Label>
-              <Input
-                id={field}
-                value={formData[field] || ''}
-                onChange={(e) => onChange(field, e.target.value)}
-                className="mt-1"
-              />
-            </div>
-          ))}
-        </div>
-
-        <div className="flex flex-col space-y-2 sm:flex-row sm:space-x-2 sm:space-y-0 pt-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-foreground">Document Data</h3>
           <Button 
-            variant="gradient"
-            onClick={onAnalyze}
-            disabled={isAnalyzing}
-            className="w-full sm:w-auto"
+            variant="ghost" 
+            size="sm" 
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="p-2"
           >
-            {isAnalyzing ? (
-              <>
-                <RotateCw className="mr-2 h-4 w-4 animate-spin" />
-                Analyzing...
-              </>
-            ) : (
-              'Analyze Document'
-            )}
-          </Button>
-          
-          <Button
-            variant="success"
-            onClick={onAddToSpreadsheet}
-            className="w-full sm:w-auto"
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            Add to Spreadsheet
+            {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </Button>
         </div>
+        
+        {isExpanded && (
+          <>
+            <div className="space-y-2">
+              {fields.map((field) => (
+                <div key={field}>
+                  <Label htmlFor={field} className="text-sm font-medium">
+                    {field}
+                  </Label>
+                  <Input
+                    id={field}
+                    value={formData[field] || ''}
+                    onChange={(e) => onChange(field, e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div className="flex flex-col space-y-2 sm:flex-row sm:space-x-2 sm:space-y-0 pt-4">
+              <Button 
+                variant="gradient"
+                onClick={onAnalyze}
+                disabled={isAnalyzing}
+                className="w-full sm:w-auto"
+              >
+                {isAnalyzing ? (
+                  <>
+                    <RotateCw className="mr-2 h-4 w-4 animate-spin" />
+                    Analyzing...
+                  </>
+                ) : (
+                  'Analyze Document'
+                )}
+              </Button>
+              
+              <Button
+                variant="success"
+                onClick={onAddToSpreadsheet}
+                className="w-full sm:w-auto"
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Add to Spreadsheet
+              </Button>
+            </div>
+          </>
+        )}
       </div>
     </Card>
   );
