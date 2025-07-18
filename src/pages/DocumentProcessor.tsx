@@ -185,7 +185,7 @@ const DocumentProcessor: React.FC = () => {
     }));
   };
 
-  // Simulate document analysis with OpenAI
+  // Extract document information using OpenAI API
   const analyzeDocument = async (fileToAnalyze?: File) => {
     console.log('analyzeDocument called with fileToAnalyze:', fileToAnalyze);
     const targetFile = fileToAnalyze || file;
@@ -200,64 +200,143 @@ const DocumentProcessor: React.FC = () => {
       return {};
     }
 
+    // Check if we have column instructions configured
+    const hasInstructions = Object.keys(columnInstructions).length > 0;
+    if (!hasInstructions) {
+      toast({
+        title: "No extraction instructions",
+        description: "Please configure column extraction instructions first by clicking on column headers.",
+        variant: "destructive",
+      });
+      return {};
+    }
+
     setIsAnalyzing(true);
     console.log('Starting analysis...');
     
     try {
-      // In a real app, you would send the file to an API endpoint
-      // that would use OpenAI Vision or Document API to extract information
-      // For this demo, we'll simulate the analysis with a timeout
-      
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Simulated response data
-      const mockData: Record<string, string> = {};
-      columns.forEach(column => {
-        switch (column) {
-          case 'Name':
-            mockData[column] = 'Sample Company LLC';
-            break;
-          case 'Date':
-            mockData[column] = new Date().toLocaleDateString();
-            break;
-          case 'Amount':
-            mockData[column] = '$' + (Math.random() * 1000).toFixed(2);
-            break;
-          case 'Category':
-            mockData[column] = ['Invoice', 'Receipt', 'Statement'][Math.floor(Math.random() * 3)];
-            break;
-          default:
-            mockData[column] = `Sample ${column} data`;
-        }
+      // Convert file to base64 for OpenAI API
+      const fileBase64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          // Remove data URL prefix (data:image/jpeg;base64,)
+          const base64 = result.split(',')[1];
+          resolve(base64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(targetFile);
       });
-      
-      console.log('Generated mock data:', mockData);
-      console.log('fileToAnalyze parameter:', fileToAnalyze);
-      console.log('Will update main formData?', !fileToAnalyze);
+
+      // Get OpenAI API key from user input (temporary solution)
+      const apiKey = window.prompt("Please enter your OpenAI API key:");
+      if (!apiKey) {
+        throw new Error("OpenAI API key is required");
+      }
+
+      // Build extraction prompt using column instructions
+      const extractionFields = Object.entries(columnInstructions)
+        .map(([column, instruction]) => `- ${column}: ${instruction}`)
+        .join('\n');
+
+      const extractionPrompt = `Analyze this document and extract the following information. Return the data as a JSON object with the exact field names specified:
+
+${extractionFields}
+
+Instructions:
+1. Extract only the information requested for each field
+2. If information is not found, use an empty string ""
+3. Be as accurate as possible to the source document
+4. Return valid JSON format only, no additional text
+
+Expected JSON format:
+{
+${Object.keys(columnInstructions).map(col => `  "${col}": "extracted value"`).join(',\n')}
+}`;
+
+      // Call OpenAI API
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o',
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'text',
+                  text: extractionPrompt
+                },
+                {
+                  type: 'image_url',
+                  image_url: {
+                    url: `data:${targetFile.type};base64,${fileBase64}`,
+                    detail: 'high'
+                  }
+                }
+              ]
+            }
+          ],
+          max_tokens: 1000,
+          temperature: 0.1
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
+      }
+
+      const result = await response.json();
+      const extractedText = result.choices[0]?.message?.content;
+
+      if (!extractedText) {
+        throw new Error('No response from OpenAI API');
+      }
+
+      // Parse the JSON response
+      let extractedData: Record<string, string>;
+      try {
+        // Remove any markdown code blocks if present
+        const cleanedText = extractedText.replace(/```json\n?|\n?```/g, '').trim();
+        extractedData = JSON.parse(cleanedText);
+      } catch (parseError) {
+        console.error('Failed to parse OpenAI response:', extractedText);
+        throw new Error('Failed to parse extracted data. Please try again.');
+      }
+
+      console.log('Extracted data:', extractedData);
       
       // Only update the main form data if no specific file was passed (main document)
       if (!fileToAnalyze) {
-        console.log('Updating main formData with mock data');
-        setFormData(mockData);
+        console.log('Updating main formData with extracted data');
+        setFormData(extractedData);
         
         toast({
-          title: "Document analyzed",
-          description: "Data has been extracted from the document.",
+          title: "Document analyzed successfully",
+          description: "Data has been extracted from the document using AI.",
         });
       } else {
         console.log('Not updating main formData - this is for batch processing');
       }
       
-      return mockData;
-    } catch (error) {
+      return extractedData;
+      
+    } catch (error: any) {
+      console.error('Analysis error:', error);
       toast({
         title: "Analysis failed",
-        description: "There was a problem analyzing the document.",
+        description: error.message || "Failed to analyze document. Please check your API key and try again.",
         variant: "destructive",
       });
       return {};
     } finally {
       setIsAnalyzing(false);
+      console.log('Analysis completed');
     }
   };
 
