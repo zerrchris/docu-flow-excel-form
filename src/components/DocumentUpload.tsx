@@ -34,7 +34,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onFileSelect, selectedF
 
   return (
     <Card className="bg-muted/5 border-2">
-      <div className="p-8">
+      <div className="p-4">
         {selectedFile && (
           <div className="flex justify-end mb-6">
             <Button variant="outline" onClick={handleClear} size="sm" className="hover:bg-destructive/10 hover:text-destructive">
@@ -47,7 +47,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onFileSelect, selectedF
         <div
           onDrop={handleDrop}
           onDragOver={handleDragOver}
-          className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-primary transition-colors cursor-pointer bg-background/50"
+          className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary transition-colors cursor-pointer bg-background/50"
         >
           <div className="flex flex-col items-center space-y-3">
             <Upload className="h-12 w-12 text-muted-foreground" />
