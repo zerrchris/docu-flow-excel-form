@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import * as XLSX from 'xlsx';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -264,114 +265,192 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     });
   };
 
-  // Upload and parse CSV file
+  // Upload and parse CSV/Excel file
   const uploadSpreadsheet = () => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.csv';
+    input.accept = '.csv,.xlsx,.xls';
     input.style.visibility = 'hidden';
     
     input.onchange = (event) => {
       const file = (event.target as HTMLInputElement).files?.[0];
       if (!file) return;
       
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const csvContent = e.target?.result as string;
-          if (!csvContent) {
-            toast({
-              title: "Error reading file",
-              description: "The file appears to be empty or corrupted.",
-              variant: "destructive",
-            });
-            return;
-          }
-
-          // Parse CSV content
-          const lines = csvContent.split('\n').filter(line => line.trim() !== '');
-          if (lines.length === 0) {
-            toast({
-              title: "Empty file",
-              description: "The CSV file is empty.",
-              variant: "destructive",
-            });
-            return;
-          }
-
-          // Parse headers
-          const headers = lines[0].split(',').map(header => 
-            header.trim().replace(/^["']|["']$/g, '') // Remove surrounding quotes
-          );
-
-          // Parse data rows
-          const csvData = lines.slice(1).map(line => {
-            const values = [];
-            let current = '';
-            let inQuotes = false;
-            
-            for (let i = 0; i < line.length; i++) {
-              const char = line[i];
-              
-              if (char === '"' && (i === 0 || line[i-1] === ',')) {
-                inQuotes = true;
-              } else if (char === '"' && inQuotes && (i === line.length - 1 || line[i+1] === ',')) {
-                inQuotes = false;
-              } else if (char === ',' && !inQuotes) {
-                values.push(current.trim());
-                current = '';
-              } else {
-                current += char;
-              }
-            }
-            values.push(current.trim()); // Add the last value
-
-            // Create row object
-            const row: Record<string, string> = {};
-            headers.forEach((header, index) => {
-              row[header] = values[index] || '';
-            });
-            return row;
-          });
-
-          // Add empty rows to reach minimum of 20 rows
-          const minRows = 20;
-          const emptyRows = Array.from({ length: Math.max(0, minRows - csvData.length) }, () => {
-            const row: Record<string, string> = {};
-            headers.forEach(col => row[col] = '');
-            return row;
-          });
-
-          // Update spreadsheet
-          setColumns(headers);
-          onColumnChange(headers);
-          setData([...csvData, ...emptyRows]);
-          
-          // Update runsheet name based on filename
-          const fileName = file.name.replace(/\.[^/.]+$/, ""); // Remove extension
-          setRunsheetName(fileName || 'Imported Runsheet');
-
-          toast({
-            title: "Spreadsheet uploaded",
-            description: `Successfully imported ${csvData.length} rows with ${headers.length} columns.`,
-          });
-
-        } catch (error) {
-          console.error('Error parsing CSV:', error);
-          toast({
-            title: "Error parsing file",
-            description: "There was an error parsing the CSV file. Please check the format.",
-            variant: "destructive",
-          });
-        }
-      };
+      const fileExtension = file.name.split('.').pop()?.toLowerCase();
       
-      reader.readAsText(file);
+      if (fileExtension === 'csv') {
+        // Handle CSV files
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const csvContent = e.target?.result as string;
+            if (!csvContent) {
+              toast({
+                title: "Error reading file",
+                description: "The file appears to be empty or corrupted.",
+                variant: "destructive",
+              });
+              return;
+            }
+
+            // Parse CSV content
+            const lines = csvContent.split('\n').filter(line => line.trim() !== '');
+            if (lines.length === 0) {
+              toast({
+                title: "Empty file",
+                description: "The CSV file is empty.",
+                variant: "destructive",
+              });
+              return;
+            }
+
+            // Parse headers
+            const headers = lines[0].split(',').map(header => 
+              header.trim().replace(/^["']|["']$/g, '') // Remove surrounding quotes
+            );
+
+            // Parse data rows
+            const csvData = lines.slice(1).map(line => {
+              const values = [];
+              let current = '';
+              let inQuotes = false;
+              
+              for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                
+                if (char === '"' && (i === 0 || line[i-1] === ',')) {
+                  inQuotes = true;
+                } else if (char === '"' && inQuotes && (i === line.length - 1 || line[i+1] === ',')) {
+                  inQuotes = false;
+                } else if (char === ',' && !inQuotes) {
+                  values.push(current.trim());
+                  current = '';
+                } else {
+                  current += char;
+                }
+              }
+              values.push(current.trim()); // Add the last value
+
+              // Create row object
+              const row: Record<string, string> = {};
+              headers.forEach((header, index) => {
+                row[header] = values[index] || '';
+              });
+              return row;
+            });
+
+            updateSpreadsheetData(headers, csvData, file.name);
+
+          } catch (error) {
+            console.error('Error parsing CSV:', error);
+            toast({
+              title: "Error parsing file",
+              description: "There was an error parsing the CSV file. Please check the format.",
+              variant: "destructive",
+            });
+          }
+        };
+        
+        reader.readAsText(file);
+        
+      } else if (fileExtension === 'xlsx' || fileExtension === 'xls') {
+        // Handle Excel files
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const data = new Uint8Array(e.target?.result as ArrayBuffer);
+            const workbook = XLSX.read(data, { type: 'array' });
+            
+            // Get the first worksheet
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            
+            // Convert to JSON
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+            
+            if (jsonData.length === 0) {
+              toast({
+                title: "Empty file",
+                description: "The Excel file is empty.",
+                variant: "destructive",
+              });
+              return;
+            }
+            
+            // Get headers from first row
+            const headers = jsonData[0].map((header: any) => String(header || '').trim()).filter(h => h);
+            
+            if (headers.length === 0) {
+              toast({
+                title: "No headers found",
+                description: "The Excel file doesn't contain valid column headers.",
+                variant: "destructive",
+              });
+              return;
+            }
+            
+            // Parse data rows
+            const excelData = jsonData.slice(1)
+              .filter(row => row.some(cell => cell !== null && cell !== undefined && String(cell).trim() !== ''))
+              .map(row => {
+                const rowData: Record<string, string> = {};
+                headers.forEach((header, index) => {
+                  const cellValue = row[index];
+                  rowData[header] = cellValue !== null && cellValue !== undefined ? String(cellValue) : '';
+                });
+                return rowData;
+              });
+
+            updateSpreadsheetData(headers, excelData, file.name);
+
+          } catch (error) {
+            console.error('Error parsing Excel:', error);
+            toast({
+              title: "Error parsing file",
+              description: "There was an error parsing the Excel file. Please check the format.",
+              variant: "destructive",
+            });
+          }
+        };
+        
+        reader.readAsArrayBuffer(file);
+      } else {
+        toast({
+          title: "Unsupported file type",
+          description: "Please upload a CSV (.csv) or Excel (.xlsx, .xls) file.",
+          variant: "destructive",
+        });
+      }
     };
     
     document.body.appendChild(input);
     input.click();
     document.body.removeChild(input);
+  };
+
+  // Helper function to update spreadsheet data
+  const updateSpreadsheetData = (headers: string[], parsedData: Record<string, string>[], fileName: string) => {
+    // Add empty rows to reach minimum of 20 rows
+    const minRows = 20;
+    const emptyRows = Array.from({ length: Math.max(0, minRows - parsedData.length) }, () => {
+      const row: Record<string, string> = {};
+      headers.forEach(col => row[col] = '');
+      return row;
+    });
+
+    // Update spreadsheet
+    setColumns(headers);
+    onColumnChange(headers);
+    setData([...parsedData, ...emptyRows]);
+    
+    // Update runsheet name based on filename
+    const fileNameWithoutExt = fileName.replace(/\.[^/.]+$/, ""); // Remove extension
+    setRunsheetName(fileNameWithoutExt || 'Imported Runsheet');
+
+    toast({
+      title: "Spreadsheet uploaded",
+      description: `Successfully imported ${parsedData.length} rows with ${headers.length} columns from ${fileName}.`,
+    });
   };
 
   // Auto-focus input when editing starts
