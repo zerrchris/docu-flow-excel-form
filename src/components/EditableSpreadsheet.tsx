@@ -33,7 +33,8 @@ interface SpreadsheetProps {
   onColumnChange: (columns: string[]) => void;
   onDataChange?: (data: Record<string, string>[]) => void;
   onColumnInstructionsChange?: (columnInstructions: Record<string, string>) => void;
-  missingColumns?: string[];
+  highlightedColumn?: string | null;
+  onColumnConfigured?: (columnName: string) => void;
 }
 
 const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({ 
@@ -42,7 +43,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   onColumnChange,
   onDataChange,
   onColumnInstructionsChange,
-  missingColumns = []
+  highlightedColumn = null,
+  onColumnConfigured
 }) => {
   const { toast } = useToast();
   const [user, setUser] = useState<User | null>(null);
@@ -621,6 +623,11 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     }
 
     setShowColumnDialog(false);
+    
+    // Notify parent that this column has been configured
+    if (onColumnConfigured) {
+      onColumnConfigured(selectedColumn);
+    }
   };
 
   // Auto-start editing when a cell is selected and user types
@@ -1167,8 +1174,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                                 <span className="font-bold">{column}</span>
                               </div>
                               
-                              {/* Magnifying Bubble for Missing Columns */}
-                              {missingColumns.includes(column) && (
+                              {/* Magnifying Bubble for Highlighted Column */}
+                              {highlightedColumn === column && (
                                 <div className="absolute -top-16 left-1/2 transform -translate-x-1/2 z-50 animate-bounce">
                                   {/* Bubble */}
                                   <div className="bg-yellow-400 text-black px-4 py-2 rounded-full shadow-lg border-2 border-yellow-500 relative animate-pulse">
