@@ -17,6 +17,7 @@ interface DocumentFrameProps {
   onAddToSpreadsheet: () => void;
   onFileSelect: (file: File) => void;
   onMultipleFilesSelect?: (files: File[]) => void;
+  onResetDocument: () => void;
   isAnalyzing: boolean;
 }
 
@@ -30,6 +31,7 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
   onAddToSpreadsheet,
   onFileSelect,
   onMultipleFilesSelect,
+  onResetDocument,
   isAnalyzing
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -71,6 +73,7 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
                       onChange={onChange}
                       onAnalyze={onAnalyze}
                       onAddToSpreadsheet={onAddToSpreadsheet}
+                      onResetDocument={onResetDocument}
                       isAnalyzing={isAnalyzing}
                     />
                   </div>

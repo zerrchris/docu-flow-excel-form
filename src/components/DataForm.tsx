@@ -13,6 +13,7 @@ interface DataFormProps {
   onChange: (field: string, value: string) => void;
   onAnalyze: () => void;
   onAddToSpreadsheet: () => void;
+  onResetDocument?: () => void;
   isAnalyzing: boolean;
 }
 
@@ -22,6 +23,7 @@ const DataForm: React.FC<DataFormProps> = ({
   onChange,
   onAnalyze,
   onAddToSpreadsheet,
+  onResetDocument,
   isAnalyzing 
 }) => {
   const [visibleFields, setVisibleFields] = useState<Record<string, boolean>>({});
@@ -126,6 +128,16 @@ const DataForm: React.FC<DataFormProps> = ({
             'Analyze Document'
           )}
         </Button>
+        
+        {onResetDocument && (
+          <Button
+            variant="outline"
+            onClick={onResetDocument}
+            className="w-full sm:w-auto"
+          >
+            Upload New Document
+          </Button>
+        )}
         
         <Button
           variant="success"

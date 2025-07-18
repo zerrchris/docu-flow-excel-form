@@ -49,6 +49,28 @@ const DocumentProcessor: React.FC = () => {
     setFormData(newFormData);
   }, [columns]);
 
+  // Handle document reset - clear file and form data
+  const resetDocument = () => {
+    // Revoke any previous object URL to avoid memory leaks
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    
+    setFile(null);
+    setPreviewUrl(null);
+    
+    // Reset form data
+    const emptyFormData: Record<string, string> = {};
+    columns.forEach(column => {
+      emptyFormData[column] = '';
+    });
+    setFormData(emptyFormData);
+    
+    // Clear any pending files
+    setPendingFiles([]);
+    setShowCombineConfirmation(false);
+  };
+
   // Handle single file selection
   const handleFileSelect = (selectedFile: File) => {
     // Revoke any previous object URL to avoid memory leaks
@@ -230,13 +252,10 @@ const DocumentProcessor: React.FC = () => {
 
   // Add current form data to spreadsheet
   const addToSpreadsheet = (dataToAdd?: Record<string, string>) => {
-    console.log('addToSpreadsheet called with dataToAdd:', dataToAdd);
     const targetData = dataToAdd || formData;
-    console.log('targetData:', targetData);
     
     // Check if any field has data
     const hasData = Object.values(targetData).some(value => value.trim() !== '');
-    console.log('hasData:', hasData);
     
     if (!hasData) {
       toast({
@@ -309,6 +328,7 @@ const DocumentProcessor: React.FC = () => {
           onAddToSpreadsheet={addToSpreadsheet}
           onFileSelect={handleFileSelect}
           onMultipleFilesSelect={handleMultipleFilesSelect}
+          onResetDocument={resetDocument}
           isAnalyzing={isAnalyzing}
         />
       </div>
