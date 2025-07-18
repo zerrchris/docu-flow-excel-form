@@ -124,11 +124,11 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
                 <img 
                   src={previewUrl} 
                   alt="Document Preview" 
-                  className="rounded-lg transition-transform duration-200"
+                  className="rounded-lg transition-transform duration-200 max-w-full max-h-full"
                   style={{ 
                     transform: `scale(${zoom})`,
-                    height: 'calc(100vh - 20rem)',
                     width: '100%',
+                    height: 'auto',
                     objectFit: 'contain'
                   }}
                 />
