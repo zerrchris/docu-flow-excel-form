@@ -41,27 +41,16 @@ const BatchDocumentRow: React.FC<BatchDocumentRowProps> = ({
   }, [file]);
 
   const handleFieldChange = (field: string, value: string) => {
-    console.log('handleFieldChange called:', field, value);
-    setFormData(prev => {
-      const newData = {
-        ...prev,
-        [field]: value
-      };
-      console.log('Updated formData:', newData);
-      return newData;
-    });
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
-
-  // Debug effect to log formData changes
-  React.useEffect(() => {
-    console.log('BatchDocumentRow formData changed:', formData);
-  }, [formData]);
 
   const handleAnalyze = async () => {
     setIsAnalyzingLocal(true);
     try {
       const analyzedData = await onAnalyze(file);
-      console.log('Setting analyzed data:', analyzedData);
       setFormData(analyzedData);
       
       // Force sync each field back to ensure state consistency
@@ -74,7 +63,6 @@ const BatchDocumentRow: React.FC<BatchDocumentRowProps> = ({
   };
 
   const handleAddToSpreadsheet = () => {
-    console.log('handleAddToSpreadsheet called with formData:', formData);
     onAddToSpreadsheet(formData);
     onRemove(); // Remove this row after adding to spreadsheet
   };
@@ -125,10 +113,7 @@ const BatchDocumentRow: React.FC<BatchDocumentRowProps> = ({
                   <DataForm 
                     fields={fields}
                     formData={formData}
-                    onChange={(field, value) => {
-                      console.log('DataForm onChange called:', field, value);
-                      handleFieldChange(field, value);
-                    }}
+                    onChange={handleFieldChange}
                     onAnalyze={handleAnalyze}
                     onAddToSpreadsheet={handleAddToSpreadsheet}
                     isAnalyzing={isAnalyzingLocal}
