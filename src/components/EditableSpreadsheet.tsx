@@ -488,7 +488,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     <Card className="p-6 mt-6">
       <div className="flex flex-col space-y-4">
         <div className="flex justify-between items-center mb-2">
-          <h3 className="text-lg font-semibold text-foreground">Data Spreadsheet</h3>
+          <h3 className="text-lg font-semibold text-foreground">Runsheet</h3>
           <div className="text-sm text-muted-foreground">
             Right-click column headers to insert or remove columns
           </div>
