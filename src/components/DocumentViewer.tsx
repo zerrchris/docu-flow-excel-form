@@ -114,13 +114,11 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
               onTouchEnd={handleTouchEnd}
             >
               <div 
-                className="flex items-center justify-center p-6"
+                className="w-full h-full flex items-center justify-center p-6"
                 onWheel={handleWheel}
                 style={{
-                  width: `${Math.max(100, zoom * 100)}%`,
-                  height: `${Math.max(100, zoom * 100)}%`,
-                  minWidth: '100%',
-                  minHeight: '100%'
+                  minWidth: `${zoom * 100}%`,
+                  minHeight: `${zoom * 100}%`
                 }}
               >
                 <img 
@@ -128,13 +126,10 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
                   alt="Document Preview" 
                   className="rounded-lg transition-transform duration-200"
                   style={{ 
-                    transform: `translate(${panX}px, ${panY}px) scale(${zoom})`,
-                    transformOrigin: 'center center',
-                    maxWidth: 'none',
-                    maxHeight: 'none',
-                    height: zoom === 1 ? 'calc(100vh - 20rem)' : 'auto',
+                    transform: `scale(${zoom})`,
+                    height: 'calc(100vh - 20rem)',
                     width: 'auto',
-                    objectFit: zoom === 1 ? 'contain' : 'none'
+                    objectFit: 'contain'
                   }}
                 />
               </div>
@@ -149,20 +144,17 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
               onTouchEnd={handleTouchEnd}
             >
               <div 
-                className="flex items-center justify-center p-6"
+                className="w-full h-full flex items-center justify-center p-6"
                 onWheel={handleWheel}
                 style={{
-                  width: `${Math.max(100, zoom * 100)}%`,
-                  height: `${Math.max(100, zoom * 100)}%`,
-                  minWidth: '100%',
-                  minHeight: '100%'
+                  minWidth: `${zoom * 100}%`,
+                  minHeight: `${zoom * 100}%`
                 }}
               >
                 <div 
                   className="transition-transform duration-200"
                   style={{ 
-                    transform: `translate(${panX}px, ${panY}px) scale(${zoom})`,
-                    transformOrigin: 'center center'
+                    transform: `scale(${zoom})`
                   }}
                 >
                   <object
