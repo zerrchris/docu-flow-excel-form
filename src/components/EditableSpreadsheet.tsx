@@ -78,9 +78,6 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
-  const [selectedCells, setSelectedCells] = useState<{start: {row: number, col: string} | null, end: {row: number, col: string} | null}>({start: null, end: null});
-  const [isDragging, setIsDragging] = useState(false);
-  const [copiedData, setCopiedData] = useState<{data: string[][], range: {start: {row: number, col: string}, end: {row: number, col: string}}} | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const headerInputRef = useRef<HTMLInputElement>(null);
 
@@ -1044,149 +1041,6 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     setResizingHeight({ startY, startHeight });
   };
 
-  // Multi-cell selection functions
-  const getCellsInRange = () => {
-    if (!selectedCells.start || !selectedCells.end) return [];
-    
-    const startRowIndex = Math.min(selectedCells.start.row, selectedCells.end.row);
-    const endRowIndex = Math.max(selectedCells.start.row, selectedCells.end.row);
-    const startColIndex = Math.min(columns.indexOf(selectedCells.start.col), columns.indexOf(selectedCells.end.col));
-    const endColIndex = Math.max(columns.indexOf(selectedCells.start.col), columns.indexOf(selectedCells.end.col));
-    
-    const cellsInRange = [];
-    for (let row = startRowIndex; row <= endRowIndex; row++) {
-      for (let colIndex = startColIndex; colIndex <= endColIndex; colIndex++) {
-        cellsInRange.push({ row, col: columns[colIndex] });
-      }
-    }
-    return cellsInRange;
-  };
-
-  const isCellInSelection = (rowIndex: number, column: string) => {
-    if (!selectedCells.start || !selectedCells.end) return false;
-    
-    const startRowIndex = Math.min(selectedCells.start.row, selectedCells.end.row);
-    const endRowIndex = Math.max(selectedCells.start.row, selectedCells.end.row);
-    const startColIndex = Math.min(columns.indexOf(selectedCells.start.col), columns.indexOf(selectedCells.end.col));
-    const endColIndex = Math.max(columns.indexOf(selectedCells.start.col), columns.indexOf(selectedCells.end.col));
-    const currentColIndex = columns.indexOf(column);
-    
-    return rowIndex >= startRowIndex && rowIndex <= endRowIndex && 
-           currentColIndex >= startColIndex && currentColIndex <= endColIndex;
-  };
-
-  const startCellSelection = (rowIndex: number, column: string) => {
-    setSelectedCells({ start: { row: rowIndex, col: column }, end: { row: rowIndex, col: column } });
-    setIsDragging(true);
-    setSelectedCell(null); // Clear single cell selection
-  };
-
-  const updateCellSelection = (rowIndex: number, column: string) => {
-    if (isDragging && selectedCells.start) {
-      setSelectedCells(prev => ({ ...prev, end: { row: rowIndex, col: column } }));
-    }
-  };
-
-  const endCellSelection = () => {
-    setIsDragging(false);
-  };
-
-  // Copy selected cells
-  const copySelectedCells = () => {
-    if (!selectedCells.start || !selectedCells.end) return;
-    
-    const startRowIndex = Math.min(selectedCells.start.row, selectedCells.end.row);
-    const endRowIndex = Math.max(selectedCells.start.row, selectedCells.end.row);
-    const startColIndex = Math.min(columns.indexOf(selectedCells.start.col), columns.indexOf(selectedCells.end.col));
-    const endColIndex = Math.max(columns.indexOf(selectedCells.start.col), columns.indexOf(selectedCells.end.col));
-    
-    const copiedValues: string[][] = [];
-    for (let row = startRowIndex; row <= endRowIndex; row++) {
-      const rowData: string[] = [];
-      for (let colIndex = startColIndex; colIndex <= endColIndex; colIndex++) {
-        rowData.push(data[row]?.[columns[colIndex]] || '');
-      }
-      copiedValues.push(rowData);
-    }
-    
-    setCopiedData({
-      data: copiedValues,
-      range: { start: selectedCells.start, end: selectedCells.end }
-    });
-    
-    toast({
-      title: "Cells copied",
-      description: `Copied ${copiedValues.length} row(s) and ${copiedValues[0]?.length || 0} column(s) to clipboard.`,
-    });
-  };
-
-  // Paste cells starting from a target position
-  const pasteCells = (targetRow: number, targetCol: string) => {
-    if (!copiedData) return;
-    
-    const targetColIndex = columns.indexOf(targetCol);
-    if (targetColIndex === -1) return;
-    
-    const newData = [...data];
-    
-    copiedData.data.forEach((row, rowOffset) => {
-      const pasteRowIndex = targetRow + rowOffset;
-      if (pasteRowIndex >= newData.length) {
-        // Add new rows if needed
-        for (let i = newData.length; i <= pasteRowIndex; i++) {
-          const newRow: Record<string, string> = {};
-          columns.forEach(col => newRow[col] = '');
-          newData.push(newRow);
-        }
-      }
-      
-      row.forEach((cellValue, colOffset) => {
-        const pasteColIndex = targetColIndex + colOffset;
-        if (pasteColIndex < columns.length) {
-          const pasteCol = columns[pasteColIndex];
-          newData[pasteRowIndex][pasteCol] = cellValue;
-        }
-      });
-    });
-    
-    setData(newData);
-    setHasUnsavedChanges(true);
-    
-    toast({
-      title: "Cells pasted",
-      description: `Pasted ${copiedData.data.length} row(s) and ${copiedData.data[0]?.length || 0} column(s).`,
-    });
-  };
-
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'c' && selectedCells.start && selectedCells.end) {
-        e.preventDefault();
-        copySelectedCells();
-      }
-      
-      if ((e.ctrlKey || e.metaKey) && e.key === 'v' && copiedData && selectedCell) {
-        e.preventDefault();
-        pasteCells(selectedCell.rowIndex, selectedCell.column);
-      }
-    };
-
-    const handleMouseUp = () => {
-      if (isDragging) {
-        endCellSelection();
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('mouseup', handleMouseUp);
-    
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [selectedCells, copiedData, selectedCell, columns, data, isDragging]);
-
   return (
     <Card className="p-6 mt-6">
       <div className="flex flex-col space-y-4">
@@ -1418,77 +1272,46 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                       </div>
                     </TableCell>
                      {columns.map((column) => {
-                       const isSelected = selectedCell?.rowIndex === rowIndex && selectedCell?.column === column;
-                       const isEditing = editingCell?.rowIndex === rowIndex && editingCell?.column === column;
-                       const isInMultiSelection = isCellInSelection(rowIndex, column);
-                       
-                       return (
-                         <ContextMenu key={`${rowIndex}-${column}`}>
-                           <ContextMenuTrigger>
-                             <TableCell 
-                               className="border-r border-border p-0 last:border-r-0 relative"
-                               style={{ width: `${getColumnWidth(column)}px`, minWidth: `${getColumnWidth(column)}px` }}
-                             >
-                              {isEditing ? (
-                                <Textarea
-                                  ref={textareaRef}
-                                  value={cellValue}
-                                  onChange={(e) => setCellValue(e.target.value)}
-                                  onKeyDown={(e) => {
-                                    // Allow Shift+Enter for line breaks, but handle Tab/Enter normally
-                                    if ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Tab' || e.key === 'Escape') {
-                                      handleInputKeyDown(e);
-                                    }
-                                  }}
-                                  className="h-full min-h-[2rem] border-none rounded-none bg-background focus:ring-2 focus:ring-primary resize-none overflow-hidden p-2"
-                                  style={{ minHeight: '60px' }}
-                                />
-                              ) : (
-                                <div
-                                  className={`min-h-[2rem] py-2 px-3 cursor-cell flex items-start transition-colors whitespace-pre-wrap user-select-none
-                                    ${isSelected 
-                                      ? 'bg-primary/10 border-2 border-primary ring-2 ring-primary/20' 
-                                      : isInMultiSelection
-                                      ? 'bg-blue-100 border-2 border-blue-300'
-                                      : 'hover:bg-muted/50 border-2 border-transparent'
-                                    }`}
-                                   onClick={() => selectCell(rowIndex, column)}
-                                   onMouseDown={(e) => {
-                                     if (e.shiftKey || e.ctrlKey) {
-                                       e.preventDefault();
-                                       startCellSelection(rowIndex, column);
-                                     }
-                                   }}
-                                   onMouseEnter={() => {
-                                     if (isDragging) {
-                                       updateCellSelection(rowIndex, column);
-                                     }
-                                   }}
-                                   onMouseUp={() => endCellSelection()}
-                                   onKeyDown={(e) => handleKeyDown(e, rowIndex, column)}
-                                  tabIndex={0}
-                                >
-                                  {row[column] || ''}
-                                </div>
-                              )}
-                            </TableCell>
-                           </ContextMenuTrigger>
-                           <ContextMenuContent>
-                             <ContextMenuItem onClick={() => copySelectedCells()} disabled={!selectedCells.start || !selectedCells.end}>
-                               Copy Cells
-                             </ContextMenuItem>
-                             <ContextMenuItem onClick={() => pasteCells(rowIndex, column)} disabled={!copiedData}>
-                               Paste Cells
-                             </ContextMenuItem>
-                             <ContextMenuSeparator />
-                             <ContextMenuItem onClick={() => deleteRow(rowIndex)} className="text-destructive focus:text-destructive">
-                               <Trash2 className="h-4 w-4 mr-2" />
-                               Delete Row
-                             </ContextMenuItem>
-                           </ContextMenuContent>
-                         </ContextMenu>
-                      );
-                     })}
+                      const isSelected = selectedCell?.rowIndex === rowIndex && selectedCell?.column === column;
+                      const isEditing = editingCell?.rowIndex === rowIndex && editingCell?.column === column;
+                      
+                      return (
+                        <TableCell 
+                          key={`${rowIndex}-${column}`}
+                          className="border-r border-border p-0 last:border-r-0 relative"
+                          style={{ width: `${getColumnWidth(column)}px`, minWidth: `${getColumnWidth(column)}px` }}
+                        >
+                         {isEditing ? (
+                           <Textarea
+                             ref={textareaRef}
+                             value={cellValue}
+                             onChange={(e) => setCellValue(e.target.value)}
+                             onKeyDown={(e) => {
+                               // Allow Shift+Enter for line breaks, but handle Tab/Enter normally
+                               if ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Tab' || e.key === 'Escape') {
+                                 handleInputKeyDown(e);
+                               }
+                             }}
+                             className="h-full min-h-[2rem] border-none rounded-none bg-background focus:ring-2 focus:ring-primary resize-none overflow-hidden p-2"
+                             style={{ minHeight: '60px' }}
+                           />
+                         ) : (
+                           <div
+                             className={`min-h-[2rem] py-2 px-3 cursor-cell flex items-start transition-colors whitespace-pre-wrap
+                               ${isSelected 
+                                 ? 'bg-primary/10 border-2 border-primary ring-2 ring-primary/20' 
+                                 : 'hover:bg-muted/50 border-2 border-transparent'
+                               }`}
+                              onClick={() => selectCell(rowIndex, column)}
+                              onKeyDown={(e) => handleKeyDown(e, rowIndex, column)}
+                             tabIndex={0}
+                           >
+                             {row[column] || ''}
+                           </div>
+                         )}
+                       </TableCell>
+                     );
+                    })}
                  </TableRow>
                 ))}
               </TableBody>
