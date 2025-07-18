@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { toast } from '@/components/ui/use-toast';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Upload, FolderOpen, Plus } from 'lucide-react';
+import { Upload, FolderOpen, Plus, AlertTriangle } from 'lucide-react';
 import DocumentFrame from '@/components/DocumentFrame';
 import EditableSpreadsheet from '@/components/EditableSpreadsheet';
 import AuthButton from '@/components/AuthButton';
@@ -31,8 +31,15 @@ const DocumentProcessor: React.FC = () => {
   const [showValidationDialog, setShowValidationDialog] = useState(false);
   const [missingColumns, setMissingColumns] = useState<string[]>([]);
   const [highlightMissingColumns, setHighlightMissingColumns] = useState(false);
-  // Get started dialog state
   
+  // Navigation blocking state
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Get started dialog state
   const [showGetStarted, setShowGetStarted] = useState(true);
   
   // Update form state when columns change
@@ -52,6 +59,57 @@ const DocumentProcessor: React.FC = () => {
     });
     setFormData(newFormData);
   }, [columns]);
+
+  // Navigation blocking - prevent leaving with unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
+  // Handle navigation blocking for React Router
+  const handleNavigation = useCallback((path: string) => {
+    if (hasUnsavedChanges) {
+      setPendingNavigation(path);
+      setShowUnsavedChangesDialog(true);
+    } else {
+      navigate(path);
+    }
+  }, [hasUnsavedChanges, navigate]);
+
+  // Proceed with navigation after confirmation
+  const proceedWithNavigation = () => {
+    setHasUnsavedChanges(false);
+    setShowUnsavedChangesDialog(false);
+    if (pendingNavigation) {
+      navigate(pendingNavigation);
+      setPendingNavigation(null);
+    }
+  };
+
+  // Cancel navigation
+  const cancelNavigation = () => {
+    setShowUnsavedChangesDialog(false);
+    setPendingNavigation(null);
+  };
+
+  // Update unsaved changes state when spreadsheet data changes
+  const handleSpreadsheetDataChange = (data: Record<string, string>[]) => {
+    setSpreadsheetData(data);
+    setHasUnsavedChanges(true);
+  };
+
+  // Update unsaved changes when columns change
+  const handleColumnsChange = (newColumns: string[]) => {
+    setColumns(newColumns);
+    setHasUnsavedChanges(true);
+  };
 
   // Handle validation dialog close and scroll to columns
   const handleValidationDialogClose = () => {
@@ -422,7 +480,10 @@ Image: [base64 image data]`;
   return (
     <div className="w-full px-4 py-6">
       <div className="flex items-center justify-between mb-8">
-        <Link to="/" className="flex items-center gap-4 hover:opacity-80 transition-opacity">
+        <div 
+          onClick={() => handleNavigation('/')} 
+          className="flex items-center gap-4 hover:opacity-80 transition-opacity cursor-pointer"
+        >
           <img 
             src={extractorLogo} 
             alt="Document Data Extractor Logo" 
@@ -431,7 +492,7 @@ Image: [base64 image data]`;
           <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
             RunsheetPro
           </h1>
-        </Link>
+        </div>
         <AuthButton />
       </div>
       
@@ -461,8 +522,8 @@ Image: [base64 image data]`;
       <EditableSpreadsheet 
         initialColumns={columns}
         initialData={spreadsheetData}
-        onColumnChange={setColumns}
-        onDataChange={setSpreadsheetData}
+        onColumnChange={handleColumnsChange}
+        onDataChange={handleSpreadsheetDataChange}
         onColumnInstructionsChange={setColumnInstructions}
         missingColumns={highlightMissingColumns ? missingColumns : []}
       />
@@ -573,6 +634,34 @@ Image: [base64 image data]`;
               Continue
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Unsaved Changes Dialog */}
+      <Dialog open={showUnsavedChangesDialog} onOpenChange={setShowUnsavedChangesDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Unsaved Changes
+            </DialogTitle>
+            <DialogDescription>
+              You have unsaved changes that will be lost if you leave this page.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground">
+              Would you like to leave without saving your changes?
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={cancelNavigation}>
+              Stay on Page
+            </Button>
+            <Button variant="destructive" onClick={proceedWithNavigation}>
+              Leave Without Saving
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
