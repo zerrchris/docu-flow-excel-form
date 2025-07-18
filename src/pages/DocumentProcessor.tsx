@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from '@/components/ui/use-toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Upload, FolderOpen, Plus } from 'lucide-react';
 import DocumentFrame from '@/components/DocumentFrame';
 import EditableSpreadsheet from '@/components/EditableSpreadsheet';
 import AuthButton from '@/components/AuthButton';
@@ -20,6 +23,9 @@ const DocumentProcessor: React.FC = () => {
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [spreadsheetData, setSpreadsheetData] = useState<Record<string, string>[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  
+  // Get started dialog state
+  const [showGetStarted, setShowGetStarted] = useState(true);
   
   // Update form state when columns change
   useEffect(() => {
@@ -171,6 +177,26 @@ const DocumentProcessor: React.FC = () => {
     setFormData(emptyFormData);
   };
 
+  // Get started dialog handlers
+  const handleUploadRunsheet = () => {
+    setShowGetStarted(false);
+    // Trigger the upload functionality from EditableSpreadsheet
+    const uploadEvent = new CustomEvent('triggerSpreadsheetUpload');
+    window.dispatchEvent(uploadEvent);
+  };
+
+  const handleOpenExisting = () => {
+    setShowGetStarted(false);
+    // Trigger the open existing functionality from EditableSpreadsheet
+    const openEvent = new CustomEvent('triggerSpreadsheetOpen');
+    window.dispatchEvent(openEvent);
+  };
+
+  const handleStartNew = () => {
+    setShowGetStarted(false);
+    // Just close the dialog and start with the current empty state
+  };
+
   return (
     <div className="w-full px-4 py-6">
       <div className="flex items-center justify-between mb-8">
@@ -208,6 +234,60 @@ const DocumentProcessor: React.FC = () => {
         onDataChange={setSpreadsheetData}
       />
       
+      {/* Get Started Dialog */}
+      <Dialog open={showGetStarted} onOpenChange={setShowGetStarted}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-center">Welcome to RunsheetPro</DialogTitle>
+            <DialogDescription className="text-center pt-2">
+              How would you like to get started today?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-6">
+            <Button
+              onClick={handleUploadRunsheet}
+              className="h-16 flex flex-col gap-2 text-left"
+              variant="outline"
+            >
+              <div className="flex items-center gap-3 w-full">
+                <Upload className="h-6 w-6" />
+                <div className="flex flex-col text-left">
+                  <span className="font-semibold">Upload Runsheet</span>
+                  <span className="text-sm text-muted-foreground">Import an existing CSV or Excel file</span>
+                </div>
+              </div>
+            </Button>
+            
+            <Button
+              onClick={handleOpenExisting}
+              className="h-16 flex flex-col gap-2 text-left"
+              variant="outline"
+            >
+              <div className="flex items-center gap-3 w-full">
+                <FolderOpen className="h-6 w-6" />
+                <div className="flex flex-col text-left">
+                  <span className="font-semibold">Open Existing Runsheet</span>
+                  <span className="text-sm text-muted-foreground">Load a previously saved runsheet</span>
+                </div>
+              </div>
+            </Button>
+            
+            <Button
+              onClick={handleStartNew}
+              className="h-16 flex flex-col gap-2 text-left"
+              variant="default"
+            >
+              <div className="flex items-center gap-3 w-full">
+                <Plus className="h-6 w-6" />
+                <div className="flex flex-col text-left">
+                  <span className="font-semibold">Start New Runsheet</span>
+                  <span className="text-sm text-muted-foreground">Begin with a fresh, empty runsheet</span>
+                </div>
+              </div>
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       
     </div>
   );

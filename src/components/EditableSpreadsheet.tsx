@@ -112,6 +112,25 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     initAuth();
   }, []);
 
+  // Listen for external trigger events from DocumentProcessor
+  useEffect(() => {
+    const handleUploadTrigger = () => {
+      handleUploadClick();
+    };
+
+    const handleOpenTrigger = () => {
+      setShowOpenDialog(true);
+    };
+
+    window.addEventListener('triggerSpreadsheetUpload', handleUploadTrigger);
+    window.addEventListener('triggerSpreadsheetOpen', handleOpenTrigger);
+
+    return () => {
+      window.removeEventListener('triggerSpreadsheetUpload', handleUploadTrigger);
+      window.removeEventListener('triggerSpreadsheetOpen', handleOpenTrigger);
+    };
+  }, []);
+
   // Save runsheet to Supabase
   const saveRunsheet = async () => {
     console.log('Save button clicked!');
