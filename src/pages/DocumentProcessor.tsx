@@ -7,7 +7,6 @@ import { Upload, FolderOpen, Plus } from 'lucide-react';
 import DocumentFrame from '@/components/DocumentFrame';
 import EditableSpreadsheet from '@/components/EditableSpreadsheet';
 import AuthButton from '@/components/AuthButton';
-import ImageCombiner from '@/components/ImageCombiner';
 
 import extractorLogo from '@/assets/document-extractor-logo.png';
 
@@ -19,8 +18,8 @@ const DocumentProcessor: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
-  const [showImageCombiner, setShowImageCombiner] = useState(false);
   const [showCombineConfirmation, setShowCombineConfirmation] = useState(false);
+  const [isProcessingCombination, setIsProcessingCombination] = useState(false);
   
   // Form and analysis state
   const [columns, setColumns] = useState<string[]>(DEFAULT_COLUMNS);
@@ -71,7 +70,7 @@ const DocumentProcessor: React.FC = () => {
     
     // Clear any pending files
     setPendingFiles([]);
-    setShowImageCombiner(false);
+    setShowCombineConfirmation(false);
     
     toast({
       title: "Document uploaded",
@@ -106,40 +105,48 @@ const DocumentProcessor: React.FC = () => {
     setShowCombineConfirmation(true);
   };
 
-  // Handle combine confirmation
-  const handleCombineConfirm = () => {
+  // Handle combine confirmation - automatically create PDF
+  const handleCombineConfirm = async () => {
     setShowCombineConfirmation(false);
-    setShowImageCombiner(true);
+    setIsProcessingCombination(true);
+    
+    try {
+      const { combineImages } = await import('@/utils/imageCombiner');
+      const { file, previewUrl } = await combineImages(pendingFiles, { type: 'pdf' });
+      
+      // Set the combined file as the current document
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+      
+      setFile(file);
+      setPreviewUrl(previewUrl);
+      setPendingFiles([]);
+      
+      // Reset form data
+      const emptyFormData: Record<string, string> = {};
+      columns.forEach(column => {
+        emptyFormData[column] = '';
+      });
+      setFormData(emptyFormData);
+      
+      toast({
+        title: "Images combined successfully",
+        description: `Created PDF document with ${pendingFiles.length} pages.`,
+      });
+    } catch (error) {
+      console.error('Error combining images:', error);
+      toast({
+        title: "Error combining images",
+        description: "Please try again or upload images individually.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessingCombination(false);
+    }
   };
 
   const handleCombineCancel = () => {
-    setShowCombineConfirmation(false);
-    setPendingFiles([]);
-  };
-
-  // Handle combined file result
-  const handleCombinedFile = (combinedFile: File, combinedPreviewUrl: string) => {
-    // Revoke any previous object URL
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-    }
-    
-    setFile(combinedFile);
-    setPreviewUrl(combinedPreviewUrl);
-    setShowImageCombiner(false);
-    setPendingFiles([]);
-    
-    // Reset form data
-    const emptyFormData: Record<string, string> = {};
-    columns.forEach(column => {
-      emptyFormData[column] = '';
-    });
-    setFormData(emptyFormData);
-  };
-
-  // Handle image combiner cancel
-  const handleCombinerCancel = () => {
-    setShowImageCombiner(false);
     setShowCombineConfirmation(false);
     setPendingFiles([]);
   };
@@ -287,26 +294,18 @@ const DocumentProcessor: React.FC = () => {
       </div>
       
       <div className="mt-6">
-        {showImageCombiner ? (
-          <ImageCombiner 
-            files={pendingFiles}
-            onCombined={handleCombinedFile}
-            onCancel={handleCombinerCancel}
-          />
-        ) : (
-          <DocumentFrame 
-            file={file}
-            previewUrl={previewUrl}
-            fields={columns}
-            formData={formData}
-            onChange={handleFieldChange}
-            onAnalyze={analyzeDocument}
-            onAddToSpreadsheet={addToSpreadsheet}
-            onFileSelect={handleFileSelect}
-            onMultipleFilesSelect={handleMultipleFilesSelect}
-            isAnalyzing={isAnalyzing}
-          />
-        )}
+        <DocumentFrame 
+          file={file}
+          previewUrl={previewUrl}
+          fields={columns}
+          formData={formData}
+          onChange={handleFieldChange}
+          onAnalyze={analyzeDocument}
+          onAddToSpreadsheet={addToSpreadsheet}
+          onFileSelect={handleFileSelect}
+          onMultipleFilesSelect={handleMultipleFilesSelect}
+          isAnalyzing={isAnalyzing}
+        />
       </div>
       
       <EditableSpreadsheet 
@@ -377,15 +376,15 @@ const DocumentProcessor: React.FC = () => {
           <DialogHeader>
             <DialogTitle>Combine Images</DialogTitle>
             <DialogDescription>
-              You've selected {pendingFiles.length} images. Would you like to combine them into a single document?
+              You've selected {pendingFiles.length} images. Would you like to combine them into a single PDF document? Each image will become a separate page.
             </DialogDescription>
           </DialogHeader>
           <div className="flex gap-3 justify-end pt-4">
-            <Button variant="outline" onClick={handleCombineCancel}>
+            <Button variant="outline" onClick={handleCombineCancel} disabled={isProcessingCombination}>
               Cancel
             </Button>
-            <Button onClick={handleCombineConfirm}>
-              Yes, combine them
+            <Button onClick={handleCombineConfirm} disabled={isProcessingCombination}>
+              {isProcessingCombination ? "Combining..." : "Yes, combine them"}
             </Button>
           </div>
         </DialogContent>
