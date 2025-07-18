@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -95,11 +95,12 @@ const DataForm: React.FC<DataFormProps> = ({
             <Label htmlFor={field} className="text-sm font-medium">
               {field}
             </Label>
-            <Input
+            <Textarea
               id={field}
               value={formData[field] || ''}
               onChange={(e) => onChange(field, e.target.value)}
-              className="mt-1"
+              className="mt-1 min-h-[40px] resize-none"
+              rows={Math.max(1, Math.ceil((formData[field] || '').length / 50))}
             />
           </div>
         ))}
