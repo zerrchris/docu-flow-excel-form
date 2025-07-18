@@ -23,7 +23,7 @@ const DataForm: React.FC<DataFormProps> = ({
   isAnalyzing 
 }) => {
   return (
-    <Card className="p-6">
+    <Card className="p-6 rounded-r-none lg:rounded-r-none rounded-l-lg">
       <div className="space-y-4">
         <h3 className="text-lg font-semibold text-foreground">Document Data</h3>
         

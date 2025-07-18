@@ -12,7 +12,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
   const isPdf = file && file.type === 'application/pdf';
 
   return (
-    <Card className="h-full">
+    <Card className="h-full rounded-l-none lg:rounded-l-none rounded-r-lg">
       <div className="h-full flex flex-col">
         <h3 className="text-xl font-semibold text-foreground p-6 pb-4">Document Preview</h3>
         <div className="relative flex-grow border-t bg-muted/20 flex items-center justify-center">
