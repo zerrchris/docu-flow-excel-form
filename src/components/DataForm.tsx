@@ -96,7 +96,10 @@ const DataForm: React.FC<DataFormProps> = ({
             <Input
               id={field}
               value={formData[field] || ''}
-              onChange={(e) => onChange(field, e.target.value)}
+              onChange={(e) => {
+                console.log('Input onChange triggered for field:', field, 'value:', e.target.value);
+                onChange(field, e.target.value);
+              }}
               className="mt-1"
             />
           </div>
