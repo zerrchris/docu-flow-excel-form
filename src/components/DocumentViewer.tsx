@@ -155,7 +155,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
         {isPdf && previewUrl && (
           <div className="w-full h-full overflow-hidden">
             <div 
-              className="w-full h-full flex items-center justify-center p-2"
+              className="w-full h-full"
               onWheel={handleWheel}
             >
               <div 
@@ -171,7 +171,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
                 <embed
                   src={previewUrl}
                   type="application/pdf"
-                  className="w-full h-full rounded-lg border bg-white"
+                  className="w-full h-full bg-white"
                   style={{
                     minHeight: '100%'
                   }}
