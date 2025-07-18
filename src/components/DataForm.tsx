@@ -133,6 +133,13 @@ const DataForm: React.FC<DataFormProps> = ({
             console.log('Add to Spreadsheet button clicked');
             console.log('visibleFieldsList:', visibleFieldsList);
             console.log('formData passed to component:', formData);
+            console.log('DataForm internal check - form values:');
+            visibleFieldsList.forEach(field => {
+              const inputElement = document.getElementById(field) as HTMLInputElement;
+              if (inputElement) {
+                console.log(`Field ${field}: input value = "${inputElement.value}", formData value = "${formData[field] || ''}"`);
+              }
+            });
             onAddToSpreadsheet();
           }}
           className="w-full sm:w-auto"
