@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Trash2, Check, X, ArrowUp, ArrowDown, Save, FolderOpen, Download, Upload, Settings } from 'lucide-react';
+import { Plus, Trash2, Check, X, ArrowUp, ArrowDown, Save, FolderOpen, Download, Upload } from 'lucide-react';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -32,7 +32,7 @@ interface SpreadsheetProps {
   initialData: Record<string, string>[];
   onColumnChange: (columns: string[]) => void;
   onDataChange?: (data: Record<string, string>[]) => void;
-  onExtractionInstructionsChange?: (instructions: string) => void;
+  onColumnInstructionsChange?: (columnInstructions: Record<string, string>) => void;
 }
 
 const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({ 
@@ -40,7 +40,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   initialData,
   onColumnChange,
   onDataChange,
-  onExtractionInstructionsChange
+  onColumnInstructionsChange
 }) => {
   const { toast } = useToast();
   const [user, setUser] = useState<User | null>(null);
@@ -69,8 +69,6 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [editingCell, setEditingCell] = useState<{rowIndex: number, column: string} | null>(null);
   const [cellValue, setCellValue] = useState<string>('');
   const [selectedCell, setSelectedCell] = useState<{rowIndex: number, column: string} | null>(null);
-  const [editingHeader, setEditingHeader] = useState<string | null>(null);
-  const [headerValue, setHeaderValue] = useState<string>('');
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
   const [resizing, setResizing] = useState<{column: string, startX: number, startWidth: number} | null>(null);
   const [showAddRowsDialog, setShowAddRowsDialog] = useState(false);
@@ -79,10 +77,12 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [resizingHeight, setResizingHeight] = useState<{startY: number, startHeight: number} | null>(null);
   const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
-  const [showExtractionDialog, setShowExtractionDialog] = useState(false);
-  const [extractionInstructions, setExtractionInstructions] = useState<string>('');
+  const [showColumnDialog, setShowColumnDialog] = useState(false);
+  const [editingColumnName, setEditingColumnName] = useState<string>('');
+  const [editingColumnInstructions, setEditingColumnInstructions] = useState<string>('');
+  const [selectedColumn, setSelectedColumn] = useState<string>('');
+  const [columnInstructions, setColumnInstructions] = useState<Record<string, string>>({});
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const headerInputRef = useRef<HTMLInputElement>(null);
 
   // Sync data with initialData prop changes
   useEffect(() => {
@@ -570,13 +570,56 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     }
   }, [editingCell]);
 
-  // Auto-focus header input when editing starts
-  useEffect(() => {
-    if (editingHeader && headerInputRef.current) {
-      headerInputRef.current.focus();
-      headerInputRef.current.select();
+  // Column dialog functions
+  const openColumnDialog = (column: string) => {
+    setSelectedColumn(column);
+    setEditingColumnName(column);
+    setEditingColumnInstructions(columnInstructions[column] || '');
+    setShowColumnDialog(true);
+  };
+
+  const saveColumnChanges = () => {
+    const trimmedName = editingColumnName.trim();
+    if (!trimmedName) return;
+
+    // Update column name if changed
+    if (trimmedName !== selectedColumn) {
+      const newColumns = columns.map(col => col === selectedColumn ? trimmedName : col);
+      setColumns(newColumns);
+      onColumnChange(newColumns);
+      
+      // Update data keys to match new column name
+      const newData = data.map(row => {
+        const newRow = { ...row };
+        if (selectedColumn in newRow) {
+          newRow[trimmedName] = newRow[selectedColumn];
+          delete newRow[selectedColumn];
+        }
+        return newRow;
+      });
+      setData(newData);
+
+      // Update column instructions with new name
+      const newInstructions = { ...columnInstructions };
+      if (selectedColumn in newInstructions) {
+        newInstructions[trimmedName] = newInstructions[selectedColumn];
+        delete newInstructions[selectedColumn];
+      }
+      newInstructions[trimmedName] = editingColumnInstructions;
+      setColumnInstructions(newInstructions);
+      onColumnInstructionsChange?.(newInstructions);
+    } else {
+      // Just update instructions
+      const newInstructions = {
+        ...columnInstructions,
+        [selectedColumn]: editingColumnInstructions
+      };
+      setColumnInstructions(newInstructions);
+      onColumnInstructionsChange?.(newInstructions);
     }
-  }, [editingHeader]);
+
+    setShowColumnDialog(false);
+  };
 
   // Auto-start editing when a cell is selected and user types
   useEffect(() => {
@@ -638,39 +681,6 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     }
   }, [resizing, resizingHeight]);
 
-  // Header editing functions
-  const startEditingHeader = (columnName: string) => {
-    setEditingHeader(columnName);
-    setHeaderValue(columnName);
-  };
-
-  const saveHeaderEdit = () => {
-    if (editingHeader && headerValue.trim() && !columns.includes(headerValue.trim()) || headerValue.trim() === editingHeader) {
-      const updatedColumns = columns.map(col => col === editingHeader ? headerValue.trim() : col);
-      setColumns(updatedColumns);
-      onColumnChange(updatedColumns);
-      
-      // Update data to use new column name
-      const updatedData = data.map(row => {
-        if (editingHeader in row && headerValue.trim() !== editingHeader) {
-          const newRow = { ...row };
-          newRow[headerValue.trim()] = newRow[editingHeader];
-          delete newRow[editingHeader];
-          return newRow;
-        }
-        return row;
-      });
-      setData(updatedData);
-      
-      setEditingHeader(null);
-      setHeaderValue('');
-    }
-  };
-
-  const cancelHeaderEdit = () => {
-    setEditingHeader(null);
-    setHeaderValue('');
-  };
 
   // Runsheet name editing functions
   const startEditingRunsheetName = () => {
@@ -1113,17 +1123,11 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           </div>
         </div>
 
-        {/* Extraction Settings Button */}
+        {/* Column Instructions Info */}
         <div className="flex justify-start mb-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowExtractionDialog(true)}
-            className="gap-2"
-          >
-            <Settings className="h-4 w-4" />
-            Configure Data Extraction
-          </Button>
+          <p className="text-sm text-muted-foreground">
+            Click on column headers to configure extraction instructions for each field
+          </p>
         </div>
 
         {/* Fixed height container with scrolling and resize handle */}
@@ -1151,40 +1155,28 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                        onDrop={(e) => handleDrop(e, column)}
                        onDragEnd={handleDragEnd}
                      >
-                       <ContextMenu>
-                         <ContextMenuTrigger className="w-full h-full p-0 select-none">
-                           {editingHeader === column ? (
-                             <Input
-                               ref={headerInputRef}
-                               value={headerValue}
-                               onChange={(e) => setHeaderValue(e.target.value)}
-                               onKeyDown={(e) => {
-                                 if (e.key === 'Enter') {
-                                   saveHeaderEdit();
-                                   e.preventDefault();
-                                 } else if (e.key === 'Escape') {
-                                   cancelHeaderEdit();
-                                   e.preventDefault();
-                                 }
-                               }}
-                               onBlur={saveHeaderEdit}
-                               className="h-full border-none rounded-none text-center font-bold focus:ring-2 focus:ring-primary"
-                             />
-                           ) : (
-                             <div 
-                               className="w-full h-full px-4 py-2 cursor-pointer hover:bg-primary/10 transition-colors relative"
-                               onClick={() => startEditingHeader(column)}
-                             >
-                               {column}
-                               {/* Resize handle */}
-                               <div
-                                 className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/30 bg-border/50"
-                                 onMouseDown={(e) => handleMouseDown(e, column)}
-                                 onClick={(e) => e.stopPropagation()}
-                               />
-                             </div>
-                           )}
-                         </ContextMenuTrigger>
+                        <ContextMenu>
+                          <ContextMenuTrigger className="w-full h-full p-0 select-none">
+                            <div 
+                              className="w-full h-full px-4 py-2 cursor-pointer hover:bg-primary/10 transition-colors relative"
+                              onClick={() => openColumnDialog(column)}
+                            >
+                              <div className="flex flex-col items-center">
+                                <span className="font-bold">{column}</span>
+                                {columnInstructions[column] && (
+                                  <span className="text-xs text-muted-foreground mt-1 truncate max-w-full">
+                                    {columnInstructions[column].substring(0, 30)}...
+                                  </span>
+                                )}
+                              </div>
+                              {/* Resize handle */}
+                              <div
+                                className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/30 bg-border/50"
+                                onMouseDown={(e) => handleMouseDown(e, column)}
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            </div>
+                          </ContextMenuTrigger>
                         <ContextMenuContent>
                           <ContextMenuItem onClick={() => insertColumnBefore(column)}>
                             <Plus className="h-4 w-4 mr-2" />
@@ -1386,43 +1378,50 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           </DialogContent>
         </Dialog>
 
-        {/* Data Extraction Configuration Dialog */}
-        <Dialog open={showExtractionDialog} onOpenChange={setShowExtractionDialog}>
+        {/* Column Configuration Dialog */}
+        <Dialog open={showColumnDialog} onOpenChange={setShowColumnDialog}>
           <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
-              <DialogTitle>Configure Data Extraction</DialogTitle>
+              <DialogTitle>Configure Column</DialogTitle>
               <DialogDescription>
-                Specify what type of information to extract from documents. This will guide the AI when analyzing and retrieving data.
+                Set the column name and specify what type of information should be extracted for this field.
               </DialogDescription>
             </DialogHeader>
-            <div className="py-4">
-              <Label htmlFor="extraction-instructions" className="text-sm font-medium">
-                Extraction Instructions
-              </Label>
-              <Textarea
-                id="extraction-instructions"
-                placeholder="Example: Extract customer names, order dates, product SKUs, quantities, and shipping addresses from invoices and receipts..."
-                value={extractionInstructions}
-                onChange={(e) => setExtractionInstructions(e.target.value)}
-                className="mt-2 min-h-[120px]"
-              />
-              <p className="text-xs text-muted-foreground mt-2">
-                Provide detailed instructions about what specific information you want to extract from your documents. The more specific you are, the better the AI will perform.
-              </p>
+            <div className="py-4 space-y-4">
+              <div>
+                <Label htmlFor="column-name" className="text-sm font-medium">
+                  Column Name
+                </Label>
+                <Input
+                  id="column-name"
+                  value={editingColumnName}
+                  onChange={(e) => setEditingColumnName(e.target.value)}
+                  className="mt-2"
+                  placeholder="Enter column name..."
+                />
+              </div>
+              <div>
+                <Label htmlFor="column-instructions" className="text-sm font-medium">
+                  Extraction Instructions
+                </Label>
+                <Textarea
+                  id="column-instructions"
+                  placeholder="Example: Extract the customer's full legal name as it appears on the document, including any titles or suffixes..."
+                  value={editingColumnInstructions}
+                  onChange={(e) => setEditingColumnInstructions(e.target.value)}
+                  className="mt-2 min-h-[120px]"
+                />
+                <p className="text-xs text-muted-foreground mt-2">
+                  Provide specific instructions for what information should be extracted for this column. Be as detailed as possible for better AI accuracy.
+                </p>
+              </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowExtractionDialog(false)}>
+              <Button variant="outline" onClick={() => setShowColumnDialog(false)}>
                 Cancel
               </Button>
-              <Button onClick={() => {
-                setShowExtractionDialog(false);
-                onExtractionInstructionsChange?.(extractionInstructions);
-                toast({
-                  title: "Extraction settings saved",
-                  description: "Your data extraction instructions have been configured.",
-                });
-              }}>
-                Save Settings
+              <Button onClick={saveColumnChanges}>
+                Save Column
               </Button>
             </DialogFooter>
           </DialogContent>
