@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Trash2, Check, X, ArrowUp, ArrowDown, Save, FolderOpen, Download, Upload } from 'lucide-react';
+import { Plus, Trash2, Check, X, ArrowUp, ArrowDown, Save, FolderOpen, Download, Upload, Settings } from 'lucide-react';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -32,13 +32,15 @@ interface SpreadsheetProps {
   initialData: Record<string, string>[];
   onColumnChange: (columns: string[]) => void;
   onDataChange?: (data: Record<string, string>[]) => void;
+  onExtractionInstructionsChange?: (instructions: string) => void;
 }
 
 const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({ 
   initialColumns, 
   initialData,
   onColumnChange,
-  onDataChange
+  onDataChange,
+  onExtractionInstructionsChange
 }) => {
   const { toast } = useToast();
   const [user, setUser] = useState<User | null>(null);
@@ -77,6 +79,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [resizingHeight, setResizingHeight] = useState<{startY: number, startHeight: number} | null>(null);
   const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
+  const [showExtractionDialog, setShowExtractionDialog] = useState(false);
+  const [extractionInstructions, setExtractionInstructions] = useState<string>('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const headerInputRef = useRef<HTMLInputElement>(null);
 
@@ -1109,6 +1113,19 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           </div>
         </div>
 
+        {/* Extraction Settings Button */}
+        <div className="flex justify-start mb-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowExtractionDialog(true)}
+            className="gap-2"
+          >
+            <Settings className="h-4 w-4" />
+            Configure Data Extraction
+          </Button>
+        </div>
+
         {/* Fixed height container with scrolling and resize handle */}
         <div 
           className="border rounded-md flex flex-col bg-background relative"
@@ -1364,6 +1381,48 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
               </Button>
               <Button variant="destructive" onClick={proceedWithUpload}>
                 Replace Data
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Data Extraction Configuration Dialog */}
+        <Dialog open={showExtractionDialog} onOpenChange={setShowExtractionDialog}>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>Configure Data Extraction</DialogTitle>
+              <DialogDescription>
+                Specify what type of information to extract from documents. This will guide the AI when analyzing and retrieving data.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <Label htmlFor="extraction-instructions" className="text-sm font-medium">
+                Extraction Instructions
+              </Label>
+              <Textarea
+                id="extraction-instructions"
+                placeholder="Example: Extract customer names, order dates, product SKUs, quantities, and shipping addresses from invoices and receipts..."
+                value={extractionInstructions}
+                onChange={(e) => setExtractionInstructions(e.target.value)}
+                className="mt-2 min-h-[120px]"
+              />
+              <p className="text-xs text-muted-foreground mt-2">
+                Provide detailed instructions about what specific information you want to extract from your documents. The more specific you are, the better the AI will perform.
+              </p>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowExtractionDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={() => {
+                setShowExtractionDialog(false);
+                onExtractionInstructionsChange?.(extractionInstructions);
+                toast({
+                  title: "Extraction settings saved",
+                  description: "Your data extraction instructions have been configured.",
+                });
+              }}>
+                Save Settings
               </Button>
             </DialogFooter>
           </DialogContent>

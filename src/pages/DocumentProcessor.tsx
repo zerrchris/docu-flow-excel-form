@@ -27,6 +27,7 @@ const DocumentProcessor: React.FC = () => {
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [spreadsheetData, setSpreadsheetData] = useState<Record<string, string>[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [extractionInstructions, setExtractionInstructions] = useState<string>('');
   
   // Get started dialog state
   const [showGetStarted, setShowGetStarted] = useState(true);
@@ -381,6 +382,7 @@ const DocumentProcessor: React.FC = () => {
         initialData={spreadsheetData}
         onColumnChange={setColumns}
         onDataChange={setSpreadsheetData}
+        onExtractionInstructionsChange={setExtractionInstructions}
       />
       
       {/* Get Started Dialog */}
