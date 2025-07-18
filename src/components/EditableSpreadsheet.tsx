@@ -55,7 +55,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [resizing, setResizing] = useState<{column: string, startX: number, startWidth: number} | null>(null);
   const [showAddRowsDialog, setShowAddRowsDialog] = useState(false);
   const [rowsToAdd, setRowsToAdd] = useState<number>(1);
-  const [spreadsheetHeight, setSpreadsheetHeight] = useState<number>(384); // 384px = h-96
+  const [spreadsheetHeight, setSpreadsheetHeight] = useState<number>(768); // 768px = twice the original height
   const [resizingHeight, setResizingHeight] = useState<{startY: number, startHeight: number} | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const headerInputRef = useRef<HTMLInputElement>(null);
