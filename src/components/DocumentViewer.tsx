@@ -128,7 +128,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
                   alt="Document Preview" 
                   className="rounded-lg transition-transform duration-200"
                   style={{ 
-                    transform: `scale(${zoom}) translate(${panX}px, ${panY}px)`,
+                    transform: `translate(${panX}px, ${panY}px) scale(${zoom})`,
                     transformOrigin: 'center center',
                     maxWidth: 'none',
                     maxHeight: 'none',
@@ -161,7 +161,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
                 <div 
                   className="transition-transform duration-200"
                   style={{ 
-                    transform: `scale(${zoom}) translate(${panX}px, ${panY}px)`,
+                    transform: `translate(${panX}px, ${panY}px) scale(${zoom})`,
                     transformOrigin: 'center center'
                   }}
                 >
