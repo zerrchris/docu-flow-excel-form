@@ -95,7 +95,14 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
   // Save runsheet to Supabase
   const saveRunsheet = async () => {
+    console.log('Save button clicked!');
+    console.log('User state:', user);
+    console.log('Runsheet name:', runsheetName);
+    console.log('Columns:', columns);
+    console.log('Data:', data);
+
     if (!user) {
+      console.log('No user - showing auth required toast');
       toast({
         title: "Authentication required",
         description: "Please sign in to save your runsheet.",
@@ -104,8 +111,16 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       return;
     }
 
+    console.log('Starting save process...');
     setIsSaving(true);
+    
     try {
+      // Check if Supabase is configured
+      if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+        throw new Error('Supabase not configured - using demo mode');
+      }
+
+      console.log('Attempting to save to database...');
       const { error } = await supabase
         .from('runsheets')
         .upsert({
@@ -118,13 +133,18 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           onConflict: 'user_id,name'
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Database error:', error);
+        throw error;
+      }
 
+      console.log('Save successful!');
       toast({
         title: "Runsheet saved",
         description: `"${runsheetName}" has been saved successfully.`,
       });
     } catch (error: any) {
+      console.error('Save failed:', error);
       toast({
         title: "Failed to save runsheet",
         description: error.message,
@@ -132,6 +152,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       });
     } finally {
       setIsSaving(false);
+      console.log('Save process completed');
     }
   };
 
