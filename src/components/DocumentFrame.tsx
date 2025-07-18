@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import DataForm from './DataForm';
 import DocumentViewer from './DocumentViewer';
+import DocumentUpload from './DocumentUpload';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 interface DocumentFrameProps {
@@ -14,6 +15,7 @@ interface DocumentFrameProps {
   onChange: (field: string, value: string) => void;
   onAnalyze: () => void;
   onAddToSpreadsheet: () => void;
+  onFileSelect: (file: File) => void;
   isAnalyzing: boolean;
 }
 
@@ -25,6 +27,7 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
   onChange,
   onAnalyze,
   onAddToSpreadsheet,
+  onFileSelect,
   isAnalyzing
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -72,7 +75,13 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
                 </div>
               </div>
               <div className="lg:col-span-8">
-                <DocumentViewer file={file} previewUrl={previewUrl} />
+                {file ? (
+                  <DocumentViewer file={file} previewUrl={previewUrl} />
+                ) : (
+                  <div className="p-6">
+                    <DocumentUpload onFileSelect={onFileSelect} selectedFile={file} />
+                  </div>
+                )}
               </div>
             </div>
           </div>

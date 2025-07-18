@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from '@/components/ui/use-toast';
-import DocumentUpload from '@/components/DocumentUpload';
 import DocumentFrame from '@/components/DocumentFrame';
 import EditableSpreadsheet from '@/components/EditableSpreadsheet';
 
@@ -172,8 +171,6 @@ const DocumentProcessor: React.FC = () => {
         </h1>
       </div>
       
-      <DocumentUpload onFileSelect={handleFileSelect} selectedFile={file} />
-      
       <div className="mt-6">
         <DocumentFrame 
           file={file}
@@ -183,6 +180,7 @@ const DocumentProcessor: React.FC = () => {
           onChange={handleFieldChange}
           onAnalyze={analyzeDocument}
           onAddToSpreadsheet={addToSpreadsheet}
+          onFileSelect={handleFileSelect}
           isAnalyzing={isAnalyzing}
         />
       </div>
