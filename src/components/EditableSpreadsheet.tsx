@@ -86,7 +86,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [selectedColumn, setSelectedColumn] = useState<string>('');
   const [columnInstructions, setColumnInstructions] = useState<Record<string, string>>({});
   const [columnAlignments, setColumnAlignments] = useState<Record<string, 'left' | 'center' | 'right'>>({});
-  const [showHeaderHighlight, setShowHeaderHighlight] = useState(true);
+  const [showHeaderHighlight, setShowHeaderHighlight] = useState(false);
   const [editingColumnAlignment, setEditingColumnAlignment] = useState<'left' | 'center' | 'right'>('left');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -142,6 +142,20 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       window.removeEventListener('triggerSpreadsheetOpen', handleOpenTrigger);
     };
   }, []);
+
+  // Show header highlight when there are missing column instructions
+  useEffect(() => {
+    const columnsWithoutInstructions = columns.filter(column => 
+      !columnInstructions[column] || columnInstructions[column].trim() === ''
+    );
+    
+    // Only show highlight if there are missing instructions and we have some data or the user has interacted
+    const hasData = data.some(row => Object.values(row).some(value => value.trim() !== ''));
+    
+    if (columnsWithoutInstructions.length > 0 && hasData && !showHeaderHighlight) {
+      setShowHeaderHighlight(true);
+    }
+  }, [columns, columnInstructions, data, showHeaderHighlight]);
 
   // Auto-save functionality
   const autoSaveRunsheet = useCallback(async () => {
