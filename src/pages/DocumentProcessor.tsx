@@ -212,14 +212,14 @@ const DocumentProcessor: React.FC = () => {
     setShowCombineConfirmation(true);
   };
 
-  // Handle combine confirmation - automatically create PDF
+  // Handle combine confirmation - create single image for analysis
   const handleCombineConfirm = async () => {
     setShowCombineConfirmation(false);
     setIsProcessingCombination(true);
     
     try {
       const { combineImages } = await import('@/utils/imageCombiner');
-      const { file: combinedFile, previewUrl: newPreviewUrl } = await combineImages(pendingFiles, { type: 'pdf' });
+      const { file: combinedFile, previewUrl: newPreviewUrl } = await combineImages(pendingFiles, { type: 'vertical' });
       
       // Revoke the OLD preview URL before setting the new one
       if (previewUrl) {
@@ -241,7 +241,7 @@ const DocumentProcessor: React.FC = () => {
       
       toast({
         title: "Images combined successfully",
-        description: `Created PDF document with ${pendingFiles.length} pages.`,
+        description: `Combined ${pendingFiles.length} images into a single document for analysis.`,
       });
     } catch (error) {
       console.error('Error combining images:', error);
@@ -589,7 +589,7 @@ Image: [base64 image data]`;
           <DialogHeader>
             <DialogTitle>Combine Images</DialogTitle>
             <DialogDescription>
-              You've selected {pendingFiles.length} images. Would you like to combine them into a single PDF document? Each image will become a separate page.
+              You've selected {pendingFiles.length} images. Would you like to combine them into a single image for document analysis?
             </DialogDescription>
           </DialogHeader>
           <div className="flex gap-3 justify-end pt-4">
