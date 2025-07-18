@@ -7,6 +7,7 @@ import { Upload, FolderOpen, Plus } from 'lucide-react';
 import DocumentFrame from '@/components/DocumentFrame';
 import EditableSpreadsheet from '@/components/EditableSpreadsheet';
 import AuthButton from '@/components/AuthButton';
+import BatchProcessing from '@/components/BatchProcessing';
 
 import extractorLogo from '@/assets/document-extractor-logo.png';
 
@@ -162,14 +163,16 @@ const DocumentProcessor: React.FC = () => {
   };
 
   // Simulate document analysis with OpenAI
-  const analyzeDocument = async () => {
-    if (!file) {
+  const analyzeDocument = async (fileToAnalyze?: File) => {
+    const targetFile = fileToAnalyze || file;
+    
+    if (!targetFile) {
       toast({
         title: "No document selected",
         description: "Please upload a document first.",
         variant: "destructive",
       });
-      return;
+      return {};
     }
 
     setIsAnalyzing(true);
@@ -202,18 +205,24 @@ const DocumentProcessor: React.FC = () => {
         }
       });
       
-      setFormData(mockData);
+      // Only update the main form data if no specific file was passed (main document)
+      if (!fileToAnalyze) {
+        setFormData(mockData);
+        
+        toast({
+          title: "Document analyzed",
+          description: "Data has been extracted from the document.",
+        });
+      }
       
-      toast({
-        title: "Document analyzed",
-        description: "Data has been extracted from the document.",
-      });
+      return mockData;
     } catch (error) {
       toast({
         title: "Analysis failed",
         description: "There was a problem analyzing the document.",
         variant: "destructive",
       });
+      return {};
     } finally {
       setIsAnalyzing(false);
     }
@@ -309,6 +318,13 @@ const DocumentProcessor: React.FC = () => {
           isAnalyzing={isAnalyzing}
         />
       </div>
+      
+      <BatchProcessing 
+        fields={columns}
+        onAddToSpreadsheet={addToSpreadsheet}
+        onAnalyze={analyzeDocument}
+        isAnalyzing={isAnalyzing}
+      />
       
       <EditableSpreadsheet 
         initialColumns={columns}
