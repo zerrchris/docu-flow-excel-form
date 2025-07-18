@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import DocumentFrame from '@/components/DocumentFrame';
 import EditableSpreadsheet from '@/components/EditableSpreadsheet';
+import AuthButton from '@/components/AuthButton';
 
 import extractorLogo from '@/assets/document-extractor-logo.png';
 
@@ -171,15 +172,18 @@ const DocumentProcessor: React.FC = () => {
 
   return (
     <div className="w-full px-4 py-6">
-      <div className="flex items-center gap-4 mb-8">
-        <img 
-          src={extractorLogo} 
-          alt="Document Data Extractor Logo" 
-          className="h-16 w-16"
-        />
-        <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-          RunsheetPro
-        </h1>
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-4">
+          <img 
+            src={extractorLogo} 
+            alt="Document Data Extractor Logo" 
+            className="h-16 w-16"
+          />
+          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            RunsheetPro
+          </h1>
+        </div>
+        <AuthButton />
       </div>
       
       <div className="mt-6">

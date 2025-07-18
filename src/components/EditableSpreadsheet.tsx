@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Trash2, Check, X, ArrowUp, ArrowDown } from 'lucide-react';
+import { Plus, Trash2, Check, X, ArrowUp, ArrowDown, Save, FolderOpen } from 'lucide-react';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -22,6 +22,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { supabase } from '@/lib/supabase';
+import { useToast } from '@/hooks/use-toast';
+import type { User } from '@supabase/supabase-js';
 
 interface SpreadsheetProps {
   initialColumns: string[];
@@ -34,6 +37,9 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   initialData,
   onColumnChange
 }) => {
+  const { toast } = useToast();
+  const [user, setUser] = useState<User | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [runsheetName, setRunsheetName] = useState<string>('Untitled Runsheet');
   const [editingRunsheetName, setEditingRunsheetName] = useState<boolean>(false);
   const [tempRunsheetName, setTempRunsheetName] = useState<string>('');
@@ -64,6 +70,61 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const headerInputRef = useRef<HTMLInputElement>(null);
+
+  // Check user authentication status
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Save runsheet to Supabase
+  const saveRunsheet = async () => {
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to save your runsheet.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from('runsheets')
+        .upsert({
+          name: runsheetName,
+          columns: columns,
+          data: data,
+          user_id: user.id,
+          updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'user_id,name'
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Runsheet saved",
+        description: `"${runsheetName}" has been saved successfully.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Failed to save runsheet",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   // Auto-focus input when editing starts
   useEffect(() => {
@@ -538,6 +599,17 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                 {runsheetName}
               </button>
             )}
+            {/* Save Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={saveRunsheet}
+              disabled={isSaving || !user}
+              className="gap-2"
+            >
+              <Save className="h-4 w-4" />
+              {isSaving ? 'Saving...' : 'Save'}
+            </Button>
           </div>
           <div className="text-sm text-muted-foreground">
             Right-click column headers to insert or remove columns
