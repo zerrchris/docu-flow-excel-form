@@ -77,6 +77,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [resizingHeight, setResizingHeight] = useState<{startY: number, startHeight: number} | null>(null);
   const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
+  const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const headerInputRef = useRef<HTMLInputElement>(null);
 
@@ -976,10 +977,48 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     }
   }, [saveEdit, cancelEdit, editingCell, columns, data, selectCell, startEditing]);
 
+  // Row selection and deletion functions
+  const toggleRowSelection = (rowIndex: number) => {
+    setSelectedRows(prev => {
+      const newSelected = new Set(prev);
+      if (newSelected.has(rowIndex)) {
+        newSelected.delete(rowIndex);
+      } else {
+        newSelected.add(rowIndex);
+      }
+      return newSelected;
+    });
+  };
+
+  const deleteSelectedRows = () => {
+    if (selectedRows.size === 0) return;
+    
+    const sortedIndices = Array.from(selectedRows).sort((a, b) => b - a); // Sort descending
+    const newData = [...data];
+    
+    // Remove rows from highest index to lowest to maintain correct indices
+    sortedIndices.forEach(index => {
+      newData.splice(index, 1);
+    });
+    
+    setData(newData);
+    setSelectedRows(new Set());
+    
+    toast({
+      title: "Rows deleted",
+      description: `Deleted ${sortedIndices.length} row(s) from the spreadsheet.`,
+    });
+  };
+
   const deleteRow = (index: number) => {
     const newData = [...data];
     newData.splice(index, 1);
     setData(newData);
+    
+    toast({
+      title: "Row deleted",
+      description: "Row has been removed from the spreadsheet.",
+    });
   };
 
   // Add rows function
@@ -1120,6 +1159,20 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
               {/* Sticky Header */}
               <TableHeader className="sticky top-0 z-10 bg-muted/95 backdrop-blur-sm border-b">
                 <TableRow className="hover:bg-muted/50">
+                  {/* Row actions header */}
+                  <TableHead className="w-12 border-r border-border p-0 text-center">
+                    {selectedRows.size > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={deleteSelectedRows}
+                        className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        title={`Delete ${selectedRows.size} selected row(s)`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </TableHead>
                   {columns.map((column) => (
                      <TableHead 
                        key={column}
@@ -1196,6 +1249,28 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
               <TableBody>
                 {data.map((row, rowIndex) => (
                   <TableRow key={rowIndex} className="hover:bg-muted/30">
+                    {/* Row handle for selection and deletion */}
+                    <TableCell className="w-12 border-r border-border p-1 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => toggleRowSelection(rowIndex)}
+                          className={`h-6 w-6 p-0 transition-colors ${
+                            selectedRows.has(rowIndex) 
+                              ? 'bg-primary text-primary-foreground hover:bg-primary/90' 
+                              : 'hover:bg-muted text-muted-foreground hover:text-foreground'
+                          }`}
+                          title="Select row"
+                        >
+                          {selectedRows.has(rowIndex) ? (
+                            <Check className="h-3 w-3" />
+                          ) : (
+                            <span className="text-xs font-mono">{rowIndex + 1}</span>
+                          )}
+                        </Button>
+                      </div>
+                    </TableCell>
                      {columns.map((column) => {
                       const isSelected = selectedCell?.rowIndex === rowIndex && selectedCell?.column === column;
                       const isEditing = editingCell?.rowIndex === rowIndex && editingCell?.column === column;
