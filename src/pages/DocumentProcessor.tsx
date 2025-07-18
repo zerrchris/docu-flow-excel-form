@@ -186,7 +186,9 @@ const DocumentProcessor: React.FC = () => {
 
   // Simulate document analysis with OpenAI
   const analyzeDocument = async (fileToAnalyze?: File) => {
+    console.log('analyzeDocument called with fileToAnalyze:', fileToAnalyze);
     const targetFile = fileToAnalyze || file;
+    console.log('targetFile:', targetFile);
     
     if (!targetFile) {
       toast({
@@ -198,6 +200,7 @@ const DocumentProcessor: React.FC = () => {
     }
 
     setIsAnalyzing(true);
+    console.log('Starting analysis...');
     
     try {
       // In a real app, you would send the file to an API endpoint
@@ -229,15 +232,19 @@ const DocumentProcessor: React.FC = () => {
       
       console.log('Generated mock data:', mockData);
       console.log('fileToAnalyze parameter:', fileToAnalyze);
+      console.log('Will update main formData?', !fileToAnalyze);
       
       // Only update the main form data if no specific file was passed (main document)
       if (!fileToAnalyze) {
+        console.log('Updating main formData with mock data');
         setFormData(mockData);
         
         toast({
           title: "Document analyzed",
           description: "Data has been extracted from the document.",
         });
+      } else {
+        console.log('Not updating main formData - this is for batch processing');
       }
       
       return mockData;
