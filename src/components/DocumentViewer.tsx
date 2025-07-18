@@ -157,18 +157,13 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
                     transform: `scale(${zoom})`
                   }}
                 >
-                  <object
-                    data={previewUrl}
-                    type="application/pdf"
-                    className="w-full h-full min-h-[500px] max-h-[800px] rounded-lg border"
+                  <iframe
+                    src={`${previewUrl}#toolbar=1&navpanes=1&scrollbar=1&page=1&view=FitH`}
+                    className="w-full h-full min-h-[600px] rounded-lg border"
                     title="PDF Preview"
-                  >
-                    <iframe
-                      src={previewUrl}
-                      className="w-full h-full min-h-[500px] max-h-[800px] rounded-lg border"
-                      title="PDF Preview Fallback"
-                    />
-                  </object>
+                    onLoad={() => console.log('PDF iframe loaded successfully')}
+                    onError={() => console.error('PDF iframe failed to load')}
+                  />
                 </div>
               </div>
             </div>
