@@ -12,6 +12,8 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
   const [zoom, setZoom] = useState(1);
   const [panX, setPanX] = useState(0);
   const [panY, setPanY] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [lastTouchDistance, setLastTouchDistance] = useState(0);
   const isImage = file && file.type.startsWith('image/');
   const isPdf = file && file.type === 'application/pdf';
@@ -71,7 +73,21 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
     setLastTouchDistance(0);
   };
 
-  
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - panX, y: e.clientY - panY });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging) return;
+    e.preventDefault();
+    setPanX(e.clientX - dragStart.x);
+    setPanY(e.clientY - dragStart.y);
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
 
   return (
     <Card className="h-full rounded-l-none lg:rounded-l-none rounded-r-lg">
@@ -108,10 +124,14 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
           
           {isImage && previewUrl && (
             <div 
-              className="w-full h-full overflow-auto scrollbar-thin"
+              className="w-full h-full overflow-hidden cursor-grab active:cursor-grabbing"
               onTouchStart={handleTouchStart}
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
             >
               <div 
                 className="w-full h-full flex items-center justify-center p-6"
@@ -124,13 +144,14 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
                 <img 
                   src={previewUrl} 
                   alt="Document Preview" 
-                  className="rounded-lg transition-transform duration-200 max-w-full max-h-full"
+                  className="rounded-lg transition-transform duration-200 max-w-full max-h-full select-none"
                   style={{ 
-                    transform: `scale(${zoom})`,
+                    transform: `scale(${zoom}) translate(${panX / zoom}px, ${panY / zoom}px)`,
                     width: '100%',
                     height: 'auto',
                     objectFit: 'contain'
                   }}
+                  draggable={false}
                 />
               </div>
             </div>
@@ -138,10 +159,14 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
           
           {isPdf && previewUrl && (
             <div 
-              className="w-full h-full overflow-auto scrollbar-thin"
+              className="w-full h-full overflow-hidden cursor-grab active:cursor-grabbing"
               onTouchStart={handleTouchStart}
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
             >
               <div 
                 className="w-full h-full flex items-center justify-center p-2"
@@ -154,7 +179,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
                 <div 
                   className="transition-transform duration-200 w-full h-full"
                   style={{ 
-                    transform: `scale(${zoom})`
+                    transform: `scale(${zoom}) translate(${panX / zoom}px, ${panY / zoom}px)`
                   }}
                 >
                   <object
