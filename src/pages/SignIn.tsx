@@ -23,25 +23,23 @@ const SignIn: React.FC = () => {
   useEffect(() => {
     const initAuth = async () => {
       try {
-        if (import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY) {
-          const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session } } = await supabase.auth.getSession();
+        setUser(session?.user ?? null);
+        
+        // If user is already signed in, redirect to home
+        if (session?.user) {
+          navigate('/');
+          return;
+        }
+        
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
           setUser(session?.user ?? null);
-          
-          // If user is already signed in, redirect to home
           if (session?.user) {
             navigate('/');
-            return;
           }
-          
-          const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-            setUser(session?.user ?? null);
-            if (session?.user) {
-              navigate('/');
-            }
-          });
+        });
 
-          return () => subscription.unsubscribe();
-        }
+        return () => subscription.unsubscribe();
       } catch (error) {
         console.warn('Auth initialization failed:', error);
       } finally {
@@ -57,14 +55,15 @@ const SignIn: React.FC = () => {
     setAuthLoading(true);
 
     try {
-      if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
-        throw new Error('Supabase is not properly configured. Please check your environment variables.');
-      }
-
       if (isSignUp) {
+        const redirectUrl = `${window.location.origin}/`;
+        
         const { error } = await supabase.auth.signUp({
           email,
           password,
+          options: {
+            emailRedirectTo: redirectUrl
+          }
         });
         
         if (error) throw error;

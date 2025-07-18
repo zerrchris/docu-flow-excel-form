@@ -107,16 +107,14 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   useEffect(() => {
     const initAuth = async () => {
       try {
-        if (import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY) {
-          const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session } } = await supabase.auth.getSession();
+        setUser(session?.user ?? null);
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
           setUser(session?.user ?? null);
+        });
 
-          const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-            setUser(session?.user ?? null);
-          });
-
-          return () => subscription.unsubscribe();
-        }
+        return () => subscription.unsubscribe();
       } catch (error) {
         console.warn('Auth initialization failed in spreadsheet:', error);
       }
@@ -150,10 +148,6 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     if (!user || !hasUnsavedChanges) return;
     
     try {
-      if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
-        return; // Skip autosave if Supabase not configured
-      }
-
       const { error } = await supabase
         .from('runsheets')
         .upsert({
@@ -239,11 +233,6 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     setIsSaving(true);
     
     try {
-      // Check if Supabase is configured
-      if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
-        throw new Error('Supabase not configured - using demo mode');
-      }
-
       console.log('Attempting to save to database...');
       const { error } = await supabase
         .from('runsheets')
@@ -296,10 +285,6 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
     setIsLoading(true);
     try {
-      if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
-        throw new Error('Supabase not configured - using demo mode');
-      }
-
       const { data: runsheets, error } = await supabase
         .from('runsheets')
         .select('*')
