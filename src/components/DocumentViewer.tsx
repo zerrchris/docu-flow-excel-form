@@ -153,7 +153,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
         )}
         
         {isPdf && previewUrl && (
-          <div className="absolute inset-0 w-full h-full overflow-hidden">
+          <div className="absolute inset-0 w-full h-full">
             <div 
               className="w-full h-full"
               onWheel={handleWheel}
@@ -168,12 +168,15 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
                 onMouseUp={handleMouseUp}
                 onMouseLeave={handleMouseUp}
               >
-                <embed
+                <iframe
                   src={previewUrl}
-                  type="application/pdf"
-                  className="w-full h-full bg-white"
+                  className="w-full h-full border-0"
                   style={{
-                    minHeight: '100%'
+                    width: '100%',
+                    height: '100%',
+                    border: 'none',
+                    margin: 0,
+                    padding: 0
                   }}
                 />
                 {/* Always visible fallback options */}
