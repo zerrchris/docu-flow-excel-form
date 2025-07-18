@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Trash2, Check, X, ArrowUp, ArrowDown, Save, FolderOpen } from 'lucide-react';
+import { Plus, Trash2, Check, X, ArrowUp, ArrowDown, Save, FolderOpen, Download } from 'lucide-react';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -220,6 +220,47 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     toast({
       title: "Runsheet loaded",
       description: `"${runsheet.name}" has been loaded successfully.`,
+    });
+  };
+
+  // Download spreadsheet as CSV
+  const downloadSpreadsheet = () => {
+    // Filter out empty rows (rows where all values are empty)
+    const nonEmptyData = data.filter(row => 
+      Object.values(row).some(value => value.trim() !== '')
+    );
+
+    // Create CSV content
+    const csvHeaders = columns.join(',');
+    const csvRows = nonEmptyData.map(row => 
+      columns.map(column => {
+        const value = row[column] || '';
+        // Escape quotes and wrap in quotes if contains comma, quote, or newline
+        const escapedValue = value.includes(',') || value.includes('"') || value.includes('\n')
+          ? `"${value.replace(/"/g, '""')}"`
+          : value;
+        return escapedValue;
+      }).join(',')
+    );
+    
+    const csvContent = [csvHeaders, ...csvRows].join('\n');
+
+    // Create and download the file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${runsheetName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.csv`);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast({
+      title: "Spreadsheet downloaded",
+      description: `"${runsheetName}" has been downloaded as a CSV file.`,
     });
   };
 
@@ -718,6 +759,17 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             >
               <FolderOpen className="h-4 w-4" />
               {isLoading ? 'Loading...' : 'Open'}
+            </Button>
+            
+            {/* Download Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={downloadSpreadsheet}
+              className="gap-2"
+            >
+              <Download className="h-4 w-4" />
+              Download
             </Button>
           </div>
           <div className="text-sm text-muted-foreground">
