@@ -112,15 +112,15 @@ const DocumentProcessor: React.FC = () => {
     
     try {
       const { combineImages } = await import('@/utils/imageCombiner');
-      const { file, previewUrl } = await combineImages(pendingFiles, { type: 'pdf' });
+      const { file: combinedFile, previewUrl: newPreviewUrl } = await combineImages(pendingFiles, { type: 'pdf' });
       
-      // Set the combined file as the current document
+      // Revoke the OLD preview URL before setting the new one
       if (previewUrl) {
         URL.revokeObjectURL(previewUrl);
       }
       
-      setFile(file);
-      setPreviewUrl(previewUrl);
+      setFile(combinedFile);
+      setPreviewUrl(newPreviewUrl);
       setPendingFiles([]);
       
       // Reset form data
