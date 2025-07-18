@@ -45,15 +45,18 @@ const combineImagesToPdf = async (
   files: File[], 
   options: CombineOptions
 ): Promise<{ file: File; previewUrl: string }> => {
+  console.log('Starting PDF creation with', files.length, 'files');
   const pdf = new jsPDF();
   let isFirstPage = true;
 
   for (const file of files) {
+    console.log('Processing file:', file.name, file.type);
     if (!isFirstPage) {
       pdf.addPage();
     }
     
     const img = await loadImage(file);
+    console.log('Image loaded:', img.width, 'x', img.height);
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d')!;
     
@@ -77,6 +80,7 @@ const combineImagesToPdf = async (
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     
     const imgData = canvas.toDataURL('image/jpeg', options.quality || 0.8);
+    console.log('Adding image to PDF page', files.indexOf(file) + 1);
     pdf.addImage(imgData, 'JPEG', 10, 10, width, height);
     
     URL.revokeObjectURL(img.src);
@@ -89,6 +93,8 @@ const combineImagesToPdf = async (
   });
   
   const previewUrl = URL.createObjectURL(combinedFile);
+  console.log('PDF created:', combinedFile);
+  console.log('Preview URL created:', previewUrl);
   return { file: combinedFile, previewUrl };
 };
 

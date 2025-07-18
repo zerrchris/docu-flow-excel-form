@@ -11,6 +11,8 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
   const isImage = file && file.type.startsWith('image/');
   const isPdf = file && file.type === 'application/pdf';
 
+  console.log('DocumentViewer received:', { file, previewUrl, fileType: file?.type, isImage, isPdf });
+
   return (
     <Card className="h-full rounded-l-none lg:rounded-l-none rounded-r-lg">
       <div className="h-full flex flex-col">
@@ -37,11 +39,17 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
           )}
           
           {isPdf && previewUrl && (
-            <iframe
-              src={`${previewUrl}#toolbar=0`}
-              className="w-full h-[calc(100vh-20rem)] rounded-lg"
-              title="PDF Preview"
-            />
+            <div className="w-full h-full flex flex-col items-center justify-center p-6">
+              <embed
+                src={previewUrl}
+                type="application/pdf"
+                className="w-full h-[calc(100vh-20rem)] rounded-lg border"
+                title="PDF Preview"
+              />
+              <p className="text-xs text-muted-foreground mt-2">
+                If the PDF doesn't display, <a href={previewUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">click here to open it in a new tab</a>
+              </p>
+            </div>
           )}
           
           {file && !isImage && !isPdf && (

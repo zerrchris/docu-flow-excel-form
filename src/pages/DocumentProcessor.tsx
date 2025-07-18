@@ -121,6 +121,8 @@ const DocumentProcessor: React.FC = () => {
       
       setFile(combinedFile);
       setPreviewUrl(newPreviewUrl);
+      console.log('Combined file set:', combinedFile);
+      console.log('New preview URL set:', newPreviewUrl);
       setPendingFiles([]);
       
       // Reset form data
