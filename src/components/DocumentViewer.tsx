@@ -144,7 +144,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
               onTouchEnd={handleTouchEnd}
             >
               <div 
-                className="w-full h-full flex items-center justify-center p-6"
+                className="w-full h-full flex items-center justify-center p-2"
                 onWheel={handleWheel}
                 style={{
                   minWidth: `${zoom * 100}%`,
@@ -152,7 +152,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
                 }}
               >
                 <div 
-                  className="transition-transform duration-200"
+                  className="transition-transform duration-200 w-full h-full"
                   style={{ 
                     transform: `scale(${zoom})`
                   }}
@@ -160,12 +160,12 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
                   <object
                     data={previewUrl}
                     type="application/pdf"
-                    className="w-full h-[calc(100vh-20rem)] rounded-lg border"
+                    className="w-full h-full min-h-[500px] max-h-[800px] rounded-lg border"
                     title="PDF Preview"
                   >
                     <iframe
                       src={previewUrl}
-                      className="w-full h-[calc(100vh-20rem)] rounded-lg border"
+                      className="w-full h-full min-h-[500px] max-h-[800px] rounded-lg border"
                       title="PDF Preview Fallback"
                     />
                   </object>
