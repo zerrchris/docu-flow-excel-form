@@ -69,7 +69,7 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
 
         <CollapsibleContent className="data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
           <div className="border-t">
-            <div className="h-[600px]">
+            <div className="h-[1000px]">
               <ResizablePanelGroup direction="horizontal" className="w-full h-full">
                 <ResizablePanel defaultSize={33} minSize={25} maxSize={50}>
                   <div className="h-full border-r border-border">
