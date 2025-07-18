@@ -124,27 +124,19 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
           
           {isImage && previewUrl && (
             <div 
-              className="w-full h-full overflow-hidden cursor-grab active:cursor-grabbing"
+              className="w-full h-full overflow-hidden"
               onTouchStart={handleTouchStart}
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
-              onMouseDown={handleMouseDown}
-              onMouseMove={handleMouseMove}
-              onMouseUp={handleMouseUp}
-              onMouseLeave={handleMouseUp}
             >
               <div 
                 className="w-full h-full flex items-center justify-center p-6"
                 onWheel={handleWheel}
-                style={{
-                  minWidth: `${zoom * 100}%`,
-                  minHeight: `${zoom * 100}%`
-                }}
               >
                 <img 
                   src={previewUrl} 
                   alt="Document Preview" 
-                  className="rounded-lg transition-transform duration-200 max-w-full max-h-full select-none"
+                  className="rounded-lg transition-transform duration-200 max-w-full max-h-full select-none cursor-grab active:cursor-grabbing"
                   style={{ 
                     transform: `scale(${zoom}) translate(${panX / zoom}px, ${panY / zoom}px)`,
                     width: '100%',
@@ -152,6 +144,10 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
                     objectFit: 'contain'
                   }}
                   draggable={false}
+                  onMouseDown={handleMouseDown}
+                  onMouseMove={handleMouseMove}
+                  onMouseUp={handleMouseUp}
+                  onMouseLeave={handleMouseUp}
                 />
               </div>
             </div>
@@ -159,33 +155,29 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
           
           {isPdf && previewUrl && (
             <div 
-              className="w-full h-full overflow-hidden cursor-grab active:cursor-grabbing"
+              className="w-full h-full overflow-hidden"
               onTouchStart={handleTouchStart}
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
-              onMouseDown={handleMouseDown}
-              onMouseMove={handleMouseMove}
-              onMouseUp={handleMouseUp}
-              onMouseLeave={handleMouseUp}
             >
               <div 
                 className="w-full h-full flex items-center justify-center p-2"
                 onWheel={handleWheel}
-                style={{
-                  minWidth: `${zoom * 100}%`,
-                  minHeight: `${zoom * 100}%`
-                }}
               >
                 <div 
-                  className="transition-transform duration-200 w-full h-full"
+                  className="transition-transform duration-200 w-full h-full cursor-grab active:cursor-grabbing"
                   style={{ 
                     transform: `scale(${zoom}) translate(${panX / zoom}px, ${panY / zoom}px)`
                   }}
+                  onMouseDown={handleMouseDown}
+                  onMouseMove={handleMouseMove}
+                  onMouseUp={handleMouseUp}
+                  onMouseLeave={handleMouseUp}
                 >
                   <object
                     data={previewUrl}
                     type="application/pdf"
-                    className="w-full h-full min-h-[600px] rounded-lg border bg-white"
+                    className="w-full h-full min-h-[600px] rounded-lg border bg-white pointer-events-none"
                     style={{
                       minHeight: '600px',
                       maxHeight: '800px'
