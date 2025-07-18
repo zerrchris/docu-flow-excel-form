@@ -52,6 +52,11 @@ const BatchDocumentRow: React.FC<BatchDocumentRowProps> = ({
     });
   };
 
+  // Debug effect to log formData changes
+  React.useEffect(() => {
+    console.log('BatchDocumentRow formData changed:', formData);
+  }, [formData]);
+
   const handleAnalyze = async () => {
     setIsAnalyzingLocal(true);
     try {
