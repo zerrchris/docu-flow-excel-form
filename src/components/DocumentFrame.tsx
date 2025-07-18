@@ -44,7 +44,7 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
           >
             <div className="flex flex-col items-start">
               <h3 className="text-lg font-semibold text-foreground">
-                Document Processing
+                Single Document Processing
               </h3>
               <p className="text-sm text-muted-foreground">
                 {file ? file.name : 'No document selected'}
