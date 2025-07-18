@@ -62,7 +62,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onFileSelect, selectedF
             <div
               onDrop={handleDrop}
               onDragOver={handleDragOver}
-              className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary transition-colors cursor-pointer bg-background/50"
+              className="border-2 border-dashed border-border rounded-lg p-4 text-center hover:border-primary transition-colors cursor-pointer bg-background/50"
             >
               <div className="flex flex-col items-center space-y-3">
                 <Upload className="h-12 w-12 text-muted-foreground" />
