@@ -36,6 +36,18 @@ const DataForm: React.FC<DataFormProps> = ({
     setVisibleFields(initialVisibility);
   }, [fields]);
 
+  // Sync formData changes back to parent when formData prop changes
+  useEffect(() => {
+    console.log('DataForm received new formData prop:', formData);
+    // When formData prop changes (like from analyze), sync each field back to parent
+    Object.entries(formData).forEach(([field, value]) => {
+      if (value && value.trim() !== '') {
+        console.log('Syncing field to parent:', field, value);
+        onChange(field, value);
+      }
+    });
+  }, [formData, onChange]);
+
   const toggleFieldVisibility = (field: string) => {
     setVisibleFields(prev => ({
       ...prev,
