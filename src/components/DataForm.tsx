@@ -27,7 +27,7 @@ const DataForm: React.FC<DataFormProps> = ({
       <div className="space-y-4">
         <h3 className="text-lg font-semibold text-foreground">Document Data</h3>
         
-        <div className="space-y-4">
+        <div className="space-y-2">
           {fields.map((field) => (
             <div key={field}>
               <Label htmlFor={field} className="text-sm font-medium">
