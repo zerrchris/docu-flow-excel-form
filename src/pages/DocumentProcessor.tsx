@@ -200,12 +200,15 @@ const DocumentProcessor: React.FC = () => {
       return {};
     }
 
-    // Check if we have column instructions configured
-    const hasInstructions = Object.keys(columnInstructions).length > 0;
-    if (!hasInstructions) {
+    // Check if all columns have extraction instructions configured
+    const columnsWithoutInstructions = columns.filter(column => 
+      !columnInstructions[column] || columnInstructions[column].trim() === ''
+    );
+    
+    if (columnsWithoutInstructions.length > 0) {
       toast({
-        title: "No extraction instructions",
-        description: "Please configure column extraction instructions first by clicking on column headers.",
+        title: "Missing extraction instructions",
+        description: `Please configure extraction instructions for all columns. Missing: ${columnsWithoutInstructions.join(', ')}. Click on column headers to add instructions.`,
         variant: "destructive",
       });
       return {};
