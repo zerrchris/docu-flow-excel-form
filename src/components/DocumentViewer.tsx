@@ -128,7 +128,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
                   style={{ 
                     transform: `scale(${zoom})`,
                     height: 'calc(100vh - 20rem)',
-                    width: 'auto',
+                    width: '100%',
                     objectFit: 'contain'
                   }}
                 />
