@@ -150,7 +150,7 @@ const SignIn: React.FC = () => {
             <CardDescription>
               {isSignUp 
                 ? 'Create an account to save and manage your runsheets' 
-                : 'Sign in to access your saved runsheets'
+                : ''
               }
             </CardDescription>
           </CardHeader>
