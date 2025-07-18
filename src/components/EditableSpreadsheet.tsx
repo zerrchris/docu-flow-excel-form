@@ -57,6 +57,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [rowsToAdd, setRowsToAdd] = useState<number>(1);
   const [spreadsheetHeight, setSpreadsheetHeight] = useState<number>(768); // 768px = twice the original height
   const [resizingHeight, setResizingHeight] = useState<{startY: number, startHeight: number} | null>(null);
+  const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
+  const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const headerInputRef = useRef<HTMLInputElement>(null);
 
@@ -235,6 +237,57 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       });
       setData(updatedData);
     }
+  };
+
+  // Column drag and drop functions
+  const handleDragStart = (e: React.DragEvent, column: string) => {
+    setDraggedColumn(column);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', column);
+  };
+
+  const handleDragOver = (e: React.DragEvent, column: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverColumn(column);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverColumn(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, targetColumn: string) => {
+    e.preventDefault();
+    
+    if (draggedColumn && draggedColumn !== targetColumn) {
+      const draggedIndex = columns.indexOf(draggedColumn);
+      const targetIndex = columns.indexOf(targetColumn);
+      
+      // Create new column order
+      const newColumns = [...columns];
+      newColumns.splice(draggedIndex, 1);
+      newColumns.splice(targetIndex, 0, draggedColumn);
+      
+      setColumns(newColumns);
+      onColumnChange(newColumns);
+      
+      // Reorder data to match new column order
+      const updatedData = data.map(row => {
+        return newColumns.reduce((acc, col) => {
+          acc[col] = row[col] || '';
+          return acc;
+        }, {} as Record<string, string>);
+      });
+      setData(updatedData);
+    }
+    
+    setDraggedColumn(null);
+    setDragOverColumn(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedColumn(null);
+    setDragOverColumn(null);
   };
 
   // Cell editing functions
@@ -452,11 +505,19 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
               <TableHeader>
                 <TableRow className="hover:bg-muted/50">
                   {columns.map((column) => (
-                    <TableHead 
-                      key={column}
-                      className="font-bold text-center border-r border-border relative p-0 last:border-r-0"
-                      style={{ width: `${getColumnWidth(column)}px`, minWidth: `${getColumnWidth(column)}px` }}
-                    >
+                     <TableHead 
+                       key={column}
+                       className={`font-bold text-center border-r border-border relative p-0 last:border-r-0 cursor-move
+                         ${draggedColumn === column ? 'opacity-50' : ''} 
+                         ${dragOverColumn === column ? 'bg-primary/20' : ''}`}
+                       style={{ width: `${getColumnWidth(column)}px`, minWidth: `${getColumnWidth(column)}px` }}
+                       draggable
+                       onDragStart={(e) => handleDragStart(e, column)}
+                       onDragOver={(e) => handleDragOver(e, column)}
+                       onDragLeave={handleDragLeave}
+                       onDrop={(e) => handleDrop(e, column)}
+                       onDragEnd={handleDragEnd}
+                     >
                        <ContextMenu>
                          <ContextMenuTrigger className="w-full h-full p-0 select-none">
                            {editingHeader === column ? (
