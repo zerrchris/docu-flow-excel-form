@@ -71,7 +71,7 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
           <div className="border-t">
             <ResizablePanelGroup direction="vertical" className="w-full">
               <ResizablePanel defaultSize={100} minSize={30}>
-                <div className="h-full min-h-[400px]">
+                <div className="h-[1000px] min-h-[400px] max-h-[1600px] resize-y overflow-hidden">
                   <ResizablePanelGroup direction="horizontal" className="w-full h-full">
                     <ResizablePanel defaultSize={33} minSize={25} maxSize={50}>
                       <div className="h-full border-r border-border">
@@ -115,9 +115,6 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
                   </ResizablePanelGroup>
                 </div>
               </ResizablePanel>
-              
-              <ResizableHandle withHandle className="bg-border hover:bg-primary/20 transition-colors" />
-              
             </ResizablePanelGroup>
           </div>
         </CollapsibleContent>
