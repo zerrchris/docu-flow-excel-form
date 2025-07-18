@@ -447,7 +447,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           style={{ height: `${spreadsheetHeight}px` }}
         >
           {/* Fixed Header */}
-          <div className="border-b bg-muted/50 overflow-hidden">
+          <div className="border-b bg-muted/50 overflow-x-auto overflow-y-hidden">
             <Table className="border-collapse">
               <TableHeader>
                 <TableRow className="hover:bg-muted/50">
