@@ -52,7 +52,7 @@ const DataForm: React.FC<DataFormProps> = ({
           <Button variant="outline" size="sm" className="w-full justify-between">
             <div className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
-              Customize Fields ({visibleFieldsList.length}/{fields.length})
+              Hide/Display Fields ({visibleFieldsList.length}/{fields.length})
             </div>
             {showFieldSettings ? (
               <ChevronUp className="h-4 w-4" />
@@ -104,7 +104,7 @@ const DataForm: React.FC<DataFormProps> = ({
         
         {visibleFieldsList.length === 0 && (
           <div className="text-center py-4 text-muted-foreground text-sm">
-            No fields selected. Use the "Customize Fields" button above to show fields.
+            No fields selected. Use the "Hide/Display Fields" button above to show fields.
           </div>
         )}
       </div>
