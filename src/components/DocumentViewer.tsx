@@ -100,28 +100,32 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
           
           {isImage && previewUrl && (
             <div 
-              className="w-full h-full overflow-auto" 
+              className="w-full h-full overflow-auto scrollbar-thin"
               onTouchStart={handleTouchStart}
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
-              style={{
-                scrollbarWidth: 'thin',
-                scrollbarColor: 'hsl(var(--border)) transparent'
-              }}
             >
               <div 
-                className="flex items-center justify-center min-w-full min-h-full p-6"
+                className="flex items-center justify-center p-6"
                 onWheel={handleWheel}
                 style={{
-                  width: zoom > 1 ? `${zoom * 100}%` : '100%',
-                  height: zoom > 1 ? `${zoom * 100}%` : '100%'
+                  width: `${Math.max(100, zoom * 100)}%`,
+                  height: `${Math.max(100, zoom * 100)}%`,
+                  minWidth: '100%',
+                  minHeight: '100%'
                 }}
               >
                 <img 
                   src={previewUrl} 
                   alt="Document Preview" 
-                  className="max-h-[calc(100vh-20rem)] max-w-full object-contain rounded-lg transition-transform duration-200"
-                  style={{ transform: `scale(${zoom}) translate(${panX}px, ${panY}px)` }}
+                  className="rounded-lg transition-transform duration-200"
+                  style={{ 
+                    transform: `scale(${zoom}) translate(${panX}px, ${panY}px)`,
+                    maxWidth: 'none',
+                    maxHeight: 'none',
+                    width: 'auto',
+                    height: 'auto'
+                  }}
                 />
               </div>
             </div>
@@ -129,21 +133,19 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
           
           {isPdf && previewUrl && (
             <div 
-              className="w-full h-full overflow-auto" 
+              className="w-full h-full overflow-auto scrollbar-thin"
               onTouchStart={handleTouchStart}
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
-              style={{
-                scrollbarWidth: 'thin',
-                scrollbarColor: 'hsl(var(--border)) transparent'
-              }}
             >
               <div 
-                className="flex items-center justify-center min-w-full min-h-full p-6"
+                className="flex items-center justify-center p-6"
                 onWheel={handleWheel}
                 style={{
-                  width: zoom > 1 ? `${zoom * 100}%` : '100%',
-                  height: zoom > 1 ? `${zoom * 100}%` : '100%'
+                  width: `${Math.max(100, zoom * 100)}%`,
+                  height: `${Math.max(100, zoom * 100)}%`,
+                  minWidth: '100%',
+                  minHeight: '100%'
                 }}
               >
                 <div 
