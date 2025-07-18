@@ -157,14 +157,44 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
                     transform: `scale(${zoom})`
                   }}
                 >
-                  <iframe
-                    src={previewUrl}
+                  <object
+                    data={previewUrl}
+                    type="application/pdf"
                     className="w-full h-full min-h-[600px] rounded-lg border bg-white"
-                    title="PDF Preview"
                     style={{
-                      border: 'none'
+                      minHeight: '600px',
+                      maxHeight: '800px'
                     }}
-                  />
+                  >
+                    <div className="w-full h-full min-h-[600px] bg-muted/20 rounded-lg border flex flex-col items-center justify-center p-8">
+                      <div className="text-center space-y-4">
+                        <AlertCircle className="h-16 w-16 text-muted-foreground mx-auto" />
+                        <div className="space-y-2">
+                          <p className="text-lg font-medium text-foreground">PDF Preview Unavailable</p>
+                          <p className="text-sm text-muted-foreground">Your browser doesn't support inline PDF viewing</p>
+                        </div>
+                        <div className="flex gap-3 justify-center">
+                          <Button 
+                            variant="outline" 
+                            onClick={() => window.open(previewUrl, '_blank')}
+                          >
+                            Open in New Tab
+                          </Button>
+                          <Button 
+                            variant="outline"
+                            onClick={() => {
+                              const link = document.createElement('a');
+                              link.href = previewUrl;
+                              link.download = file?.name || 'document.pdf';
+                              link.click();
+                            }}
+                          >
+                            Download PDF
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </object>
                 </div>
               </div>
             </div>
