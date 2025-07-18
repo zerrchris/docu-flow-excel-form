@@ -16,8 +16,16 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
   const isImage = file && file.type.startsWith('image/');
   const isPdf = file && file.type === 'application/pdf';
 
-  const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.25, 3));
-  const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.25, 0.25));
+  const handleZoomIn = () => {
+    setZoom(prev => Math.min(prev + 0.25, 3));
+    setPanX(0);
+    setPanY(0);
+  };
+  const handleZoomOut = () => {
+    setZoom(prev => Math.max(prev - 0.25, 0.25));
+    setPanX(0);
+    setPanY(0);
+  };
   const handleZoomReset = () => {
     setZoom(1);
     setPanX(0);
@@ -121,6 +129,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
                   className="rounded-lg transition-transform duration-200"
                   style={{ 
                     transform: `scale(${zoom}) translate(${panX}px, ${panY}px)`,
+                    transformOrigin: 'center center',
                     maxWidth: 'none',
                     maxHeight: 'none',
                     width: 'auto',
@@ -150,7 +159,10 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
               >
                 <div 
                   className="transition-transform duration-200"
-                  style={{ transform: `scale(${zoom}) translate(${panX}px, ${panY}px)` }}
+                  style={{ 
+                    transform: `scale(${zoom}) translate(${panX}px, ${panY}px)`,
+                    transformOrigin: 'center center'
+                  }}
                 >
                   <object
                     data={previewUrl}
