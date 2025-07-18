@@ -17,6 +17,12 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
   const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.25, 0.25));
   const handleZoomReset = () => setZoom(1);
 
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.1 : 0.1;
+    setZoom(prev => Math.max(0.25, Math.min(3, prev + delta)));
+  };
+
   
 
   return (
@@ -53,7 +59,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
           )}
           
           {isImage && previewUrl && (
-            <div className="w-full h-full flex items-center justify-center p-6">
+            <div className="w-full h-full flex items-center justify-center p-6" onWheel={handleWheel}>
               <img 
                 src={previewUrl} 
                 alt="Document Preview" 
@@ -64,7 +70,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
           )}
           
           {isPdf && previewUrl && (
-            <div className="w-full h-full flex items-center justify-center p-6">
+            <div className="w-full h-full flex items-center justify-center p-6" onWheel={handleWheel}>
               <div 
                 className="transition-transform duration-200"
                 style={{ transform: `scale(${zoom})` }}
