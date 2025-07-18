@@ -29,6 +29,17 @@ const DataForm: React.FC<DataFormProps> = ({
   const [visibleFields, setVisibleFields] = useState<Record<string, boolean>>({});
   const [showFieldSettings, setShowFieldSettings] = useState(false);
 
+  // Auto-close field settings after 5 seconds
+  useEffect(() => {
+    if (showFieldSettings) {
+      const timer = setTimeout(() => {
+        setShowFieldSettings(false);
+      }, 5000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [showFieldSettings]);
+
   // Initialize all fields as visible when fields change
   useEffect(() => {
     const initialVisibility: Record<string, boolean> = {};
