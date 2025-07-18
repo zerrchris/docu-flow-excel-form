@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Trash2, Check, X, ArrowUp, ArrowDown, Save, FolderOpen, Download, Upload } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Plus, Trash2, Check, X, ArrowUp, ArrowDown, Save, FolderOpen, Download, Upload, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -84,7 +85,9 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [editingColumnInstructions, setEditingColumnInstructions] = useState<string>('');
   const [selectedColumn, setSelectedColumn] = useState<string>('');
   const [columnInstructions, setColumnInstructions] = useState<Record<string, string>>({});
+  const [columnAlignments, setColumnAlignments] = useState<Record<string, 'left' | 'center' | 'right'>>({});
   const [showHeaderHighlight, setShowHeaderHighlight] = useState(true);
+  const [editingColumnAlignment, setEditingColumnAlignment] = useState<'left' | 'center' | 'right'>('left');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Sync data with initialData prop changes
@@ -641,6 +644,9 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     const suggestion = existingInstructions || generateExtractionSuggestion(column);
     setEditingColumnInstructions(suggestion);
     
+    // Set current alignment or default to left
+    setEditingColumnAlignment(columnAlignments[column] || 'left');
+    
     setShowColumnDialog(true);
   };
 
@@ -674,14 +680,29 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       newInstructions[trimmedName] = editingColumnInstructions;
       setColumnInstructions(newInstructions);
       onColumnInstructionsChange?.(newInstructions);
+
+      // Update column alignments with new name
+      const newAlignments = { ...columnAlignments };
+      if (selectedColumn in newAlignments) {
+        newAlignments[trimmedName] = newAlignments[selectedColumn];
+        delete newAlignments[selectedColumn];
+      }
+      newAlignments[trimmedName] = editingColumnAlignment;
+      setColumnAlignments(newAlignments);
     } else {
-      // Just update instructions
+      // Just update instructions and alignment
       const newInstructions = {
         ...columnInstructions,
         [selectedColumn]: editingColumnInstructions
       };
       setColumnInstructions(newInstructions);
       onColumnInstructionsChange?.(newInstructions);
+
+      const newAlignments = {
+        ...columnAlignments,
+        [selectedColumn]: editingColumnAlignment
+      };
+      setColumnAlignments(newAlignments);
     }
 
     setShowColumnDialog(false);
@@ -1296,34 +1317,39 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                           className="border-r border-border p-0 last:border-r-0 relative"
                           style={{ width: `${getColumnWidth(column)}px`, minWidth: `${getColumnWidth(column)}px` }}
                         >
-                         {isEditing ? (
-                           <Textarea
-                             ref={textareaRef}
-                             value={cellValue}
-                             onChange={(e) => setCellValue(e.target.value)}
-                             onKeyDown={(e) => {
-                               // Allow Shift+Enter for line breaks, but handle Tab/Enter normally
-                               if ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Tab' || e.key === 'Escape') {
-                                 handleInputKeyDown(e);
-                               }
-                             }}
-                             className="h-full min-h-[2rem] border-none rounded-none bg-background focus:ring-2 focus:ring-primary resize-none overflow-hidden p-2"
-                             style={{ minHeight: '60px' }}
-                           />
-                         ) : (
-                           <div
-                             className={`min-h-[2rem] py-2 px-3 cursor-cell flex items-start transition-colors whitespace-pre-wrap
-                               ${isSelected 
-                                 ? 'bg-primary/10 border-2 border-primary ring-2 ring-primary/20' 
-                                 : 'hover:bg-muted/50 border-2 border-transparent'
-                               }`}
-                              onClick={() => selectCell(rowIndex, column)}
-                              onKeyDown={(e) => handleKeyDown(e, rowIndex, column)}
-                             tabIndex={0}
-                           >
-                             {row[column] || ''}
-                           </div>
-                         )}
+                          {isEditing ? (
+                            <Textarea
+                              ref={textareaRef}
+                              value={cellValue}
+                              onChange={(e) => setCellValue(e.target.value)}
+                              onKeyDown={(e) => {
+                                // Allow Shift+Enter for line breaks, but handle Tab/Enter normally
+                                if ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Tab' || e.key === 'Escape') {
+                                  handleInputKeyDown(e);
+                                }
+                              }}
+                              className={`h-full min-h-[2rem] border-none rounded-none bg-background focus:ring-2 focus:ring-primary resize-none overflow-hidden p-2 ${
+                                columnAlignments[column] === 'center' ? 'text-center' : 
+                                columnAlignments[column] === 'right' ? 'text-right' : 'text-left'
+                              }`}
+                              style={{ minHeight: '60px' }}
+                            />
+                          ) : (
+                            <div
+                              className={`min-h-[2rem] py-2 px-3 cursor-cell flex items-start transition-colors whitespace-pre-wrap
+                                ${isSelected 
+                                  ? 'bg-primary/10 border-2 border-primary ring-2 ring-primary/20' 
+                                  : 'hover:bg-muted/50 border-2 border-transparent'
+                                }
+                                ${columnAlignments[column] === 'center' ? 'text-center justify-center' : 
+                                  columnAlignments[column] === 'right' ? 'text-right justify-end' : 'text-left justify-start'}`}
+                               onClick={() => selectCell(rowIndex, column)}
+                               onKeyDown={(e) => handleKeyDown(e, rowIndex, column)}
+                              tabIndex={0}
+                            >
+                              {row[column] || ''}
+                            </div>
+                          )}
                        </TableCell>
                      );
                     })}
@@ -1495,6 +1521,36 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                 <p className="text-xs text-muted-foreground mt-2">
                   Provide specific instructions for what information should be extracted for this column. Be as detailed as possible for better AI accuracy.
                 </p>
+              </div>
+              <div>
+                <Label htmlFor="column-alignment" className="text-sm font-medium">
+                  Text Alignment
+                </Label>
+                <Select value={editingColumnAlignment} onValueChange={(value: 'left' | 'center' | 'right') => setEditingColumnAlignment(value)}>
+                  <SelectTrigger className="mt-2">
+                    <SelectValue placeholder="Select alignment" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="left">
+                      <div className="flex items-center gap-2">
+                        <AlignLeft className="h-4 w-4" />
+                        Left
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="center">
+                      <div className="flex items-center gap-2">
+                        <AlignCenter className="h-4 w-4" />
+                        Center
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="right">
+                      <div className="flex items-center gap-2">
+                        <AlignRight className="h-4 w-4" />
+                        Right
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <DialogFooter>
