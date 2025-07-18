@@ -874,9 +874,12 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
   // Handle input key events during editing
   const handleInputKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.altKey && !e.shiftKey) {
       saveEdit();
       e.preventDefault();
+    } else if (e.key === 'Enter' && e.altKey) {
+      // Alt+Enter creates line break - allow default behavior
+      return;
     } else if (e.key === 'Escape') {
       cancelEdit();
       e.preventDefault();
