@@ -31,12 +31,14 @@ interface SpreadsheetProps {
   initialColumns: string[];
   initialData: Record<string, string>[];
   onColumnChange: (columns: string[]) => void;
+  onDataChange?: (data: Record<string, string>[]) => void;
 }
 
 const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({ 
   initialColumns, 
   initialData,
-  onColumnChange
+  onColumnChange,
+  onDataChange
 }) => {
   const { toast } = useToast();
   const [user, setUser] = useState<User | null>(null);
@@ -438,10 +440,17 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       return row;
     });
 
+    const newData = [...parsedData, ...emptyRows];
+
     // Update spreadsheet
     setColumns(headers);
     onColumnChange(headers);
-    setData([...parsedData, ...emptyRows]);
+    setData(newData);
+    
+    // Update parent component's data
+    if (onDataChange) {
+      onDataChange(parsedData); // Only pass the actual data, not the empty rows
+    }
     
     // Update runsheet name based on filename
     const fileNameWithoutExt = fileName.replace(/\.[^/.]+$/, ""); // Remove extension

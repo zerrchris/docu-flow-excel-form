@@ -205,6 +205,7 @@ const DocumentProcessor: React.FC = () => {
         initialColumns={columns}
         initialData={spreadsheetData}
         onColumnChange={setColumns}
+        onDataChange={setSpreadsheetData}
       />
       
       
