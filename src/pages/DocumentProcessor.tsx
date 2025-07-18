@@ -382,7 +382,7 @@ const DocumentProcessor: React.FC = () => {
           </DialogHeader>
           <div className="flex gap-3 justify-end pt-4">
             <Button variant="outline" onClick={handleCombineCancel}>
-              No, keep separate
+              Cancel
             </Button>
             <Button onClick={handleCombineConfirm}>
               Yes, combine them
