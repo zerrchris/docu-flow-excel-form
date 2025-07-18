@@ -34,6 +34,9 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   initialData,
   onColumnChange
 }) => {
+  const [runsheetName, setRunsheetName] = useState<string>('Untitled Runsheet');
+  const [editingRunsheetName, setEditingRunsheetName] = useState<boolean>(false);
+  const [tempRunsheetName, setTempRunsheetName] = useState<string>('');
   const [columns, setColumns] = useState<string[]>(initialColumns);
   const [data, setData] = useState<Record<string, string>[]>(() => {
     // Ensure we always have at least 20 rows
@@ -170,6 +173,25 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const cancelHeaderEdit = () => {
     setEditingHeader(null);
     setHeaderValue('');
+  };
+
+  // Runsheet name editing functions
+  const startEditingRunsheetName = () => {
+    setEditingRunsheetName(true);
+    setTempRunsheetName(runsheetName);
+  };
+
+  const saveRunsheetNameEdit = () => {
+    if (tempRunsheetName.trim()) {
+      setRunsheetName(tempRunsheetName.trim());
+    }
+    setEditingRunsheetName(false);
+    setTempRunsheetName('');
+  };
+
+  const cancelRunsheetNameEdit = () => {
+    setEditingRunsheetName(false);
+    setTempRunsheetName('');
   };
 
   // Column management
@@ -488,7 +510,35 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     <Card className="p-6 mt-6">
       <div className="flex flex-col space-y-4">
         <div className="flex justify-between items-center mb-2">
-          <h3 className="text-lg font-semibold text-foreground">Runsheet</h3>
+          <div className="flex items-center gap-3">
+            <h3 className="text-lg font-semibold text-foreground">Runsheet</h3>
+            <span className="text-muted-foreground">•</span>
+            {editingRunsheetName ? (
+              <Input
+                value={tempRunsheetName}
+                onChange={(e) => setTempRunsheetName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    saveRunsheetNameEdit();
+                    e.preventDefault();
+                  } else if (e.key === 'Escape') {
+                    cancelRunsheetNameEdit();
+                    e.preventDefault();
+                  }
+                }}
+                onBlur={saveRunsheetNameEdit}
+                className="h-7 text-sm font-medium min-w-[200px] max-w-[300px]"
+                autoFocus
+              />
+            ) : (
+              <button
+                onClick={startEditingRunsheetName}
+                className="text-sm font-medium text-foreground hover:text-primary transition-colors cursor-pointer underline-offset-4 hover:underline"
+              >
+                {runsheetName}
+              </button>
+            )}
+          </div>
           <div className="text-sm text-muted-foreground">
             Right-click column headers to insert or remove columns
           </div>
