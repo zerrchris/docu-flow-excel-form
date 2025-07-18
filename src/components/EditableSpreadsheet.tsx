@@ -73,15 +73,24 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
   // Check user authentication status
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-    });
+    const initAuth = async () => {
+      try {
+        if (import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY) {
+          const { data: { session } } = await supabase.auth.getSession();
+          setUser(session?.user ?? null);
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
+          const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            setUser(session?.user ?? null);
+          });
 
-    return () => subscription.unsubscribe();
+          return () => subscription.unsubscribe();
+        }
+      } catch (error) {
+        console.warn('Auth initialization failed in spreadsheet:', error);
+      }
+    };
+
+    initAuth();
   }, []);
 
   // Save runsheet to Supabase

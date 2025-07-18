@@ -19,19 +19,29 @@ const AuthButton: React.FC = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    const initAuth = async () => {
+      try {
+        // Only initialize if Supabase is properly configured
+        if (import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY) {
+          // Get initial session
+          const { data: { session } } = await supabase.auth.getSession();
+          setUser(session?.user ?? null);
+          
+          // Listen for auth changes
+          const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            setUser(session?.user ?? null);
+          });
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+          return () => subscription.unsubscribe();
+        }
+      } catch (error) {
+        console.warn('Auth initialization failed:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    return () => subscription.unsubscribe();
+    initAuth();
   }, []);
 
   const handleAuth = async (e: React.FormEvent) => {
@@ -39,6 +49,11 @@ const AuthButton: React.FC = () => {
     setAuthLoading(true);
 
     try {
+      // Check if Supabase is properly configured
+      if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+        throw new Error('Supabase is not properly configured. Please check your environment variables.');
+      }
+
       if (isSignUp) {
         const { error } = await supabase.auth.signUp({
           email,
