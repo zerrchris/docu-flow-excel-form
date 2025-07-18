@@ -976,17 +976,10 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     }
   }, [saveEdit, cancelEdit, editingCell, columns, data, selectCell, startEditing]);
 
-  // Row deletion function
-
   const deleteRow = (index: number) => {
     const newData = [...data];
     newData.splice(index, 1);
     setData(newData);
-    
-    toast({
-      title: "Row deleted",
-      description: "Row has been removed from the spreadsheet.",
-    });
   };
 
   // Add rows function
@@ -1127,10 +1120,6 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
               {/* Sticky Header */}
               <TableHeader className="sticky top-0 z-10 bg-muted/95 backdrop-blur-sm border-b">
                 <TableRow className="hover:bg-muted/50">
-                  {/* Row actions header */}
-                  <TableHead className="w-12 border-r border-border p-0 text-center">
-                    <span className="text-xs font-medium">Delete</span>
-                  </TableHead>
                   {columns.map((column) => (
                      <TableHead 
                        key={column}
@@ -1207,18 +1196,6 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
               <TableBody>
                 {data.map((row, rowIndex) => (
                   <TableRow key={rowIndex} className="hover:bg-muted/30">
-                     {/* Row delete button */}
-                     <TableCell className="w-12 border-r border-border p-1 text-center">
-                       <Button
-                         variant="ghost"
-                         size="sm"
-                         onClick={() => deleteRow(rowIndex)}
-                         className="h-6 w-6 p-0 text-destructive hover:text-destructive hover:bg-destructive/10 transition-colors"
-                         title="Delete row"
-                       >
-                         <Trash2 className="h-3 w-3" />
-                       </Button>
-                     </TableCell>
                      {columns.map((column) => {
                       const isSelected = selectedCell?.rowIndex === rowIndex && selectedCell?.column === column;
                       const isEditing = editingCell?.rowIndex === rowIndex && editingCell?.column === column;
