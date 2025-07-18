@@ -154,12 +154,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
           )}
           
           {isPdf && previewUrl && (
-            <div 
-              className="w-full h-full overflow-hidden"
-              onTouchStart={handleTouchStart}
-              onTouchMove={handleTouchMove}
-              onTouchEnd={handleTouchEnd}
-            >
+            <div className="w-full h-full overflow-hidden">
               <div 
                 className="w-full h-full flex items-center justify-center p-2"
                 onWheel={handleWheel}
@@ -174,44 +169,47 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
                   onMouseUp={handleMouseUp}
                   onMouseLeave={handleMouseUp}
                 >
-                  <object
-                    data={previewUrl}
-                    type="application/pdf"
-                    className="w-full h-full min-h-[600px] rounded-lg border bg-white pointer-events-none"
+                  <iframe
+                    src={`${previewUrl}#view=FitH&toolbar=0&navpanes=0&scrollbar=0`}
+                    className="w-full h-full min-h-[600px] rounded-lg border bg-white"
+                    title="PDF Preview"
                     style={{
                       minHeight: '600px',
-                      maxHeight: '800px'
+                      border: 'none'
                     }}
-                  >
-                    <div className="w-full h-full min-h-[600px] bg-muted/20 rounded-lg border flex flex-col items-center justify-center p-8">
-                      <div className="text-center space-y-4">
-                        <AlertCircle className="h-16 w-16 text-muted-foreground mx-auto" />
-                        <div className="space-y-2">
-                          <p className="text-lg font-medium text-foreground">PDF Preview Unavailable</p>
-                          <p className="text-sm text-muted-foreground">Your browser doesn't support inline PDF viewing</p>
-                        </div>
-                        <div className="flex gap-3 justify-center">
-                          <Button 
-                            variant="outline" 
-                            onClick={() => window.open(previewUrl, '_blank')}
-                          >
-                            Open in New Tab
-                          </Button>
-                          <Button 
-                            variant="outline"
-                            onClick={() => {
-                              const link = document.createElement('a');
-                              link.href = previewUrl;
-                              link.download = file?.name || 'document.pdf';
-                              link.click();
-                            }}
-                          >
-                            Download PDF
-                          </Button>
-                        </div>
+                    sandbox="allow-same-origin allow-scripts"
+                    onLoad={() => console.log('PDF iframe loaded')}
+                    onError={() => console.error('PDF iframe failed')}
+                  />
+                  {/* Fallback overlay for when PDF doesn't load */}
+                  <div className="absolute inset-0 flex items-center justify-center bg-muted/5 rounded-lg pointer-events-none opacity-0 hover:opacity-100 transition-opacity">
+                    <div className="text-center space-y-4 pointer-events-auto">
+                      <div className="space-y-2">
+                        <p className="text-sm text-muted-foreground">Having trouble viewing the PDF?</p>
+                      </div>
+                      <div className="flex gap-3 justify-center">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => window.open(previewUrl, '_blank')}
+                        >
+                          Open in New Tab
+                        </Button>
+                        <Button 
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const link = document.createElement('a');
+                            link.href = previewUrl;
+                            link.download = file?.name || 'document.pdf';
+                            link.click();
+                          }}
+                        >
+                          Download PDF
+                        </Button>
                       </div>
                     </div>
-                  </object>
+                  </div>
                 </div>
               </div>
             </div>
