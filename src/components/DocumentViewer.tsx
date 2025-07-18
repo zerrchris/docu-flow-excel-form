@@ -132,8 +132,9 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
                     transformOrigin: 'center center',
                     maxWidth: 'none',
                     maxHeight: 'none',
+                    height: zoom === 1 ? 'calc(100vh - 20rem)' : 'auto',
                     width: 'auto',
-                    height: 'auto'
+                    objectFit: zoom === 1 ? 'contain' : 'none'
                   }}
                 />
               </div>
