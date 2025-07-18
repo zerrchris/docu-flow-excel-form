@@ -10,17 +10,57 @@ interface DocumentViewerProps {
 
 const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => {
   const [zoom, setZoom] = useState(1);
+  const [panX, setPanX] = useState(0);
+  const [panY, setPanY] = useState(0);
+  const [lastTouchDistance, setLastTouchDistance] = useState(0);
   const isImage = file && file.type.startsWith('image/');
   const isPdf = file && file.type === 'application/pdf';
 
   const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.25, 3));
   const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.25, 0.25));
-  const handleZoomReset = () => setZoom(1);
+  const handleZoomReset = () => {
+    setZoom(1);
+    setPanX(0);
+    setPanY(0);
+  };
 
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
-    const delta = e.deltaY > 0 ? -0.1 : 0.1;
-    setZoom(prev => Math.max(0.25, Math.min(3, prev + delta)));
+    const panSpeed = 50;
+    setPanX(prev => prev - e.deltaX * panSpeed / 100);
+    setPanY(prev => prev - e.deltaY * panSpeed / 100);
+  };
+
+  const getTouchDistance = (touches: React.TouchList) => {
+    if (touches.length < 2) return 0;
+    const touch1 = touches[0];
+    const touch2 = touches[1];
+    return Math.sqrt(
+      Math.pow(touch2.clientX - touch1.clientX, 2) + 
+      Math.pow(touch2.clientY - touch1.clientY, 2)
+    );
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      setLastTouchDistance(getTouchDistance(e.touches));
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      e.preventDefault();
+      const currentDistance = getTouchDistance(e.touches);
+      if (lastTouchDistance > 0) {
+        const scale = currentDistance / lastTouchDistance;
+        setZoom(prev => Math.max(0.25, Math.min(3, prev * scale)));
+      }
+      setLastTouchDistance(currentDistance);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setLastTouchDistance(0);
   };
 
   
@@ -59,21 +99,33 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
           )}
           
           {isImage && previewUrl && (
-            <div className="w-full h-full flex items-center justify-center p-6" onWheel={handleWheel}>
+            <div 
+              className="w-full h-full flex items-center justify-center p-6" 
+              onWheel={handleWheel}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+            >
               <img 
                 src={previewUrl} 
                 alt="Document Preview" 
                 className="max-h-[calc(100vh-20rem)] max-w-full object-contain rounded-lg transition-transform duration-200"
-                style={{ transform: `scale(${zoom})` }}
+                style={{ transform: `scale(${zoom}) translate(${panX}px, ${panY}px)` }}
               />
             </div>
           )}
           
           {isPdf && previewUrl && (
-            <div className="w-full h-full flex items-center justify-center p-6" onWheel={handleWheel}>
+            <div 
+              className="w-full h-full flex items-center justify-center p-6" 
+              onWheel={handleWheel}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+            >
               <div 
                 className="transition-transform duration-200"
-                style={{ transform: `scale(${zoom})` }}
+                style={{ transform: `scale(${zoom}) translate(${panX}px, ${panY}px)` }}
               >
                 <object
                   data={previewUrl}
