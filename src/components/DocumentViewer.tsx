@@ -87,7 +87,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
             </div>
           )}
         </div>
-        <div className="relative flex-grow border-t bg-muted/20 flex items-center justify-center overflow-auto">
+        <div className="relative flex-grow border-t bg-muted/20 flex items-center justify-center overflow-hidden">
           {!file && (
             <div className="text-center p-8 text-muted-foreground">
               <div className="flex flex-col items-center space-y-2">
@@ -100,45 +100,69 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
           
           {isImage && previewUrl && (
             <div 
-              className="w-full h-full flex items-center justify-center p-6" 
-              onWheel={handleWheel}
+              className="w-full h-full overflow-auto" 
               onTouchStart={handleTouchStart}
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
+              style={{
+                scrollbarWidth: 'thin',
+                scrollbarColor: 'hsl(var(--border)) transparent'
+              }}
             >
-              <img 
-                src={previewUrl} 
-                alt="Document Preview" 
-                className="max-h-[calc(100vh-20rem)] max-w-full object-contain rounded-lg transition-transform duration-200"
-                style={{ transform: `scale(${zoom}) translate(${panX}px, ${panY}px)` }}
-              />
+              <div 
+                className="flex items-center justify-center min-w-full min-h-full p-6"
+                onWheel={handleWheel}
+                style={{
+                  width: zoom > 1 ? `${zoom * 100}%` : '100%',
+                  height: zoom > 1 ? `${zoom * 100}%` : '100%'
+                }}
+              >
+                <img 
+                  src={previewUrl} 
+                  alt="Document Preview" 
+                  className="max-h-[calc(100vh-20rem)] max-w-full object-contain rounded-lg transition-transform duration-200"
+                  style={{ transform: `scale(${zoom}) translate(${panX}px, ${panY}px)` }}
+                />
+              </div>
             </div>
           )}
           
           {isPdf && previewUrl && (
             <div 
-              className="w-full h-full flex items-center justify-center p-6" 
-              onWheel={handleWheel}
+              className="w-full h-full overflow-auto" 
               onTouchStart={handleTouchStart}
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
+              style={{
+                scrollbarWidth: 'thin',
+                scrollbarColor: 'hsl(var(--border)) transparent'
+              }}
             >
               <div 
-                className="transition-transform duration-200"
-                style={{ transform: `scale(${zoom}) translate(${panX}px, ${panY}px)` }}
+                className="flex items-center justify-center min-w-full min-h-full p-6"
+                onWheel={handleWheel}
+                style={{
+                  width: zoom > 1 ? `${zoom * 100}%` : '100%',
+                  height: zoom > 1 ? `${zoom * 100}%` : '100%'
+                }}
               >
-                <object
-                  data={previewUrl}
-                  type="application/pdf"
-                  className="w-full h-[calc(100vh-20rem)] rounded-lg border"
-                  title="PDF Preview"
+                <div 
+                  className="transition-transform duration-200"
+                  style={{ transform: `scale(${zoom}) translate(${panX}px, ${panY}px)` }}
                 >
-                  <iframe
-                    src={previewUrl}
+                  <object
+                    data={previewUrl}
+                    type="application/pdf"
                     className="w-full h-[calc(100vh-20rem)] rounded-lg border"
-                    title="PDF Preview Fallback"
-                  />
-                </object>
+                    title="PDF Preview"
+                  >
+                    <iframe
+                      src={previewUrl}
+                      className="w-full h-[calc(100vh-20rem)] rounded-lg border"
+                      title="PDF Preview Fallback"
+                    />
+                  </object>
+                </div>
               </div>
             </div>
           )}
