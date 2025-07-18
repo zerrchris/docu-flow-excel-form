@@ -41,10 +41,15 @@ const BatchDocumentRow: React.FC<BatchDocumentRowProps> = ({
   }, [file]);
 
   const handleFieldChange = (field: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    console.log('handleFieldChange called:', field, value);
+    setFormData(prev => {
+      const newData = {
+        ...prev,
+        [field]: value
+      };
+      console.log('Updated formData:', newData);
+      return newData;
+    });
   };
 
   const handleAnalyze = async () => {
