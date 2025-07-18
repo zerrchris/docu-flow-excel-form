@@ -6,7 +6,6 @@ import EditableSpreadsheet from '@/components/EditableSpreadsheet';
 import AuthButton from '@/components/AuthButton';
 
 import extractorLogo from '@/assets/document-extractor-logo.png';
-import laptopHero from '@/assets/laptop-hero.jpg';
 
 // Initial columns for the spreadsheet
 const DEFAULT_COLUMNS = ['Inst Number', 'Book/Page', 'Inst Type', 'Recording Date', 'Document Date', 'Grantor', 'Grantee', 'Legal Description', 'Notes'];
@@ -175,22 +174,15 @@ const DocumentProcessor: React.FC = () => {
   return (
     <div className="w-full px-4 py-6">
       <div className="flex items-center justify-between mb-8">
-        <Link to="/" className="flex items-center gap-6 hover:opacity-80 transition-opacity">
-          <div className="flex items-center gap-4">
-            <img 
-              src={extractorLogo} 
-              alt="Document Data Extractor Logo" 
-              className="h-16 w-16"
-            />
-            <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              RunsheetPro
-            </h1>
-          </div>
+        <Link to="/" className="flex items-center gap-4 hover:opacity-80 transition-opacity">
           <img 
-            src={laptopHero} 
-            alt="Professional laptop workspace" 
-            className="h-20 w-auto object-cover rounded-lg shadow-sm"
+            src={extractorLogo} 
+            alt="Document Data Extractor Logo" 
+            className="h-16 w-16"
           />
+          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            RunsheetPro
+          </h1>
         </Link>
         <AuthButton />
       </div>
