@@ -499,10 +499,11 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           className="border rounded-md flex flex-col bg-background relative"
           style={{ height: `${spreadsheetHeight}px` }}
         >
-          {/* Fixed Header */}
-          <div className="border-b bg-muted/50 overflow-x-auto overflow-y-hidden">
+          {/* Single scrollable container for both header and body */}
+          <div className="flex-1 overflow-auto">
             <Table className="border-collapse">
-              <TableHeader>
+              {/* Sticky Header */}
+              <TableHeader className="sticky top-0 z-10 bg-muted/95 backdrop-blur-sm border-b">
                 <TableRow className="hover:bg-muted/50">
                   {columns.map((column) => (
                      <TableHead 
@@ -575,12 +576,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                   ))}
                 </TableRow>
               </TableHeader>
-            </Table>
-          </div>
 
-          {/* Scrollable Body */}
-          <div className="flex-1 overflow-auto">
-            <Table className="border-collapse">
+              {/* Scrollable Body */}
               <TableBody>
                 {data.map((row, rowIndex) => (
                   <TableRow key={rowIndex} className="hover:bg-muted/30">
