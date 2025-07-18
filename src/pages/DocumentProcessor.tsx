@@ -253,12 +253,6 @@ const DocumentProcessor: React.FC = () => {
         reader.readAsDataURL(targetFile);
       });
 
-      // Get OpenAI API key from user input (temporary solution)
-      const apiKey = window.prompt("Please enter your OpenAI API key:");
-      if (!apiKey) {
-        throw new Error("OpenAI API key is required");
-      }
-
       // Build extraction prompt using column instructions
       const extractionFields = Object.entries(columnInstructions)
         .map(([column, instruction]) => `- ${column}: ${instruction}`)
@@ -277,37 +271,20 @@ Instructions:
 Expected JSON format:
 {
 ${Object.keys(columnInstructions).map(col => `  "${col}": "extracted value"`).join(',\n')}
-}`;
+}
 
-      // Call OpenAI API
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+Image: [base64 image data]`;
+
+      // Call company's OpenAI Edge Function for document analysis
+      const response = await fetch('https://xnpmrafjjqsissbtempj.supabase.co/functions/v1/analyze-document', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-4o',
-          messages: [
-            {
-              role: 'user',
-              content: [
-                {
-                  type: 'text',
-                  text: extractionPrompt
-                },
-                {
-                  type: 'image_url',
-                  image_url: {
-                    url: `data:${targetFile.type};base64,${fileBase64}`,
-                    detail: 'high'
-                  }
-                }
-              ]
-            }
-          ],
-          max_tokens: 1000,
-          temperature: 0.1
+          prompt: extractionPrompt,
+          imageData: `data:${targetFile.type};base64,${fileBase64}`,
+          systemMessage: "You are a document analysis assistant. Analyze the provided image and extract the requested information in JSON format."
         })
       });
 
@@ -317,7 +294,7 @@ ${Object.keys(columnInstructions).map(col => `  "${col}": "extracted value"`).jo
       }
 
       const result = await response.json();
-      const extractedText = result.choices[0]?.message?.content;
+      const extractedText = result.generatedText;
 
       if (!extractedText) {
         throw new Error('No response from OpenAI API');
