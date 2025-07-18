@@ -1163,11 +1163,6 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                             >
                               <div className="flex flex-col items-center">
                                 <span className="font-bold">{column}</span>
-                                {columnInstructions[column] && (
-                                  <span className="text-xs text-muted-foreground mt-1 truncate max-w-full">
-                                    {columnInstructions[column].substring(0, 30)}...
-                                  </span>
-                                )}
                               </div>
                               {/* Resize handle */}
                               <div
