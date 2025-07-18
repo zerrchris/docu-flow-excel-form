@@ -36,6 +36,12 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
+  // Wrapper to ensure analyze is called without parameters for single document processing
+  const handleAnalyze = () => {
+    console.log('DocumentFrame handleAnalyze called - calling onAnalyze() without parameters');
+    onAnalyze();
+  };
+
   return (
     <Card className="rounded-lg overflow-hidden">
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
@@ -71,7 +77,7 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
                       fields={fields}
                       formData={formData}
                       onChange={onChange}
-                      onAnalyze={onAnalyze}
+                      onAnalyze={handleAnalyze}
                       onAddToSpreadsheet={onAddToSpreadsheet}
                       onResetDocument={onResetDocument}
                       isAnalyzing={isAnalyzing}
