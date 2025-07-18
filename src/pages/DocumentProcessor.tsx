@@ -28,8 +28,10 @@ const DocumentProcessor: React.FC = () => {
   const [spreadsheetData, setSpreadsheetData] = useState<Record<string, string>[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [columnInstructions, setColumnInstructions] = useState<Record<string, string>>({});
-  
+  const [showValidationDialog, setShowValidationDialog] = useState(false);
+  const [missingColumns, setMissingColumns] = useState<string[]>([]);
   // Get started dialog state
+  
   const [showGetStarted, setShowGetStarted] = useState(true);
   
   // Update form state when columns change
@@ -206,11 +208,8 @@ const DocumentProcessor: React.FC = () => {
     );
     
     if (columnsWithoutInstructions.length > 0) {
-      toast({
-        title: "Missing extraction instructions",
-        description: `Please configure extraction instructions for all columns. Missing: ${columnsWithoutInstructions.join(', ')}. Click on column headers to add instructions.`,
-        variant: "destructive",
-      });
+      setMissingColumns(columnsWithoutInstructions);
+      setShowValidationDialog(true);
       return {};
     }
 
@@ -541,7 +540,40 @@ ${Object.keys(columnInstructions).map(col => `  "${col}": "extracted value"`).jo
           </div>
         </DialogContent>
       </Dialog>
-      
+
+      {/* Column Instructions Validation Dialog */}
+      <Dialog open={showValidationDialog} onOpenChange={setShowValidationDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Configuration Required</DialogTitle>
+            <DialogDescription>
+              All column headers must have extraction instructions configured before analyzing documents.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground mb-3">
+              Please configure extraction instructions for the following columns:
+            </p>
+            <div className="bg-muted p-3 rounded-md">
+              <ul className="list-disc list-inside space-y-1">
+                {missingColumns.map((column) => (
+                  <li key={column} className="text-sm font-medium text-foreground">
+                    {column}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <p className="text-sm text-muted-foreground mt-3">
+              Click on any column header in the spreadsheet below to add extraction instructions.
+            </p>
+          </div>
+          <div className="flex justify-end">
+            <Button onClick={() => setShowValidationDialog(false)}>
+              Continue
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
