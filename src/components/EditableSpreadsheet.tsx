@@ -679,9 +679,6 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
               </DialogFooter>
             </DialogContent>
           </Dialog>
-          <div className="space-x-4">
-            <span>Click to edit • Tab to navigate • Esc to cancel</span>
-          </div>
         </div>
       </div>
     </Card>
