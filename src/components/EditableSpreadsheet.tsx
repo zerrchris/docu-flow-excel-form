@@ -33,6 +33,7 @@ interface SpreadsheetProps {
   onColumnChange: (columns: string[]) => void;
   onDataChange?: (data: Record<string, string>[]) => void;
   onColumnInstructionsChange?: (columnInstructions: Record<string, string>) => void;
+  missingColumns?: string[];
 }
 
 const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({ 
@@ -40,7 +41,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   initialData,
   onColumnChange,
   onDataChange,
-  onColumnInstructionsChange
+  onColumnInstructionsChange,
+  missingColumns = []
 }) => {
   const { toast } = useToast();
   const [user, setUser] = useState<User | null>(null);
@@ -1017,7 +1019,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   };
 
   return (
-    <Card className="p-6 mt-6">
+    <Card className="p-6 mt-6" data-spreadsheet-container>
       <div className="flex flex-col space-y-4">
         <div className="flex justify-between items-center mb-2">
           <div className="flex items-center gap-3">
@@ -1143,12 +1145,13 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                 <TableRow className="hover:bg-muted/50">
                   {columns.map((column) => (
                      <TableHead 
-                       key={column}
-                       className={`font-bold text-center border-r border-border relative p-0 last:border-r-0 cursor-move
-                         ${draggedColumn === column ? 'opacity-50' : ''} 
-                         ${dragOverColumn === column ? 'bg-primary/20' : ''}`}
-                       style={{ width: `${getColumnWidth(column)}px`, minWidth: `${getColumnWidth(column)}px` }}
-                       draggable
+                        key={column}
+                        className={`font-bold text-center border-r border-border relative p-0 last:border-r-0 cursor-move
+                          ${draggedColumn === column ? 'opacity-50' : ''} 
+                          ${dragOverColumn === column ? 'bg-primary/20' : ''}
+                          ${missingColumns.includes(column) ? 'animate-pulse bg-yellow-100 border-2 border-yellow-400 dark:bg-yellow-900/20 dark:border-yellow-500' : ''}`}
+                        style={{ width: `${getColumnWidth(column)}px`, minWidth: `${getColumnWidth(column)}px` }}
+                        draggable
                        onDragStart={(e) => handleDragStart(e, column)}
                        onDragOver={(e) => handleDragOver(e, column)}
                        onDragLeave={handleDragLeave}
@@ -1158,11 +1161,17 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                         <ContextMenu>
                           <ContextMenuTrigger className="w-full h-full p-0 select-none">
                             <div 
-                              className="w-full h-full px-4 py-2 cursor-pointer hover:bg-primary/10 transition-colors relative"
+                              className={`w-full h-full px-4 py-2 cursor-pointer hover:bg-primary/10 transition-colors relative
+                                ${missingColumns.includes(column) ? 'animate-bounce' : ''}`}
                               onClick={() => openColumnDialog(column)}
                             >
                               <div className="flex flex-col items-center">
                                 <span className="font-bold">{column}</span>
+                                {missingColumns.includes(column) && (
+                                  <span className="text-xs text-yellow-600 dark:text-yellow-400 mt-1 animate-pulse">
+                                    Click to configure
+                                  </span>
+                                )}
                               </div>
                               {/* Resize handle */}
                               <div

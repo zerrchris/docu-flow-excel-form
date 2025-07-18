@@ -30,6 +30,7 @@ const DocumentProcessor: React.FC = () => {
   const [columnInstructions, setColumnInstructions] = useState<Record<string, string>>({});
   const [showValidationDialog, setShowValidationDialog] = useState(false);
   const [missingColumns, setMissingColumns] = useState<string[]>([]);
+  const [highlightMissingColumns, setHighlightMissingColumns] = useState(false);
   // Get started dialog state
   
   const [showGetStarted, setShowGetStarted] = useState(true);
@@ -51,6 +52,28 @@ const DocumentProcessor: React.FC = () => {
     });
     setFormData(newFormData);
   }, [columns]);
+
+  // Handle validation dialog close and scroll to columns
+  const handleValidationDialogClose = () => {
+    setShowValidationDialog(false);
+    
+    // Scroll to spreadsheet and highlight missing columns
+    setTimeout(() => {
+      const spreadsheetElement = document.querySelector('[data-spreadsheet-container]');
+      if (spreadsheetElement) {
+        spreadsheetElement.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center' 
+        });
+        
+        // Highlight missing columns for 3 seconds
+        setHighlightMissingColumns(true);
+        setTimeout(() => {
+          setHighlightMissingColumns(false);
+        }, 3000);
+      }
+    }, 100);
+  };
 
   // Handle document reset - clear file and form data
   const resetDocument = () => {
@@ -464,6 +487,7 @@ ${Object.keys(columnInstructions).map(col => `  "${col}": "extracted value"`).jo
         onColumnChange={setColumns}
         onDataChange={setSpreadsheetData}
         onColumnInstructionsChange={setColumnInstructions}
+        missingColumns={highlightMissingColumns ? missingColumns : []}
       />
       
       {/* Get Started Dialog */}
@@ -568,7 +592,7 @@ ${Object.keys(columnInstructions).map(col => `  "${col}": "extracted value"`).jo
             </p>
           </div>
           <div className="flex justify-end">
-            <Button onClick={() => setShowValidationDialog(false)}>
+            <Button onClick={handleValidationDialogClose}>
               Continue
             </Button>
           </div>
