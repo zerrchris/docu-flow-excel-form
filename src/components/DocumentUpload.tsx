@@ -35,18 +35,14 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onFileSelect, selectedF
   return (
     <Card className="bg-muted/5 border-2">
       <div className="p-8">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h3 className="text-xl font-semibold text-foreground mb-2">Upload Document</h3>
-            <p className="text-muted-foreground">Upload a document to extract its data automatically</p>
-          </div>
-          {selectedFile && (
+        {selectedFile && (
+          <div className="flex justify-end mb-6">
             <Button variant="outline" onClick={handleClear} size="sm" className="hover:bg-destructive/10 hover:text-destructive">
               <Trash2 className="h-4 w-4 mr-2" />
               Clear
             </Button>
-          )}
-        </div>
+          </div>
+        )}
         
         <div
           onDrop={handleDrop}
