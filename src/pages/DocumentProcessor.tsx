@@ -131,10 +131,16 @@ const DocumentProcessor: React.FC = () => {
 
   // Add current form data to spreadsheet
   const addToSpreadsheet = () => {
+    console.log('addToSpreadsheet called');
+    console.log('Current formData:', formData);
+    console.log('Current columns:', columns);
+    
     // Check if any field has data
     const hasData = Object.values(formData).some(value => value.trim() !== '');
+    console.log('Has data:', hasData);
     
     if (!hasData) {
+      console.log('No data detected, showing error toast');
       toast({
         title: "No data to add",
         description: "Please fill in some fields or analyze the document first.",
@@ -143,7 +149,12 @@ const DocumentProcessor: React.FC = () => {
       return;
     }
 
-    setSpreadsheetData(prev => [...prev, { ...formData }]);
+    console.log('Adding data to spreadsheet:', formData);
+    setSpreadsheetData(prev => {
+      const newData = [...prev, { ...formData }];
+      console.log('New spreadsheet data:', newData);
+      return newData;
+    });
     
     toast({
       title: "Data added to spreadsheet",

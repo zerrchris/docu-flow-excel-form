@@ -129,7 +129,12 @@ const DataForm: React.FC<DataFormProps> = ({
         
         <Button
           variant="success"
-          onClick={onAddToSpreadsheet}
+          onClick={() => {
+            console.log('Add to Spreadsheet button clicked');
+            console.log('visibleFieldsList:', visibleFieldsList);
+            console.log('formData passed to component:', formData);
+            onAddToSpreadsheet();
+          }}
           className="w-full sm:w-auto"
           disabled={visibleFieldsList.length === 0}
         >
