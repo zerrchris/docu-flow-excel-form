@@ -205,7 +205,7 @@ const Home: React.FC = () => {
                     </Link>
                   ) : (
                     <>
-                      <Link to="/signin" className="block">
+                      <Link to="/signin?mode=signup" className="block">
                         <Button size="lg" className="w-full">
                           Create Account
                         </Button>
