@@ -160,7 +160,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
                 onWheel={handleWheel}
               >
                 <div 
-                  className="transition-transform duration-200 w-full h-full cursor-grab active:cursor-grabbing"
+                  className="transition-transform duration-200 w-full h-full cursor-grab active:cursor-grabbing relative"
                   style={{ 
                     transform: `scale(${zoom}) translate(${panX / zoom}px, ${panY / zoom}px)`
                   }}
@@ -169,46 +169,37 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
                   onMouseUp={handleMouseUp}
                   onMouseLeave={handleMouseUp}
                 >
-                  <iframe
-                    src={`${previewUrl}#view=FitH&toolbar=0&navpanes=0&scrollbar=0`}
+                  <embed
+                    src={previewUrl}
+                    type="application/pdf"
                     className="w-full h-full min-h-[600px] rounded-lg border bg-white"
-                    title="PDF Preview"
                     style={{
-                      minHeight: '600px',
-                      border: 'none'
+                      minHeight: '600px'
                     }}
-                    sandbox="allow-same-origin allow-scripts"
-                    onLoad={() => console.log('PDF iframe loaded')}
-                    onError={() => console.error('PDF iframe failed')}
                   />
-                  {/* Fallback overlay for when PDF doesn't load */}
-                  <div className="absolute inset-0 flex items-center justify-center bg-muted/5 rounded-lg pointer-events-none opacity-0 hover:opacity-100 transition-opacity">
-                    <div className="text-center space-y-4 pointer-events-auto">
-                      <div className="space-y-2">
-                        <p className="text-sm text-muted-foreground">Having trouble viewing the PDF?</p>
-                      </div>
-                      <div className="flex gap-3 justify-center">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => window.open(previewUrl, '_blank')}
-                        >
-                          Open in New Tab
-                        </Button>
-                        <Button 
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            const link = document.createElement('a');
-                            link.href = previewUrl;
-                            link.download = file?.name || 'document.pdf';
-                            link.click();
-                          }}
-                        >
-                          Download PDF
-                        </Button>
-                      </div>
-                    </div>
+                  {/* Always visible fallback options */}
+                  <div className="absolute top-4 right-4 flex gap-2 z-10">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => window.open(previewUrl, '_blank')}
+                      className="bg-white/90 backdrop-blur-sm"
+                    >
+                      Open in Tab
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const link = document.createElement('a');
+                        link.href = previewUrl;
+                        link.download = file?.name || 'document.pdf';
+                        link.click();
+                      }}
+                      className="bg-white/90 backdrop-blur-sm"
+                    >
+                      Download
+                    </Button>
                   </div>
                 </div>
               </div>
