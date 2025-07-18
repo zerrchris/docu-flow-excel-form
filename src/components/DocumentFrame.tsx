@@ -78,8 +78,10 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
                 {file ? (
                   <DocumentViewer file={file} previewUrl={previewUrl} />
                 ) : (
-                  <div className="p-6">
-                    <DocumentUpload onFileSelect={onFileSelect} selectedFile={file} />
+                  <div className="p-6 h-full min-h-[400px] flex items-center justify-center">
+                    <div className="w-full">
+                      <DocumentUpload onFileSelect={onFileSelect} selectedFile={file} />
+                    </div>
                   </div>
                 )}
               </div>
