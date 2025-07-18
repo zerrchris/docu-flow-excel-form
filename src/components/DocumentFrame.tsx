@@ -68,9 +68,9 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
 
         <CollapsibleContent className="data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
           <div className="border-t">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-0">
-              <div className="lg:col-span-4 border-r border-border">
-                <div className="p-6">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 min-h-0">
+              <div className="lg:col-span-4 border-r border-border flex flex-col">
+                <div className="p-6 flex-1">
                   <div className="space-y-2">
                     <h4 className="text-md font-medium text-foreground">Document Data</h4>
                     <DataForm 
@@ -85,13 +85,13 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
                   </div>
                 </div>
               </div>
-              <div className="lg:col-span-8 flex">
+              <div className="lg:col-span-8 flex flex-col">
                 {file ? (
-                  <div className="w-full max-h-[600px] overflow-hidden">
+                  <div className="w-full flex-1">
                     <DocumentViewer file={file} previewUrl={previewUrl} />
                   </div>
                 ) : (
-                  <div className="p-6 flex items-center justify-center w-full">
+                  <div className="p-6 flex items-center justify-center w-full flex-1">
                     <div className="w-full">
                       <DocumentUpload 
                         onFileSelect={onFileSelect} 

@@ -111,7 +111,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
             </div>
           )}
         </div>
-        <div className="relative flex-grow border-t bg-muted/20 flex items-center justify-center overflow-auto max-h-[536px]">
+        <div className="relative flex-grow border-t bg-muted/20 flex items-center justify-center overflow-auto">
           {!file && (
             <div className="text-center p-8 text-muted-foreground">
               <div className="flex flex-col items-center space-y-2">
