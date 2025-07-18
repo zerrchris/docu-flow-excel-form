@@ -1148,8 +1148,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                         key={column}
                         className={`font-bold text-center border-r border-border relative p-0 last:border-r-0 cursor-move
                           ${draggedColumn === column ? 'opacity-50' : ''} 
-                          ${dragOverColumn === column ? 'bg-primary/20' : ''}
-                          ${missingColumns.includes(column) ? 'animate-pulse bg-yellow-100 border-2 border-yellow-400 dark:bg-yellow-900/20 dark:border-yellow-500' : ''}`}
+                          ${dragOverColumn === column ? 'bg-primary/20' : ''}`}
                         style={{ width: `${getColumnWidth(column)}px`, minWidth: `${getColumnWidth(column)}px` }}
                         draggable
                        onDragStart={(e) => handleDragStart(e, column)}
@@ -1161,18 +1160,33 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                         <ContextMenu>
                           <ContextMenuTrigger className="w-full h-full p-0 select-none">
                             <div 
-                              className={`w-full h-full px-4 py-2 cursor-pointer hover:bg-primary/10 transition-colors relative
-                                ${missingColumns.includes(column) ? 'animate-bounce' : ''}`}
+                              className="w-full h-full px-4 py-2 cursor-pointer hover:bg-primary/10 transition-colors relative"
                               onClick={() => openColumnDialog(column)}
                             >
                               <div className="flex flex-col items-center">
                                 <span className="font-bold">{column}</span>
-                                {missingColumns.includes(column) && (
-                                  <span className="text-xs text-yellow-600 dark:text-yellow-400 mt-1 animate-pulse">
-                                    Click to configure
-                                  </span>
-                                )}
                               </div>
+                              
+                              {/* Magnifying Bubble for Missing Columns */}
+                              {missingColumns.includes(column) && (
+                                <div className="absolute -top-16 left-1/2 transform -translate-x-1/2 z-50 animate-bounce">
+                                  {/* Bubble */}
+                                  <div className="bg-yellow-400 text-black px-4 py-2 rounded-full shadow-lg border-2 border-yellow-500 relative animate-pulse">
+                                    <div className="text-xs font-semibold whitespace-nowrap flex items-center gap-1">
+                                      <span className="text-lg">🔍</span>
+                                      Click to configure
+                                    </div>
+                                    {/* Bubble pointer/arrow */}
+                                    <div className="absolute top-full left-1/2 transform -translate-x-1/2">
+                                      <div className="w-0 h-0 border-l-4 border-r-4 border-t-6 border-transparent border-t-yellow-400"></div>
+                                      <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-3 border-r-3 border-t-5 border-transparent border-t-yellow-500"></div>
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Magnifying effect ring */}
+                                  <div className="absolute inset-0 rounded-full border-2 border-yellow-300 animate-ping opacity-75"></div>
+                                </div>
+                              )}
                               {/* Resize handle */}
                               <div
                                 className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/30 bg-border/50"
