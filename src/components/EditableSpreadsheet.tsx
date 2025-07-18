@@ -74,6 +74,18 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const headerInputRef = useRef<HTMLInputElement>(null);
 
+  // Sync data with initialData prop changes
+  useEffect(() => {
+    const minRows = 20;
+    const existingRows = initialData.length;
+    const emptyRows = Array.from({ length: Math.max(0, minRows - existingRows) }, () => {
+      const row: Record<string, string> = {};
+      initialColumns.forEach(col => row[col] = '');
+      return row;
+    });
+    setData([...initialData, ...emptyRows]);
+  }, [initialData, initialColumns]);
+
   // Check user authentication status
   useEffect(() => {
     const initAuth = async () => {
