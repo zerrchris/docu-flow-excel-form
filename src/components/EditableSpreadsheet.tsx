@@ -1236,20 +1236,20 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           className="border rounded-md flex flex-col bg-background relative"
           style={{ height: `${spreadsheetHeight}px` }}
         >
+          {/* Header highlight message */}
+          {showHeaderHighlight && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30">
+              <div className="bg-primary text-primary-foreground px-4 py-2 rounded-lg shadow-lg">
+                <span className="text-sm font-semibold">Click any header to configure data extraction</span>
+              </div>
+            </div>
+          )}
           {/* Single scrollable container for both header and body */}
           <div className="flex-1 overflow-auto">
             <Table className="border-collapse">
               {/* Sticky Header */}
               <TableHeader className="sticky top-0 z-10 bg-muted/95 backdrop-blur-sm border-b">
                 <TableRow className={`hover:bg-muted/50 transition-colors ${showHeaderHighlight ? 'bg-gradient-to-r from-primary/20 to-accent/20 border-2 border-primary/50' : ''}`}>
-                  {/* Header highlight message */}
-                  {showHeaderHighlight && (
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
-                      <div className="bg-primary text-primary-foreground px-4 py-2 rounded-lg shadow-lg">
-                        <span className="text-sm font-semibold">Click any header to configure data extraction</span>
-                      </div>
-                    </div>
-                  )}
                   {columns.map((column) => (
                      <TableHead 
                         key={column}
