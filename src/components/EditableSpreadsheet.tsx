@@ -86,7 +86,6 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [selectedColumn, setSelectedColumn] = useState<string>('');
   const [columnInstructions, setColumnInstructions] = useState<Record<string, string>>({});
   const [columnAlignments, setColumnAlignments] = useState<Record<string, 'left' | 'center' | 'right'>>({});
-  const [showHeaderHighlight, setShowHeaderHighlight] = useState(false);
   const [editingColumnAlignment, setEditingColumnAlignment] = useState<'left' | 'center' | 'right'>('left');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -143,19 +142,6 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     };
   }, []);
 
-  // Show header highlight when there are missing column instructions
-  useEffect(() => {
-    const columnsWithoutInstructions = columns.filter(column => 
-      !columnInstructions[column] || columnInstructions[column].trim() === ''
-    );
-    
-    // Only show highlight if there are missing instructions and we have some data or the user has interacted
-    const hasData = data.some(row => Object.values(row).some(value => value.trim() !== ''));
-    
-    if (columnsWithoutInstructions.length > 0 && hasData && !showHeaderHighlight) {
-      setShowHeaderHighlight(true);
-    }
-  }, [columns, columnInstructions, data, showHeaderHighlight]);
 
   // Auto-save functionality
   const autoSaveRunsheet = useCallback(async () => {
@@ -1236,28 +1222,19 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           className="border rounded-md flex flex-col bg-background relative"
           style={{ height: `${spreadsheetHeight}px` }}
         >
-          {/* Header highlight message */}
-          {showHeaderHighlight && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30">
-              <div className="bg-primary text-primary-foreground px-4 py-2 rounded-lg shadow-lg">
-                <span className="text-sm font-semibold">Click any header to configure data extraction</span>
-              </div>
-            </div>
-          )}
           {/* Single scrollable container for both header and body */}
           <div className="flex-1 overflow-auto">
             <Table className="border-collapse">
               {/* Sticky Header */}
               <TableHeader className="sticky top-0 z-10 bg-muted/95 backdrop-blur-sm border-b">
-                <TableRow className={`hover:bg-muted/50 transition-colors ${showHeaderHighlight ? 'bg-gradient-to-r from-primary/20 to-accent/20 border-2 border-primary/50' : ''}`}>
+                <TableRow className="hover:bg-muted/50 transition-colors">
                   {columns.map((column) => (
                      <TableHead 
-                        key={column}
-                        className={`font-bold text-center border-r border-border relative p-0 last:border-r-0 cursor-move
-                          ${draggedColumn === column ? 'opacity-50' : ''} 
-                          ${dragOverColumn === column ? 'bg-primary/20' : ''}
-                          ${showHeaderHighlight ? 'relative z-10' : ''}
-                          ${missingColumns.includes(column) ? 'animate-pulse bg-yellow-100 border-2 border-yellow-400 dark:bg-yellow-900/20 dark:border-yellow-500' : ''}`}
+                         key={column}
+                         className={`font-bold text-center border-r border-border relative p-0 last:border-r-0 cursor-move
+                           ${draggedColumn === column ? 'opacity-50' : ''} 
+                           ${dragOverColumn === column ? 'bg-primary/20' : ''}
+                           ${missingColumns.includes(column) ? 'animate-pulse bg-yellow-100 border-2 border-yellow-400 dark:bg-yellow-900/20 dark:border-yellow-500' : ''}`}
                         style={{ width: `${getColumnWidth(column)}px`, minWidth: `${getColumnWidth(column)}px` }}
                         draggable
                        onDragStart={(e) => handleDragStart(e, column)}
@@ -1268,14 +1245,10 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                      >
                         <ContextMenu>
                           <ContextMenuTrigger className="w-full h-full p-0 select-none">
-                            <div 
-                              className={`w-full h-full px-4 py-2 cursor-pointer hover:bg-primary/10 transition-colors relative
-                                ${missingColumns.includes(column) ? 'animate-bounce' : ''}
-                                ${showHeaderHighlight ? 'hover:bg-primary/30' : ''}`}
-                              onClick={() => {
-                                setShowHeaderHighlight(false);
-                                openColumnDialog(column);
-                              }}
+                             <div 
+                               className={`w-full h-full px-4 py-2 cursor-pointer hover:bg-primary/10 transition-colors relative
+                                 ${missingColumns.includes(column) ? 'animate-bounce' : ''}`}
+                               onClick={() => openColumnDialog(column)}
                             >
                               <div className="flex flex-col items-center">
                                 <span className="font-bold">{column}</span>
