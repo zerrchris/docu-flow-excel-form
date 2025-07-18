@@ -40,6 +40,9 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const { toast } = useToast();
   const [user, setUser] = useState<User | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showOpenDialog, setShowOpenDialog] = useState(false);
+  const [savedRunsheets, setSavedRunsheets] = useState<any[]>([]);
   const [runsheetName, setRunsheetName] = useState<string>('Untitled Runsheet');
   const [editingRunsheetName, setEditingRunsheetName] = useState<boolean>(false);
   const [tempRunsheetName, setTempRunsheetName] = useState<string>('');
@@ -154,6 +157,58 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       setIsSaving(false);
       console.log('Save process completed');
     }
+  };
+
+  // Fetch saved runsheets from Supabase
+  const fetchSavedRunsheets = async () => {
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to view saved runsheets.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+        throw new Error('Supabase not configured - using demo mode');
+      }
+
+      const { data: runsheets, error } = await supabase
+        .from('runsheets')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false });
+
+      if (error) throw error;
+
+      setSavedRunsheets(runsheets || []);
+      setShowOpenDialog(true);
+    } catch (error: any) {
+      toast({
+        title: "Failed to load runsheets",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Load a saved runsheet
+  const loadRunsheet = (runsheet: any) => {
+    setRunsheetName(runsheet.name);
+    setColumns(runsheet.columns);
+    onColumnChange(runsheet.columns);
+    setData(runsheet.data);
+    setShowOpenDialog(false);
+    
+    toast({
+      title: "Runsheet loaded",
+      description: `"${runsheet.name}" has been loaded successfully.`,
+    });
   };
 
   // Auto-focus input when editing starts
@@ -640,6 +695,18 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
               <Save className="h-4 w-4" />
               {isSaving ? 'Saving...' : 'Save'}
             </Button>
+            
+            {/* Open Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={fetchSavedRunsheets}
+              disabled={isLoading || !user}
+              className="gap-2"
+            >
+              <FolderOpen className="h-4 w-4" />
+              {isLoading ? 'Loading...' : 'Open'}
+            </Button>
           </div>
           <div className="text-sm text-muted-foreground">
             Right-click column headers to insert or remove columns
@@ -829,6 +896,57 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             </DialogContent>
           </Dialog>
         </div>
+
+        {/* Open Runsheet Dialog */}
+        <Dialog open={showOpenDialog} onOpenChange={setShowOpenDialog}>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle>Open Saved Runsheet</DialogTitle>
+              <DialogDescription>
+                Select a runsheet to open. This will replace your current runsheet.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="max-h-[400px] overflow-y-auto">
+              {savedRunsheets.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <FolderOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No saved runsheets found.</p>
+                  <p className="text-sm">Save your current runsheet to see it here.</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {savedRunsheets.map((runsheet) => (
+                    <div
+                      key={runsheet.id}
+                      className="border rounded-lg p-4 hover:bg-muted/50 cursor-pointer transition-colors"
+                      onClick={() => loadRunsheet(runsheet)}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <h3 className="font-medium text-foreground">{runsheet.name}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {runsheet.columns.length} columns • {runsheet.data.length} rows
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Last updated: {new Date(runsheet.updated_at).toLocaleDateString()} {new Date(runsheet.updated_at).toLocaleTimeString()}
+                          </p>
+                        </div>
+                        <Button variant="ghost" size="sm" className="ml-2">
+                          Open
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowOpenDialog(false)}>
+                Cancel
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </Card>
   );
