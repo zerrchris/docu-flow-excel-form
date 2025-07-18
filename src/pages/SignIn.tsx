@@ -187,7 +187,10 @@ const SignIn: React.FC = () => {
                   type="button"
                   variant="ghost"
                   className="w-full"
-                  onClick={() => setIsSignUp(!isSignUp)}
+                  onClick={() => {
+                    console.log('Toggling isSignUp from', isSignUp, 'to', !isSignUp);
+                    setIsSignUp(!isSignUp);
+                  }}
                 >
                   {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
                 </Button>
