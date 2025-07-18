@@ -14,6 +14,19 @@ import extractorLogo from '@/assets/document-extractor-logo.png';
 // Initial columns for the spreadsheet
 const DEFAULT_COLUMNS = ['Inst Number', 'Book/Page', 'Inst Type', 'Recording Date', 'Document Date', 'Grantor', 'Grantee', 'Legal Description', 'Notes'];
 
+// Default extraction instructions for each column
+const DEFAULT_EXTRACTION_INSTRUCTIONS: Record<string, string> = {
+  'Inst Number': 'Extract the instrument number or recording number as it appears on the document',
+  'Book/Page': 'Extract the book and page reference (format: Book XXX, Page XXX or XXX/XXX)',
+  'Inst Type': 'Extract the document type (e.g., Deed, Mortgage, Lien, Assignment, etc.)',
+  'Recording Date': 'Extract the official recording date in MM/DD/YYYY format',
+  'Document Date': 'Extract the date the document was signed or executed in MM/DD/YYYY format',
+  'Grantor': 'Extract the full name(s) of the grantor(s) - the party transferring or granting rights',
+  'Grantee': 'Extract the full name(s) of the grantee(s) - the party receiving rights',
+  'Legal Description': 'Extract the complete legal property description including lot, block, subdivision, and any metes and bounds',
+  'Notes': 'Extract any special conditions, considerations, or additional relevant information'
+};
+
 const DocumentProcessor: React.FC = () => {
   // Document state
   const [file, setFile] = useState<File | null>(null);
@@ -474,7 +487,11 @@ Image: [base64 image data]`;
 
   const handleStartNew = () => {
     setShowGetStarted(false);
-    // Just close the dialog and start with the current empty state
+    // Reset to default state with default extraction instructions
+    setColumns(DEFAULT_COLUMNS);
+    setColumnInstructions(DEFAULT_EXTRACTION_INSTRUCTIONS);
+    setSpreadsheetData([]);
+    setFormData({});
   };
 
   return (
