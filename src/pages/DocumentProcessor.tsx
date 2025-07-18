@@ -20,6 +20,7 @@ const DocumentProcessor: React.FC = () => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [showImageCombiner, setShowImageCombiner] = useState(false);
+  const [showCombineConfirmation, setShowCombineConfirmation] = useState(false);
   
   // Form and analysis state
   const [columns, setColumns] = useState<string[]>(DEFAULT_COLUMNS);
@@ -102,12 +103,18 @@ const DocumentProcessor: React.FC = () => {
     }
 
     setPendingFiles(imageFiles);
+    setShowCombineConfirmation(true);
+  };
+
+  // Handle combine confirmation
+  const handleCombineConfirm = () => {
+    setShowCombineConfirmation(false);
     setShowImageCombiner(true);
-    
-    toast({
-      title: "Multiple images selected",
-      description: `${imageFiles.length} images ready to combine. Choose your combination method.`,
-    });
+  };
+
+  const handleCombineCancel = () => {
+    setShowCombineConfirmation(false);
+    setPendingFiles([]);
   };
 
   // Handle combined file result
@@ -133,6 +140,7 @@ const DocumentProcessor: React.FC = () => {
   // Handle image combiner cancel
   const handleCombinerCancel = () => {
     setShowImageCombiner(false);
+    setShowCombineConfirmation(false);
     setPendingFiles([]);
   };
 
@@ -358,6 +366,26 @@ const DocumentProcessor: React.FC = () => {
                   <span className="text-sm text-muted-foreground">Begin with a fresh, empty runsheet</span>
                 </div>
               </div>
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Combine Images Confirmation Dialog */}
+      <Dialog open={showCombineConfirmation} onOpenChange={setShowCombineConfirmation}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Combine Images</DialogTitle>
+            <DialogDescription>
+              You've selected {pendingFiles.length} images. Would you like to combine them into a single document?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-3 justify-end pt-4">
+            <Button variant="outline" onClick={handleCombineCancel}>
+              No, keep separate
+            </Button>
+            <Button onClick={handleCombineConfirm}>
+              Yes, combine them
             </Button>
           </div>
         </DialogContent>
