@@ -50,6 +50,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [runsheetName, setRunsheetName] = useState<string>('Untitled Runsheet');
   const [editingRunsheetName, setEditingRunsheetName] = useState<boolean>(false);
   const [tempRunsheetName, setTempRunsheetName] = useState<string>('');
+  const [lastSaveTime, setLastSaveTime] = useState<Date | null>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [columns, setColumns] = useState<string[]>(initialColumns);
   const [data, setData] = useState<Record<string, string>[]>(() => {
     // Ensure we always have at least 20 rows
@@ -131,6 +133,67 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     };
   }, []);
 
+  // Auto-save functionality
+  const autoSaveRunsheet = useCallback(async () => {
+    if (!user || !hasUnsavedChanges) return;
+    
+    try {
+      if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+        return; // Skip autosave if Supabase not configured
+      }
+
+      const { error } = await supabase
+        .from('runsheets')
+        .upsert({
+          name: runsheetName,
+          columns: columns,
+          data: data,
+          user_id: user.id,
+          updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'user_id,name'
+        });
+
+      if (!error) {
+        setHasUnsavedChanges(false);
+        setLastSaveTime(new Date());
+      }
+    } catch (error) {
+      console.error('Autosave failed:', error);
+    }
+  }, [user, hasUnsavedChanges, runsheetName, columns, data]);
+
+  // Track changes to mark as unsaved
+  useEffect(() => {
+    setHasUnsavedChanges(true);
+  }, [data, columns, runsheetName]);
+
+  // Auto-save every 30 seconds if there are unsaved changes
+  useEffect(() => {
+    if (!user || !hasUnsavedChanges) return;
+    
+    const interval = setInterval(() => {
+      autoSaveRunsheet();
+    }, 30000); // Auto-save every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [user, hasUnsavedChanges, autoSaveRunsheet]);
+
+  // Save before leaving the page
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges && user) {
+        e.preventDefault();
+        e.returnValue = '';
+        // Try to save quickly
+        autoSaveRunsheet();
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges, user, autoSaveRunsheet]);
+
   // Save runsheet to Supabase
   const saveRunsheet = async () => {
     console.log('Save button clicked!');
@@ -177,6 +240,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       }
 
       console.log('Save successful!');
+      setHasUnsavedChanges(false);
+      setLastSaveTime(new Date());
       toast({
         title: "Runsheet saved",
         description: `"${runsheetName}" has been saved successfully.`,
@@ -969,6 +1034,30 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                 {runsheetName}
               </button>
             )}
+            
+            {/* Autosave Status */}
+            {user && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                {hasUnsavedChanges ? (
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />
+                    <span>Unsaved changes</span>
+                  </div>
+                ) : lastSaveTime ? (
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-green-500 rounded-full" />
+                    <span>
+                      Saved {new Date(lastSaveTime).toLocaleTimeString([], { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      })}
+                    </span>
+                  </div>
+                ) : null}
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
             {/* Save Button */}
             <Button
               variant="outline"
