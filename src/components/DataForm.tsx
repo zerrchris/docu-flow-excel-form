@@ -112,38 +112,40 @@ const DataForm: React.FC<DataFormProps> = ({
       </div>
 
       {/* Action Buttons */}
-      <div className="flex flex-col space-y-2 sm:flex-row sm:space-x-2 sm:space-y-0 pt-4">
-        <Button 
-          variant="gradient"
-          onClick={onAnalyze}
-          disabled={isAnalyzing}
-          className="w-full sm:w-auto"
-        >
-          {isAnalyzing ? (
-            <>
-              <RotateCw className="mr-2 h-4 w-4 animate-spin" />
-              Analyzing...
-            </>
-          ) : (
-            'Analyze Document'
-          )}
-        </Button>
-        
-        <Button
-          variant="success"
-          onClick={() => onAddToSpreadsheet()}
-          className="w-full sm:w-auto"
-          disabled={visibleFieldsList.length === 0}
-        >
-          <Plus className="h-4 w-4 mr-1" />
-          Add to Spreadsheet
-        </Button>
+      <div className="space-y-2 pt-4">
+        <div className="flex flex-col space-y-2 sm:flex-row sm:space-x-2 sm:space-y-0">
+          <Button 
+            variant="gradient"
+            onClick={onAnalyze}
+            disabled={isAnalyzing}
+            className="w-full sm:w-auto"
+          >
+            {isAnalyzing ? (
+              <>
+                <RotateCw className="mr-2 h-4 w-4 animate-spin" />
+                Analyzing...
+              </>
+            ) : (
+              'Analyze Document'
+            )}
+          </Button>
+          
+          <Button
+            variant="success"
+            onClick={() => onAddToSpreadsheet()}
+            className="w-full sm:w-auto"
+            disabled={visibleFieldsList.length === 0}
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Add to Spreadsheet
+          </Button>
+        </div>
         
         {onResetDocument && (
           <Button
             variant="outline"
             onClick={onResetDocument}
-            className="w-full sm:w-auto"
+            className="w-full"
           >
             Upload New Document
           </Button>
