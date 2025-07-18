@@ -63,6 +63,11 @@ const BatchDocumentRow: React.FC<BatchDocumentRowProps> = ({
       const analyzedData = await onAnalyze(file);
       console.log('Setting analyzed data:', analyzedData);
       setFormData(analyzedData);
+      
+      // Force sync each field back to ensure state consistency
+      Object.entries(analyzedData).forEach(([field, value]) => {
+        handleFieldChange(field, value);
+      });
     } finally {
       setIsAnalyzingLocal(false);
     }
