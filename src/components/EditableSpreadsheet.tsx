@@ -573,10 +573,73 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   }, [editingCell]);
 
   // Column dialog functions
+  const generateExtractionSuggestion = (columnName: string): string => {
+    const name = columnName.toLowerCase();
+    
+    const suggestions: Record<string, string> = {
+      'grantor': "Extract the Grantor's name as it appears on the document and include the address if there is one",
+      'grantee': "Extract the Grantee's name as it appears on the document and include the address if there is one",
+      'inst number': "Extract the instrument number exactly as it appears on the document",
+      'instrument number': "Extract the instrument number exactly as it appears on the document",
+      'book': "Extract the book number from the book/page reference",
+      'page': "Extract the page number from the book/page reference",
+      'book/page': "Extract the complete book and page reference (e.g., Book 123, Page 456)",
+      'inst type': "Extract the type of instrument (e.g., Deed, Mortgage, Lien, etc.)",
+      'instrument type': "Extract the type of instrument (e.g., Deed, Mortgage, Lien, etc.)",
+      'recording date': "Extract the date when the document was recorded at the courthouse",
+      'record date': "Extract the date when the document was recorded at the courthouse",
+      'document date': "Extract the date the document was signed or executed",
+      'execution date': "Extract the date the document was signed or executed",
+      'legal description': "Extract the complete legal description of the property including lot, block, subdivision, and metes and bounds if present",
+      'property description': "Extract the complete legal description of the property including lot, block, subdivision, and metes and bounds if present",
+      'notes': "Extract any additional relevant information, special conditions, or remarks",
+      'comments': "Extract any additional relevant information, special conditions, or remarks",
+      'consideration': "Extract the purchase price or consideration amount",
+      'amount': "Extract any monetary amount mentioned in the document",
+      'price': "Extract the purchase price or sale amount",
+      'acres': "Extract the acreage or land area measurements",
+      'lot': "Extract the lot number from the legal description",
+      'block': "Extract the block number from the legal description",
+      'subdivision': "Extract the subdivision name from the legal description",
+      'county': "Extract the county where the property is located",
+      'state': "Extract the state where the property is located",
+      'address': "Extract the street address or property address",
+      'notary': "Extract the notary public information including name and commission details",
+      'witness': "Extract witness names and signatures",
+      'mortgage company': "Extract the mortgage lender or financial institution name",
+      'lender': "Extract the lending institution or mortgage company name",
+      'borrower': "Extract the borrower's name and details",
+      'loan amount': "Extract the loan or mortgage amount",
+      'interest rate': "Extract the interest rate percentage",
+      'term': "Extract the loan term or duration",
+      'maturity date': "Extract the loan maturity or due date"
+    };
+    
+    // Find exact match first
+    if (suggestions[name]) {
+      return suggestions[name];
+    }
+    
+    // Find partial matches
+    for (const [key, suggestion] of Object.entries(suggestions)) {
+      if (name.includes(key) || key.includes(name)) {
+        return suggestion;
+      }
+    }
+    
+    // Default suggestion
+    return `Extract the ${columnName} information exactly as it appears on the document`;
+  };
+
   const openColumnDialog = (column: string) => {
     setSelectedColumn(column);
     setEditingColumnName(column);
-    setEditingColumnInstructions(columnInstructions[column] || '');
+    
+    // Generate suggestion if no existing instructions
+    const existingInstructions = columnInstructions[column] || '';
+    const suggestion = existingInstructions || generateExtractionSuggestion(column);
+    setEditingColumnInstructions(suggestion);
+    
     setShowColumnDialog(true);
   };
 
