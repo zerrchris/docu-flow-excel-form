@@ -73,6 +73,7 @@ export type Database = {
       }
       runsheets: {
         Row: {
+          column_instructions: Json | null
           columns: string[]
           created_at: string
           data: Json
@@ -82,6 +83,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          column_instructions?: Json | null
           columns?: string[]
           created_at?: string
           data?: Json
@@ -91,6 +93,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          column_instructions?: Json | null
           columns?: string[]
           created_at?: string
           data?: Json
