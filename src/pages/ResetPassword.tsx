@@ -13,16 +13,20 @@ const ResetPassword: React.FC = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [tokenHash, setTokenHash] = useState<string>('');
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const navigate = useNavigate();
 
   useEffect(() => {
     // Check if we have the required tokens in the URL
-    const tokenHash = searchParams.get('token_hash');
+    const urlTokenHash = searchParams.get('token_hash');
     const type = searchParams.get('type');
     
-    if (!tokenHash || type !== 'recovery') {
+    console.log('Reset password page loaded with params:', { urlTokenHash, type });
+    
+    if (!urlTokenHash || type !== 'recovery') {
+      console.log('Missing or invalid parameters');
       toast({
         title: "Invalid reset link",
         description: "This password reset link is invalid or has expired.",
@@ -32,35 +36,8 @@ const ResetPassword: React.FC = () => {
       return;
     }
 
-    // Set the session from the URL parameters
-    const setSessionFromUrl = async () => {
-      try {
-        const { error } = await supabase.auth.verifyOtp({
-          token_hash: tokenHash,
-          type: 'recovery'
-        });
-        
-        if (error) {
-          console.error('Error verifying reset token:', error);
-          toast({
-            title: "Invalid reset link",
-            description: "This password reset link is invalid or has expired.",
-            variant: "destructive",
-          });
-          navigate('/signin');
-        }
-      } catch (error) {
-        console.error('Error setting session:', error);
-        toast({
-          title: "Invalid reset link",
-          description: "This password reset link is invalid or has expired.",
-          variant: "destructive",
-        });
-        navigate('/signin');
-      }
-    };
-
-    setSessionFromUrl();
+    // Store the token hash for use when submitting the form
+    setTokenHash(urlTokenHash);
   }, [searchParams, navigate, toast]);
 
   const handlePasswordReset = async (e: React.FormEvent) => {
@@ -87,11 +64,30 @@ const ResetPassword: React.FC = () => {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.updateUser({
+      console.log('Attempting to verify OTP and update password');
+      
+      // First verify the OTP token
+      const { error: verifyError } = await supabase.auth.verifyOtp({
+        token_hash: tokenHash,
+        type: 'recovery'
+      });
+
+      if (verifyError) {
+        console.error('Error verifying OTP:', verifyError);
+        throw verifyError;
+      }
+
+      console.log('OTP verified, now updating password');
+
+      // Now update the password
+      const { error: updateError } = await supabase.auth.updateUser({
         password: password
       });
 
-      if (error) throw error;
+      if (updateError) {
+        console.error('Error updating password:', updateError);
+        throw updateError;
+      }
 
       toast({
         title: "Password updated",
@@ -101,6 +97,7 @@ const ResetPassword: React.FC = () => {
       // Redirect to sign in page
       navigate('/signin');
     } catch (error: any) {
+      console.error('Password reset error:', error);
       toast({
         title: "Error updating password",
         description: error.message,
