@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import PDFViewer from './PDFViewer';
 
 interface DocumentViewerProps {
   file: File | null;
@@ -89,11 +90,16 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
     setIsDragging(false);
   };
 
+  // For PDFs, use the dedicated PDF viewer
+  if (isPdf && previewUrl) {
+    return <PDFViewer file={file} previewUrl={previewUrl} />;
+  }
+
   return (
     <div className="h-full flex flex-col rounded-l-none lg:rounded-l-none rounded-r-lg bg-card border border-border">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 sm:p-6 pb-4 border-b shrink-0 gap-2 sm:gap-0">
         <h3 className="text-lg sm:text-xl font-semibold text-foreground">Document Preview</h3>
-        {file && (
+        {file && isImage && (
           <div className="flex items-center gap-1 sm:gap-2 w-full sm:w-auto justify-end">
             <Button variant="outline" size="sm" onClick={handleZoomOut} disabled={zoom <= 0.25} className="p-2 sm:px-3">
               <ZoomOut className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -148,62 +154,6 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
                 onMouseUp={handleMouseUp}
                 onMouseLeave={handleMouseUp}
               />
-            </div>
-          </div>
-        )}
-        
-        {isPdf && previewUrl && (
-          <div className="w-full h-full overflow-hidden">
-            <div 
-              className="w-full h-full"
-              onWheel={handleWheel}
-            >
-              <div 
-                className="transition-transform duration-200 w-full h-full cursor-grab active:cursor-grabbing relative"
-                style={{ 
-                  transform: `scale(${zoom}) translate(${panX / zoom}px, ${panY / zoom}px)`
-                }}
-                onMouseDown={handleMouseDown}
-                onMouseMove={handleMouseMove}
-                onMouseUp={handleMouseUp}
-                onMouseLeave={handleMouseUp}
-              >
-                <iframe
-                  src={previewUrl}
-                  className="w-full h-full border-0"
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    border: 'none',
-                    margin: 0,
-                    padding: 0
-                  }}
-                />
-                {/* Always visible fallback options */}
-                <div className="absolute top-2 right-2 sm:top-4 sm:right-4 flex flex-col sm:flex-row gap-1 sm:gap-2 z-10">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => window.open(previewUrl, '_blank')}
-                    className="bg-white/90 backdrop-blur-sm text-xs sm:text-sm px-2 py-1 sm:px-3 sm:py-2"
-                  >
-                    Open in Tab
-                  </Button>
-                  <Button 
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const link = document.createElement('a');
-                      link.href = previewUrl;
-                      link.download = file?.name || 'document.pdf';
-                      link.click();
-                    }}
-                    className="bg-white/90 backdrop-blur-sm text-xs sm:text-sm px-2 py-1 sm:px-3 sm:py-2"
-                  >
-                    Download
-                  </Button>
-                </div>
-              </div>
             </div>
           </div>
         )}
