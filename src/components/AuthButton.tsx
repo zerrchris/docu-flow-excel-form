@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { User, LogIn, LogOut, Shield } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { User, LogIn, LogOut, Shield, KeyRound, ChevronDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -75,6 +76,27 @@ const AuthButton: React.FC = () => {
     }
   };
 
+  const handleChangePassword = async () => {
+    if (!user?.email) return;
+    
+    const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    
+    if (error) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Password Reset Email Sent",
+        description: "Check your email for a password reset link.",
+      });
+    }
+  };
+
   if (loading) {
     return <Button variant="outline" disabled>Loading...</Button>;
   }
@@ -93,10 +115,25 @@ const AuthButton: React.FC = () => {
             </Button>
           </Link>
         )}
-        <Button variant="outline" size="sm" onClick={handleSignOut}>
-          <LogOut className="h-4 w-4 mr-2" />
-          Sign Out
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm">
+              <User className="h-4 w-4 mr-2" />
+              Account
+              <ChevronDown className="h-4 w-4 ml-2" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={handleChangePassword}>
+              <KeyRound className="h-4 w-4 mr-2" />
+              Change Password
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleSignOut}>
+              <LogOut className="h-4 w-4 mr-2" />
+              Sign Out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     );
   }
