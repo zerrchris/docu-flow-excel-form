@@ -31,7 +31,22 @@ serve(async (req) => {
 
     // Enhance prompt with position information if requested
     const enhancedPrompt = includePositions 
-      ? `${prompt}\n\nIMPORTANT: For each extracted field, also provide the approximate position coordinates where the text was found in the document. Return the response as JSON with this structure:
+      ? `${prompt}\n\nIMPORTANT: For each extracted field, carefully analyze the document image to determine the exact position coordinates where the text was found. 
+
+COORDINATE SYSTEM INSTRUCTIONS:
+- Use percentage values (0-100) relative to the ENTIRE document dimensions
+- x: percentage from the LEFT edge of the document (0 = far left, 100 = far right)
+- y: percentage from the TOP edge of the document (0 = top, 100 = bottom)  
+- width: percentage width of the text area
+- height: percentage height of the text area
+
+POSITIONING GUIDELINES:
+- Look carefully at where each piece of text appears in the document
+- Measure from the top-left corner of the document as origin (0,0)
+- Be as precise as possible with the coordinates
+- Only include positions for text you can clearly see and locate
+
+Return the response as JSON with this structure:
 {
   "extractedData": {
     "field1": "value1",
@@ -43,7 +58,9 @@ serve(async (req) => {
   }
 }
 
-Use percentage values (0-100) for coordinates relative to the document dimensions. If you cannot determine the position for a field, omit it from the positions object.`
+EXAMPLE: If text appears near the top-right of the document, it might have coordinates like x: 75, y: 15. If text appears in the middle-left, it might be x: 10, y: 50.
+
+Only include positions for fields where you can clearly identify the location of the text in the document.`
       : prompt;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
