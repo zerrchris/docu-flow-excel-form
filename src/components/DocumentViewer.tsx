@@ -145,21 +145,20 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
             onTouchEnd={handleTouchEnd}
           >
             <div 
-              className="w-full h-full flex items-center justify-center relative"
+              className="w-full h-full flex items-start justify-center relative"
               onWheel={handleWheel}
             >
-              <div className="relative">
+              <div className="relative w-full">
                 <img 
                   src={previewUrl} 
                   alt="Document Preview" 
-                  className="rounded-lg transition-transform duration-200 select-none cursor-grab active:cursor-grabbing"
+                  className="rounded-lg transition-transform duration-200 select-none cursor-grab active:cursor-grabbing w-full"
                   style={{ 
                     transform: `scale(${zoom}) translate(${panX / zoom}px, ${panY / zoom}px)`,
+                    transformOrigin: 'top left',
                     width: '100%',
-                    maxWidth: '100%',
                     height: 'auto',
-                    maxHeight: '100%',
-                    objectFit: 'contain'
+                    display: 'block'
                   }}
                   draggable={false}
                   onMouseDown={handleMouseDown}
