@@ -27,6 +27,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { GoogleDrivePicker } from './GoogleDrivePicker';
+import { ExtractionPreferencesService } from '@/services/extractionPreferences';
 import type { User } from '@supabase/supabase-js';
 
 interface SpreadsheetProps {
@@ -91,6 +92,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [columnAlignments, setColumnAlignments] = useState<Record<string, 'left' | 'center' | 'right'>>({});
   const [editingColumnAlignment, setEditingColumnAlignment] = useState<'left' | 'center' | 'right'>('left');
   const [showGoogleDrivePicker, setShowGoogleDrivePicker] = useState(false);
+  const [isSavingAsDefault, setIsSavingAsDefault] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Sync data with initialData prop changes
@@ -271,6 +273,46 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     } finally {
       setIsSaving(false);
       console.log('Save process completed');
+    }
+  };
+
+  // Save current configuration as default
+  const saveAsDefault = async () => {
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to save default extraction preferences.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSavingAsDefault(true);
+    
+    try {
+      const success = await ExtractionPreferencesService.saveDefaultPreferences(columns, columnInstructions);
+      
+      if (success) {
+        toast({
+          title: "Default saved",
+          description: "Current extraction configuration saved as default for future use.",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to save default configuration. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error saving as default:', error);
+      toast({
+        title: "Error", 
+        description: "An unexpected error occurred while saving default configuration.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingAsDefault(false);
     }
   };
 
@@ -1667,9 +1709,18 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                 </Select>
               </div>
             </div>
-            <DialogFooter>
+            <DialogFooter className="gap-2">
               <Button variant="outline" onClick={() => setShowColumnDialog(false)}>
                 Cancel
+              </Button>
+              <Button 
+                variant="secondary" 
+                onClick={saveAsDefault}
+                disabled={isSavingAsDefault || !user}
+                className="gap-2"
+              >
+                <Save className="h-4 w-4" />
+                {isSavingAsDefault ? "Saving..." : "Save as Default"}
               </Button>
               <Button onClick={saveColumnChanges}>
                 Save Column
