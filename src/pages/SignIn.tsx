@@ -18,6 +18,7 @@ const SignIn: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
+  const [resetEmailSent, setResetEmailSent] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -94,6 +95,43 @@ const SignIn: React.FC = () => {
     } catch (error: any) {
       toast({
         title: "Authentication failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email) {
+      toast({
+        title: "Email required",
+        description: "Please enter your email address first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setAuthLoading(true);
+    
+    try {
+      const redirectUrl = `${window.location.origin}/signin?reset=true`;
+      
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: redirectUrl,
+      });
+      
+      if (error) throw error;
+      
+      setResetEmailSent(true);
+      toast({
+        title: "Reset email sent",
+        description: "Check your email for a password reset link.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error sending reset email",
         description: error.message,
         variant: "destructive",
       });
@@ -184,6 +222,20 @@ const SignIn: React.FC = () => {
                   <LogIn className="h-4 w-4 mr-2" />
                   {authLoading ? 'Loading...' : (isSignUp ? 'Create Account' : 'Sign In')}
                 </Button>
+                
+                {!isSignUp && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="w-full text-sm"
+                    onClick={handleForgotPassword}
+                    disabled={authLoading}
+                  >
+                    {resetEmailSent ? 'Reset email sent!' : 'Forgot password?'}
+                  </Button>
+                )}
+                
                 <Button
                   type="button"
                   variant="ghost"
@@ -191,6 +243,7 @@ const SignIn: React.FC = () => {
                   onClick={() => {
                     console.log('Toggling isSignUp from', isSignUp, 'to', !isSignUp);
                     setIsSignUp(!isSignUp);
+                    setResetEmailSent(false);
                   }}
                 >
                   {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
