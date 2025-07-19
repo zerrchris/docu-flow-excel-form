@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import extractorLogo from '@/assets/document-extractor-logo.png';
+import AuthButton from '@/components/AuthButton';
 
 const Home: React.FC = () => {
   const [user, setUser] = useState<SupabaseUser | null>(null);
@@ -51,27 +52,16 @@ const Home: React.FC = () => {
               </h1>
             </div>
             <div className="flex items-center gap-4">
-              {loading ? (
-                <Button disabled>Loading...</Button>
-              ) : user ? (
-                <div className="flex items-center gap-4">
-                  <span className="text-sm text-muted-foreground">Welcome, {user.email}</span>
-                  <Link to="/app">
-                    <Button>Open App</Button>
-                  </Link>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <Link to="/signin">
-                    <Button variant="outline">
-                      <LogIn className="h-4 w-4 mr-2" />
-                      Sign In
-                    </Button>
-                  </Link>
-                  <Link to="/app">
-                    <Button>Try Now</Button>
-                  </Link>
-                </div>
+              <AuthButton />
+              {user && (
+                <Link to="/app">
+                  <Button>Open App</Button>
+                </Link>
+              )}
+              {!user && (
+                <Link to="/app">
+                  <Button>Try Now</Button>
+                </Link>
               )}
             </div>
           </div>
