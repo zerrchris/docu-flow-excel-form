@@ -67,16 +67,17 @@ const SignIn: React.FC = () => {
         }
         
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-          console.log('Auth state changed:', event, session);
+          console.log('Auth state changed:', event, session?.user?.email);
           setUser(session?.user ?? null);
           
           // Only redirect on successful sign in, not during password reset flow
           if (session?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && !isPasswordReset) {
-            console.log('Successful sign in, redirecting to home');
-            // Use setTimeout to ensure state updates are complete
+            console.log('Auth state indicates successful sign in, attempting redirect');
+            // Multiple redirect attempts to ensure it works
             setTimeout(() => {
-              window.location.href = '/';
-            }, 100);
+              console.log('Executing redirect to home page');
+              window.location.replace('/');
+            }, 500);
           }
         });
 
@@ -158,10 +159,12 @@ const SignIn: React.FC = () => {
           description: "You have successfully signed in.",
         });
         
-        // Force immediate redirect after successful sign in
+        // Multiple redirect attempts with different methods
+        console.log('Attempting immediate redirect after sign in');
         setTimeout(() => {
-          window.location.href = '/';
-        }, 100);
+          console.log('Executing post-signin redirect');
+          window.location.replace('/');
+        }, 1000);
       }
       
       setEmail('');
@@ -232,18 +235,35 @@ const SignIn: React.FC = () => {
   // If user is already signed in, show a different message
   if (user) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <img 
-            src={extractorLogo} 
-            alt="RunsheetPro Logo" 
-            className="h-16 w-16 mx-auto mb-4"
-          />
-          <p className="mb-4">You're already signed in as {user.email}</p>
-          <Link to="/">
-            <Button>Go to App</Button>
-          </Link>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <CardTitle>Already Signed In</CardTitle>
+            <CardDescription>
+              You're signed in as {user.email}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-center text-sm text-muted-foreground">
+              Redirecting to the app...
+            </p>
+            <div className="flex flex-col gap-2">
+              <Button onClick={() => window.location.href = '/'} className="w-full">
+                Go to App
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  supabase.auth.signOut();
+                  setUser(null);
+                }} 
+                className="w-full"
+              >
+                Sign Out
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
