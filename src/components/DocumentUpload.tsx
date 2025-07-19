@@ -51,8 +51,8 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
   }, [onFileSelect]);
 
   return (
-    <Card className="bg-muted/5 border-2">
-      <div className="p-4">
+    <Card className="bg-muted/5 border-2 h-full flex flex-col">
+      <div className="p-4 flex flex-col h-full">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-foreground">Upload Document</h3>
           <Button 
@@ -66,7 +66,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
         </div>
 
         {isExpanded && (
-          <>
+          <div className="flex flex-col flex-1">
             {selectedFile && (
               <div className="flex justify-end mb-6">
                 <Button variant="outline" onClick={handleClear} size="sm" className="hover:bg-destructive/10 hover:text-destructive">
@@ -79,12 +79,12 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
             <div
               onDrop={handleDrop}
               onDragOver={handleDragOver}
-              className="border-2 border-dashed border-border rounded-lg p-4 text-center hover:border-primary transition-colors cursor-pointer bg-background/50"
+              className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-primary transition-colors cursor-pointer bg-background/50 flex-1 flex flex-col items-center justify-center min-h-[400px]"
             >
-              <div className="flex flex-col items-center space-y-3">
-                <Upload className="h-12 w-12 text-muted-foreground" />
-                <div className="space-y-2">
-                  <p className="text-lg text-foreground">
+              <div className="flex flex-col items-center space-y-4">
+                <Upload className="h-16 w-16 text-muted-foreground" />
+                <div className="space-y-3">
+                  <p className="text-xl text-foreground">
                     Drag and drop your document{allowMultiple ? 's' : ''} here, or
                   </p>
                   <Button variant="outline" size="lg" asChild className="font-semibold">
@@ -131,7 +131,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
                 </span>
               </div>
             )}
-          </>
+          </div>
         )}
       </div>
     </Card>

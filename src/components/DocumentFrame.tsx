@@ -97,15 +97,13 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
                     {file ? (
                       <DocumentViewer file={file} previewUrl={previewUrl} />
                     ) : (
-                      <div className="p-6 flex items-center justify-center h-full">
-                        <div className="w-full">
-                          <DocumentUpload 
-                            onFileSelect={onFileSelect} 
-                            onMultipleFilesSelect={onMultipleFilesSelect}
-                            selectedFile={file}
-                            allowMultiple={true}
-                          />
-                        </div>
+                      <div className="h-full">
+                        <DocumentUpload 
+                          onFileSelect={onFileSelect} 
+                          onMultipleFilesSelect={onMultipleFilesSelect}
+                          selectedFile={file}
+                          allowMultiple={true}
+                        />
                       </div>
                     )}
                   </div>
