@@ -376,13 +376,26 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
   // Handle file upload logic
   const handleFileUpload = (file: File, fileName: string) => {
-    const fileExtension = file.name.split('.').pop()?.toLowerCase();
+    console.log('Processing file:', { name: file.name, type: file.type, fileName });
     
-    if (fileExtension === 'csv') {
+    const fileExtension = file.name.split('.').pop()?.toLowerCase();
+    const mimeType = file.type;
+    
+    // Determine file type based on both extension and MIME type
+    const isCSV = fileExtension === 'csv' || mimeType === 'text/csv';
+    const isExcel = fileExtension === 'xlsx' || fileExtension === 'xls' || 
+                    mimeType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+                    mimeType === 'application/vnd.ms-excel' ||
+                    mimeType === 'application/vnd.google-apps.spreadsheet';
+    
+    if (isCSV) {
+      console.log('Processing as CSV file');
       handleCSVUpload(file, fileName);
-    } else if (fileExtension === 'xlsx' || fileExtension === 'xls') {
+    } else if (isExcel) {
+      console.log('Processing as Excel file');
       handleExcelUpload(file, fileName);
     } else {
+      console.log('Unsupported file type:', { fileExtension, mimeType });
       toast({
         title: "Unsupported file type",
         description: "Please upload a CSV (.csv) or Excel (.xlsx, .xls) file.",
