@@ -1449,7 +1449,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                 msOverflowStyle: 'none'
               }}
             >
-              <Table className="border-collapse">
+              <Table className="border-collapse" style={{ width: `${getTotalTableWidth()}px`, minWidth: `${getTotalTableWidth()}px` }}>
               <TableHeader>
                 <TableRow className="hover:bg-muted/50 transition-colors">
                   {columns.map((column) => (
@@ -1523,7 +1523,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             className="flex-1 overflow-auto"
             onScroll={handleBodyScroll}
           >
-            <Table className="border-collapse">
+            <Table className="border-collapse" style={{ width: `${getTotalTableWidth()}px`, minWidth: `${getTotalTableWidth()}px` }}>
               <TableBody>
                 {data.map((row, rowIndex) => (
                   <TableRow key={rowIndex} className="hover:bg-muted/30">
