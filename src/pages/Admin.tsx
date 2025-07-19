@@ -140,13 +140,15 @@ const Admin: React.FC = () => {
   const saveGlobalInstructions = async () => {
     setIsSavingInstructions(true);
     try {
-      const { error } = await supabase
+      // First try to update existing record
+      const { data, error } = await supabase
         .from('admin_settings')
-        .upsert({
-          setting_key: 'global_extraction_instructions',
+        .update({ 
           setting_value: globalInstructions,
-          description: 'Global instructions that are included with every document extraction request to improve AI accuracy and consistency.'
-        });
+          updated_at: new Date().toISOString()
+        })
+        .eq('setting_key', 'global_extraction_instructions')
+        .select();
 
       if (error) throw error;
 

@@ -31,11 +31,11 @@ export class AdminSettingsService {
     try {
       const { error } = await supabase
         .from('admin_settings')
-        .upsert({
-          setting_key: 'global_extraction_instructions',
+        .update({ 
           setting_value: instructions,
-          description: 'Global instructions that are included with every document extraction request to improve AI accuracy and consistency.'
-        });
+          updated_at: new Date().toISOString()
+        })
+        .eq('setting_key', 'global_extraction_instructions');
 
       if (error) {
         console.error('Error updating global instructions:', error);
