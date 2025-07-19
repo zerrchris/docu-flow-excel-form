@@ -200,6 +200,44 @@ const DocumentProcessor: React.FC = () => {
     setPendingNavigation(null);
   };
 
+  // Handle saving column configuration
+  const handleSaveColumnConfig = async (field: string, value: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "Authentication Required",
+          description: "Please sign in to save column configurations.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Update the column instructions for this field
+      const updatedInstructions = {
+        ...columnInstructions,
+        [field]: value
+      };
+      
+      setColumnInstructions(updatedInstructions);
+      
+      // Save to preferences
+      await ExtractionPreferencesService.saveDefaultPreferences(columns, updatedInstructions);
+      
+      toast({
+        title: "Configuration Saved",
+        description: `Column configuration for "${field}" has been saved.`,
+      });
+    } catch (error) {
+      console.error('Error saving column configuration:', error);
+      toast({
+        title: "Save Failed",
+        description: "Failed to save column configuration. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
   // Update unsaved changes state when spreadsheet data changes
   const handleSpreadsheetDataChange = (data: Record<string, string>[]) => {
     setSpreadsheetData(data);
@@ -618,6 +656,7 @@ Image: [base64 image data]`;
           onFileSelect={handleFileSelect}
           onMultipleFilesSelect={handleMultipleFilesSelect}
           onResetDocument={resetDocument}
+          onSaveColumnConfig={handleSaveColumnConfig}
           isAnalyzing={isAnalyzing}
         />
       </div>

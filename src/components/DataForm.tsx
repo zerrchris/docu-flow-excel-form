@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { RotateCw, CheckCircle, Plus, Settings, ChevronDown, ChevronUp } from 'lucide-react';
+import { RotateCw, CheckCircle, Plus, Settings, ChevronDown, ChevronUp, Save } from 'lucide-react';
 
 interface DataFormProps {
   fields: string[];
@@ -14,6 +14,7 @@ interface DataFormProps {
   onAnalyze: () => void;
   onAddToSpreadsheet: () => void;
   onResetDocument?: () => void;
+  onSaveColumnConfig?: (field: string, value: string) => void;
   isAnalyzing: boolean;
 }
 
@@ -24,6 +25,7 @@ const DataForm: React.FC<DataFormProps> = ({
   onAnalyze,
   onAddToSpreadsheet,
   onResetDocument,
+  onSaveColumnConfig,
   isAnalyzing 
 }) => {
   const [visibleFields, setVisibleFields] = useState<Record<string, boolean>>({});
@@ -103,9 +105,23 @@ const DataForm: React.FC<DataFormProps> = ({
       <div className="space-y-2">
         {visibleFieldsList.map((field) => (
           <div key={field}>
-            <Label htmlFor={field} className="text-sm font-medium">
-              {field}
-            </Label>
+            <div className="flex items-center justify-between mb-1">
+              <Label htmlFor={field} className="text-sm font-medium">
+                {field}
+              </Label>
+              {onSaveColumnConfig && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onSaveColumnConfig(field, formData[field] || '')}
+                  className="h-6 px-2 text-xs"
+                  title={`Save configuration for ${field}`}
+                >
+                  <Save className="h-3 w-3 mr-1" />
+                  Save Config
+                </Button>
+              )}
+            </div>
             <Textarea
               id={field}
               value={formData[field] || ''}
