@@ -114,7 +114,7 @@ const BatchDocumentRow: React.FC<BatchDocumentRowProps> = ({
         </div>
 
         <CollapsibleContent className="data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-0">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 h-[1000px]">
             <div className="lg:col-span-4 border-r border-border">
               <div className="p-6">
                 <div className="space-y-2">
