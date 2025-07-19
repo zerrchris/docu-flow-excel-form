@@ -57,7 +57,23 @@ const AuthButton: React.FC = () => {
       }
     };
 
-    initAuth();
+    // Add a timeout to ensure loading doesn't persist indefinitely
+    const loadingTimeout = setTimeout(() => {
+      console.log('AuthButton loading timeout reached, forcing loading to false');
+      setLoading(false);
+    }, 2000);
+
+    initAuth().then(() => {
+      clearTimeout(loadingTimeout);
+    }).catch((error) => {
+      console.error('AuthButton initAuth promise rejected:', error);
+      clearTimeout(loadingTimeout);
+      setLoading(false);
+    });
+
+    return () => {
+      clearTimeout(loadingTimeout);
+    };
   }, []);
 
   const handleSignOut = async () => {
