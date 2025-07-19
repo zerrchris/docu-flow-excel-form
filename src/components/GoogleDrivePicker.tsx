@@ -44,26 +44,39 @@ export const GoogleDrivePicker: React.FC<GoogleDrivePickerProps> = ({
       // Open popup for OAuth
       const popup = window.open(authData.authUrl, 'google-auth', 'width=500,height=600');
       
-      // Listen for OAuth completion
-      const checkClosed = setInterval(async () => {
-        try {
-          if (popup?.closed) {
-            clearInterval(checkClosed);
-            setIsAuthenticating(false);
-            
-            // Check if we have an auth code in localStorage (set by popup)
-            const authCode = localStorage.getItem('google_auth_code');
-            if (authCode) {
-              localStorage.removeItem('google_auth_code');
-              await handleAuthCompletion(authCode);
-            }
-          }
-        } catch (error) {
-          clearInterval(checkClosed);
+      if (!popup) {
+        throw new Error('Popup blocked. Please allow popups for this site.');
+      }
+
+      // Listen for messages from the popup
+      const messageListener = (event: MessageEvent) => {
+        if (event.origin !== window.location.origin) return;
+        
+        if (event.data.type === 'GOOGLE_AUTH_SUCCESS') {
+          popup.close();
+          window.removeEventListener('message', messageListener);
           setIsAuthenticating(false);
-          console.error('Auth check error:', error);
+          handleAuthCompletion(event.data.code);
+        } else if (event.data.type === 'GOOGLE_AUTH_ERROR') {
+          popup.close();
+          window.removeEventListener('message', messageListener);
+          setIsAuthenticating(false);
+          toast.error('Google authentication failed');
+        }
+      };
+
+      window.addEventListener('message', messageListener);
+
+      // Fallback: Check if popup is closed without success
+      const checkClosed = setInterval(() => {
+        if (popup.closed) {
+          clearInterval(checkClosed);
+          window.removeEventListener('message', messageListener);
+          setIsAuthenticating(false);
+          // Don't show error if we already got a success message
         }
       }, 1000);
+
     } catch (error) {
       setIsAuthenticating(false);
       toast.error('Failed to start Google authentication');
