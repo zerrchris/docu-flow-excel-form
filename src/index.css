@@ -2,6 +2,38 @@
 @tailwind components;
 @tailwind utilities;
 
+/* PDF Viewer Custom Scrollbars */
+.pdf-scrollable {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--muted-foreground) / 0.4) transparent;
+}
+
+.pdf-scrollable::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+}
+
+.pdf-scrollable::-webkit-scrollbar-track {
+  background: hsl(var(--muted) / 0.2);
+  border-radius: 8px;
+}
+
+.pdf-scrollable::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--muted-foreground) / 0.4);
+  border-radius: 8px;
+  border: 2px solid hsl(var(--muted) / 0.2);
+}
+
+.pdf-scrollable::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--muted-foreground) / 0.6);
+}
+
+.pdf-scrollable::-webkit-scrollbar-corner {
+  background: hsl(var(--muted) / 0.2);
+}
+@tailwind components;
+@tailwind utilities;
+
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
 All colors MUST be HSL.
 */

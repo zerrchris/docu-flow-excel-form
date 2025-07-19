@@ -220,14 +220,8 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ file, previewUrl }) => {
           )}
           
           {!loading && !error && (
-            <div 
-              className="w-full h-full overflow-auto pdf-scrollable"
-              style={{
-                scrollbarWidth: 'thin',
-                scrollbarColor: 'hsl(var(--muted-foreground)) transparent',
-              }}
-            >
-              <div className="flex justify-center p-4 min-w-max min-h-max">
+            <div className="w-full h-full overflow-scroll pdf-scrollable">
+              <div className="flex justify-center p-4" style={{ minWidth: '150%', minHeight: '150%' }}>
                 <Document
                   file={previewUrl}
                   onLoadSuccess={onDocumentLoadSuccess}
@@ -244,29 +238,6 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ file, previewUrl }) => {
                   />
                 </Document>
               </div>
-              <style dangerouslySetInnerHTML={{
-                __html: `
-                  .pdf-scrollable::-webkit-scrollbar {
-                    width: 12px;
-                    height: 12px;
-                  }
-                  .pdf-scrollable::-webkit-scrollbar-track {
-                    background: transparent;
-                  }
-                  .pdf-scrollable::-webkit-scrollbar-thumb {
-                    background-color: hsl(var(--muted-foreground) / 0.3);
-                    border-radius: 6px;
-                    border: 2px solid transparent;
-                    background-clip: content-box;
-                  }
-                  .pdf-scrollable::-webkit-scrollbar-thumb:hover {
-                    background-color: hsl(var(--muted-foreground) / 0.5);
-                  }
-                  .pdf-scrollable::-webkit-scrollbar-corner {
-                    background: transparent;
-                  }
-                `
-              }} />
             </div>
           )}
         </div>
