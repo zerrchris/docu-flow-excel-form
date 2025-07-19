@@ -46,13 +46,17 @@ export const GoogleDrivePicker: React.FC<GoogleDrivePickerProps> = ({
 
       if (authError) {
         console.error('Auth error:', authError);
+        toast.error(`Failed to get auth URL: ${authError.message || JSON.stringify(authError)}`);
         throw authError;
       }
 
       if (!authData || !authData.authUrl) {
         console.error('No auth URL received:', authData);
+        toast.error('No authorization URL received from server');
         throw new Error('No auth URL received from server');
       }
+
+      console.log('Generated auth URL:', authData.authUrl);
 
       // Try to open popup with better detection
       const popup = window.open(authData.authUrl, 'google-auth', 'width=600,height=700,scrollbars=yes,resizable=yes');
