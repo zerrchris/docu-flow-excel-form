@@ -93,6 +93,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [editingColumnAlignment, setEditingColumnAlignment] = useState<'left' | 'center' | 'right'>('left');
   const [showGoogleDrivePicker, setShowGoogleDrivePicker] = useState(false);
   const [isSavingAsDefault, setIsSavingAsDefault] = useState(false);
+  const [hasManuallyResizedColumns, setHasManuallyResizedColumns] = useState(false);
   
   // Refs for scroll synchronization and container width measurement
   const bodyScrollRef = useRef<HTMLDivElement>(null);
@@ -109,9 +110,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       const availableWidth = Math.max(containerWidth, 800); // Minimum width of 800px
       const columnWidth = Math.floor(availableWidth / columns.length);
       
-      // Only set widths if they haven't been manually set yet
-      const hasCustomWidths = Object.keys(columnWidths).length > 0;
-      if (!hasCustomWidths) {
+      // Only set widths if no columns have been manually resized
+      if (!hasManuallyResizedColumns) {
         const newWidths: Record<string, number> = {};
         columns.forEach(column => {
           newWidths[column] = columnWidth;
@@ -119,7 +119,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         setColumnWidths(newWidths);
       }
     }
-  }, [columns]); // Only depend on columns, not columnWidths to avoid infinite loop
+  }, [columns, hasManuallyResizedColumns]);
 
   // Sync data with initialData prop changes
   useEffect(() => {
@@ -396,6 +396,9 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     onColumnChange(runsheet.columns);
     setData(runsheet.data);
     setShowOpenDialog(false);
+    // Reset column width state for new runsheet
+    setColumnWidths({});
+    setHasManuallyResizedColumns(false);
     
     toast({
       title: "Runsheet loaded",
@@ -943,6 +946,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           ...prev,
           [resizing.column]: newWidth
         }));
+        // Mark that columns have been manually resized
+        setHasManuallyResizedColumns(true);
       }
       
       if (resizingHeight) {
