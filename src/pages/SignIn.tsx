@@ -28,24 +28,30 @@ const SignIn: React.FC = () => {
   useEffect(() => {
     const initAuth = async () => {
       try {
+        console.log('Starting auth initialization...');
         const { data: { session } } = await supabase.auth.getSession();
+        console.log('Current session:', session);
         setUser(session?.user ?? null);
         
         // Check if we're in a password reset flow
         const urlParams = new URLSearchParams(window.location.search);
         const isPasswordReset = urlParams.get('reset') === 'true';
+        console.log('Is password reset flow:', isPasswordReset);
         
         // If user is already signed in and not in reset flow, redirect to home
         if (session?.user && !isPasswordReset) {
+          console.log('User already signed in, redirecting to home');
           navigate('/');
           return;
         }
         
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+          console.log('Auth state changed:', event, session);
           setUser(session?.user ?? null);
           
           // Only redirect on successful sign in, not during password reset flow
           if (session?.user && event === 'SIGNED_IN' && !isPasswordReset) {
+            console.log('Successful sign in, redirecting to home');
             navigate('/');
           }
         });
@@ -54,6 +60,7 @@ const SignIn: React.FC = () => {
       } catch (error) {
         console.warn('Auth initialization failed:', error);
       } finally {
+        console.log('Auth initialization complete, setting loading to false');
         setLoading(false);
       }
     };
