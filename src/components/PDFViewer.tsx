@@ -206,35 +206,39 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ file, previewUrl }) => {
         )}
 
         {/* PDF viewer area */}
-        <div className="flex-1 bg-muted/20 flex items-center justify-center overflow-auto p-4">
+        <div className="flex-1 bg-muted/20 relative">
           {loading && (
-            <div className="text-center">
+            <div className="absolute inset-0 flex items-center justify-center">
               <div className="text-muted-foreground">Loading PDF...</div>
             </div>
           )}
           
           {error && (
-            <div className="text-center text-destructive">
-              <div>{error}</div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-destructive">{error}</div>
             </div>
           )}
           
           {!loading && !error && (
-            <Document
-              file={previewUrl}
-              onLoadSuccess={onDocumentLoadSuccess}
-              onLoadError={onDocumentLoadError}
-              loading={<div className="text-muted-foreground">Loading PDF...</div>}
-              error={<div className="text-destructive">Failed to load PDF</div>}
-            >
-              <Page 
-                pageNumber={currentPage}
-                scale={scale}
-                className="shadow-lg border border-border"
-                renderAnnotationLayer={false}
-                renderTextLayer={false}
-              />
-            </Document>
+            <div className="w-full h-full overflow-auto scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent hover:scrollbar-thumb-muted-foreground/40">
+              <div className="flex justify-center p-4 min-w-max min-h-max">
+                <Document
+                  file={previewUrl}
+                  onLoadSuccess={onDocumentLoadSuccess}
+                  onLoadError={onDocumentLoadError}
+                  loading={<div className="text-muted-foreground">Loading PDF...</div>}
+                  error={<div className="text-destructive">Failed to load PDF</div>}
+                >
+                  <Page 
+                    pageNumber={currentPage}
+                    scale={scale}
+                    className="shadow-lg border border-border bg-white"
+                    renderAnnotationLayer={false}
+                    renderTextLayer={false}
+                  />
+                </Document>
+              </div>
+            </div>
           )}
         </div>
       </div>
