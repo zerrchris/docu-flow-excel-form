@@ -9,6 +9,7 @@ import EditableSpreadsheet from '@/components/EditableSpreadsheet';
 import AuthButton from '@/components/AuthButton';
 import BatchProcessing from '@/components/BatchProcessing';
 import { ExtractionPreferencesService } from '@/services/extractionPreferences';
+import { AdminSettingsService } from '@/services/adminSettings';
 import { supabase } from '@/integrations/supabase/client';
 
 import extractorLogo from '@/assets/document-extractor-logo.png';
@@ -461,7 +462,11 @@ const DocumentProcessor: React.FC = () => {
         .map(([column, instruction]) => `- ${column}: ${instruction}`)
         .join('\n');
 
-      const extractionPrompt = `Analyze this document and extract the following information. Return the data as a JSON object with the exact field names specified:
+      // Get global admin instructions
+      const globalInstructions = await AdminSettingsService.getGlobalExtractionInstructions();
+      
+      // Build comprehensive prompt with admin instructions
+      let extractionPrompt = `Analyze this document and extract the following information. Return the data as a JSON object with the exact field names specified:
 
 ${extractionFields}
 
@@ -469,7 +474,14 @@ Instructions:
 1. Extract only the information requested for each field
 2. If information is not found, use an empty string ""
 3. Be as accurate as possible to the source document
-4. Return valid JSON format only, no additional text
+4. Return valid JSON format only, no additional text`;
+
+      // Add global admin instructions if they exist
+      if (globalInstructions.trim()) {
+        extractionPrompt += `\n\nAdditional Instructions:\n${globalInstructions}`;
+      }
+
+      extractionPrompt += `
 
 Expected JSON format:
 {

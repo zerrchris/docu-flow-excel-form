@@ -7,7 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Users, Shield, UserCheck } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { ArrowLeft, Users, Shield, UserCheck, Settings } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 
@@ -35,6 +37,8 @@ const Admin: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [globalInstructions, setGlobalInstructions] = useState('');
+  const [isSavingInstructions, setIsSavingInstructions] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -70,6 +74,7 @@ const Admin: React.FC = () => {
 
       setIsAdmin(true);
       await loadUsers();
+      await loadGlobalInstructions();
       setLoading(false);
     };
 
@@ -108,6 +113,56 @@ const Admin: React.FC = () => {
         description: "Failed to load users: " + error.message,
         variant: "destructive",
       });
+    }
+  };
+
+  const loadGlobalInstructions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('admin_settings')
+        .select('setting_value')
+        .eq('setting_key', 'global_extraction_instructions')
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error loading global instructions:', error);
+        return;
+      }
+
+      if (data) {
+        setGlobalInstructions(data.setting_value);
+      }
+    } catch (error: any) {
+      console.error('Error loading global instructions:', error);
+    }
+  };
+
+  const saveGlobalInstructions = async () => {
+    setIsSavingInstructions(true);
+    try {
+      const { error } = await supabase
+        .from('admin_settings')
+        .upsert({
+          setting_key: 'global_extraction_instructions',
+          setting_value: globalInstructions,
+          description: 'Global instructions that are included with every document extraction request to improve AI accuracy and consistency.'
+        })
+        .eq('setting_key', 'global_extraction_instructions');
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Global extraction instructions have been saved.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to save global instructions: " + error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingInstructions(false);
     }
   };
 
@@ -205,6 +260,42 @@ const Admin: React.FC = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Global Extraction Instructions */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5" />
+              Global Extraction Instructions
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="global-instructions" className="text-sm font-medium">
+                  Instructions for AI Document Analysis
+                </Label>
+                <p className="text-xs text-muted-foreground mt-1 mb-2">
+                  These instructions will be included with every document extraction request to improve accuracy and consistency.
+                </p>
+                <Textarea
+                  id="global-instructions"
+                  value={globalInstructions}
+                  onChange={(e) => setGlobalInstructions(e.target.value)}
+                  className="min-h-[120px]"
+                  placeholder="Enter detailed instructions for how the AI should extract data from documents..."
+                />
+              </div>
+              <Button 
+                onClick={saveGlobalInstructions}
+                disabled={isSavingInstructions}
+                className="w-full sm:w-auto"
+              >
+                {isSavingInstructions ? 'Saving...' : 'Save Instructions'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Users Table */}
         <Card>
