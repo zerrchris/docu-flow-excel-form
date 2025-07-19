@@ -136,7 +136,7 @@ const BatchProcessing: React.FC<BatchProcessingProps> = ({
                   <div
                     onDrop={handleDrop}
                     onDragOver={handleDragOver}
-                    className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary transition-colors cursor-pointer bg-muted/20"
+                    className="border-2 border-dashed border-border rounded-lg p-12 text-center hover:border-primary transition-colors cursor-pointer bg-muted/20 min-h-[200px] flex items-center justify-center"
                   >
                     <div className="flex flex-col items-center space-y-3">
                       <Upload className="h-8 w-8 text-muted-foreground" />
