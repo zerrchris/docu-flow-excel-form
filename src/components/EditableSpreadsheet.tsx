@@ -283,14 +283,12 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   // Scroll synchronization between header and body
   const handleBodyScroll = () => {
     if (bodyScrollRef.current && headerScrollRef.current) {
-      console.log('Body scroll:', bodyScrollRef.current.scrollLeft);
       headerScrollRef.current.scrollLeft = bodyScrollRef.current.scrollLeft;
     }
   };
 
   const handleHeaderScroll = () => {
     if (bodyScrollRef.current && headerScrollRef.current) {
-      console.log('Header scroll:', headerScrollRef.current.scrollLeft);
       bodyScrollRef.current.scrollLeft = headerScrollRef.current.scrollLeft;
     }
   };
@@ -1423,7 +1421,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                 msOverflowStyle: 'none'
               }}
             >
-              <Table className="border-collapse" style={{ width: `${getTotalTableWidth()}px`, minWidth: `${getTotalTableWidth()}px` }}>
+              <Table className="border-collapse">
               <TableHeader>
                 <TableRow className="hover:bg-muted/50 transition-colors">
                   {columns.map((column) => (
@@ -1497,7 +1495,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             className="flex-1 overflow-auto"
             onScroll={handleBodyScroll}
           >
-            <Table className="border-collapse" style={{ width: `${getTotalTableWidth()}px`, minWidth: `${getTotalTableWidth()}px` }}>
+            <Table className="border-collapse">
               <TableBody>
                 {data.map((row, rowIndex) => (
                   <TableRow key={rowIndex} className="hover:bg-muted/30">
