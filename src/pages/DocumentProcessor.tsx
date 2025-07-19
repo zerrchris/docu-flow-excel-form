@@ -465,7 +465,7 @@ const DocumentProcessor: React.FC = () => {
       // Get global admin instructions
       const globalInstructions = await AdminSettingsService.getGlobalExtractionInstructions();
       
-      // Build extraction prompt without global instructions (they'll be in system message)
+      // Build extraction prompt including global instructions
       let extractionPrompt = `Analyze this document and extract the following information. Return the data as a JSON object with the exact field names specified:
 
 ${extractionFields}
@@ -474,7 +474,14 @@ Instructions:
 1. Extract only the information requested for each field
 2. If information is not found, use an empty string ""
 3. Be as accurate as possible to the source document
-4. Return valid JSON format only, no additional text
+4. Return valid JSON format only, no additional text`;
+
+      // Add global admin instructions to user prompt as well for reinforcement
+      if (globalInstructions.trim()) {
+        extractionPrompt += `\n\nAdditional Extraction Guidelines:\n${globalInstructions}`;
+      }
+
+      extractionPrompt += `
 
 Expected JSON format:
 {
