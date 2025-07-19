@@ -10,24 +10,17 @@ import AuthButton from '@/components/AuthButton';
 
 const Home: React.FC = () => {
   const [user, setUser] = useState<SupabaseUser | null>(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const initAuth = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await supabase.auth.getSession();
+      setUser(session?.user ?? null);
+      
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
         setUser(session?.user ?? null);
-        
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-          setUser(session?.user ?? null);
-        });
+      });
 
-        return () => subscription.unsubscribe();
-      } catch (error) {
-        console.warn('Auth initialization failed:', error);
-      } finally {
-        setLoading(false);
-      }
+      return () => subscription.unsubscribe();
     };
 
     initAuth();
