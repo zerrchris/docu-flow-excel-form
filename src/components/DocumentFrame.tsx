@@ -8,13 +8,6 @@ import DocumentUpload from './DocumentUpload';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 
-interface HighlightPosition {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
 interface DocumentFrameProps {
   file: File | null;
   previewUrl: string | null;
@@ -27,9 +20,6 @@ interface DocumentFrameProps {
   onMultipleFilesSelect?: (files: File[]) => void;
   onResetDocument: () => void;
   isAnalyzing: boolean;
-  highlights?: Record<string, HighlightPosition>;
-  activeHighlight?: string | null;
-  onHighlightClick?: (fieldName: string) => void;
 }
 
 const DocumentFrame: React.FC<DocumentFrameProps> = ({
@@ -43,10 +33,7 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
   onFileSelect,
   onMultipleFilesSelect,
   onResetDocument,
-  isAnalyzing,
-  highlights,
-  activeHighlight,
-  onHighlightClick
+  isAnalyzing
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -108,13 +95,7 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
                 <ResizablePanel defaultSize={67}>
                   <div className="h-full">
                     {file ? (
-                      <DocumentViewer 
-                        file={file} 
-                        previewUrl={previewUrl} 
-                        highlights={highlights}
-                        activeHighlight={activeHighlight}
-                        onHighlightClick={onHighlightClick}
-                      />
+                      <DocumentViewer file={file} previewUrl={previewUrl} />
                     ) : (
                       <div className="h-full">
                         <DocumentUpload 
