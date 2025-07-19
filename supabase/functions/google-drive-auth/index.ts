@@ -24,7 +24,7 @@ serve(async (req) => {
 
     if (action === 'get_auth_url') {
       // Generate OAuth URL
-      const redirectUri = `${origin}/auth/google/callback`
+      const redirectUri = `${origin}/google-auth-callback`
       const scope = 'https://www.googleapis.com/auth/drive.readonly'
       
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
@@ -52,7 +52,7 @@ serve(async (req) => {
           code,
           client_id: clientId,
           client_secret: clientSecret,
-          redirect_uri: `${origin}/auth/google/callback`,
+          redirect_uri: `${origin}/google-auth-callback`,
           grant_type: 'authorization_code',
         }),
       })

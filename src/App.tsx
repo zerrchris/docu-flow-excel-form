@@ -25,7 +25,7 @@ const App = () => (
           <Route path="/signin" element={<SignIn />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/admin" element={<Admin />} />
-          <Route path="/auth/google/callback" element={<GoogleAuthCallback />} />
+          <Route path="/google-auth-callback" element={<GoogleAuthCallback />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
