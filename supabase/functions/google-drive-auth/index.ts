@@ -88,7 +88,14 @@ serve(async (req) => {
       
       console.log('Metadata response status:', metadataResponse.status)
       
+      if (!metadataResponse.ok) {
+        const errorText = await metadataResponse.text()
+        console.log('Metadata error:', errorText)
+        throw new Error(`Failed to get file metadata: ${metadataResponse.status} ${errorText}`)
+      }
+      
       const metadata = await metadataResponse.json()
+      console.log('File metadata:', metadata)
       
       // Download file content
       const contentResponse = await fetch(
@@ -99,6 +106,14 @@ serve(async (req) => {
           },
         }
       )
+      
+      console.log('Content response status:', contentResponse.status)
+      
+      if (!contentResponse.ok) {
+        const errorText = await contentResponse.text()
+        console.log('Content error:', errorText)
+        throw new Error(`Failed to download file content: ${contentResponse.status} ${errorText}`)
+      }
       
       const content = await contentResponse.arrayBuffer()
       const base64Content = btoa(String.fromCharCode(...new Uint8Array(content)))
