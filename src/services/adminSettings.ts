@@ -35,8 +35,9 @@ export class AdminSettingsService {
           setting_key: 'global_extraction_instructions',
           setting_value: instructions,
           description: 'Global instructions that are included with every document extraction request to improve AI accuracy and consistency.'
-        })
-        .eq('setting_key', 'global_extraction_instructions');
+        }, {
+          onConflict: 'setting_key'
+        });
 
       if (error) {
         console.error('Error updating global instructions:', error);
