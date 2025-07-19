@@ -303,15 +303,15 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   };
 
   // Scroll synchronization between header and body
-  const handleBodyScroll = () => {
-    if (bodyScrollRef.current && headerScrollRef.current) {
-      headerScrollRef.current.scrollLeft = bodyScrollRef.current.scrollLeft;
+  const handleBodyScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    if (headerScrollRef.current) {
+      headerScrollRef.current.scrollLeft = e.currentTarget.scrollLeft;
     }
   };
 
-  const handleHeaderScroll = () => {
-    if (bodyScrollRef.current && headerScrollRef.current) {
-      bodyScrollRef.current.scrollLeft = headerScrollRef.current.scrollLeft;
+  const handleHeaderScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    if (bodyScrollRef.current) {
+      bodyScrollRef.current.scrollLeft = e.currentTarget.scrollLeft;
     }
   };
 
