@@ -26,6 +26,7 @@ const BatchProcessing: React.FC<BatchProcessingProps> = ({
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [batchDocuments, setBatchDocuments] = useState<BatchDocument[]>([]);
+  const [isUploadAreaExpanded, setIsUploadAreaExpanded] = useState(true);
   const { toast } = useToast();
 
   const handleFilesUpload = (files: FileList | File[]) => {
@@ -41,6 +42,11 @@ const BatchProcessing: React.FC<BatchProcessingProps> = ({
       title: "Files uploaded",
       description: `${fileArray.length} document${fileArray.length > 1 ? 's' : ''} added to batch processing.`,
     });
+
+    // Collapse upload area after first upload
+    if (batchDocuments.length === 0 && fileArray.length > 0) {
+      setIsUploadAreaExpanded(false);
+    }
 
     if (!isExpanded) {
       setIsExpanded(true);
@@ -102,38 +108,53 @@ const BatchProcessing: React.FC<BatchProcessingProps> = ({
 
         <CollapsibleContent className="data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
           <div className="border-t">
-            {/* Upload Area */}
-            <div className="p-6 border-b">
-              <div
-                onDrop={handleDrop}
-                onDragOver={handleDragOver}
-                className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary transition-colors cursor-pointer bg-muted/20"
-              >
-                <div className="flex flex-col items-center space-y-3">
-                  <Upload className="h-8 w-8 text-muted-foreground" />
-                  <div className="space-y-2">
-                    <p className="text-foreground">
-                      Drop multiple documents here, or
-                    </p>
-                    <Button variant="outline" asChild>
-                      <label htmlFor="batch-file-upload" className="cursor-pointer">
-                        Browse Files
-                      </label>
-                    </Button>
-                    <input
-                      id="batch-file-upload"
-                      type="file"
-                      accept=".pdf,.jpg,.jpeg,.png,.gif,.bmp,.tiff,.webp,.doc,.docx"
-                      onChange={handleFileInput}
-                      className="hidden"
-                      multiple
-                    />
+            {/* Upload Area - Collapsible */}
+            <div className="border-b">
+              {isUploadAreaExpanded || batchDocuments.length === 0 ? (
+                <div className="p-6">
+                  <div
+                    onDrop={handleDrop}
+                    onDragOver={handleDragOver}
+                    className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary transition-colors cursor-pointer bg-muted/20"
+                  >
+                    <div className="flex flex-col items-center space-y-3">
+                      <Upload className="h-8 w-8 text-muted-foreground" />
+                      <div className="space-y-2">
+                        <p className="text-foreground">
+                          Drop multiple documents here, or
+                        </p>
+                        <Button variant="outline" asChild>
+                          <label htmlFor="batch-file-upload" className="cursor-pointer">
+                            Browse Files
+                          </label>
+                        </Button>
+                        <input
+                          id="batch-file-upload"
+                          type="file"
+                          accept=".pdf,.jpg,.jpeg,.png,.gif,.bmp,.tiff,.webp,.doc,.docx"
+                          onChange={handleFileInput}
+                          className="hidden"
+                          multiple
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Upload multiple individual documents for processing
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Upload multiple individual documents for processing
-                  </p>
                 </div>
-              </div>
+              ) : (
+                <div className="p-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsUploadAreaExpanded(true)}
+                    className="w-full h-12 bg-muted/20 hover:bg-muted/40 border-dashed transition-all duration-200 animate-fade-in"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Add More Documents
+                  </Button>
+                </div>
+              )}
             </div>
 
             {/* Batch Document Rows */}
