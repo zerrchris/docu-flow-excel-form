@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { User, LogIn, LogOut, Shield } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 
@@ -15,11 +15,25 @@ const AuthButton: React.FC = () => {
   useEffect(() => {
     const initAuth = async () => {
       try {
-        if (import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY) {
-          const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session } } = await supabase.auth.getSession();
+        setUser(session?.user ?? null);
+        
+        // Check if user is admin
+        if (session?.user) {
+          const { data: roleData } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', session.user.id)
+            .eq('role', 'admin')
+            .single();
+          
+          setIsAdmin(!!roleData);
+        }
+        
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
           setUser(session?.user ?? null);
           
-          // Check if user is admin
+          // Check admin status when auth state changes
           if (session?.user) {
             const { data: roleData } = await supabase
               .from('user_roles')
@@ -29,28 +43,12 @@ const AuthButton: React.FC = () => {
               .single();
             
             setIsAdmin(!!roleData);
+          } else {
+            setIsAdmin(false);
           }
-          
-          const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-            setUser(session?.user ?? null);
-            
-            // Check admin status when auth state changes
-            if (session?.user) {
-              const { data: roleData } = await supabase
-                .from('user_roles')
-                .select('role')
-                .eq('user_id', session.user.id)
-                .eq('role', 'admin')
-                .single();
-              
-              setIsAdmin(!!roleData);
-            } else {
-              setIsAdmin(false);
-            }
-          });
+        });
 
-          return () => subscription.unsubscribe();
-        }
+        return () => subscription.unsubscribe();
       } catch (error) {
         console.warn('Auth initialization failed:', error);
       } finally {
