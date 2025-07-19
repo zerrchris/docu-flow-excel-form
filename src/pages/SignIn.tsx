@@ -31,7 +31,15 @@ const SignIn: React.FC = () => {
         console.log('Starting auth initialization...');
         console.log('Current URL:', window.location.href);
         console.log('Search params:', window.location.search);
-        const { data: { session } } = await supabase.auth.getSession();
+        
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error('Session error:', sessionError);
+          setLoading(false);
+          return;
+        }
+        
         console.log('Current session:', session);
         setUser(session?.user ?? null);
         
@@ -74,14 +82,30 @@ const SignIn: React.FC = () => {
           subscription.unsubscribe();
         };
       } catch (error) {
-        console.warn('Auth initialization failed:', error);
+        console.error('Auth initialization failed:', error);
       } finally {
         console.log('Auth initialization complete, setting loading to false');
         setLoading(false);
       }
     };
 
-    initAuth();
+    // Add a timeout to ensure loading doesn't persist indefinitely
+    const loadingTimeout = setTimeout(() => {
+      console.log('Loading timeout reached, forcing loading to false');
+      setLoading(false);
+    }, 3000);
+
+    initAuth().then(() => {
+      clearTimeout(loadingTimeout);
+    }).catch((error) => {
+      console.error('InitAuth promise rejected:', error);
+      clearTimeout(loadingTimeout);
+      setLoading(false);
+    });
+
+    return () => {
+      clearTimeout(loadingTimeout);
+    };
   }, [navigate]);
 
   const handleAuth = async (e: React.FormEvent) => {
