@@ -198,6 +198,10 @@ const DocumentProcessor: React.FC = () => {
     // Clear any pending files
     setPendingFiles([]);
     setShowCombineConfirmation(false);
+    
+    // Clear highlights from previous document
+    setHighlights({});
+    setActiveHighlight(null);
   };
 
   // Handle single file selection
@@ -223,6 +227,10 @@ const DocumentProcessor: React.FC = () => {
     // Clear any pending files
     setPendingFiles([]);
     setShowCombineConfirmation(false);
+    
+    // Clear highlights from previous document
+    setHighlights({});
+    setActiveHighlight(null);
     
     toast({
       title: "Document uploaded",
@@ -283,6 +291,10 @@ const DocumentProcessor: React.FC = () => {
         emptyFormData[column] = '';
       });
       setFormData(emptyFormData);
+      
+      // Clear highlights from previous document
+      setHighlights({});
+      setActiveHighlight(null);
       
       toast({
         title: "Images combined successfully",
