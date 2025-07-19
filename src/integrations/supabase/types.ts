@@ -44,6 +44,36 @@ export type Database = {
         }
         Relationships: []
       }
+      runsheets: {
+        Row: {
+          columns: string[]
+          created_at: string
+          data: Json
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          columns?: string[]
+          created_at?: string
+          data?: Json
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          columns?: string[]
+          created_at?: string
+          data?: Json
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
