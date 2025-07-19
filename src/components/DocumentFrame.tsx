@@ -44,7 +44,7 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
   };
 
   return (
-    <Card className="rounded-lg overflow-hidden">
+    <Card className="rounded-none overflow-hidden">
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
         <CollapsibleTrigger asChild>
           <Button 
