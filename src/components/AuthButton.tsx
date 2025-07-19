@@ -14,65 +14,75 @@ const AuthButton: React.FC = () => {
   const { toast } = useToast();
 
   useEffect(() => {
+    let mounted = true;
+
     const initAuth = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        setUser(session?.user ?? null);
-        
-        // Check if user is admin
-        if (session?.user) {
-          const { data: roleData } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', session.user.id)
-            .eq('role', 'admin')
-            .single();
+        // Set up auth state listener FIRST
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+          if (!mounted) return;
           
-          setIsAdmin(!!roleData);
-        }
-        
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
           setUser(session?.user ?? null);
           
-          // Check admin status when auth state changes
+          // Defer admin check to avoid deadlock
           if (session?.user) {
-            const { data: roleData } = await supabase
-              .from('user_roles')
-              .select('role')
-              .eq('user_id', session.user.id)
-              .eq('role', 'admin')
-              .single();
-            
-            setIsAdmin(!!roleData);
+            setTimeout(() => {
+              if (!mounted) return;
+              checkAdminStatus(session.user.id);
+            }, 0);
           } else {
             setIsAdmin(false);
           }
         });
-
-        return () => subscription.unsubscribe();
+        
+        // THEN check for existing session
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!mounted) return;
+        
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          checkAdminStatus(session.user.id);
+        }
+        
+        setLoading(false);
+        
+        return () => {
+          mounted = false;
+          subscription.unsubscribe();
+        };
       } catch (error) {
         console.warn('Auth initialization failed:', error);
-      } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
-    // Add a timeout to ensure loading doesn't persist indefinitely
-    const loadingTimeout = setTimeout(() => {
-      console.log('AuthButton loading timeout reached, forcing loading to false');
-      setLoading(false);
-    }, 2000);
+    const checkAdminStatus = async (userId: string) => {
+      try {
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', userId)
+          .eq('role', 'admin')
+          .maybeSingle();
+        
+        if (mounted) {
+          setIsAdmin(!!roleData);
+        }
+      } catch (error) {
+        console.warn('Failed to check admin status:', error);
+        if (mounted) {
+          setIsAdmin(false);
+        }
+      }
+    };
 
-    initAuth().then(() => {
-      clearTimeout(loadingTimeout);
-    }).catch((error) => {
-      console.error('AuthButton initAuth promise rejected:', error);
-      clearTimeout(loadingTimeout);
-      setLoading(false);
-    });
+    initAuth();
 
     return () => {
-      clearTimeout(loadingTimeout);
+      mounted = false;
     };
   }, []);
 
