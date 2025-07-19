@@ -36,7 +36,17 @@ const SignIn: React.FC = () => {
         // Check if we're in a password reset flow
         const urlParams = new URLSearchParams(window.location.search);
         const isPasswordReset = urlParams.get('reset') === 'true';
-        console.log('Is password reset flow:', isPasswordReset);
+        const tokenHash = urlParams.get('token_hash');
+        const type = urlParams.get('type');
+        
+        console.log('URL params:', { isPasswordReset, tokenHash, type });
+        
+        // If this is a password reset link, redirect to reset password page
+        if (tokenHash && type === 'recovery') {
+          console.log('Redirecting to reset password page');
+          navigate(`/reset-password?token_hash=${tokenHash}&type=${type}`);
+          return;
+        }
         
         // If user is already signed in and not in reset flow, redirect to home
         if (session?.user && !isPasswordReset) {
