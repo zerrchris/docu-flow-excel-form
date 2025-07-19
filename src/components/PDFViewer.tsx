@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Document, Page, pdfjs } from 'react-pdf';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -13,10 +14,12 @@ import {
   Grid,
   Download
 } from 'lucide-react';
-import * as pdfjsLib from 'pdfjs-dist';
 
-// Configure PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+// Configure PDF.js worker for react-pdf
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/legacy/build/pdf.worker.min.js`;
+
+import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
+import 'react-pdf/dist/esm/Page/TextLayer.css';
 
 interface PDFViewerProps {
   file: File | null;
@@ -24,93 +27,26 @@ interface PDFViewerProps {
 }
 
 const PDFViewer: React.FC<PDFViewerProps> = ({ file, previewUrl }) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [pdfDocument, setPdfDocument] = useState<any>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [scale, setScale] = useState(1.2);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showThumbnails, setShowThumbnails] = useState(false);
-  const [thumbnails, setThumbnails] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Load PDF document
-  useEffect(() => {
-    if (!previewUrl || !file?.type.includes('pdf')) return;
+  // PDF event handlers
+  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
+    setTotalPages(numPages);
+    setCurrentPage(1);
+    setLoading(false);
+  };
 
-    setLoading(true);
-    setError(null);
-
-    pdfjsLib.getDocument(previewUrl).promise
-      .then((pdf) => {
-        setPdfDocument(pdf);
-        setTotalPages(pdf.numPages);
-        setCurrentPage(1);
-        generateThumbnails(pdf);
-      })
-      .catch((err) => {
-        console.error('Error loading PDF:', err);
-        setError('Failed to load PDF document');
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  }, [previewUrl, file]);
-
-  // Render current page
-  useEffect(() => {
-    if (!pdfDocument || !canvasRef.current) return;
-
-    const canvas = canvasRef.current;
-    const context = canvas.getContext('2d');
-    if (!context) return;
-
-    pdfDocument.getPage(currentPage).then((page: any) => {
-      const viewport = page.getViewport({ scale });
-      
-      canvas.height = viewport.height;
-      canvas.width = viewport.width;
-
-      const renderContext = {
-        canvasContext: context,
-        viewport: viewport,
-      };
-
-      page.render(renderContext);
-    });
-  }, [pdfDocument, currentPage, scale]);
-
-  // Generate thumbnails
-  const generateThumbnails = async (pdf: any) => {
-    const thumbs: string[] = [];
-    const thumbScale = 0.2;
-
-    for (let i = 1; i <= Math.min(pdf.numPages, 20); i++) { // Limit to 20 thumbnails
-      try {
-        const page = await pdf.getPage(i);
-        const viewport = page.getViewport({ scale: thumbScale });
-        
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
-        canvas.height = viewport.height;
-        canvas.width = viewport.width;
-
-        if (context) {
-          await page.render({
-            canvasContext: context,
-            viewport: viewport,
-          }).promise;
-          
-          thumbs.push(canvas.toDataURL());
-        }
-      } catch (err) {
-        console.error('Error generating thumbnail:', err);
-      }
-    }
-    
-    setThumbnails(thumbs);
+  const onDocumentLoadError = (error: Error) => {
+    console.error('Error loading PDF:', error);
+    setError('Failed to load PDF document');
+    setLoading(false);
   };
 
   // Navigation functions
@@ -240,7 +176,7 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ file, previewUrl }) => {
           <Card className="w-48 border-r border-border rounded-none">
             <ScrollArea className="h-full p-2">
               <div className="space-y-2">
-                {thumbnails.map((thumbnail, index) => (
+                {Array.from({ length: totalPages }, (_, index) => (
                   <button
                     key={index}
                     onClick={() => goToPage(index + 1)}
@@ -250,11 +186,18 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ file, previewUrl }) => {
                         : 'border-border hover:border-primary/50'
                     }`}
                   >
-                    <img 
-                      src={thumbnail} 
-                      alt={`Page ${index + 1}`}
-                      className="w-full h-auto"
-                    />
+                    <Document
+                      file={previewUrl}
+                      loading=""
+                      error=""
+                    >
+                      <Page 
+                        pageNumber={index + 1}
+                        scale={0.2}
+                        renderAnnotationLayer={false}
+                        renderTextLayer={false}
+                      />
+                    </Document>
                     <div className="text-xs text-center mt-1">
                       {index + 1}
                     </div>
@@ -265,7 +208,7 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ file, previewUrl }) => {
           </Card>
         )}
 
-        {/* PDF canvas area */}
+        {/* PDF viewer area */}
         <div className="flex-1 bg-muted/20 flex items-center justify-center overflow-auto p-4">
           {loading && (
             <div className="text-center">
@@ -280,14 +223,21 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ file, previewUrl }) => {
           )}
           
           {!loading && !error && (
-            <canvas 
-              ref={canvasRef}
-              className="border border-border shadow-lg bg-white max-w-full max-h-full"
-              style={{ 
-                display: 'block',
-                margin: '0 auto'
-              }}
-            />
+            <Document
+              file={previewUrl}
+              onLoadSuccess={onDocumentLoadSuccess}
+              onLoadError={onDocumentLoadError}
+              loading={<div className="text-muted-foreground">Loading PDF...</div>}
+              error={<div className="text-destructive">Failed to load PDF</div>}
+            >
+              <Page 
+                pageNumber={currentPage}
+                scale={scale}
+                className="shadow-lg border border-border"
+                renderAnnotationLayer={true}
+                renderTextLayer={true}
+              />
+            </Document>
           )}
         </div>
       </div>
