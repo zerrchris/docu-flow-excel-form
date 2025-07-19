@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, Check, X, ArrowUp, ArrowDown, Save, FolderOpen, Download, Upload, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
+import { Plus, Trash2, Check, X, ArrowUp, ArrowDown, Save, FolderOpen, Download, Upload, AlignLeft, AlignCenter, AlignRight, Cloud } from 'lucide-react';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -26,6 +26,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { GoogleDrivePicker } from './GoogleDrivePicker';
 import type { User } from '@supabase/supabase-js';
 
 interface SpreadsheetProps {
@@ -89,6 +90,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [columnInstructions, setColumnInstructions] = useState<Record<string, string>>({});
   const [columnAlignments, setColumnAlignments] = useState<Record<string, 'left' | 'center' | 'right'>>({});
   const [editingColumnAlignment, setEditingColumnAlignment] = useState<'left' | 'center' | 'right'>('left');
+  const [showGoogleDrivePicker, setShowGoogleDrivePicker] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Sync data with initialData prop changes
@@ -372,8 +374,107 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     performUpload();
   };
 
-  // Actual upload function
-  const performUpload = () => {
+  // Handle file upload logic
+  const handleFileUpload = (file: File, fileName: string) => {
+    const fileExtension = file.name.split('.').pop()?.toLowerCase();
+    
+    if (fileExtension === 'csv') {
+      handleCSVUpload(file, fileName);
+    } else if (fileExtension === 'xlsx' || fileExtension === 'xls') {
+      handleExcelUpload(file, fileName);
+    } else {
+      toast({
+        title: "Unsupported file type",
+        description: "Please upload a CSV (.csv) or Excel (.xlsx, .xls) file.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handle CSV file upload
+  const handleCSVUpload = (file: File, fileName: string) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string;
+        const rows = content.split('\n');
+        const headers = rows[0].split(',').map(h => h.trim().replace(/"/g, ''));
+        
+        const parsedData = rows.slice(1)
+          .filter(row => row.trim())
+          .map(row => {
+            const values = row.split(',').map(v => v.trim().replace(/"/g, ''));
+            const rowData: Record<string, string> = {};
+            headers.forEach((header, index) => {
+              rowData[header] = values[index] || '';
+            });
+            return rowData;
+          });
+
+        updateSpreadsheetData(headers, parsedData, fileName);
+      } catch (error) {
+        console.error('Error parsing CSV:', error);
+        toast({
+          title: "Error parsing CSV",
+          description: "The CSV file could not be parsed. Please check the file format.",
+          variant: "destructive",
+        });
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  // Handle Excel file upload
+  const handleExcelUpload = (file: File, fileName: string) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = e.target?.result;
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+        if (jsonData.length === 0) {
+          toast({
+            title: "Empty spreadsheet",
+            description: "The Excel file appears to be empty.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        const headers = (jsonData[0] as string[]).map(h => h?.toString() || '');
+        const parsedData = jsonData.slice(1).map((row: any) => {
+          const rowData: Record<string, string> = {};
+          headers.forEach((header, index) => {
+            rowData[header] = (row[index] || '').toString();
+          });
+          return rowData;
+        });
+
+        updateSpreadsheetData(headers, parsedData, fileName);
+      } catch (error) {
+        console.error('Error parsing Excel file:', error);
+        toast({
+          title: "Error parsing Excel file",
+          description: "The Excel file could not be parsed. Please check the file format.",
+          variant: "destructive",
+        });
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  // Actual upload function - can accept File object directly or trigger file picker
+  const performUpload = (file?: File, fileName?: string) => {
+    if (file && fileName) {
+      // Direct file upload (from Google Drive or other sources)
+      handleFileUpload(file, fileName);
+      return;
+    }
+
+    // Traditional file picker
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.csv,.xlsx,.xls';
@@ -1203,6 +1304,17 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
               <Upload className="h-4 w-4" />
               Upload
             </Button>
+            
+            {/* Google Drive Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowGoogleDrivePicker(true)}
+              className="gap-2"
+            >
+              <Cloud className="h-4 w-4" />
+              Google Drive
+            </Button>
           </div>
           <div className="text-sm text-muted-foreground">
             Right-click column headers to insert or remove columns
@@ -1552,6 +1664,13 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Google Drive Picker */}
+        <GoogleDrivePicker
+          isOpen={showGoogleDrivePicker}
+          onClose={() => setShowGoogleDrivePicker(false)}
+          onFileSelect={performUpload}
+        />
       </div>
     </Card>
   );
