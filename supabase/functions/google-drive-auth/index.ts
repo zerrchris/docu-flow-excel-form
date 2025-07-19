@@ -12,7 +12,8 @@ serve(async (req) => {
   }
 
   try {
-    const { action, code, fileId, origin } = await req.json()
+    const requestBody = await req.json()
+    const { action, code, fileId, origin, access_token } = requestBody
 
     const clientId = Deno.env.get('GOOGLE_OAUTH_CLIENT_ID')
     const clientSecret = Deno.env.get('GOOGLE_OAUTH_CLIENT_SECRET')
@@ -65,7 +66,15 @@ serve(async (req) => {
     }
 
     if (action === 'get_file') {
-      const { access_token } = await req.json()
+      console.log('Getting file with ID:', fileId, 'and token:', access_token ? 'present' : 'missing')
+      
+      if (!access_token) {
+        throw new Error('Access token is required')
+      }
+      
+      if (!fileId) {
+        throw new Error('File ID is required')
+      }
       
       // Get file metadata
       const metadataResponse = await fetch(
@@ -76,6 +85,8 @@ serve(async (req) => {
           },
         }
       )
+      
+      console.log('Metadata response status:', metadataResponse.status)
       
       const metadata = await metadataResponse.json()
       
