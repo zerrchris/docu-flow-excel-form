@@ -141,7 +141,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
               <img 
                 src={previewUrl} 
                 alt="Document Preview" 
-                className="rounded-lg transition-transform duration-200 select-none cursor-grab active:cursor-grabbing max-w-full max-h-full"
+                className="rounded-lg transition-transform duration-200 select-none cursor-grab active:cursor-grabbing w-full"
                 style={{ 
                   transform: `scale(${zoom}) translate(${panX / zoom}px, ${panY / zoom}px)`
                 }}
