@@ -151,7 +151,7 @@ const BatchProcessing: React.FC<BatchProcessingProps> = ({
                       Documents to Process ({batchDocuments.length})
                     </h4>
                     <p className="text-xs text-muted-foreground">
-                      Expand each document to analyze and add to spreadsheet. Processed documents will be removed automatically.
+                      Expand each document to analyze and add to runsheet. Processed documents will be removed automatically.
                     </p>
                   </div>
                   {batchDocuments.map((doc) => (

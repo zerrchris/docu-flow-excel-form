@@ -149,7 +149,7 @@ const DataForm: React.FC<DataFormProps> = ({
             disabled={visibleFieldsList.length === 0}
           >
             <Plus className="h-4 w-4 mr-1" />
-            Add to Spreadsheet
+            Add to Runsheet
           </Button>
         </div>
         
