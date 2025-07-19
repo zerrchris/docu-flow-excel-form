@@ -34,12 +34,25 @@ export const GoogleDrivePicker: React.FC<GoogleDrivePickerProps> = ({
     setIsAuthenticating(true);
     
     try {
+      console.log('Starting Google authentication...');
+      console.log('Origin:', window.location.origin);
+      
       // Get OAuth URL from our edge function
       const { data: authData, error: authError } = await supabase.functions.invoke('google-drive-auth', {
         body: { action: 'get_auth_url', origin: window.location.origin }
       });
 
-      if (authError) throw authError;
+      console.log('Auth response:', { authData, authError });
+
+      if (authError) {
+        console.error('Auth error:', authError);
+        throw authError;
+      }
+
+      if (!authData || !authData.authUrl) {
+        console.error('No auth URL received:', authData);
+        throw new Error('No auth URL received from server');
+      }
 
       // Try to open popup with better detection
       const popup = window.open(authData.authUrl, 'google-auth', 'width=600,height=700,scrollbars=yes,resizable=yes');
