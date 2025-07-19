@@ -19,7 +19,6 @@ interface DocumentFrameProps {
   onFileSelect: (file: File) => void;
   onMultipleFilesSelect?: (files: File[]) => void;
   onResetDocument: () => void;
-  onSaveColumnConfig?: (field: string, value: string) => void;
   isAnalyzing: boolean;
 }
 
@@ -34,7 +33,6 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
   onFileSelect,
   onMultipleFilesSelect,
   onResetDocument,
-  onSaveColumnConfig,
   isAnalyzing
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -78,16 +76,15 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
                     <div className="p-6 h-full overflow-auto">
                       <div className="space-y-2">
                         <h4 className="text-md font-medium text-foreground">Document Data</h4>
-                  <DataForm
-                    fields={fields}
-                    formData={formData}
-                    onChange={onChange}
-                    onAnalyze={handleAnalyze}
-                    onAddToSpreadsheet={onAddToSpreadsheet}
-                    onResetDocument={onResetDocument}
-                    onSaveColumnConfig={onSaveColumnConfig}
-                    isAnalyzing={isAnalyzing}
-                  />
+                        <DataForm 
+                          fields={fields}
+                          formData={formData}
+                          onChange={onChange}
+                          onAnalyze={handleAnalyze}
+                          onAddToSpreadsheet={onAddToSpreadsheet}
+                          onResetDocument={onResetDocument}
+                          isAnalyzing={isAnalyzing}
+                        />
                       </div>
                     </div>
                   </div>
