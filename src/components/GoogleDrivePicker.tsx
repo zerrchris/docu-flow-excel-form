@@ -41,8 +41,8 @@ export const GoogleDrivePicker: React.FC<GoogleDrivePickerProps> = ({
 
       if (authError) throw authError;
 
-      // Try to open popup
-      const popup = window.open(authData.authUrl, 'google-auth', 'width=500,height=600');
+      // Try to open popup with better detection
+      const popup = window.open(authData.authUrl, 'google-auth', 'width=600,height=700,scrollbars=yes,resizable=yes');
       
       if (!popup || popup.closed || typeof popup.closed == 'undefined') {
         // Popup was blocked, redirect to new tab instead
@@ -57,30 +57,47 @@ export const GoogleDrivePicker: React.FC<GoogleDrivePickerProps> = ({
 
       // Listen for messages from the popup
       const messageListener = (event: MessageEvent) => {
-        if (event.origin !== window.location.origin) return;
+        console.log('Received message:', event.data, 'from origin:', event.origin);
+        
+        if (event.origin !== window.location.origin) {
+          console.log('Origin mismatch, ignoring message');
+          return;
+        }
         
         if (event.data.type === 'GOOGLE_AUTH_SUCCESS') {
+          console.log('Authentication successful, closing popup and handling auth');
           popup.close();
           window.removeEventListener('message', messageListener);
+          clearInterval(checkClosed);
           setIsAuthenticating(false);
           handleAuthCompletion(event.data.code);
         } else if (event.data.type === 'GOOGLE_AUTH_ERROR') {
+          console.log('Authentication error:', event.data.error);
           popup.close();
           window.removeEventListener('message', messageListener);
+          clearInterval(checkClosed);
           setIsAuthenticating(false);
-          toast.error('Google authentication failed');
+          toast.error('Google authentication failed: ' + event.data.error);
         }
       };
 
       window.addEventListener('message', messageListener);
 
-      // Check if popup is closed
+      // Check if popup is closed manually
       const checkClosed = setInterval(() => {
         if (popup.closed) {
+          console.log('Popup was closed manually');
           clearInterval(checkClosed);
           window.removeEventListener('message', messageListener);
           setIsAuthenticating(false);
-          // User might have closed popup manually
+          
+          // Check for fallback localStorage method
+          const savedCode = localStorage.getItem('google_auth_code');
+          if (savedCode) {
+            console.log('Found saved auth code, proceeding with authentication');
+            localStorage.removeItem('google_auth_code');
+            handleAuthCompletion(savedCode);
+          }
         }
       }, 1000);
 
