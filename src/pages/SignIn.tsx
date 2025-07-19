@@ -25,122 +25,59 @@ const SignIn: React.FC = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // IMMEDIATE CHECK - Add this right at the top
   useEffect(() => {
-    console.log('=== IMMEDIATE AUTH CHECK ===');
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Immediate session check:', session?.user?.email || 'No user');
-      if (session?.user) {
-        console.log('REDIRECTING IMMEDIATELY');
-        navigate('/', { replace: true });
-      }
-    });
-  }, [navigate]);
+    let mounted = true;
 
-  useEffect(() => {
     const initAuth = async () => {
       try {
-        console.log('Starting auth initialization...');
-        console.log('Current URL:', window.location.href);
-        console.log('Search params:', window.location.search);
+        // Check for existing session
+        const { data: { session } } = await supabase.auth.getSession();
         
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
-        if (sessionError) {
-          console.error('Session error:', sessionError);
-          setLoading(false);
-          return;
-        }
-        
-        console.log('Current session:', session?.user?.email || 'No user');
-        
-        // IMMEDIATE REDIRECT CHECK - if user exists, redirect now
+        if (!mounted) return;
+
+        // If user is already signed in, redirect immediately
         if (session?.user) {
-          console.log('User found immediately, forcing redirect NOW');
-          window.location.replace('/');
-          return; // Don't continue with the rest of the setup
-        }
-        
-        setUser(session?.user ?? null);
-        
-        // Check if we're in a password reset flow
-        const urlParams = new URLSearchParams(window.location.search);
-        const isPasswordReset = urlParams.get('reset') === 'true';
-        const tokenHash = urlParams.get('token_hash');
-        const type = urlParams.get('type');
-        
-        console.log('URL params:', { isPasswordReset, tokenHash, type });
-        
-        // If this is a password reset link, redirect to reset password page
-        if (tokenHash && type === 'recovery') {
-          console.log('Redirecting to reset password page');
-          navigate(`/reset-password?token_hash=${tokenHash}&type=${type}`);
+          navigate('/', { replace: true });
           return;
         }
-        
-        // If user is already signed in and not in reset flow, redirect to home
-        if (session?.user && !isPasswordReset) {
-          console.log('User already signed in, redirecting to home');
-          // Force immediate redirect
-          window.location.href = '/';
-          return;
-        }
-        
+
+        // Set up auth state listener
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-          console.log('Auth state changed:', event, session?.user?.email);
+          if (!mounted) return;
+          
           setUser(session?.user ?? null);
           
-          // Only redirect on successful sign in, not during password reset flow
-          if (session?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && !isPasswordReset) {
-            console.log('Auth state indicates successful sign in, attempting redirect');
-            // Multiple redirect attempts to ensure it works
-            setTimeout(() => {
-              console.log('Executing redirect to home page');
-              window.location.replace('/');
-            }, 500);
+          // Redirect on successful sign in
+          if (session?.user && event === 'SIGNED_IN') {
+            navigate('/', { replace: true });
           }
         });
 
-        // Store subscription for cleanup
-        return () => {
-          console.log('Cleaning up auth subscription');
-          subscription.unsubscribe();
-        };
+        // Cleanup function
+        return () => subscription.unsubscribe();
+
       } catch (error) {
-        console.error('Auth initialization failed:', error);
+        console.error('Auth initialization error:', error);
       } finally {
-        console.log('Auth initialization complete, setting loading to false');
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
-    // Add a timeout to ensure loading doesn't persist indefinitely
-    const loadingTimeout = setTimeout(() => {
-      console.log('Loading timeout reached, forcing loading to false');
-      setLoading(false);
-    }, 1000); // Reduced from 3000ms to 1000ms for faster loading
-
-    initAuth().then(() => {
-      clearTimeout(loadingTimeout);
-    }).catch((error) => {
-      console.error('InitAuth promise rejected:', error);
-      clearTimeout(loadingTimeout);
-      setLoading(false);
-    });
+    initAuth();
 
     return () => {
-      clearTimeout(loadingTimeout);
+      mounted = false;
     };
   }, [navigate]);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthLoading(true);
-    console.log('Starting authentication process...', { isSignUp, email });
 
     try {
       if (isSignUp) {
-        console.log('Attempting sign up...');
         const redirectUrl = `${window.location.origin}/`;
         
         const { error } = await supabase.auth.signUp({
@@ -151,48 +88,19 @@ const SignIn: React.FC = () => {
           }
         });
         
-        if (error) {
-          console.error('Sign up error:', error);
-          throw error;
-        }
+        if (error) throw error;
         
-        console.log('Sign up successful');
         toast({
           title: "Check your email",
           description: "A confirmation link has been sent to your email address.",
         });
       } else {
-        console.log('Attempting sign in...');
-        const { data, error } = await supabase.auth.signInWithPassword({
+        const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         
-        if (error) {
-          console.error('Sign in error:', error);
-          throw error;
-        }
-        
-        console.log('Sign in successful:', data);
-        
-        // MULTIPLE REDIRECT ATTEMPTS
-        console.log('=== STARTING REDIRECT SEQUENCE ===');
-        
-        // Attempt 1: React Router navigate
-        console.log('Attempt 1: React Router navigate');
-        navigate('/', { replace: true });
-        
-        // Attempt 2: window.location.replace
-        setTimeout(() => {
-          console.log('Attempt 2: window.location.replace');
-          window.location.replace('/');
-        }, 100);
-        
-        // Attempt 3: window.location.href
-        setTimeout(() => {
-          console.log('Attempt 3: window.location.href');
-          window.location.href = '/';
-        }, 200);
+        if (error) throw error;
         
         toast({
           title: "Welcome back!",
@@ -203,14 +111,12 @@ const SignIn: React.FC = () => {
       setEmail('');
       setPassword('');
     } catch (error: any) {
-      console.error('Authentication failed:', error);
       toast({
         title: "Authentication failed",
         description: error.message,
         variant: "destructive",
       });
     } finally {
-      console.log('Setting authLoading to false');
       setAuthLoading(false);
     }
   };
@@ -264,65 +170,7 @@ const SignIn: React.FC = () => {
       </div>
     );
   }
-  // DEBUG: Log current state
-  console.log('=== SIGNIN RENDER ===');
-  console.log('Loading:', loading);
-  console.log('User:', user?.email || 'No user');
-  console.log('Current URL:', window.location.href);
-  
-  // If user is already signed in, show a different message
-  if (user) {
-    console.log('User detected, showing signed in message');
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <CardTitle>Already Signed In</CardTitle>
-            <CardDescription>
-              You're signed in as {user.email}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-center text-sm text-muted-foreground">
-              Click below to go to the app:
-            </p>
-            <div className="flex flex-col gap-2">
-              <Button 
-                onClick={() => {
-                  console.log('Manual navigation button clicked');
-                  navigate('/', { replace: true });
-                }} 
-                className="w-full"
-              >
-                Go to App (Navigate)
-              </Button>
-              <Button 
-                onClick={() => {
-                  console.log('Manual redirect button clicked');
-                  window.location.href = '/';
-                }} 
-                variant="outline"
-                className="w-full"
-              >
-                Go to App (Redirect)
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  console.log('Sign out clicked');
-                  supabase.auth.signOut();
-                  setUser(null);
-                }} 
-                className="w-full"
-              >
-                Sign Out
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
@@ -448,7 +296,6 @@ const SignIn: React.FC = () => {
                   variant="ghost"
                   className="w-full"
                   onClick={() => {
-                    console.log('Toggling isSignUp from', isSignUp, 'to', !isSignUp);
                     setIsSignUp(!isSignUp);
                     setResetEmailSent(false);
                   }}
