@@ -27,6 +27,7 @@ const BatchProcessing: React.FC<BatchProcessingProps> = ({
   const [isExpanded, setIsExpanded] = useState(false);
   const [batchDocuments, setBatchDocuments] = useState<BatchDocument[]>([]);
   const [isUploadAreaExpanded, setIsUploadAreaExpanded] = useState(true);
+  const [activeDocumentIndex, setActiveDocumentIndex] = useState<number | null>(null);
   const { toast } = useToast();
 
   const handleFilesUpload = (files: FileList | File[]) => {
@@ -73,8 +74,28 @@ const BatchProcessing: React.FC<BatchProcessingProps> = ({
   };
 
   const removeBatchDocument = (id: string) => {
-    setBatchDocuments(prev => prev.filter(doc => doc.id !== id));
+    const currentIndex = batchDocuments.findIndex(doc => doc.id === id);
+    const newDocuments = batchDocuments.filter(doc => doc.id !== id);
+    
+    setBatchDocuments(newDocuments);
+    
+    // If we removed a document and there are more documents, navigate to next one
+    if (newDocuments.length > 0) {
+      // If we removed the last document, go to the previous one
+      // Otherwise, stay at the same index (which will be the next document)
+      const nextIndex = currentIndex >= newDocuments.length ? newDocuments.length - 1 : currentIndex;
+      setActiveDocumentIndex(nextIndex);
+    } else {
+      setActiveDocumentIndex(null);
+    }
   };
+
+  // Initialize active document when first document is uploaded
+  React.useEffect(() => {
+    if (batchDocuments.length > 0 && activeDocumentIndex === null) {
+      setActiveDocumentIndex(0);
+    }
+  }, [batchDocuments.length, activeDocumentIndex]);
 
   return (
     <Card className="mt-6">
@@ -175,7 +196,7 @@ const BatchProcessing: React.FC<BatchProcessingProps> = ({
                       Expand each document to analyze and add to runsheet. Processed documents will be removed automatically.
                     </p>
                   </div>
-                  {batchDocuments.map((doc) => (
+                  {batchDocuments.map((doc, index) => (
                     <BatchDocumentRow
                       key={doc.id}
                       file={doc.file}
@@ -184,6 +205,7 @@ const BatchProcessing: React.FC<BatchProcessingProps> = ({
                       onAddToSpreadsheet={onAddToSpreadsheet}
                       onAnalyze={onAnalyze}
                       isAnalyzing={isAnalyzing}
+                      isActive={activeDocumentIndex === index}
                     />
                   ))}
                 </>

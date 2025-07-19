@@ -13,6 +13,7 @@ interface BatchDocumentRowProps {
   onAddToSpreadsheet: (data: Record<string, string>) => void;
   isAnalyzing: boolean;
   onAnalyze: (file: File) => Promise<Record<string, string>>;
+  isActive?: boolean;
 }
 
 const BatchDocumentRow: React.FC<BatchDocumentRowProps> = ({
@@ -21,7 +22,8 @@ const BatchDocumentRow: React.FC<BatchDocumentRowProps> = ({
   onRemove,
   onAddToSpreadsheet,
   isAnalyzing,
-  onAnalyze
+  onAnalyze,
+  isActive = false
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -39,6 +41,13 @@ const BatchDocumentRow: React.FC<BatchDocumentRowProps> = ({
     setPreviewUrl(url);
     return () => URL.revokeObjectURL(url);
   }, [file]);
+
+  // Auto-expand when this document becomes active
+  React.useEffect(() => {
+    if (isActive && !isExpanded) {
+      setIsExpanded(true);
+    }
+  }, [isActive, isExpanded]);
 
   const handleFieldChange = (field: string, value: string) => {
     setFormData(prev => ({
