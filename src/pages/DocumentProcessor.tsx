@@ -465,7 +465,7 @@ const DocumentProcessor: React.FC = () => {
       // Get global admin instructions
       const globalInstructions = await AdminSettingsService.getGlobalExtractionInstructions();
       
-      // Build comprehensive prompt with admin instructions
+      // Build extraction prompt without global instructions (they'll be in system message)
       let extractionPrompt = `Analyze this document and extract the following information. Return the data as a JSON object with the exact field names specified:
 
 ${extractionFields}
@@ -474,14 +474,7 @@ Instructions:
 1. Extract only the information requested for each field
 2. If information is not found, use an empty string ""
 3. Be as accurate as possible to the source document
-4. Return valid JSON format only, no additional text`;
-
-      // Add global admin instructions if they exist
-      if (globalInstructions.trim()) {
-        extractionPrompt += `\n\nAdditional Instructions:\n${globalInstructions}`;
-      }
-
-      extractionPrompt += `
+4. Return valid JSON format only, no additional text
 
 Expected JSON format:
 {
@@ -489,6 +482,13 @@ ${Object.keys(columnInstructions).map(col => `  "${col}": "extracted value"`).jo
 }
 
 Image: [base64 image data]`;
+
+      // Build enhanced system message with global instructions
+      let systemMessage = "You are a document analysis assistant. Analyze the provided image and extract the requested information in JSON format.";
+      
+      if (globalInstructions.trim()) {
+        systemMessage += `\n\nGlobal Extraction Guidelines:\n${globalInstructions}`;
+      }
 
       // Call company's OpenAI Edge Function for document analysis
       const response = await fetch('https://xnpmrafjjqsissbtempj.supabase.co/functions/v1/analyze-document', {
@@ -499,7 +499,7 @@ Image: [base64 image data]`;
         body: JSON.stringify({
           prompt: extractionPrompt,
           imageData: `data:${targetFile.type};base64,${fileBase64}`,
-          systemMessage: "You are a document analysis assistant. Analyze the provided image and extract the requested information in JSON format."
+          systemMessage: systemMessage
         })
       });
 
