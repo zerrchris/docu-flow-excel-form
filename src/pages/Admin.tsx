@@ -146,8 +146,7 @@ const Admin: React.FC = () => {
           setting_key: 'global_extraction_instructions',
           setting_value: globalInstructions,
           description: 'Global instructions that are included with every document extraction request to improve AI accuracy and consistency.'
-        })
-        .eq('setting_key', 'global_extraction_instructions');
+        });
 
       if (error) throw error;
 
