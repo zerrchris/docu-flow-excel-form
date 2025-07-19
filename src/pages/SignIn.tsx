@@ -71,10 +71,12 @@ const SignIn: React.FC = () => {
           setUser(session?.user ?? null);
           
           // Only redirect on successful sign in, not during password reset flow
-          if (session?.user && event === 'SIGNED_IN' && !isPasswordReset) {
+          if (session?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && !isPasswordReset) {
             console.log('Successful sign in, redirecting to home');
-            // Force immediate redirect
-            window.location.href = '/';
+            // Use setTimeout to ensure state updates are complete
+            setTimeout(() => {
+              window.location.href = '/';
+            }, 100);
           }
         });
 
@@ -156,7 +158,10 @@ const SignIn: React.FC = () => {
           description: "You have successfully signed in.",
         });
         
-        // Navigation will be handled by the useEffect hook
+        // Force immediate redirect after successful sign in
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 100);
       }
       
       setEmail('');
