@@ -19,6 +19,10 @@ const ResetPassword: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    console.log('ResetPassword page loaded');
+    console.log('Current URL:', window.location.href);
+    console.log('Search params:', window.location.search);
+    
     // Check if we have the required tokens in the URL
     const urlTokenHash = searchParams.get('token_hash');
     const type = searchParams.get('type');

@@ -29,6 +29,8 @@ const SignIn: React.FC = () => {
     const initAuth = async () => {
       try {
         console.log('Starting auth initialization...');
+        console.log('Current URL:', window.location.href);
+        console.log('Search params:', window.location.search);
         const { data: { session } } = await supabase.auth.getSession();
         console.log('Current session:', session);
         setUser(session?.user ?? null);
