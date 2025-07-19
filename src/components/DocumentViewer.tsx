@@ -139,9 +139,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
                 style={{ 
                   transform: `scale(${zoom}) translate(${panX / zoom}px, ${panY / zoom}px)`,
                   width: '100%',
-                  maxWidth: '100%',
-                  height: 'auto',
-                  maxHeight: '100%',
+                  height: '100%',
                   objectFit: 'contain'
                 }}
                 draggable={false}
