@@ -18,7 +18,12 @@ serve(async (req) => {
     const clientId = Deno.env.get('GOOGLE_OAUTH_CLIENT_ID')
     const clientSecret = Deno.env.get('GOOGLE_OAUTH_CLIENT_SECRET')
     
+    console.log('Client ID exists:', !!clientId)
+    console.log('Client Secret exists:', !!clientSecret)
+    console.log('Client ID (first 10 chars):', clientId?.substring(0, 10))
+    
     if (!clientId || !clientSecret) {
+      console.error('Missing OAuth credentials - Client ID:', !!clientId, 'Client Secret:', !!clientSecret)
       throw new Error('Google OAuth credentials not configured')
     }
 
