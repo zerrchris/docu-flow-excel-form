@@ -136,7 +136,7 @@ const BatchProcessing: React.FC<BatchProcessingProps> = ({
                   <div
                     onDrop={handleDrop}
                     onDragOver={handleDragOver}
-                    className="border-2 border-dashed border-border rounded-lg p-12 text-center hover:border-primary transition-colors cursor-pointer bg-muted/20 min-h-[200px] flex items-center justify-center"
+                    className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary transition-colors cursor-pointer bg-muted/20"
                   >
                     <div className="flex flex-col items-center space-y-3">
                       <Upload className="h-8 w-8 text-muted-foreground" />
@@ -180,7 +180,13 @@ const BatchProcessing: React.FC<BatchProcessingProps> = ({
 
             {/* Batch Document Rows */}
             <div className="p-6 space-y-0">
-            {batchDocuments.length === 0 ? null : (
+              {batchDocuments.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Files className="h-12 w-12 mx-auto mb-3 opacity-60" />
+                  <p>No documents uploaded yet</p>
+                  <p className="text-sm">Upload documents above to start batch processing</p>
+                </div>
+              ) : (
                 <>
                   <div className="mb-4">
                     <h4 className="text-sm font-medium text-foreground mb-2">
