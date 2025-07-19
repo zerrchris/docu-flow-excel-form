@@ -184,6 +184,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           name: runsheetName,
           columns: columns,
           data: data,
+          column_instructions: columnInstructions,
           user_id: user.id,
           updated_at: new Date().toISOString(),
         }, {
@@ -270,6 +271,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           name: runsheetName,
           columns: columns,
           data: data,
+          column_instructions: columnInstructions,
           user_id: user.id,
           updated_at: new Date().toISOString(),
         }, {
@@ -395,6 +397,11 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     setColumns(runsheet.columns);
     onColumnChange(runsheet.columns);
     setData(runsheet.data);
+    // Load column instructions if they exist
+    if (runsheet.column_instructions) {
+      setColumnInstructions(runsheet.column_instructions);
+      onColumnInstructionsChange?.(runsheet.column_instructions);
+    }
     setShowOpenDialog(false);
     // Reset column width state for new runsheet
     setColumnWidths({});
