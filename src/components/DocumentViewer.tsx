@@ -181,8 +181,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({
                       top: `${position.y}%`,
                       width: `${position.width}%`,
                       height: `${position.height}%`,
-                      transform: `scale(${zoom}) translate(${panX / zoom}px, ${panY / zoom}px)`,
-                      transformOrigin: 'top left'
+                      // Remove the transform - highlights should move with the image naturally
                     }}
                     onClick={() => onHighlightClick?.(fieldName)}
                     title={`Click to focus ${fieldName}`}
