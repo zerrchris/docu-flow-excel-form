@@ -1431,7 +1431,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           className="border rounded-md bg-background relative overflow-auto"
           style={{ height: `${spreadsheetHeight}px` }}
         >
-          <Table className="border-collapse" style={{ width: `${getTotalTableWidth()}px`, minWidth: `${getTotalTableWidth()}px` }}>
+          <div className="min-w-fit">
+            <Table className="border-collapse w-full" style={{ minWidth: `${getTotalTableWidth()}px` }}>
             {/* Sticky Header */}
             <TableHeader className="sticky top-0 z-10 bg-muted/95 backdrop-blur-sm">
               <TableRow className="hover:bg-muted/50 transition-colors">
@@ -1551,6 +1552,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                ))}
             </TableBody>
           </Table>
+          </div>
 
           {/* Height resize handle */}
           <div
