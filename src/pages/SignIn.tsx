@@ -97,7 +97,7 @@ const SignIn: React.FC = () => {
     const loadingTimeout = setTimeout(() => {
       console.log('Loading timeout reached, forcing loading to false');
       setLoading(false);
-    }, 3000);
+    }, 1000); // Reduced from 3000ms to 1000ms for faster loading
 
     initAuth().then(() => {
       clearTimeout(loadingTimeout);
@@ -220,14 +220,10 @@ const SignIn: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
-          <img 
-            src={extractorLogo} 
-            alt="RunsheetPro Logo" 
-            className="h-16 w-16 mx-auto mb-4"
-          />
-          <p>Loading...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-sm text-muted-foreground">Checking authentication...</p>
         </div>
       </div>
     );
