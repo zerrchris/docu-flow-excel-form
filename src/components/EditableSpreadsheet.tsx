@@ -93,6 +93,10 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [editingColumnAlignment, setEditingColumnAlignment] = useState<'left' | 'center' | 'right'>('left');
   const [showGoogleDrivePicker, setShowGoogleDrivePicker] = useState(false);
   const [isSavingAsDefault, setIsSavingAsDefault] = useState(false);
+  
+  // Refs for scroll synchronization
+  const bodyScrollRef = useRef<HTMLDivElement>(null);
+  const headerScrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Sync data with initialData prop changes
@@ -273,6 +277,13 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     } finally {
       setIsSaving(false);
       console.log('Save process completed');
+    }
+  };
+
+  // Scroll synchronization between header and body
+  const handleBodyScroll = () => {
+    if (bodyScrollRef.current && headerScrollRef.current) {
+      headerScrollRef.current.scrollLeft = bodyScrollRef.current.scrollLeft;
     }
   };
 
@@ -1389,8 +1400,16 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           style={{ height: `${spreadsheetHeight}px` }}
         >
           {/* Fixed Header */}
-          <div className="flex-shrink-0 border-b bg-muted/95 backdrop-blur-sm">
-            <Table className="border-collapse">
+          <div className="flex-shrink-0 border-b bg-muted/95 backdrop-blur-sm overflow-hidden">
+            <div 
+              ref={headerScrollRef}
+              className="overflow-x-auto [&::-webkit-scrollbar]:hidden"
+              style={{ 
+                scrollbarWidth: 'none', 
+                msOverflowStyle: 'none'
+              }}
+            >
+              <Table className="border-collapse">
               <TableHeader>
                 <TableRow className="hover:bg-muted/50 transition-colors">
                   {columns.map((column) => (
@@ -1455,10 +1474,15 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                 </TableRow>
               </TableHeader>
             </Table>
+            </div>
           </div>
 
           {/* Scrollable Body */}
-          <div className="flex-1 overflow-auto">
+          <div 
+            ref={bodyScrollRef}
+            className="flex-1 overflow-auto"
+            onScroll={handleBodyScroll}
+          >
             <Table className="border-collapse">
               <TableBody>
                 {data.map((row, rowIndex) => (
