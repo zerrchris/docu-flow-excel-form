@@ -44,8 +44,8 @@ const BatchProcessing: React.FC<BatchProcessingProps> = ({
       description: `${fileArray.length} document${fileArray.length > 1 ? 's' : ''} added to batch processing.`,
     });
 
-    // Collapse upload area after first upload
-    if (batchDocuments.length === 0 && fileArray.length > 0) {
+    // Collapse upload area after upload
+    if (fileArray.length > 0) {
       setIsUploadAreaExpanded(false);
     }
 
