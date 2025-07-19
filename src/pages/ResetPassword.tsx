@@ -19,17 +19,48 @@ const ResetPassword: React.FC = () => {
 
   useEffect(() => {
     // Check if we have the required tokens in the URL
-    const accessToken = searchParams.get('access_token');
-    const refreshToken = searchParams.get('refresh_token');
+    const tokenHash = searchParams.get('token_hash');
+    const type = searchParams.get('type');
     
-    if (!accessToken || !refreshToken) {
+    if (!tokenHash || type !== 'recovery') {
       toast({
         title: "Invalid reset link",
         description: "This password reset link is invalid or has expired.",
         variant: "destructive",
       });
       navigate('/signin');
+      return;
     }
+
+    // Set the session from the URL parameters
+    const setSessionFromUrl = async () => {
+      try {
+        const { error } = await supabase.auth.verifyOtp({
+          token_hash: tokenHash,
+          type: 'recovery'
+        });
+        
+        if (error) {
+          console.error('Error verifying reset token:', error);
+          toast({
+            title: "Invalid reset link",
+            description: "This password reset link is invalid or has expired.",
+            variant: "destructive",
+          });
+          navigate('/signin');
+        }
+      } catch (error) {
+        console.error('Error setting session:', error);
+        toast({
+          title: "Invalid reset link",
+          description: "This password reset link is invalid or has expired.",
+          variant: "destructive",
+        });
+        navigate('/signin');
+      }
+    };
+
+    setSessionFromUrl();
   }, [searchParams, navigate, toast]);
 
   const handlePasswordReset = async (e: React.FormEvent) => {
