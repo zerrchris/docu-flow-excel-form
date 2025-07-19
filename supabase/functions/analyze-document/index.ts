@@ -29,6 +29,39 @@ serve(async (req) => {
 
     console.log('Analyzing document with vision API');
 
+    // Check if the data is a PDF (PDFs can't be processed by vision API)
+    if (imageData.includes('data:application/pdf')) {
+      console.error('PDF files are not supported by OpenAI vision API');
+      return new Response(
+        JSON.stringify({ 
+          error: 'PDF files are not currently supported for analysis. Please convert your PDF to an image format (PNG, JPEG) and try again.',
+          details: 'OpenAI vision API only supports image formats'
+        }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    // Check if it's a valid image format
+    const supportedFormats = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    const mimeType = imageData.split(';')[0].replace('data:', '');
+    
+    if (!supportedFormats.includes(mimeType)) {
+      console.error('Unsupported file format:', mimeType);
+      return new Response(
+        JSON.stringify({ 
+          error: `Unsupported file format: ${mimeType}. Please use PNG, JPEG, GIF, or WebP images.`,
+          details: 'OpenAI vision API only supports image formats'
+        }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
