@@ -232,12 +232,12 @@ export const GoogleDrivePicker: React.FC<GoogleDrivePickerProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden">
-        <DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>Import from Google Drive</DialogTitle>
         </DialogHeader>
         
-        <div className="flex flex-col gap-4 overflow-hidden">
+        <div className="flex flex-col gap-4 flex-1 min-h-0">
           {!accessToken ? (
             <Card>
               <CardHeader className="text-center">
@@ -275,8 +275,8 @@ export const GoogleDrivePicker: React.FC<GoogleDrivePickerProps> = ({
               </CardContent>
             </Card>
           ) : (
-            <div className="flex flex-col gap-4 overflow-hidden">
-              <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-4 flex-1 min-h-0">
+              <div className="flex items-center justify-between flex-shrink-0">
                 <h3 className="text-lg font-semibold">Select a spreadsheet</h3>
                 <Button 
                   variant="outline" 
@@ -292,7 +292,7 @@ export const GoogleDrivePicker: React.FC<GoogleDrivePickerProps> = ({
                 </Button>
               </div>
               
-              <div className="flex-1 overflow-y-auto space-y-2">
+              <div className="flex-1 overflow-y-auto space-y-2 min-h-0 max-h-[50vh]">
                 {isLoadingFiles ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin" />
@@ -306,7 +306,7 @@ export const GoogleDrivePicker: React.FC<GoogleDrivePickerProps> = ({
                   files.map((file) => (
                     <Card 
                       key={file.id} 
-                      className="cursor-pointer hover:bg-accent/50 transition-colors"
+                      className="cursor-pointer hover:bg-accent/50 transition-colors flex-shrink-0"
                       onClick={() => downloadFile(file)}
                     >
                       <CardContent className="flex items-center justify-between p-4">
