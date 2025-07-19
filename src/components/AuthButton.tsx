@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { User, LogIn, LogOut } from 'lucide-react';
+import { User, LogIn, LogOut, Shield } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
@@ -9,6 +9,7 @@ import type { User as SupabaseUser } from '@supabase/supabase-js';
 const AuthButton: React.FC = () => {
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -18,8 +19,34 @@ const AuthButton: React.FC = () => {
           const { data: { session } } = await supabase.auth.getSession();
           setUser(session?.user ?? null);
           
-          const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+          // Check if user is admin
+          if (session?.user) {
+            const { data: roleData } = await supabase
+              .from('user_roles')
+              .select('role')
+              .eq('user_id', session.user.id)
+              .eq('role', 'admin')
+              .single();
+            
+            setIsAdmin(!!roleData);
+          }
+          
+          const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
             setUser(session?.user ?? null);
+            
+            // Check admin status when auth state changes
+            if (session?.user) {
+              const { data: roleData } = await supabase
+                .from('user_roles')
+                .select('role')
+                .eq('user_id', session.user.id)
+                .eq('role', 'admin')
+                .single();
+              
+              setIsAdmin(!!roleData);
+            } else {
+              setIsAdmin(false);
+            }
           });
 
           return () => subscription.unsubscribe();
@@ -60,6 +87,14 @@ const AuthButton: React.FC = () => {
         <span className="text-sm text-muted-foreground">
           {user.email}
         </span>
+        {isAdmin && (
+          <Link to="/admin">
+            <Button variant="outline" size="sm">
+              <Shield className="h-4 w-4 mr-2" />
+              Admin
+            </Button>
+          </Link>
+        )}
         <Button variant="outline" size="sm" onClick={handleSignOut}>
           <LogOut className="h-4 w-4 mr-2" />
           Sign Out
