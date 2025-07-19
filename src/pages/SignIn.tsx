@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { LogIn, ArrowLeft } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -19,6 +20,8 @@ const SignIn: React.FC = () => {
   const [password, setPassword] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
   const [resetEmailSent, setResetEmailSent] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [dialogOpen, setDialogOpen] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -104,10 +107,10 @@ const SignIn: React.FC = () => {
   };
 
   const handleForgotPassword = async () => {
-    if (!email) {
+    if (!resetEmail) {
       toast({
         title: "Email required",
-        description: "Please enter your email address first.",
+        description: "Please enter your email address.",
         variant: "destructive",
       });
       return;
@@ -118,13 +121,15 @@ const SignIn: React.FC = () => {
     try {
       const redirectUrl = `${window.location.origin}/signin?reset=true`;
       
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
         redirectTo: redirectUrl,
       });
       
       if (error) throw error;
       
       setResetEmailSent(true);
+      setDialogOpen(false);
+      setResetEmail('');
       toast({
         title: "Reset email sent",
         description: "Check your email for a password reset link.",
@@ -224,16 +229,55 @@ const SignIn: React.FC = () => {
                 </Button>
                 
                 {!isSignUp && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="w-full text-sm"
-                    onClick={handleForgotPassword}
-                    disabled={authLoading}
-                  >
-                    {resetEmailSent ? 'Reset email sent!' : 'Forgot password?'}
-                  </Button>
+                  <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="w-full text-sm"
+                        disabled={authLoading}
+                      >
+                        {resetEmailSent ? 'Reset email sent!' : 'Forgot password?'}
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Reset Password</DialogTitle>
+                        <DialogDescription>
+                          Enter your email address and we'll send you a link to reset your password.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="reset-email">Email</Label>
+                          <Input
+                            id="reset-email"
+                            type="email"
+                            placeholder="Enter your email"
+                            value={resetEmail}
+                            onChange={(e) => setResetEmail(e.target.value)}
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            className="flex-1"
+                            onClick={() => setDialogOpen(false)}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            className="flex-1"
+                            onClick={handleForgotPassword}
+                            disabled={authLoading}
+                          >
+                            {authLoading ? 'Sending...' : 'Send Reset Link'}
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                 )}
                 
                 <Button
