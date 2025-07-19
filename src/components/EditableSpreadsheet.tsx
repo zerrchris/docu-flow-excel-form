@@ -1416,7 +1416,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           <div className="flex-shrink-0 border-b bg-muted/95 backdrop-blur-sm">
             <div 
               ref={headerScrollRef}
-              className="overflow-x-auto [&::-webkit-scrollbar]:hidden min-w-fit"
+              className="overflow-x-auto [&::-webkit-scrollbar]:hidden"
               onScroll={handleHeaderScroll}
               style={{ 
                 scrollbarWidth: 'none', 
@@ -1494,7 +1494,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           {/* Scrollable Body */}
           <div 
             ref={bodyScrollRef}
-            className="flex-1 overflow-auto min-w-fit"
+            className="flex-1 overflow-auto"
             onScroll={handleBodyScroll}
           >
             <Table className="border-collapse" style={{ width: `${getTotalTableWidth()}px`, minWidth: `${getTotalTableWidth()}px` }}>
