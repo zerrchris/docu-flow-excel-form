@@ -128,7 +128,7 @@ const BatchProcessing: React.FC<BatchProcessingProps> = ({
         </CollapsibleTrigger>
 
         <CollapsibleContent className="data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
-          <div className="border-t">
+          <div className="border-t h-[1000px]">
             {/* Upload Area - Collapsible */}
             <div className="border-b">
               {isUploadAreaExpanded || batchDocuments.length === 0 ? (
