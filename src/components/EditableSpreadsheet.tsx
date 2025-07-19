@@ -94,10 +94,32 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [showGoogleDrivePicker, setShowGoogleDrivePicker] = useState(false);
   const [isSavingAsDefault, setIsSavingAsDefault] = useState(false);
   
-  // Refs for scroll synchronization
+  // Refs for scroll synchronization and container width measurement
   const bodyScrollRef = useRef<HTMLDivElement>(null);
   const headerScrollRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  
+  // Calculate and distribute column widths when columns change
+  useEffect(() => {
+    if (containerRef.current && columns.length > 0) {
+      // Get the container width (accounting for borders and padding)
+      const containerWidth = containerRef.current.clientWidth - 2; // -2 for borders
+      const availableWidth = Math.max(containerWidth, 800); // Minimum width of 800px
+      const columnWidth = Math.floor(availableWidth / columns.length);
+      
+      // Only set widths if they haven't been manually set yet
+      const hasCustomWidths = Object.keys(columnWidths).length > 0;
+      if (!hasCustomWidths) {
+        const newWidths: Record<string, number> = {};
+        columns.forEach(column => {
+          newWidths[column] = columnWidth;
+        });
+        setColumnWidths(newWidths);
+      }
+    }
+  }, [columns]); // Only depend on columns, not columnWidths to avoid infinite loop
 
   // Sync data with initialData prop changes
   useEffect(() => {
@@ -1407,6 +1429,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
         {/* Fixed height container with scrolling and resize handle */}
         <div 
+          ref={containerRef}
           className="border rounded-md flex flex-col bg-background relative"
           style={{ height: `${spreadsheetHeight}px` }}
         >
