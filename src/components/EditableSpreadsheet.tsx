@@ -283,7 +283,15 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   // Scroll synchronization between header and body
   const handleBodyScroll = () => {
     if (bodyScrollRef.current && headerScrollRef.current) {
+      console.log('Body scroll:', bodyScrollRef.current.scrollLeft);
       headerScrollRef.current.scrollLeft = bodyScrollRef.current.scrollLeft;
+    }
+  };
+
+  const handleHeaderScroll = () => {
+    if (bodyScrollRef.current && headerScrollRef.current) {
+      console.log('Header scroll:', headerScrollRef.current.scrollLeft);
+      bodyScrollRef.current.scrollLeft = headerScrollRef.current.scrollLeft;
     }
   };
 
@@ -1409,6 +1417,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             <div 
               ref={headerScrollRef}
               className="overflow-x-auto [&::-webkit-scrollbar]:hidden min-w-fit"
+              onScroll={handleHeaderScroll}
               style={{ 
                 scrollbarWidth: 'none', 
                 msOverflowStyle: 'none'
