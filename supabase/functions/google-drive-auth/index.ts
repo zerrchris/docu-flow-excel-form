@@ -27,6 +27,9 @@ serve(async (req) => {
       const redirectUri = `${origin}/google-auth-callback`
       const scope = 'https://www.googleapis.com/auth/drive.readonly'
       
+      console.log('Creating OAuth URL with redirect URI:', redirectUri)
+      console.log('Origin received:', origin)
+      
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
         `client_id=${encodeURIComponent(clientId)}&` +
         `redirect_uri=${encodeURIComponent(redirectUri)}&` +
@@ -34,6 +37,8 @@ serve(async (req) => {
         `response_type=code&` +
         `access_type=offline&` +
         `prompt=consent`
+      
+      console.log('Full auth URL:', authUrl)
       
       return new Response(
         JSON.stringify({ authUrl }),
