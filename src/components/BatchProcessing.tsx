@@ -180,13 +180,7 @@ const BatchProcessing: React.FC<BatchProcessingProps> = ({
 
             {/* Batch Document Rows */}
             <div className="p-6 space-y-0">
-              {batchDocuments.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Files className="h-12 w-12 mx-auto mb-3 opacity-60" />
-                  <p>No documents uploaded yet</p>
-                  <p className="text-sm">Upload documents above to start batch processing</p>
-                </div>
-              ) : (
+            {batchDocuments.length === 0 ? null : (
                 <>
                   <div className="mb-4">
                     <h4 className="text-sm font-medium text-foreground mb-2">
