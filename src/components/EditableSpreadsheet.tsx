@@ -175,23 +175,23 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     setHasUnsavedChanges(true);
     onUnsavedChanges?.(true); // Notify parent component
     
-    // Debounced auto-save: save 2 seconds after the last change
+    // Debounced auto-save: save 10 seconds after the last change
     if (!user) return;
     
     const timeoutId = setTimeout(() => {
       autoSaveRunsheet();
-    }, 2000); // 2 second debounce
+    }, 10000); // 10 second debounce
     
     return () => clearTimeout(timeoutId);
   }, [data, columns, runsheetName, user, autoSaveRunsheet, onUnsavedChanges]);
 
-  // Fallback auto-save every 30 seconds for any missed changes
+  // Fallback auto-save every 2 minutes for any missed changes
   useEffect(() => {
     if (!user || !hasUnsavedChanges) return;
     
     const interval = setInterval(() => {
       autoSaveRunsheet();
-    }, 30000); // Auto-save every 30 seconds as fallback
+    }, 120000); // Auto-save every 2 minutes as fallback
 
     return () => clearInterval(interval);
   }, [user, hasUnsavedChanges, autoSaveRunsheet]);
