@@ -45,6 +45,10 @@ const DocumentProcessor: React.FC = () => {
   const [missingColumns, setMissingColumns] = useState<string[]>([]);
   const [highlightMissingColumns, setHighlightMissingColumns] = useState(false);
   
+  // Highlighting state
+  const [highlights, setHighlights] = useState<Record<string, { x: number; y: number; width: number; height: number }>>({});
+  const [activeHighlight, setActiveHighlight] = useState<string | null>(null);
+  
   // Navigation blocking state
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] = useState(false);
@@ -383,7 +387,8 @@ Image: [base64 image data]`;
         body: JSON.stringify({
           prompt: extractionPrompt,
           imageData: `data:${targetFile.type};base64,${fileBase64}`,
-          systemMessage: "You are a document analysis assistant. Analyze the provided image and extract the requested information in JSON format."
+          systemMessage: "You are a document analysis assistant. Analyze the provided image and extract the requested information in JSON format.",
+          includePositions: true // Request position information for highlighting
         })
       });
 
@@ -401,10 +406,22 @@ Image: [base64 image data]`;
 
       // Parse the JSON response
       let extractedData: Record<string, string>;
+      let positionData: Record<string, { x: number; y: number; width: number; height: number }> = {};
+      
       try {
         // Remove any markdown code blocks if present
         const cleanedText = extractedText.replace(/```json\n?|\n?```/g, '').trim();
-        extractedData = JSON.parse(cleanedText);
+        const parsedResponse = JSON.parse(cleanedText);
+        
+        // Check if the response includes position data
+        if (parsedResponse.extractedData && parsedResponse.positions) {
+          extractedData = parsedResponse.extractedData;
+          positionData = parsedResponse.positions;
+          console.log('Received position data:', positionData);
+        } else {
+          // Fallback for responses without position data
+          extractedData = parsedResponse;
+        }
       } catch (parseError) {
         console.error('Failed to parse OpenAI response:', extractedText);
         throw new Error('Failed to parse extracted data. Please try again.');
@@ -416,6 +433,12 @@ Image: [base64 image data]`;
       if (!fileToAnalyze) {
         console.log('Updating main formData with extracted data');
         setFormData(extractedData);
+        
+        // Set highlights for the main document
+        if (Object.keys(positionData).length > 0) {
+          setHighlights(positionData);
+          console.log('Set highlights:', positionData);
+        }
         
         toast({
           title: "Document analyzed successfully",
@@ -522,6 +545,25 @@ Image: [base64 image data]`;
     setFormData({});
   };
 
+  // Handle highlight click - focus on the corresponding form field
+  const handleHighlightClick = (fieldName: string) => {
+    setActiveHighlight(fieldName);
+    
+    // Optional: scroll to the field in the form
+    setTimeout(() => {
+      const fieldElement = document.querySelector(`[data-field="${fieldName}"]`);
+      if (fieldElement) {
+        fieldElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        (fieldElement as HTMLElement).focus();
+      }
+    }, 100);
+    
+    // Clear active highlight after a few seconds
+    setTimeout(() => {
+      setActiveHighlight(null);
+    }, 3000);
+  };
+
   return (
     <div className="w-full px-4 py-6">
       <div className="flex items-center justify-between mb-8">
@@ -554,6 +596,9 @@ Image: [base64 image data]`;
           onMultipleFilesSelect={handleMultipleFilesSelect}
           onResetDocument={resetDocument}
           isAnalyzing={isAnalyzing}
+          highlights={highlights}
+          activeHighlight={activeHighlight}
+          onHighlightClick={handleHighlightClick}
         />
       </div>
       

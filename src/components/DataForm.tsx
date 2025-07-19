@@ -108,6 +108,7 @@ const DataForm: React.FC<DataFormProps> = ({
             </Label>
             <Textarea
               id={field}
+              data-field={field}
               value={formData[field] || ''}
               onChange={(e) => onChange(field, e.target.value)}
               className="mt-1 min-h-[40px] resize-none"

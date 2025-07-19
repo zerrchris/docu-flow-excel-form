@@ -3,12 +3,28 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 
+interface HighlightPosition {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 interface DocumentViewerProps {
   file: File | null;
   previewUrl: string | null;
+  highlights?: Record<string, HighlightPosition>;
+  activeHighlight?: string | null;
+  onHighlightClick?: (fieldName: string) => void;
 }
 
-const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => {
+const DocumentViewer: React.FC<DocumentViewerProps> = ({ 
+  file, 
+  previewUrl, 
+  highlights = {}, 
+  activeHighlight = null, 
+  onHighlightClick 
+}) => {
   const [zoom, setZoom] = useState(1);
   const [panX, setPanX] = useState(0);
   const [panY, setPanY] = useState(0);
@@ -123,33 +139,61 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
         
         {isImage && previewUrl && (
           <div 
-            className="w-full h-full overflow-hidden"
+            className="w-full h-full overflow-hidden relative"
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
           >
             <div 
-              className="w-full h-full flex items-center justify-center"
+              className="w-full h-full flex items-center justify-center relative"
               onWheel={handleWheel}
             >
-              <img 
-                src={previewUrl} 
-                alt="Document Preview" 
-                className="rounded-lg transition-transform duration-200 select-none cursor-grab active:cursor-grabbing"
-                style={{ 
-                  transform: `scale(${zoom}) translate(${panX / zoom}px, ${panY / zoom}px)`,
-                  width: '100%',
-                  maxWidth: '100%',
-                  height: 'auto',
-                  maxHeight: '100%',
-                  objectFit: 'contain'
-                }}
-                draggable={false}
-                onMouseDown={handleMouseDown}
-                onMouseMove={handleMouseMove}
-                onMouseUp={handleMouseUp}
-                onMouseLeave={handleMouseUp}
-              />
+              <div className="relative">
+                <img 
+                  src={previewUrl} 
+                  alt="Document Preview" 
+                  className="rounded-lg transition-transform duration-200 select-none cursor-grab active:cursor-grabbing"
+                  style={{ 
+                    transform: `scale(${zoom}) translate(${panX / zoom}px, ${panY / zoom}px)`,
+                    width: '100%',
+                    maxWidth: '100%',
+                    height: 'auto',
+                    maxHeight: '100%',
+                    objectFit: 'contain'
+                  }}
+                  draggable={false}
+                  onMouseDown={handleMouseDown}
+                  onMouseMove={handleMouseMove}
+                  onMouseUp={handleMouseUp}
+                  onMouseLeave={handleMouseUp}
+                />
+                
+                {/* Highlight overlays */}
+                {Object.entries(highlights).map(([fieldName, position]) => (
+                  <div
+                    key={fieldName}
+                    className={`absolute border-2 transition-all duration-200 cursor-pointer ${
+                      activeHighlight === fieldName 
+                        ? 'border-primary bg-primary/20 shadow-lg animate-pulse' 
+                        : 'border-primary/60 bg-primary/10 hover:bg-primary/20 hover:border-primary'
+                    }`}
+                    style={{
+                      left: `${position.x}%`,
+                      top: `${position.y}%`,
+                      width: `${position.width}%`,
+                      height: `${position.height}%`,
+                      transform: `scale(${zoom}) translate(${panX / zoom}px, ${panY / zoom}px)`,
+                      transformOrigin: 'top left'
+                    }}
+                    onClick={() => onHighlightClick?.(fieldName)}
+                    title={`Click to focus ${fieldName}`}
+                  >
+                    <div className="absolute -top-6 left-0 bg-primary text-primary-foreground text-xs px-2 py-1 rounded whitespace-nowrap shadow-sm">
+                      {fieldName}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
