@@ -114,24 +114,26 @@ const BatchDocumentRow: React.FC<BatchDocumentRowProps> = ({
         </div>
 
         <CollapsibleContent className="data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-0">
-            <div className="lg:col-span-4 border-r border-border">
-              <div className="p-6">
-                <div className="space-y-2">
-                  <h4 className="text-md font-medium text-foreground">Document Data</h4>
-                  <DataForm 
-                    fields={fields}
-                    formData={formData}
-                    onChange={handleFieldChange}
-                    onAnalyze={handleAnalyze}
-                    onAddToSpreadsheet={handleAddToSpreadsheet}
-                    isAnalyzing={isAnalyzingLocal}
-                  />
+          <div className="h-[1000px]">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 h-full">
+              <div className="lg:col-span-4 border-r border-border">
+                <div className="p-6 h-full overflow-auto">
+                  <div className="space-y-2">
+                    <h4 className="text-md font-medium text-foreground">Document Data</h4>
+                    <DataForm 
+                      fields={fields}
+                      formData={formData}
+                      onChange={handleFieldChange}
+                      onAnalyze={handleAnalyze}
+                      onAddToSpreadsheet={handleAddToSpreadsheet}
+                      isAnalyzing={isAnalyzingLocal}
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className="lg:col-span-8">
-              <DocumentViewer file={file} previewUrl={previewUrl} />
+              <div className="lg:col-span-8 h-full">
+                <DocumentViewer file={file} previewUrl={previewUrl} />
+              </div>
             </div>
           </div>
         </CollapsibleContent>
