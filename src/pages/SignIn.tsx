@@ -68,7 +68,11 @@ const SignIn: React.FC = () => {
           }
         });
 
-        return () => subscription.unsubscribe();
+        // Store subscription for cleanup
+        return () => {
+          console.log('Cleaning up auth subscription');
+          subscription.unsubscribe();
+        };
       } catch (error) {
         console.warn('Auth initialization failed:', error);
       } finally {
