@@ -25,6 +25,18 @@ const SignIn: React.FC = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  // IMMEDIATE CHECK - Add this right at the top
+  useEffect(() => {
+    console.log('=== IMMEDIATE AUTH CHECK ===');
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Immediate session check:', session?.user?.email || 'No user');
+      if (session?.user) {
+        console.log('REDIRECTING IMMEDIATELY');
+        navigate('/', { replace: true });
+      }
+    });
+  }, [navigate]);
+
   useEffect(() => {
     const initAuth = async () => {
       try {
@@ -163,9 +175,24 @@ const SignIn: React.FC = () => {
         
         console.log('Sign in successful:', data);
         
-        // IMMEDIATE FORCED REDIRECT
-        console.log('Sign in complete - forcing immediate redirect');
-        window.location.replace('/');
+        // MULTIPLE REDIRECT ATTEMPTS
+        console.log('=== STARTING REDIRECT SEQUENCE ===');
+        
+        // Attempt 1: React Router navigate
+        console.log('Attempt 1: React Router navigate');
+        navigate('/', { replace: true });
+        
+        // Attempt 2: window.location.replace
+        setTimeout(() => {
+          console.log('Attempt 2: window.location.replace');
+          window.location.replace('/');
+        }, 100);
+        
+        // Attempt 3: window.location.href
+        setTimeout(() => {
+          console.log('Attempt 3: window.location.href');
+          window.location.href = '/';
+        }, 200);
         
         toast({
           title: "Welcome back!",
@@ -237,9 +264,15 @@ const SignIn: React.FC = () => {
       </div>
     );
   }
+  // DEBUG: Log current state
+  console.log('=== SIGNIN RENDER ===');
+  console.log('Loading:', loading);
+  console.log('User:', user?.email || 'No user');
+  console.log('Current URL:', window.location.href);
   
   // If user is already signed in, show a different message
   if (user) {
+    console.log('User detected, showing signed in message');
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Card className="w-full max-w-md">
@@ -251,15 +284,32 @@ const SignIn: React.FC = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-center text-sm text-muted-foreground">
-              Redirecting to the app...
+              Click below to go to the app:
             </p>
             <div className="flex flex-col gap-2">
-              <Button onClick={() => window.location.href = '/'} className="w-full">
-                Go to App
+              <Button 
+                onClick={() => {
+                  console.log('Manual navigation button clicked');
+                  navigate('/', { replace: true });
+                }} 
+                className="w-full"
+              >
+                Go to App (Navigate)
+              </Button>
+              <Button 
+                onClick={() => {
+                  console.log('Manual redirect button clicked');
+                  window.location.href = '/';
+                }} 
+                variant="outline"
+                className="w-full"
+              >
+                Go to App (Redirect)
               </Button>
               <Button 
                 variant="outline" 
                 onClick={() => {
+                  console.log('Sign out clicked');
                   supabase.auth.signOut();
                   setUser(null);
                 }} 
