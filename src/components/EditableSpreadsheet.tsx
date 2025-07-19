@@ -95,9 +95,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [isSavingAsDefault, setIsSavingAsDefault] = useState(false);
   const [hasManuallyResizedColumns, setHasManuallyResizedColumns] = useState(false);
   
-  // Refs for scroll synchronization and container width measurement
-  const bodyScrollRef = useRef<HTMLDivElement>(null);
-  const headerScrollRef = useRef<HTMLDivElement>(null);
+  // Ref for container width measurement
   const containerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -304,18 +302,6 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     }
   };
 
-  // Scroll synchronization between header and body
-  const handleBodyScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    if (headerScrollRef.current) {
-      headerScrollRef.current.scrollLeft = e.currentTarget.scrollLeft;
-    }
-  };
-
-  const handleHeaderScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    if (bodyScrollRef.current) {
-      bodyScrollRef.current.scrollLeft = e.currentTarget.scrollLeft;
-    }
-  };
 
   // Save current configuration as default
   const saveAsDefault = async () => {
@@ -1439,152 +1425,132 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           </p>
         </div>
 
-        {/* Fixed height container with scrolling and resize handle */}
+        {/* Single scrollable table container */}
         <div 
           ref={containerRef}
-          className="border rounded-md flex flex-col bg-background relative"
+          className="border rounded-md bg-background relative overflow-auto"
           style={{ height: `${spreadsheetHeight}px` }}
         >
-          {/* Fixed Header */}
-          <div className="flex-shrink-0 border-b bg-muted/95 backdrop-blur-sm">
-            <div 
-              ref={headerScrollRef}
-              className="overflow-x-auto [&::-webkit-scrollbar]:hidden"
-              onScroll={handleHeaderScroll}
-              style={{ 
-                scrollbarWidth: 'none', 
-                msOverflowStyle: 'none'
-              }}
-            >
-              <Table className="border-collapse" style={{ width: `${getTotalTableWidth()}px`, minWidth: `${getTotalTableWidth()}px` }}>
-              <TableHeader>
-                <TableRow className="hover:bg-muted/50 transition-colors">
-                  {columns.map((column) => (
-                     <TableHead 
-                         key={column}
-                         className={`font-bold text-center border-r border-border relative p-0 last:border-r-0 cursor-move
-                           ${draggedColumn === column ? 'opacity-50' : ''} 
-                           ${dragOverColumn === column ? 'bg-primary/20' : ''}
-                           ${missingColumns.includes(column) ? 'animate-pulse bg-yellow-100 border-2 border-yellow-400 dark:bg-yellow-900/20 dark:border-yellow-500' : ''}`}
-                        style={{ width: `${getColumnWidth(column)}px`, minWidth: `${getColumnWidth(column)}px` }}
-                        draggable
-                       onDragStart={(e) => handleDragStart(e, column)}
-                       onDragOver={(e) => handleDragOver(e, column)}
-                       onDragLeave={handleDragLeave}
-                       onDrop={(e) => handleDrop(e, column)}
-                       onDragEnd={handleDragEnd}
-                     >
-                        <ContextMenu>
-                          <ContextMenuTrigger className="w-full h-full p-0 select-none">
-                             <div 
-                               className={`w-full h-full px-4 py-2 cursor-pointer hover:bg-primary/10 transition-colors relative
-                                 ${missingColumns.includes(column) ? 'animate-bounce' : ''}`}
-                               onClick={() => openColumnDialog(column)}
-                            >
-                              <div className="flex flex-col items-center">
-                                <span className="font-bold">{column}</span>
-                                {missingColumns.includes(column) && (
-                                  <span className="text-xs text-yellow-600 dark:text-yellow-400 mt-1 animate-pulse">
-                                    Click to configure
-                                  </span>
-                                )}
-                              </div>
-                              {/* Resize handle */}
-                              <div
-                                className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/30 bg-border/50"
-                                onMouseDown={(e) => handleMouseDown(e, column)}
-                                onClick={(e) => e.stopPropagation()}
-                              />
-                            </div>
-                          </ContextMenuTrigger>
-                        <ContextMenuContent>
-                          <ContextMenuItem onClick={() => insertColumnBefore(column)}>
-                            <Plus className="h-4 w-4 mr-2" />
-                            Insert Column Before
-                          </ContextMenuItem>
-                          <ContextMenuItem onClick={() => insertColumnAfter(column)}>
-                            <Plus className="h-4 w-4 mr-2" />
-                            Insert Column After
-                          </ContextMenuItem>
-                          <ContextMenuSeparator />
-                          <ContextMenuItem 
-                            onClick={() => removeColumn(column)}
-                            className="text-destructive focus:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Remove Column
-                          </ContextMenuItem>
-                        </ContextMenuContent>
-                      </ContextMenu>
-                    </TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-            </Table>
-            </div>
-          </div>
-
-          {/* Scrollable Body */}
-          <div 
-            ref={bodyScrollRef}
-            className="flex-1 overflow-auto"
-            onScroll={handleBodyScroll}
-          >
-            <Table className="border-collapse" style={{ width: `${getTotalTableWidth()}px`, minWidth: `${getTotalTableWidth()}px` }}>
-              <TableBody>
-                {data.map((row, rowIndex) => (
-                  <TableRow key={rowIndex} className="hover:bg-muted/30">
-                     {columns.map((column) => {
-                      const isSelected = selectedCell?.rowIndex === rowIndex && selectedCell?.column === column;
-                      const isEditing = editingCell?.rowIndex === rowIndex && editingCell?.column === column;
-                      
-                      return (
-                        <TableCell 
-                          key={`${rowIndex}-${column}`}
-                          className="border-r border-border p-0 last:border-r-0 relative"
-                          style={{ width: `${getColumnWidth(column)}px`, minWidth: `${getColumnWidth(column)}px` }}
-                        >
-                          {isEditing ? (
-                            <Textarea
-                              ref={textareaRef}
-                              value={cellValue}
-                              onChange={(e) => setCellValue(e.target.value)}
-                              onKeyDown={(e) => {
-                                // Allow Shift+Enter for line breaks, but handle Tab/Enter normally
-                                if ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Tab' || e.key === 'Escape') {
-                                  handleInputKeyDown(e);
-                                }
-                              }}
-                              className={`h-full min-h-[2rem] border-none rounded-none bg-background focus:ring-2 focus:ring-primary resize-none overflow-hidden p-2 ${
-                                columnAlignments[column] === 'center' ? 'text-center' : 
-                                columnAlignments[column] === 'right' ? 'text-right' : 'text-left'
-                              }`}
-                              style={{ minHeight: '60px' }}
-                            />
-                          ) : (
-                            <div
-                              className={`min-h-[2rem] py-2 px-3 cursor-cell flex items-start transition-colors whitespace-pre-wrap
-                                ${isSelected 
-                                  ? 'bg-primary/10 border-2 border-primary ring-2 ring-primary/20' 
-                                  : 'hover:bg-muted/50 border-2 border-transparent'
-                                }
-                                ${columnAlignments[column] === 'center' ? 'text-center justify-center' : 
-                                  columnAlignments[column] === 'right' ? 'text-right justify-end' : 'text-left justify-start'}`}
-                               onClick={() => selectCell(rowIndex, column)}
-                               onKeyDown={(e) => handleKeyDown(e, rowIndex, column)}
-                              tabIndex={0}
-                            >
-                              {row[column] || ''}
-                            </div>
-                          )}
-                       </TableCell>
-                     );
-                    })}
-                 </TableRow>
+          <Table className="border-collapse" style={{ width: `${getTotalTableWidth()}px`, minWidth: `${getTotalTableWidth()}px` }}>
+            {/* Sticky Header */}
+            <TableHeader className="sticky top-0 z-10 bg-muted/95 backdrop-blur-sm">
+              <TableRow className="hover:bg-muted/50 transition-colors">
+                {columns.map((column) => (
+                   <TableHead 
+                       key={column}
+                       className={`font-bold text-center border-r border-border relative p-0 last:border-r-0 cursor-move
+                         ${draggedColumn === column ? 'opacity-50' : ''} 
+                         ${dragOverColumn === column ? 'bg-primary/20' : ''}
+                         ${missingColumns.includes(column) ? 'animate-pulse bg-yellow-100 border-2 border-yellow-400 dark:bg-yellow-900/20 dark:border-yellow-500' : ''}`}
+                       style={{ width: `${getColumnWidth(column)}px`, minWidth: `${getColumnWidth(column)}px` }}
+                       draggable
+                      onDragStart={(e) => handleDragStart(e, column)}
+                      onDragOver={(e) => handleDragOver(e, column)}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => handleDrop(e, column)}
+                      onDragEnd={handleDragEnd}
+                    >
+                       <ContextMenu>
+                         <ContextMenuTrigger className="w-full h-full p-0 select-none">
+                            <div 
+                              className={`w-full h-full px-4 py-2 cursor-pointer hover:bg-primary/10 transition-colors relative
+                                ${missingColumns.includes(column) ? 'animate-bounce' : ''}`}
+                              onClick={() => openColumnDialog(column)}
+                           >
+                             <div className="flex flex-col items-center">
+                               <span className="font-bold">{column}</span>
+                               {missingColumns.includes(column) && (
+                                 <span className="text-xs text-yellow-600 dark:text-yellow-400 mt-1 animate-pulse">
+                                   Click to configure
+                                 </span>
+                               )}
+                             </div>
+                             {/* Resize handle */}
+                             <div
+                               className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/30 bg-border/50"
+                               onMouseDown={(e) => handleMouseDown(e, column)}
+                               onClick={(e) => e.stopPropagation()}
+                             />
+                           </div>
+                         </ContextMenuTrigger>
+                       <ContextMenuContent>
+                         <ContextMenuItem onClick={() => insertColumnBefore(column)}>
+                           <Plus className="h-4 w-4 mr-2" />
+                           Insert Column Before
+                         </ContextMenuItem>
+                         <ContextMenuItem onClick={() => insertColumnAfter(column)}>
+                           <Plus className="h-4 w-4 mr-2" />
+                           Insert Column After
+                         </ContextMenuItem>
+                         <ContextMenuSeparator />
+                         <ContextMenuItem 
+                           onClick={() => removeColumn(column)}
+                           className="text-destructive focus:text-destructive"
+                         >
+                           <Trash2 className="h-4 w-4 mr-2" />
+                           Remove Column
+                         </ContextMenuItem>
+                       </ContextMenuContent>
+                     </ContextMenu>
+                   </TableHead>
                  ))}
-              </TableBody>
-            </Table>
-          </div>
+               </TableRow>
+             </TableHeader>
+
+            {/* Table Body */}
+            <TableBody>
+              {data.map((row, rowIndex) => (
+                <TableRow key={rowIndex} className="hover:bg-muted/30">
+                   {columns.map((column) => {
+                    const isSelected = selectedCell?.rowIndex === rowIndex && selectedCell?.column === column;
+                    const isEditing = editingCell?.rowIndex === rowIndex && editingCell?.column === column;
+                    
+                    return (
+                      <TableCell 
+                        key={`${rowIndex}-${column}`}
+                        className="border-r border-border p-0 last:border-r-0 relative"
+                        style={{ width: `${getColumnWidth(column)}px`, minWidth: `${getColumnWidth(column)}px` }}
+                      >
+                        {isEditing ? (
+                          <Textarea
+                            ref={textareaRef}
+                            value={cellValue}
+                            onChange={(e) => setCellValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              // Allow Shift+Enter for line breaks, but handle Tab/Enter normally
+                              if ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Tab' || e.key === 'Escape') {
+                                handleInputKeyDown(e);
+                              }
+                            }}
+                            className={`h-full min-h-[2rem] border-none rounded-none bg-background focus:ring-2 focus:ring-primary resize-none overflow-hidden p-2 ${
+                              columnAlignments[column] === 'center' ? 'text-center' : 
+                              columnAlignments[column] === 'right' ? 'text-right' : 'text-left'
+                            }`}
+                            style={{ minHeight: '60px' }}
+                          />
+                        ) : (
+                          <div
+                            className={`min-h-[2rem] py-2 px-3 cursor-cell flex items-start transition-colors whitespace-pre-wrap
+                              ${isSelected 
+                                ? 'bg-primary/10 border-2 border-primary ring-2 ring-primary/20' 
+                                : 'hover:bg-muted/50 border-2 border-transparent'
+                              }
+                              ${columnAlignments[column] === 'center' ? 'text-center justify-center' : 
+                                columnAlignments[column] === 'right' ? 'text-right justify-end' : 'text-left justify-start'}`}
+                             onClick={() => selectCell(rowIndex, column)}
+                             onKeyDown={(e) => handleKeyDown(e, rowIndex, column)}
+                            tabIndex={0}
+                          >
+                            {row[column] || ''}
+                          </div>
+                        )}
+                     </TableCell>
+                   );
+                  })}
+               </TableRow>
+               ))}
+            </TableBody>
+          </Table>
 
           {/* Height resize handle */}
           <div
