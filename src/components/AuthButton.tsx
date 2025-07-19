@@ -107,14 +107,6 @@ const AuthButton: React.FC = () => {
         <span className="text-sm text-muted-foreground">
           {user.email}
         </span>
-        {isAdmin && (
-          <Link to="/admin">
-            <Button variant="outline" size="sm">
-              <Shield className="h-4 w-4 mr-2" />
-              Admin
-            </Button>
-          </Link>
-        )}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm">
@@ -124,6 +116,14 @@ const AuthButton: React.FC = () => {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            {isAdmin && (
+              <DropdownMenuItem asChild>
+                <Link to="/admin" className="flex items-center w-full">
+                  <Shield className="h-4 w-4 mr-2" />
+                  Admin Panel
+                </Link>
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem onClick={handleChangePassword}>
               <KeyRound className="h-4 w-4 mr-2" />
               Change Password
