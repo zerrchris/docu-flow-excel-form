@@ -97,15 +97,29 @@ serve(async (req) => {
       const metadata = await metadataResponse.json()
       console.log('File metadata:', metadata)
       
-      // Download file content
-      const contentResponse = await fetch(
-        `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
-        {
-          headers: {
-            'Authorization': `Bearer ${access_token}`,
-          },
-        }
-      )
+      // Determine the correct API endpoint and export format for Google Workspace files
+      let downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`
+      
+      // Handle Google Workspace files that need to be exported
+      if (metadata.mimeType === 'application/vnd.google-apps.spreadsheet') {
+        // Export Google Sheets as Excel format
+        downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}/export?mimeType=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`
+      } else if (metadata.mimeType === 'application/vnd.google-apps.document') {
+        // Export Google Docs as Word format
+        downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}/export?mimeType=application/vnd.openxmlformats-officedocument.wordprocessingml.document`
+      } else if (metadata.mimeType === 'application/vnd.google-apps.presentation') {
+        // Export Google Slides as PowerPoint format
+        downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}/export?mimeType=application/vnd.openxmlformats-officedocument.presentationml.presentation`
+      }
+      
+      console.log('Download URL:', downloadUrl)
+      
+      // Download or export file content
+      const contentResponse = await fetch(downloadUrl, {
+        headers: {
+          'Authorization': `Bearer ${access_token}`,
+        },
+      })
       
       console.log('Content response status:', contentResponse.status)
       
