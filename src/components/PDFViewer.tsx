@@ -18,9 +18,6 @@ import {
 // Configure PDF.js worker for react-pdf
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/legacy/build/pdf.worker.min.js`;
 
-import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
-import 'react-pdf/dist/esm/Page/TextLayer.css';
-
 interface PDFViewerProps {
   file: File | null;
   previewUrl: string | null;
@@ -234,8 +231,8 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ file, previewUrl }) => {
                 pageNumber={currentPage}
                 scale={scale}
                 className="shadow-lg border border-border"
-                renderAnnotationLayer={true}
-                renderTextLayer={true}
+                renderAnnotationLayer={false}
+                renderTextLayer={false}
               />
             </Document>
           )}
