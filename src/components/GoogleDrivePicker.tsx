@@ -41,11 +41,18 @@ export const GoogleDrivePicker: React.FC<GoogleDrivePickerProps> = ({
 
       if (authError) throw authError;
 
-      // Open popup for OAuth
+      // Try to open popup
       const popup = window.open(authData.authUrl, 'google-auth', 'width=500,height=600');
       
-      if (!popup) {
-        throw new Error('Popup blocked. Please allow popups for this site.');
+      if (!popup || popup.closed || typeof popup.closed == 'undefined') {
+        // Popup was blocked, redirect to new tab instead
+        setIsAuthenticating(false);
+        toast.error('Popup blocked! Opening Google authentication in a new tab...', {
+          duration: 3000,
+        });
+        // Open in new tab as fallback
+        window.open(authData.authUrl, '_blank');
+        return;
       }
 
       // Listen for messages from the popup
@@ -67,13 +74,13 @@ export const GoogleDrivePicker: React.FC<GoogleDrivePickerProps> = ({
 
       window.addEventListener('message', messageListener);
 
-      // Fallback: Check if popup is closed without success
+      // Check if popup is closed
       const checkClosed = setInterval(() => {
         if (popup.closed) {
           clearInterval(checkClosed);
           window.removeEventListener('message', messageListener);
           setIsAuthenticating(false);
-          // Don't show error if we already got a success message
+          // User might have closed popup manually
         }
       }, 1000);
 
@@ -206,23 +213,31 @@ export const GoogleDrivePicker: React.FC<GoogleDrivePickerProps> = ({
                 </CardDescription>
               </CardHeader>
               <CardContent className="text-center">
-                <Button 
-                  onClick={authenticateWithGoogle}
-                  disabled={isAuthenticating}
-                  className="w-full"
-                >
-                  {isAuthenticating ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Connecting...
-                    </>
-                  ) : (
-                    <>
-                      <FolderOpen className="mr-2 h-4 w-4" />
-                      Connect Google Drive
-                    </>
-                  )}
-                </Button>
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Access your Google Drive spreadsheets to import them directly into your runsheet.
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Note: If you see a popup blocker warning, please allow popups for this site or use the new tab that opens.
+                  </p>
+                  <Button 
+                    onClick={authenticateWithGoogle}
+                    disabled={isAuthenticating}
+                    className="w-full"
+                  >
+                    {isAuthenticating ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Connecting...
+                      </>
+                    ) : (
+                      <>
+                        <FolderOpen className="mr-2 h-4 w-4" />
+                        Connect Google Drive
+                      </>
+                    )}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ) : (
