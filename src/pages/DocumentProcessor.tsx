@@ -8,6 +8,8 @@ import DocumentFrame from '@/components/DocumentFrame';
 import EditableSpreadsheet from '@/components/EditableSpreadsheet';
 import AuthButton from '@/components/AuthButton';
 import BatchProcessing from '@/components/BatchProcessing';
+import { ExtractionPreferencesService } from '@/services/extractionPreferences';
+import { supabase } from '@/integrations/supabase/client';
 
 import extractorLogo from '@/assets/document-extractor-logo.png';
 
@@ -54,6 +56,69 @@ const DocumentProcessor: React.FC = () => {
   
   // Get started dialog state
   const [showGetStarted, setShowGetStarted] = useState(true);
+  
+  // Preferences loading state
+  const [isLoadingPreferences, setIsLoadingPreferences] = useState(true);
+  
+  // Load user preferences on component mount
+  useEffect(() => {
+    const loadUserPreferences = async () => {
+      setIsLoadingPreferences(true);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user) {
+          const preferences = await ExtractionPreferencesService.getDefaultPreferences();
+          
+          if (preferences && preferences.columns && preferences.column_instructions) {
+            // Load saved preferences
+            setColumns(preferences.columns);
+            setColumnInstructions(preferences.column_instructions as Record<string, string>);
+            console.log('Loaded user preferences:', preferences);
+          } else {
+            // No saved preferences, use defaults and save them
+            setColumns(DEFAULT_COLUMNS);
+            setColumnInstructions(DEFAULT_EXTRACTION_INSTRUCTIONS);
+            await ExtractionPreferencesService.saveDefaultPreferences(
+              DEFAULT_COLUMNS, 
+              DEFAULT_EXTRACTION_INSTRUCTIONS
+            );
+            console.log('Created default preferences for user');
+          }
+        } else {
+          // Not authenticated, use defaults
+          setColumns(DEFAULT_COLUMNS);
+          setColumnInstructions(DEFAULT_EXTRACTION_INSTRUCTIONS);
+        }
+      } catch (error) {
+        console.error('Error loading user preferences:', error);
+        // Fallback to defaults on error
+        setColumns(DEFAULT_COLUMNS);
+        setColumnInstructions(DEFAULT_EXTRACTION_INSTRUCTIONS);
+      } finally {
+        setIsLoadingPreferences(false);
+      }
+    };
+
+    loadUserPreferences();
+  }, []);
+  
+  // Auto-save preferences when columns or instructions change
+  useEffect(() => {
+    if (!isLoadingPreferences && columns.length > 0 && Object.keys(columnInstructions).length > 0) {
+      const savePreferences = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await ExtractionPreferencesService.saveDefaultPreferences(columns, columnInstructions);
+          console.log('Auto-saved user preferences');
+        }
+      };
+      
+      // Debounce the save to avoid too many API calls
+      const timeoutId = setTimeout(savePreferences, 1000);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [columns, columnInstructions, isLoadingPreferences]);
   
   // Update form state when columns change
   useEffect(() => {

@@ -74,6 +74,39 @@ export type Database = {
         }
         Relationships: []
       }
+      user_extraction_preferences: {
+        Row: {
+          column_instructions: Json
+          columns: string[]
+          created_at: string
+          id: string
+          is_default: boolean
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          column_instructions?: Json
+          columns?: string[]
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          column_instructions?: Json
+          columns?: string[]
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
