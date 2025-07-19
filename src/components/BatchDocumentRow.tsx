@@ -130,7 +130,7 @@ const BatchDocumentRow: React.FC<BatchDocumentRowProps> = ({
                 </div>
               </div>
             </div>
-            <div className="lg:col-span-8">
+            <div className="lg:col-span-8 max-h-[1000px] overflow-hidden">
               <DocumentViewer file={file} previewUrl={previewUrl} />
             </div>
           </div>
