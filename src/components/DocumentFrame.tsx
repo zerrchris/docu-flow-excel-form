@@ -71,7 +71,7 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
           <div className="border-t">
             <div className="h-[1000px]">
               <ResizablePanelGroup direction="horizontal" className="w-full h-full">
-                <ResizablePanel defaultSize={33} minSize={25} maxSize={50}>
+                <ResizablePanel defaultSize={33} minSize={25} maxSize={75}>
                   <div className="h-full border-r border-border">
                     <div className="p-6 h-full overflow-auto">
                       <div className="space-y-2">
