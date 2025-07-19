@@ -31,15 +31,21 @@ const SignIn: React.FC = () => {
         const { data: { session } } = await supabase.auth.getSession();
         setUser(session?.user ?? null);
         
-        // If user is already signed in, redirect to home
-        if (session?.user) {
+        // Check if we're in a password reset flow
+        const urlParams = new URLSearchParams(window.location.search);
+        const isPasswordReset = urlParams.get('reset') === 'true';
+        
+        // If user is already signed in and not in reset flow, redirect to home
+        if (session?.user && !isPasswordReset) {
           navigate('/');
           return;
         }
         
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
           setUser(session?.user ?? null);
-          if (session?.user) {
+          
+          // Only redirect on successful sign in, not during password reset flow
+          if (session?.user && event === 'SIGNED_IN' && !isPasswordReset) {
             navigate('/');
           }
         });
