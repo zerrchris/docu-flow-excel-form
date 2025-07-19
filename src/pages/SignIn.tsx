@@ -61,7 +61,8 @@ const SignIn: React.FC = () => {
         // If user is already signed in and not in reset flow, redirect to home
         if (session?.user && !isPasswordReset) {
           console.log('User already signed in, redirecting to home');
-          navigate('/');
+          // Force immediate redirect
+          window.location.href = '/';
           return;
         }
         
@@ -72,7 +73,8 @@ const SignIn: React.FC = () => {
           // Only redirect on successful sign in, not during password reset flow
           if (session?.user && event === 'SIGNED_IN' && !isPasswordReset) {
             console.log('Successful sign in, redirecting to home');
-            navigate('/');
+            // Force immediate redirect
+            window.location.href = '/';
           }
         });
 
@@ -111,9 +113,11 @@ const SignIn: React.FC = () => {
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthLoading(true);
+    console.log('Starting authentication process...', { isSignUp, email });
 
     try {
       if (isSignUp) {
+        console.log('Attempting sign up...');
         const redirectUrl = `${window.location.origin}/`;
         
         const { error } = await supabase.auth.signUp({
@@ -124,20 +128,29 @@ const SignIn: React.FC = () => {
           }
         });
         
-        if (error) throw error;
+        if (error) {
+          console.error('Sign up error:', error);
+          throw error;
+        }
         
+        console.log('Sign up successful');
         toast({
           title: "Check your email",
           description: "A confirmation link has been sent to your email address.",
         });
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        console.log('Attempting sign in...');
+        const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         
-        if (error) throw error;
+        if (error) {
+          console.error('Sign in error:', error);
+          throw error;
+        }
         
+        console.log('Sign in successful:', data);
         toast({
           title: "Welcome back!",
           description: "You have successfully signed in.",
@@ -149,12 +162,14 @@ const SignIn: React.FC = () => {
       setEmail('');
       setPassword('');
     } catch (error: any) {
+      console.error('Authentication failed:', error);
       toast({
         title: "Authentication failed",
         description: error.message,
         variant: "destructive",
       });
     } finally {
+      console.log('Setting authLoading to false');
       setAuthLoading(false);
     }
   };
@@ -212,7 +227,25 @@ const SignIn: React.FC = () => {
       </div>
     );
   }
-
+  
+  // If user is already signed in, show a different message
+  if (user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <img 
+            src={extractorLogo} 
+            alt="RunsheetPro Logo" 
+            className="h-16 w-16 mx-auto mb-4"
+          />
+          <p className="mb-4">You're already signed in as {user.email}</p>
+          <Link to="/">
+            <Button>Go to App</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
