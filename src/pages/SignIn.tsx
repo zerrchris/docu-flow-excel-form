@@ -40,7 +40,15 @@ const SignIn: React.FC = () => {
           return;
         }
         
-        console.log('Current session:', session);
+        console.log('Current session:', session?.user?.email || 'No user');
+        
+        // IMMEDIATE REDIRECT CHECK - if user exists, redirect now
+        if (session?.user) {
+          console.log('User found immediately, forcing redirect NOW');
+          window.location.replace('/');
+          return; // Don't continue with the rest of the setup
+        }
+        
         setUser(session?.user ?? null);
         
         // Check if we're in a password reset flow
@@ -154,17 +162,15 @@ const SignIn: React.FC = () => {
         }
         
         console.log('Sign in successful:', data);
+        
+        // IMMEDIATE FORCED REDIRECT
+        console.log('Sign in complete - forcing immediate redirect');
+        window.location.replace('/');
+        
         toast({
           title: "Welcome back!",
           description: "You have successfully signed in.",
         });
-        
-        // Multiple redirect attempts with different methods
-        console.log('Attempting immediate redirect after sign in');
-        setTimeout(() => {
-          console.log('Executing post-signin redirect');
-          window.location.replace('/');
-        }, 1000);
       }
       
       setEmail('');
