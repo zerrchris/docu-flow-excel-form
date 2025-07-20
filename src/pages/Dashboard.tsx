@@ -46,12 +46,6 @@ const Dashboard: React.FC = () => {
       description: "Organize and manage your uploaded documents",
       icon: FolderOpen,
       path: "/file-manager"
-    },
-    {
-      title: "Upload Documents",
-      description: "Upload documents directly to start processing",
-      icon: Upload,
-      path: "/runsheet"
     }
   ];
 
