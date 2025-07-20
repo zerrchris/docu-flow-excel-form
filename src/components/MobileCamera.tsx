@@ -106,6 +106,11 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
     setShowNameDialog(true);
   };
 
+  const handleAddToExistingProject = async () => {
+    await loadExistingProjects();
+    setShowProjectSelectionDialog(true);
+  };
+
   const startNewProject = () => {
     // Clear current project and show project dialog
     setCurrentProject('');
@@ -456,25 +461,33 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
               <p className="text-sm text-muted-foreground">
                 Project: <span className="font-medium text-primary">{currentProject}</span>
               </p>
-              <div className="flex gap-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowProjectDialog(true)}
-                  className="text-xs"
-                >
-                  Rename
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={startNewProject}
-                  className="text-xs gap-1"
-                >
-                  <Plus className="h-3 w-3" />
-                  New Project
-                </Button>
-              </div>
+               <div className="flex gap-1 flex-wrap justify-center">
+                 <Button
+                   variant="ghost"
+                   size="sm"
+                   onClick={() => setShowProjectDialog(true)}
+                   className="text-xs"
+                 >
+                   Rename
+                 </Button>
+                 <Button
+                   variant="ghost"
+                   size="sm"
+                   onClick={handleAddToExistingProject}
+                   className="text-xs"
+                 >
+                   Add to Existing
+                 </Button>
+                 <Button
+                   variant="ghost"
+                   size="sm"
+                   onClick={startNewProject}
+                   className="text-xs gap-1"
+                 >
+                   <Plus className="h-3 w-3" />
+                   New Project
+                 </Button>
+               </div>
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">
