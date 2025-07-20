@@ -23,11 +23,14 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
   const [documentPageCount, setDocumentPageCount] = useState(1);
   const [showNameDialog, setShowNameDialog] = useState(false);
   const [showProjectDialog, setShowProjectDialog] = useState(false);
+  const [showProjectSelectionDialog, setShowProjectSelectionDialog] = useState(false);
   const [currentProject, setCurrentProject] = useState('');
   const [projectName, setProjectName] = useState('');
   const [documentName, setDocumentName] = useState('');
   const [instrumentNumber, setInstrumentNumber] = useState('');
   const [bookPage, setBookPage] = useState('');
+  const [capturedPhotoData, setCapturedPhotoData] = useState<string | null>(null);
+  const [existingProjects, setExistingProjects] = useState<string[]>([]);
 
   const checkCameraPermissions = async () => {
     if (!Capacitor.isNativePlatform()) {
@@ -48,19 +51,95 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
     }
   };
 
-  const startDocumentCapture = () => {
-    console.log('Starting document capture, current project:', currentProject);
-    // Check if we have a current project, if not show project dialog first
-    if (!currentProject || currentProject.trim() === '') {
-      console.log('No current project, showing project dialog');
-      setShowProjectDialog(true);
-    } else {
-      console.log('Project exists, showing document name dialog');
-      setShowNameDialog(true);
+  const startDocumentCapture = async () => {
+    try {
+      const hasPermissions = await checkCameraPermissions();
+      if (!hasPermissions) {
+        toast({
+          title: "Camera Permission Required",
+          description: "Please allow camera access to take photos.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setIsUploading(true);
+
+      const image = await Camera.getPhoto({
+        quality: 80,
+        allowEditing: false,
+        resultType: CameraResultType.DataUrl,
+        source: CameraSource.Camera,
+      });
+
+      if (image.dataUrl) {
+        setCapturedPhotoData(image.dataUrl);
+        await loadExistingProjects();
+        setShowProjectSelectionDialog(true);
+      }
+    } catch (error) {
+      console.error('Error taking picture:', error);
+      toast({
+        title: "Camera Error",
+        description: "Failed to take picture. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
     }
   };
 
   const handleStartProject = () => {
+    handleProjectCreated();
+  };
+
+  const loadExistingProjects = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase.storage
+        .from('documents')
+        .list(user.id, {
+          limit: 100,
+          offset: 0,
+        });
+
+      if (error) {
+        console.error('Error loading projects:', error);
+        return;
+      }
+
+      // Extract unique project names from folder structure
+      const projects = new Set<string>();
+      data?.forEach(item => {
+        if (item.name && item.metadata) {
+          // Check if this looks like a project folder
+          const folderName = item.name.split('/')[0];
+          if (folderName && folderName !== item.name) {
+            projects.add(folderName.replace(/_/g, ' '));
+          }
+        }
+      });
+
+      setExistingProjects(Array.from(projects));
+    } catch (error) {
+      console.error('Error loading existing projects:', error);
+    }
+  };
+
+  const handleSelectExistingProject = (projectName: string) => {
+    setCurrentProject(projectName);
+    setShowProjectSelectionDialog(false);
+    setShowNameDialog(true);
+  };
+
+  const handleCreateNewProject = () => {
+    setShowProjectSelectionDialog(false);
+    setShowProjectDialog(true);
+  };
+
+  const handleProjectCreated = () => {
     setCurrentProject(projectName);
     setShowProjectDialog(false);
     setShowNameDialog(true);
@@ -84,6 +163,28 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
   };
 
   const takePictureAfterNaming = async () => {
+    if (capturedPhotoData) {
+      // Use the already captured photo
+      setCurrentDocumentPages(prev => [...prev, capturedPhotoData]);
+      
+      if (!isCapturingDocument) {
+        setIsCapturingDocument(true);
+        setDocumentPageCount(1);
+      } else {
+        setDocumentPageCount(prev => prev + 1);
+      }
+
+      toast({
+        title: "Page Captured",
+        description: `Page ${documentPageCount + (isCapturingDocument ? 0 : 1)} added. Continue taking pictures or finish document.`,
+      });
+
+      // Clear the captured photo data
+      setCapturedPhotoData(null);
+      return;
+    }
+
+    // Fallback to taking a new picture (for existing document capture)
     try {
       const hasPermissions = await checkCameraPermissions();
       if (!hasPermissions) {
@@ -646,6 +747,58 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
             </Button>
             <Button onClick={handleStartProject} disabled={!projectName.trim()}>
               Continue
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Project Selection Dialog - Shown after taking photo */}
+      <Dialog open={showProjectSelectionDialog} onOpenChange={setShowProjectSelectionDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Choose Project</DialogTitle>
+            <DialogDescription>
+              Would you like to start a new project or continue working on an existing one?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            {existingProjects.length > 0 && (
+              <div className="space-y-3">
+                <h4 className="text-sm font-medium">Continue Existing Project:</h4>
+                <div className="space-y-2">
+                  {existingProjects.map((project, index) => (
+                    <Button
+                      key={index}
+                      variant="outline"
+                      className="w-full justify-start"
+                      onClick={() => handleSelectExistingProject(project)}
+                    >
+                      {project}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium">Or start a new project:</h4>
+              <Button
+                className="w-full gap-2"
+                onClick={handleCreateNewProject}
+              >
+                <Plus className="h-4 w-4" />
+                Create New Project
+              </Button>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowProjectSelectionDialog(false);
+                setCapturedPhotoData(null); // Clear the captured photo
+              }}
+            >
+              Cancel
             </Button>
           </DialogFooter>
         </DialogContent>
