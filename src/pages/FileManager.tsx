@@ -679,6 +679,14 @@ export const FileManager: React.FC = () => {
                 Open
               </Button>
               <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => window.open(`/runsheet?runsheet=${runsheet.id}`, '_blank')}
+                className="gap-2 text-xs"
+              >
+                New Tab
+              </Button>
+              <Button
                 variant="outline"
                 size="sm"
                 onClick={() => openDeleteDialog(undefined, runsheet)}

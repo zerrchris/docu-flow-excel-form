@@ -12,6 +12,8 @@ import { ExtractionPreferencesService } from '@/services/extractionPreferences';
 import { AdminSettingsService } from '@/services/adminSettings';
 import { supabase } from '@/integrations/supabase/client';
 import { useActiveRunsheet } from '@/hooks/useActiveRunsheet';
+import { useMultipleRunsheets } from '@/hooks/useMultipleRunsheets';
+import RunsheetTabs from '@/components/RunsheetTabs';
 
 import extractorLogo from '@/assets/document-extractor-logo.png';
 
@@ -56,8 +58,9 @@ const DocumentProcessor: React.FC = () => {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   
-  // Use active runsheet hook
+  // Use active runsheet hooks
   const { activeRunsheet } = useActiveRunsheet();
+  const { addRunsheet, hasActiveRunsheets } = useMultipleRunsheets();
   
   // Get started dialog state
   const [showGetStarted, setShowGetStarted] = useState(true);
@@ -141,20 +144,18 @@ const DocumentProcessor: React.FC = () => {
     }
   }, [searchParams, isLoadingPreferences]);
 
-  // Check for active runsheet and skip get started dialog if one exists
+  // Check for active runsheets and skip get started dialog if any exist
   useEffect(() => {
     const runsheetId = searchParams.get('runsheet');
     
-    // If there's no URL parameter but there's an active runsheet, skip get started dialog
-    if (!runsheetId && !isLoadingPreferences && activeRunsheet) {
-      console.log('Active runsheet found, skipping get started dialog:', activeRunsheet.name);
+    // If there's no URL parameter but there are active runsheets, skip get started dialog
+    if (!runsheetId && !isLoadingPreferences && hasActiveRunsheets) {
+      console.log('Active runsheets found, skipping get started dialog');
       setShowGetStarted(false);
       
-      // Dispatch event to auto-load the most recently updated runsheet
-      const autoRestoreEvent = new CustomEvent('autoRestoreLastRunsheet');
-      window.dispatchEvent(autoRestoreEvent);
+      // No need to auto-restore as tabs will handle the active runsheets
     }
-  }, [activeRunsheet, searchParams, isLoadingPreferences]);
+  }, [hasActiveRunsheets, searchParams, isLoadingPreferences]);
 
   // Auto-restore last worked on runsheet if no specific runsheet is requested and no active runsheet
   useEffect(() => {
@@ -641,76 +642,78 @@ Image: [base64 image data]`;
   };
 
   return (
-    <div className="w-full px-4 py-6">
-      <div className="flex items-center justify-between mb-8">
-        <div 
-          onClick={() => handleNavigation('/')} 
-          className="flex items-center gap-4 hover:opacity-80 transition-opacity cursor-pointer"
-        >
-          <img 
-            src={extractorLogo} 
-            alt="Document Data Extractor Logo" 
-            className="h-16 w-16"
+    <RunsheetTabs>
+      <div className="w-full px-4 py-6">
+        <div className="flex items-center justify-between mb-8">
+          <div 
+            onClick={() => handleNavigation('/')} 
+            className="flex items-center gap-4 hover:opacity-80 transition-opacity cursor-pointer"
+          >
+            <img 
+              src={extractorLogo} 
+              alt="Document Data Extractor Logo" 
+              className="h-16 w-16"
+            />
+            <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              RunsheetPro
+            </h1>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleNavigation('/mobile-capture')}
+              className="gap-2"
+            >
+              <Smartphone className="h-4 w-4" />
+              Mobile Capture
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleNavigation('/file-manager')}
+              className="gap-2"
+            >
+              <Files className="h-4 w-4" />
+              Manage Files
+            </Button>
+            <AuthButton />
+          </div>
+        </div>
+        
+        <div className="mt-6">
+          <DocumentFrame 
+            file={file}
+            previewUrl={previewUrl}
+            fields={columns}
+            formData={formData}
+            onChange={handleFieldChange}
+            onAnalyze={analyzeDocument}
+            onAddToSpreadsheet={addToSpreadsheet}
+            onFileSelect={handleFileSelect}
+            onMultipleFilesSelect={handleMultipleFilesSelect}
+            onResetDocument={resetDocument}
+            isAnalyzing={isAnalyzing}
           />
-          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            RunsheetPro
-          </h1>
         </div>
-        <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleNavigation('/mobile-capture')}
-            className="gap-2"
-          >
-            <Smartphone className="h-4 w-4" />
-            Mobile Capture
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleNavigation('/file-manager')}
-            className="gap-2"
-          >
-            <Files className="h-4 w-4" />
-            Manage Files
-          </Button>
-          <AuthButton />
-        </div>
-      </div>
-      
-      <div className="mt-6">
-        <DocumentFrame 
-          file={file}
-          previewUrl={previewUrl}
+        
+        <BatchProcessing 
           fields={columns}
-          formData={formData}
-          onChange={handleFieldChange}
-          onAnalyze={analyzeDocument}
           onAddToSpreadsheet={addToSpreadsheet}
-          onFileSelect={handleFileSelect}
-          onMultipleFilesSelect={handleMultipleFilesSelect}
-          onResetDocument={resetDocument}
+          onAnalyze={analyzeDocument}
           isAnalyzing={isAnalyzing}
         />
+        
+        <EditableSpreadsheet 
+          initialColumns={columns}
+          initialData={spreadsheetData}
+          onColumnChange={handleColumnsChange}
+          onDataChange={handleSpreadsheetDataChange}
+          onColumnInstructionsChange={setColumnInstructions}
+          onUnsavedChanges={() => {}}
+          missingColumns={highlightMissingColumns ? missingColumns : []}
+        />
       </div>
-      
-      <BatchProcessing 
-        fields={columns}
-        onAddToSpreadsheet={addToSpreadsheet}
-        onAnalyze={analyzeDocument}
-        isAnalyzing={isAnalyzing}
-      />
-      
-      <EditableSpreadsheet 
-        initialColumns={columns}
-        initialData={spreadsheetData}
-        onColumnChange={handleColumnsChange}
-        onDataChange={handleSpreadsheetDataChange}
-        onColumnInstructionsChange={setColumnInstructions}
-        onUnsavedChanges={() => {}}
-        missingColumns={highlightMissingColumns ? missingColumns : []}
-      />
       
       {/* Get Started Dialog */}
       <Dialog open={showGetStarted} onOpenChange={setShowGetStarted}>
@@ -824,7 +827,7 @@ Image: [base64 image data]`;
         </DialogContent>
       </Dialog>
 
-    </div>
+    </RunsheetTabs>
   );
 };
 

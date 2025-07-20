@@ -1,69 +1,41 @@
 import { useState, useEffect } from 'react';
+import { useMultipleRunsheets, ActiveRunsheet } from './useMultipleRunsheets';
 
-interface ActiveRunsheet {
+interface LegacyActiveRunsheet {
   name: string;
   id?: string;
 }
 
-const ACTIVE_RUNSHEET_KEY = 'activeRunsheet';
-
-// Global state for active runsheet
-let globalActiveRunsheet: ActiveRunsheet | null = null;
-let listeners: Set<(runsheet: ActiveRunsheet | null) => void> = new Set();
-
-const notifyListeners = () => {
-  listeners.forEach(listener => listener(globalActiveRunsheet));
-};
-
+// Legacy hook for backward compatibility
 export const useActiveRunsheet = () => {
-  const [activeRunsheet, setActiveRunsheet] = useState<ActiveRunsheet | null>(globalActiveRunsheet);
+  const { currentRunsheet, addRunsheet, clearAllRunsheets, hasActiveRunsheets } = useMultipleRunsheets();
 
-  useEffect(() => {
-    // Add this component as a listener
-    listeners.add(setActiveRunsheet);
-    
-    // Load from localStorage on mount
-    try {
-      const stored = localStorage.getItem(ACTIVE_RUNSHEET_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        globalActiveRunsheet = parsed;
-        notifyListeners();
-      }
-    } catch (error) {
-      console.error('Error loading active runsheet from localStorage:', error);
-    }
-
-    return () => {
-      // Remove this component as a listener
-      listeners.delete(setActiveRunsheet);
+  const setActiveRunsheet = (runsheet: LegacyActiveRunsheet) => {
+    const newRunsheet: ActiveRunsheet = {
+      id: runsheet.id || `legacy-${Date.now()}`,
+      name: runsheet.name,
+      data: [],
+      columns: [],
+      columnInstructions: {},
+      hasUnsavedChanges: false
     };
-  }, []);
-
-  const setActive = (runsheet: ActiveRunsheet | null) => {
-    globalActiveRunsheet = runsheet;
-    
-    // Save to localStorage
-    try {
-      if (runsheet) {
-        localStorage.setItem(ACTIVE_RUNSHEET_KEY, JSON.stringify(runsheet));
-      } else {
-        localStorage.removeItem(ACTIVE_RUNSHEET_KEY);
-      }
-    } catch (error) {
-      console.error('Error saving active runsheet to localStorage:', error);
-    }
-    
-    notifyListeners();
+    addRunsheet(newRunsheet);
   };
 
-  const clearActive = () => {
-    setActive(null);
+  const clearActiveRunsheet = () => {
+    clearAllRunsheets();
   };
+
+  // Convert current runsheet to legacy format
+  const activeRunsheet: LegacyActiveRunsheet | null = currentRunsheet ? {
+    name: currentRunsheet.name,
+    id: currentRunsheet.id
+  } : null;
 
   return {
     activeRunsheet,
-    setActiveRunsheet: setActive,
-    clearActiveRunsheet: clearActive
+    setActiveRunsheet,
+    clearActiveRunsheet,
+    hasActiveRunsheet: hasActiveRunsheets
   };
 };
