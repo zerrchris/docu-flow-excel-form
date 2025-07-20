@@ -412,7 +412,21 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
   // Load a specific runsheet by ID (for URL parameter functionality)
   const loadSpecificRunsheet = async (runsheetId: string) => {
-    if (!user) {
+    // Wait for user authentication to be loaded
+    let currentUser = user;
+    if (!currentUser) {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        currentUser = session?.user ?? null;
+        if (session?.user) {
+          setUser(session.user);
+        }
+      } catch (error) {
+        console.error('Error getting session:', error);
+      }
+    }
+
+    if (!currentUser) {
       toast({
         title: "Authentication required",
         description: "Please sign in to load runsheets.",
@@ -426,7 +440,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         .from('runsheets')
         .select('*')
         .eq('id', runsheetId)
-        .eq('user_id', user.id)
+        .eq('user_id', currentUser.id)
         .single();
 
       if (error) {
