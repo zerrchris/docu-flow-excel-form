@@ -423,7 +423,7 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
                   onClick={() => setShowProjectDialog(true)}
                   className="text-xs"
                 >
-                  Change
+                  Rename
                 </Button>
                 <Button
                   variant="ghost"
