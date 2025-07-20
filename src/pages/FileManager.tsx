@@ -6,9 +6,11 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ArrowLeft, Eye, Edit2, Trash2, Search, Calendar, FileImage, Smartphone, Upload as UploadIcon, Download, CheckSquare, X, ChevronDown, ChevronRight, Folder, FolderOpen, FileSpreadsheet, ArrowUp } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import AuthButton from '@/components/AuthButton';
+import extractorLogo from '@/assets/document-extractor-logo.png';
 
 interface StoredFile {
   id: string;
@@ -863,112 +865,135 @@ export const FileManager: React.FC = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="sticky top-0 z-50 bg-background border-b">
-        <div className="flex items-center justify-between p-4">
-          <div className="flex items-center gap-3">
-            {currentFolder === 'root' ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate('/app')}
-                className="gap-2"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Back to App
-              </Button>
-            ) : (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setCurrentFolder('root');
-                  setSearchTerm('');
-                  setSelectedFiles(new Set());
-                  setIsSelectMode(false);
-                }}
-                className="gap-2"
-              >
-                <ArrowUp className="h-4 w-4" />
-                Back to File Manager
-              </Button>
-            )}
-            <h1 className="text-xl font-semibold">
-              {currentFolder === 'root' ? 'File Manager' :
-               currentFolder === 'projects' ? 'Projects' : 'Run Sheets'}
-            </h1>
-          </div>
-          
-          {currentFolder !== 'root' && (
-            <div className="flex gap-2">
-              {isSelectMode ? (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsSelectMode(false)}
-                    className="gap-2"
-                  >
-                    <X className="h-4 w-4" />
-                    Cancel
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={selectAllItems}
-                    disabled={currentItems.length === 0}
-                    className="gap-2"
-                  >
-                    <CheckSquare className="h-4 w-4" />
-                    {selectedFiles.size === currentItems.length ? 'Deselect All' : 'Select All'}
-                  </Button>
-                  {selectedFiles.size > 0 && (
-                    <>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleDownloadSelected}
-                        className="gap-2"
-                      >
-                        <Download className="h-4 w-4" />
-                        Download ({selectedFiles.size})
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={handleDeleteSelected}
-                        disabled={isDeleting}
-                        className="gap-2"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        {isDeleting ? 'Deleting...' : `Delete (${selectedFiles.size})`}
-                      </Button>
-                    </>
-                  )}
-                </>
-              ) : (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={toggleSelectMode}
-                    disabled={currentItems.length === 0}
-                    className="gap-2"
-                  >
-                    <CheckSquare className="h-4 w-4" />
-                    Select
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={refreshCurrentFolder}
-                    disabled={isLoading}
-                  >
-                    {isLoading ? 'Loading...' : 'Refresh'}
-                  </Button>
-                </>
-              )}
+      <header className="border-b">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <Link to="/" className="flex items-center gap-4">
+              <img 
+                src={extractorLogo} 
+                alt="RunsheetPro Logo" 
+                className="h-12 w-12"
+              />
+              <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                RunsheetPro
+              </h1>
+            </Link>
+            <div className="flex items-center gap-4">
+              <AuthButton />
             </div>
-          )}
+          </div>
+        </div>
+      </header>
+
+      {/* Navigation Breadcrumb */}
+      <div className="border-b bg-muted/30">
+        <div className="container mx-auto px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {currentFolder === 'root' ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate('/app')}
+                  className="gap-2"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to App
+                </Button>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setCurrentFolder('root');
+                    setSearchTerm('');
+                    setSelectedFiles(new Set());
+                    setIsSelectMode(false);
+                  }}
+                  className="gap-2"
+                >
+                  <ArrowUp className="h-4 w-4" />
+                  Back to File Manager
+                </Button>
+              )}
+              <h2 className="text-xl font-semibold">
+                {currentFolder === 'root' ? 'File Manager' :
+                 currentFolder === 'projects' ? 'Projects' : 'Run Sheets'}
+              </h2>
+            </div>
+            
+            {currentFolder !== 'root' && (
+              <div className="flex gap-2">
+                {isSelectMode ? (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsSelectMode(false)}
+                      className="gap-2"
+                    >
+                      <X className="h-4 w-4" />
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={selectAllItems}
+                      disabled={currentItems.length === 0}
+                      className="gap-2"
+                    >
+                      <CheckSquare className="h-4 w-4" />
+                      {selectedFiles.size === currentItems.length ? 'Deselect All' : 'Select All'}
+                    </Button>
+                    {selectedFiles.size > 0 && (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleDownloadSelected}
+                          className="gap-2"
+                        >
+                          <Download className="h-4 w-4" />
+                          Download ({selectedFiles.size})
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={handleDeleteSelected}
+                          disabled={isDeleting}
+                          className="gap-2"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          {isDeleting ? 'Deleting...' : `Delete (${selectedFiles.size})`}
+                        </Button>
+                      </>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={toggleSelectMode}
+                      disabled={currentItems.length === 0}
+                      className="gap-2"
+                    >
+                      <CheckSquare className="h-4 w-4" />
+                      Select
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={refreshCurrentFolder}
+                      disabled={isLoading}
+                    >
+                      {isLoading ? 'Loading...' : 'Refresh'}
+                    </Button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
