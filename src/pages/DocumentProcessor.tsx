@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { toast } from '@/components/ui/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Upload, FolderOpen, Plus, AlertTriangle } from 'lucide-react';
+import { Upload, FolderOpen, Plus, AlertTriangle, Smartphone } from 'lucide-react';
 import DocumentFrame from '@/components/DocumentFrame';
 import EditableSpreadsheet from '@/components/EditableSpreadsheet';
 import AuthButton from '@/components/AuthButton';
@@ -663,7 +663,18 @@ Image: [base64 image data]`;
             RunsheetPro
           </h1>
         </div>
-        <AuthButton />
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleNavigation('/mobile-capture')}
+            className="gap-2"
+          >
+            <Smartphone className="h-4 w-4" />
+            Mobile Capture
+          </Button>
+          <AuthButton />
+        </div>
       </div>
       
       <div className="mt-6">

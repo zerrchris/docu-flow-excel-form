@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { uploadFileToStorage } from '@/utils/fileStorage';
 import DataForm from './DataForm';
 import DocumentViewer from './DocumentViewer';
+import { MobileCapturedDocuments } from './MobileCapturedDocuments';
 import DocumentUpload from './DocumentUpload';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
@@ -40,6 +41,20 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
   const [isExpanded, setIsExpanded] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
+
+  // Listen for mobile document selection events
+  React.useEffect(() => {
+    const handleMobileDocumentSelected = (event: CustomEvent) => {
+      const { file } = event.detail;
+      onFileSelect(file);
+    };
+
+    window.addEventListener('mobileDocumentSelected', handleMobileDocumentSelected as EventListener);
+    
+    return () => {
+      window.removeEventListener('mobileDocumentSelected', handleMobileDocumentSelected as EventListener);
+    };
+  }, [onFileSelect]);
 
   // Wrapper to ensure analyze is called without parameters for single document processing
   const handleAnalyze = () => {
@@ -143,7 +158,8 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
                     {file ? (
                       <DocumentViewer file={file} previewUrl={previewUrl} />
                     ) : (
-                      <div className="h-full">
+                      <div className="h-full p-6 space-y-4">
+                        <MobileCapturedDocuments />
                         <DocumentUpload 
                           onFileSelect={onFileSelect} 
                           onMultipleFilesSelect={onMultipleFilesSelect}

@@ -8,6 +8,7 @@ import AppPage from "./pages/App";
 import SignIn from "./pages/SignIn";
 import ResetPassword from "./pages/ResetPassword";
 import Admin from "./pages/Admin";
+import { MobileCapture } from "./pages/MobileCapture";
 import NotFound from "./pages/NotFound";
 import GoogleAuthCallback from "./components/GoogleAuthCallback";
 
@@ -25,6 +26,7 @@ const App = () => (
           <Route path="/signin" element={<SignIn />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/admin" element={<Admin />} />
+          <Route path="/mobile-capture" element={<MobileCapture />} />
           <Route path="/google-auth-callback" element={<GoogleAuthCallback />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
