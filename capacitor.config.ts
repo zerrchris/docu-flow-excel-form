@@ -1,7 +1,7 @@
 import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'app.lovable.9e9137075b2b41be9c863541992b5349',
+  appId: 'com.lovable.docuflowexcelform',
   appName: 'docu-flow-excel-form',
   webDir: 'dist',
   server: {
