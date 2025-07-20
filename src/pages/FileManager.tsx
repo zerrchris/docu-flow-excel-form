@@ -16,6 +16,14 @@ interface StoredFile {
   size: number;
   created_at: string;
   type: 'mobile' | 'uploaded';
+  project?: string;
+  fullPath: string;
+}
+
+interface ProjectGroup {
+  name: string;
+  files: StoredFile[];
+  count: number;
 }
 
 export const FileManager: React.FC = () => {
@@ -48,19 +56,44 @@ export const FileManager: React.FC = () => {
       }
 
       setIsLoading(true);
-      const { data, error } = await supabase.storage
-        .from('documents')
-        .list(user.id, {
-          limit: 100,
-          sortBy: { column: 'created_at', order: 'desc' }
-        });
+      
+      // Get all files recursively to handle project folders
+      const getAllFiles = async (path = '') => {
+        const { data, error } = await supabase.storage
+          .from('documents')
+          .list(`${user.id}${path}`, {
+            limit: 100,
+            sortBy: { column: 'created_at', order: 'desc' }
+          });
+        
+        if (error) throw error;
+        
+        let allFiles: any[] = [];
+        
+        for (const item of data || []) {
+          if (item.id === null) {
+            // This is a folder, recursively get its contents
+            const subFiles = await getAllFiles(`${path}/${item.name}`);
+            allFiles = allFiles.concat(subFiles);
+          } else {
+            // This is a file
+            allFiles.push({
+              ...item,
+              fullPath: `${path}/${item.name}`.replace(/^\//, ''),
+              project: path ? path.split('/').pop() : undefined
+            });
+          }
+        }
+        
+        return allFiles;
+      };
 
-      if (error) throw error;
+      const allFiles = await getAllFiles();
 
-      const filesWithUrls = data?.map(file => {
+      const filesWithUrls = allFiles.map(file => {
         const { data: urlData } = supabase.storage
           .from('documents')
-          .getPublicUrl(`${user.id}/${file.name}`);
+          .getPublicUrl(`${user.id}/${file.fullPath}`);
 
         return {
           id: file.id || file.name,
@@ -68,9 +101,11 @@ export const FileManager: React.FC = () => {
           url: urlData.publicUrl,
           size: file.metadata?.size || 0,
           created_at: file.created_at || new Date().toISOString(),
-          type: file.name.startsWith('mobile_document') ? 'mobile' as const : 'uploaded' as const
+          type: file.name.startsWith('mobile_document') ? 'mobile' as const : 'uploaded' as const,
+          project: file.project,
+          fullPath: file.fullPath
         };
-      }) || [];
+      });
 
       setFiles(filesWithUrls);
     } catch (error: any) {

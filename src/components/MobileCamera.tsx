@@ -22,6 +22,9 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
   const [isCapturingDocument, setIsCapturingDocument] = useState(false);
   const [documentPageCount, setDocumentPageCount] = useState(1);
   const [showNameDialog, setShowNameDialog] = useState(false);
+  const [showProjectDialog, setShowProjectDialog] = useState(false);
+  const [currentProject, setCurrentProject] = useState('');
+  const [projectName, setProjectName] = useState('');
   const [documentName, setDocumentName] = useState('');
   const [instrumentNumber, setInstrumentNumber] = useState('');
   const [bookPage, setBookPage] = useState('');
@@ -46,6 +49,17 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
   };
 
   const startDocumentCapture = () => {
+    // Check if we have a current project, if not show project dialog first
+    if (!currentProject) {
+      setShowProjectDialog(true);
+    } else {
+      setShowNameDialog(true);
+    }
+  };
+
+  const handleStartProject = () => {
+    setCurrentProject(projectName);
+    setShowProjectDialog(false);
     setShowNameDialog(true);
   };
 
@@ -164,10 +178,13 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
         return;
       }
 
-      // Upload to Supabase storage
+      // Upload to Supabase storage with project folder structure
+      const projectPath = currentProject ? `${currentProject.replace(/[^a-zA-Z0-9]/g, '_')}/` : '';
+      const filePath = `${user.id}/${projectPath}${fileName}`;
+      
       const { data, error } = await supabase.storage
         .from('documents')
-        .upload(`${user.id}/${fileName}`, blob, {
+        .upload(filePath, blob, {
           contentType: 'image/jpeg',
           upsert: false
         });
@@ -294,11 +311,27 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
   return (
     <Card className="p-6">
       <div className="space-y-4">
-        <div className="text-center">
-          <h3 className="text-lg font-semibold mb-2">Document Camera</h3>
-          <p className="text-sm text-muted-foreground">
-            Take photos of documents to analyze later
-          </p>
+        <div className="text-center space-y-2">
+          <h3 className="text-lg font-semibold">Document Camera</h3>
+          {currentProject ? (
+            <div className="flex items-center justify-center gap-2">
+              <p className="text-sm text-muted-foreground">
+                Project: <span className="font-medium text-primary">{currentProject}</span>
+              </p>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowProjectDialog(true)}
+                className="text-xs"
+              >
+                Change
+              </Button>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Take photos of documents to analyze later
+            </p>
+          )}
         </div>
 
         {/* Document Progress */}
@@ -466,6 +499,44 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
             </Button>
             <Button onClick={handleStartWithName}>
               Start Taking Photos
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Project Naming Dialog */}
+      <Dialog open={showProjectDialog} onOpenChange={setShowProjectDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Start New Project</DialogTitle>
+            <DialogDescription>
+              Name your project to group related documents together
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="project-name">Project Name</Label>
+              <Input
+                id="project-name"
+                value={projectName}
+                onChange={(e) => setProjectName(e.target.value)}
+                placeholder="e.g., Property Survey 2024, Mortgage Docs..."
+              />
+            </div>
+            {currentProject && (
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="text-sm text-muted-foreground">
+                  Current project: <span className="font-medium">{currentProject}</span>
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowProjectDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleStartProject} disabled={!projectName.trim()}>
+              Continue
             </Button>
           </DialogFooter>
         </DialogContent>
