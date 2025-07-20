@@ -3,6 +3,8 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ChevronDown, ChevronUp, X, FileText } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { useToast } from '@/hooks/use-toast';
+import { uploadFileToStorage } from '@/utils/fileStorage';
 import DataForm from './DataForm';
 import DocumentViewer from './DocumentViewer';
 
@@ -35,6 +37,8 @@ const BatchDocumentRow: React.FC<BatchDocumentRowProps> = ({
     return emptyData;
   });
   const [isAnalyzingLocal, setIsAnalyzingLocal] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const { toast } = useToast();
 
   React.useEffect(() => {
     const url = URL.createObjectURL(file);
@@ -71,9 +75,40 @@ const BatchDocumentRow: React.FC<BatchDocumentRowProps> = ({
     }
   };
 
-  const handleAddToSpreadsheet = () => {
-    onAddToSpreadsheet(formData);
-    onRemove(); // Remove this row after adding to spreadsheet
+  const handleAddToSpreadsheet = async () => {
+    setIsUploading(true);
+    try {
+      // Upload file to storage
+      const fileResult = await uploadFileToStorage(file, 'documents', 'batch-processed');
+      
+      // Add file information to the form data
+      const dataWithFile = {
+        ...formData,
+        'Document File': fileResult.fileName,
+        'Document URL': fileResult.url,
+        'Storage Path': fileResult.path
+      };
+      
+      onAddToSpreadsheet(dataWithFile);
+      onRemove(); // Remove this row after adding to spreadsheet
+      
+      toast({
+        title: "Success",
+        description: `Document "${file.name}" processed and uploaded successfully.`,
+      });
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      toast({
+        title: "Upload Error",
+        description: `Failed to upload "${file.name}". Adding data without file.`,
+        variant: "destructive",
+      });
+      // Still add to spreadsheet but without file data
+      onAddToSpreadsheet(formData);
+      onRemove();
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   return (
@@ -126,6 +161,7 @@ const BatchDocumentRow: React.FC<BatchDocumentRowProps> = ({
                     onAnalyze={handleAnalyze}
                     onAddToSpreadsheet={handleAddToSpreadsheet}
                     isAnalyzing={isAnalyzingLocal}
+                    isUploading={isUploading}
                   />
                 </div>
               </div>

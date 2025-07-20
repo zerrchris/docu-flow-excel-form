@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ChevronDown, ChevronUp, GripHorizontal } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { uploadFileToStorage } from '@/utils/fileStorage';
 import DataForm from './DataForm';
 import DocumentViewer from './DocumentViewer';
 import DocumentUpload from './DocumentUpload';
@@ -15,7 +17,7 @@ interface DocumentFrameProps {
   formData: Record<string, string>;
   onChange: (field: string, value: string) => void;
   onAnalyze: () => void;
-  onAddToSpreadsheet: () => void;
+  onAddToSpreadsheet: (data?: Record<string, string>) => void;
   onFileSelect: (file: File) => void;
   onMultipleFilesSelect?: (files: File[]) => void;
   onResetDocument: () => void;
@@ -36,11 +38,54 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
   isAnalyzing
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const { toast } = useToast();
 
   // Wrapper to ensure analyze is called without parameters for single document processing
   const handleAnalyze = () => {
     console.log('DocumentFrame handleAnalyze called - calling onAnalyze() without parameters');
     onAnalyze();
+  };
+
+  // Handle adding to spreadsheet with file upload
+  const handleAddToSpreadsheet = async () => {
+    if (!file) {
+      onAddToSpreadsheet();
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      // Upload file to storage
+      const fileResult = await uploadFileToStorage(file, 'documents', 'single-processed');
+      
+      // Create enhanced data with file information
+      const dataWithFile = {
+        ...formData,
+        'Document File': fileResult.fileName,
+        'Document URL': fileResult.url,
+        'Storage Path': fileResult.path
+      };
+      
+      // Call onAddToSpreadsheet with the enhanced data
+      onAddToSpreadsheet(dataWithFile);
+      
+      toast({
+        title: "Success",
+        description: `Document "${file.name}" processed and uploaded successfully.`,
+      });
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      toast({
+        title: "Upload Error", 
+        description: `Failed to upload "${file.name}". Adding data without file.`,
+        variant: "destructive",
+      });
+      // Still add to spreadsheet but without file data
+      onAddToSpreadsheet();
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   return (
@@ -81,9 +126,10 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
                           formData={formData}
                           onChange={onChange}
                           onAnalyze={handleAnalyze}
-                          onAddToSpreadsheet={onAddToSpreadsheet}
+                          onAddToSpreadsheet={handleAddToSpreadsheet}
                           onResetDocument={onResetDocument}
                           isAnalyzing={isAnalyzing}
+                          isUploading={isUploading}
                         />
                       </div>
                     </div>

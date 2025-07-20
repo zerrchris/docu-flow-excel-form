@@ -15,7 +15,7 @@ import { supabase } from '@/integrations/supabase/client';
 import extractorLogo from '@/assets/document-extractor-logo.png';
 
 // Initial columns for the spreadsheet
-const DEFAULT_COLUMNS = ['Inst Number', 'Book/Page', 'Inst Type', 'Recording Date', 'Document Date', 'Grantor', 'Grantee', 'Legal Description', 'Notes'];
+const DEFAULT_COLUMNS = ['Inst Number', 'Book/Page', 'Inst Type', 'Recording Date', 'Document Date', 'Grantor', 'Grantee', 'Legal Description', 'Notes', 'Document File', 'Document URL'];
 
 // Default extraction instructions for each column
 const DEFAULT_EXTRACTION_INSTRUCTIONS: Record<string, string> = {
@@ -27,7 +27,9 @@ const DEFAULT_EXTRACTION_INSTRUCTIONS: Record<string, string> = {
   'Grantor': 'Extract the full name(s) of the grantor(s) - the party transferring or granting rights',
   'Grantee': 'Extract the full name(s) of the grantee(s) - the party receiving rights',
   'Legal Description': 'Extract the complete legal property description including lot, block, subdivision, and any metes and bounds',
-  'Notes': 'Extract any special conditions, considerations, or additional relevant information'
+  'Notes': 'Extract any special conditions, considerations, or additional relevant information',
+  'Document File': 'The original filename of the uploaded document',
+  'Document URL': 'Public URL to access the stored document file'
 };
 
 const DocumentProcessor: React.FC = () => {

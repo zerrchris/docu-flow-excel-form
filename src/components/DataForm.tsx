@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { RotateCw, CheckCircle, Plus, Settings, ChevronDown, ChevronUp } from 'lucide-react';
+import { RotateCw, CheckCircle, Plus, Settings, ChevronDown, ChevronUp, Upload } from 'lucide-react';
 
 interface DataFormProps {
   fields: string[];
@@ -15,6 +15,7 @@ interface DataFormProps {
   onAddToSpreadsheet: () => void;
   onResetDocument?: () => void;
   isAnalyzing: boolean;
+  isUploading?: boolean;
 }
 
 const DataForm: React.FC<DataFormProps> = ({ 
@@ -24,7 +25,8 @@ const DataForm: React.FC<DataFormProps> = ({
   onAnalyze,
   onAddToSpreadsheet,
   onResetDocument,
-  isAnalyzing 
+  isAnalyzing,
+  isUploading = false
 }) => {
   const [visibleFields, setVisibleFields] = useState<Record<string, boolean>>({});
   const [showFieldSettings, setShowFieldSettings] = useState(false);
@@ -146,10 +148,19 @@ const DataForm: React.FC<DataFormProps> = ({
             variant="success"
             onClick={() => onAddToSpreadsheet()}
             className="w-full sm:w-auto"
-            disabled={visibleFieldsList.length === 0}
+            disabled={visibleFieldsList.length === 0 || isUploading}
           >
-            <Plus className="h-4 w-4 mr-1" />
-            Add to Runsheet
+            {isUploading ? (
+              <>
+                <Upload className="h-4 w-4 mr-1 animate-pulse" />
+                Uploading...
+              </>
+            ) : (
+              <>
+                <Plus className="h-4 w-4 mr-1" />
+                Add to Runsheet
+              </>
+            )}
           </Button>
         </div>
         
