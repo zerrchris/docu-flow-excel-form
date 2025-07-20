@@ -309,7 +309,8 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
     }
   };
 
-  const isMobile = Capacitor.isNativePlatform();
+  const isMobile = Capacitor.isNativePlatform() || 
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
   return (
     <Card className="p-6">
