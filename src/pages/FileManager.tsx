@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ArrowLeft, Eye, Edit2, Trash2, Search, Calendar, FileImage, Smartphone, Upload as UploadIcon, Download, CheckSquare, X } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ArrowLeft, Eye, Edit2, Trash2, Search, Calendar, FileImage, Smartphone, Upload as UploadIcon, Download, CheckSquare, X, ChevronDown, ChevronRight, Folder, FolderOpen } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -40,6 +41,8 @@ export const FileManager: React.FC = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const [isSelectMode, setIsSelectMode] = useState(false);
+  const [viewMode, setViewMode] = useState<'grid' | 'projects'>('grid');
+  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadStoredFiles();
@@ -288,6 +291,35 @@ export const FileManager: React.FC = () => {
     setSelectedFiles(newSelection);
   };
 
+  const toggleProjectExpansion = (projectName: string) => {
+    const newExpanded = new Set(expandedProjects);
+    if (newExpanded.has(projectName)) {
+      newExpanded.delete(projectName);
+    } else {
+      newExpanded.add(projectName);
+    }
+    setExpandedProjects(newExpanded);
+  };
+
+  const filteredFiles = files.filter(file =>
+    file.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Group files by project
+  const groupedFiles = React.useMemo(() => {
+    const groups: { [key: string]: StoredFile[] } = {};
+    
+    filteredFiles.forEach(file => {
+      const projectName = file.project || 'Individual Files';
+      if (!groups[projectName]) {
+        groups[projectName] = [];
+      }
+      groups[projectName].push(file);
+    });
+
+    return groups;
+  }, [filteredFiles]);
+
   const formatFileSize = (bytes: number) => {
     const MB = bytes / (1024 * 1024);
     return MB > 1 ? `${MB.toFixed(1)} MB` : `${(bytes / 1024).toFixed(0)} KB`;
@@ -316,8 +348,88 @@ export const FileManager: React.FC = () => {
     setShowDeleteDialog(true);
   };
 
-  const filteredFiles = files.filter(file =>
-    file.name.toLowerCase().includes(searchTerm.toLowerCase())
+
+  const renderFileCard = (file: StoredFile) => (
+    <Card key={file.id} className="p-4 hover:shadow-md transition-shadow">
+      <div className="space-y-3">
+        {/* File Preview */}
+        <div className="relative w-full h-32 bg-muted rounded overflow-hidden">
+          <img
+            src={file.url}
+            alt={file.name}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+            }}
+          />
+        </div>
+
+        {/* File Info */}
+        <div className="space-y-2">
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="font-medium text-sm truncate flex-1" title={file.name}>
+              {file.name}
+            </h3>
+            <Badge variant={file.type === 'mobile' ? 'default' : 'secondary'} className="text-xs">
+              {file.type === 'mobile' ? (
+                <><Smartphone className="h-3 w-3 mr-1" /> Mobile</>
+              ) : (
+                <><UploadIcon className="h-3 w-3 mr-1" /> Upload</>
+              )}
+            </Badge>
+          </div>
+          
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Calendar className="h-3 w-3" />
+            <span>{formatDate(file.created_at)}</span>
+            <span>•</span>
+            <span>{formatFileSize(file.size)}</span>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2">
+          {isSelectMode ? (
+            <Button
+              variant={selectedFiles.has(file.id) ? "default" : "outline"}
+              size="sm"
+              onClick={() => toggleFileSelection(file.id)}
+              className="flex-1"
+            >
+              {selectedFiles.has(file.id) ? '✓ Selected' : 'Select'}
+            </Button>
+          ) : (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.open(file.url, '_blank')}
+                className="flex-1 gap-2"
+              >
+                <Eye className="h-3 w-3" />
+                View
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => openRenameDialog(file)}
+                className="gap-2"
+              >
+                <Edit2 className="h-3 w-3" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => openDeleteDialog(file)}
+                className="gap-2 text-destructive hover:text-destructive"
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+    </Card>
   );
 
   return (
@@ -386,6 +498,24 @@ export const FileManager: React.FC = () => {
               </>
             ) : (
               <>
+                <Button
+                  variant={viewMode === 'grid' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('grid')}
+                  className="gap-2"
+                >
+                  Grid View
+                </Button>
+                <Button
+                  variant={viewMode === 'projects' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('projects')}
+                  disabled={Object.keys(groupedFiles).length <= 1}
+                  className="gap-2"
+                >
+                  <Folder className="h-4 w-4" />
+                  Projects
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"
@@ -466,90 +596,52 @@ export const FileManager: React.FC = () => {
             )}
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredFiles.map((file) => (
-              <Card key={file.id} className="p-4 hover:shadow-md transition-shadow">
-                <div className="space-y-3">
-                  {/* File Preview */}
-                  <div className="relative w-full h-32 bg-muted rounded overflow-hidden">
-                    <img
-                      src={file.url}
-                      alt={file.name}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                      }}
-                    />
-                  </div>
-
-                  {/* File Info */}
-                  <div className="space-y-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <h3 className="font-medium text-sm truncate flex-1" title={file.name}>
-                        {file.name}
-                      </h3>
-                      <Badge variant={file.type === 'mobile' ? 'default' : 'secondary'} className="text-xs">
-                        {file.type === 'mobile' ? (
-                          <><Smartphone className="h-3 w-3 mr-1" /> Mobile</>
+          viewMode === 'grid' ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredFiles.map(renderFileCard)}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {Object.entries(groupedFiles).map(([projectName, projectFiles]) => (
+                <Card key={projectName} className="overflow-hidden">
+                  <Collapsible
+                    open={expandedProjects.has(projectName)}
+                    onOpenChange={() => toggleProjectExpansion(projectName)}
+                  >
+                    <CollapsibleTrigger asChild>
+                      <div className="flex items-center justify-between p-4 hover:bg-muted/50 cursor-pointer">
+                        <div className="flex items-center gap-3">
+                          {expandedProjects.has(projectName) ? (
+                            <FolderOpen className="h-5 w-5 text-primary" />
+                          ) : (
+                            <Folder className="h-5 w-5 text-muted-foreground" />
+                          )}
+                          <div>
+                            <h3 className="font-medium">{projectName}</h3>
+                            <p className="text-sm text-muted-foreground">
+                              {projectFiles.length} file{projectFiles.length !== 1 ? 's' : ''}
+                            </p>
+                          </div>
+                        </div>
+                        {expandedProjects.has(projectName) ? (
+                          <ChevronDown className="h-4 w-4" />
                         ) : (
-                          <><UploadIcon className="h-3 w-3 mr-1" /> Upload</>
+                          <ChevronRight className="h-4 w-4" />
                         )}
-                      </Badge>
-                    </div>
-                    
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Calendar className="h-3 w-3" />
-                      <span>{formatDate(file.created_at)}</span>
-                      <span>•</span>
-                      <span>{formatFileSize(file.size)}</span>
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex gap-2">
-                    {isSelectMode ? (
-                      <Button
-                        variant={selectedFiles.has(file.id) ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => toggleFileSelection(file.id)}
-                        className="flex-1"
-                      >
-                        {selectedFiles.has(file.id) ? '✓ Selected' : 'Select'}
-                      </Button>
-                    ) : (
-                      <>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => window.open(file.url, '_blank')}
-                          className="flex-1 gap-2"
-                        >
-                          <Eye className="h-3 w-3" />
-                          View
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openRenameDialog(file)}
-                          className="gap-2"
-                        >
-                          <Edit2 className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openDeleteDialog(file)}
-                          className="gap-2 text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
+                      </div>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="p-4 pt-0">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {projectFiles.map(renderFileCard)}
+                        </div>
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                </Card>
+              ))}
+            </div>
+          )
         )}
       </div>
 
