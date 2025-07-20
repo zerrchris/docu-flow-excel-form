@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Camera as CameraIcon, Upload, Image as ImageIcon, Plus } from 'lucide-react';
+import { Camera as CameraIcon, Upload, Image as ImageIcon, Plus, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -30,7 +30,9 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
   const [documentName, setDocumentName] = useState('');
   const [instrumentNumber, setInstrumentNumber] = useState('');
   const [bookPage, setBookPage] = useState('');
-  const [existingProjects, setExistingProjects] = useState<string[]>([]);
+  const [existingProjects, setExistingProjects] = useState<Array<{name: string, lastModified: string}>>([]);
+  const [recentProjects, setRecentProjects] = useState<Array<{name: string, lastModified: string}>>([]);
+  const [projectSearchTerm, setProjectSearchTerm] = useState('');
 
   const checkCameraPermissions = async () => {
     if (!Capacitor.isNativePlatform()) {
@@ -66,17 +68,32 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
         return;
       }
 
-      // Extract project folders (folders have id: null)
-      const projectSet = new Set<string>();
-      data?.forEach(item => {
+      // Extract project folders with their last modified dates
+      const projects: Array<{name: string, lastModified: string}> = [];
+      
+      for (const item of data || []) {
         if (item.id === null && item.name) {
-          // This is a folder, convert from storage format to display format
+          // This is a folder, get its last modified date by checking files inside
+          const { data: folderFiles } = await supabase.storage
+            .from('documents')
+            .list(`${user.id}/${item.name}`, { 
+              limit: 1, 
+              sortBy: { column: 'updated_at', order: 'desc' }
+            });
+          
           const displayName = item.name.replace(/_/g, ' ');
-          projectSet.add(displayName);
+          const lastModified = folderFiles?.[0]?.updated_at || item.updated_at || new Date().toISOString();
+          
+          projects.push({ name: displayName, lastModified });
         }
-      });
+      }
 
-      setExistingProjects(Array.from(projectSet));
+      // Sort by last modified date (most recent first)
+      projects.sort((a, b) => new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime());
+      
+      setExistingProjects(projects);
+      // Take first 5 for recent projects
+      setRecentProjects(projects.slice(0, 5));
     } catch (error) {
       console.error('Error loading existing projects:', error);
     }
@@ -734,7 +751,7 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
               Add to Existing Project
             </Button>
             
-            {existingProjects.length > 0 && (
+            {recentProjects.length > 0 && (
               <>
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
@@ -742,21 +759,26 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
                   </div>
                   <div className="relative flex justify-center text-xs uppercase">
                     <span className="bg-background px-2 text-muted-foreground">
-                      Or continue existing project
+                      Or continue recent project
                     </span>
                   </div>
                 </div>
                 
                 <div className="max-h-40 overflow-y-auto space-y-2">
-                  {existingProjects.map((project, index) => (
+                  {recentProjects.map((project, index) => (
                     <Button
                       key={index}
-                      onClick={() => handleContinueProject(project)}
+                      onClick={() => handleContinueProject(project.name)}
                       variant="outline"
-                      className="h-12 w-full justify-start"
+                      className="h-12 w-full justify-start text-left"
                       size="lg"
                     >
-                      {project}
+                      <div className="flex flex-col items-start">
+                        <span className="font-medium">{project.name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(project.lastModified).toLocaleDateString()}
+                        </span>
+                      </div>
                     </Button>
                   ))}
                 </div>
@@ -781,23 +803,44 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+            {/* Search Input */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search projects..."
+                value={projectSearchTerm}
+                onChange={(e) => setProjectSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            
             {existingProjects.length > 0 ? (
               <div className="max-h-60 overflow-y-auto space-y-2">
-                {existingProjects.map((project, index) => (
-                  <Button
-                    key={index}
-                    onClick={() => {
-                      setCurrentProject(project);
-                      setShowExistingProjectsDialog(false);
-                      setShowNameDialog(true);
-                    }}
-                    variant="outline"
-                    className="h-12 w-full justify-start"
-                    size="lg"
-                  >
-                    {project}
-                  </Button>
-                ))}
+                {existingProjects
+                  .filter(project => 
+                    project.name.toLowerCase().includes(projectSearchTerm.toLowerCase())
+                  )
+                  .map((project, index) => (
+                    <Button
+                      key={index}
+                      onClick={() => {
+                        setCurrentProject(project.name);
+                        setShowExistingProjectsDialog(false);
+                        setShowNameDialog(true);
+                        setProjectSearchTerm('');
+                      }}
+                      variant="outline"
+                      className="h-16 w-full justify-start text-left"
+                      size="lg"
+                    >
+                      <div className="flex flex-col items-start">
+                        <span className="font-medium">{project.name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          Last edited: {new Date(project.lastModified).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </Button>
+                  ))}
               </div>
             ) : (
               <div className="text-center py-8">
