@@ -60,7 +60,20 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
       });
 
       if (image.dataUrl) {
-        await uploadPhoto(image.dataUrl);
+        // Add to current document pages instead of uploading immediately
+        setCurrentDocumentPages(prev => [...prev, image.dataUrl!]);
+        
+        if (!isCapturingDocument) {
+          setIsCapturingDocument(true);
+          setDocumentPageCount(1);
+        } else {
+          setDocumentPageCount(prev => prev + 1);
+        }
+
+        toast({
+          title: "Page Captured",
+          description: `Page ${documentPageCount + (isCapturingDocument ? 0 : 1)} added. Continue taking pictures or finish document.`,
+        });
       }
     } catch (error) {
       console.error('Error taking picture:', error);
@@ -172,6 +185,46 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
     }
   };
 
+  const finishDocument = async () => {
+    if (currentDocumentPages.length === 0) return;
+
+    setIsUploading(true);
+    try {
+      // Upload all pages of the current document
+      for (let i = 0; i < currentDocumentPages.length; i++) {
+        await uploadPhoto(currentDocumentPages[i]);
+      }
+
+      toast({
+        title: "Document Completed",
+        description: `${currentDocumentPages.length} pages uploaded successfully.`,
+      });
+
+      // Reset for next document
+      setCurrentDocumentPages([]);
+      setIsCapturingDocument(false);
+      setDocumentPageCount(1);
+    } catch (error) {
+      toast({
+        title: "Upload Failed",
+        description: "Failed to upload document pages.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const cancelDocument = () => {
+    setCurrentDocumentPages([]);
+    setIsCapturingDocument(false);
+    setDocumentPageCount(1);
+    toast({
+      title: "Document Cancelled",
+      description: "Document capture cancelled.",
+    });
+  };
+
   // Fallback for web platforms
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -222,6 +275,53 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
           </p>
         </div>
 
+        {/* Document Progress */}
+        {isCapturingDocument && (
+          <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
+            <div className="text-center mb-3">
+              <h4 className="font-medium text-primary">Document in Progress</h4>
+              <p className="text-sm text-muted-foreground">
+                {currentDocumentPages.length} page(s) captured
+              </p>
+            </div>
+            
+            {/* Preview of captured pages */}
+            <div className="grid grid-cols-3 gap-2 mb-4">
+              {currentDocumentPages.map((pageUrl, index) => (
+                <div key={index} className="aspect-square">
+                  <img
+                    src={pageUrl}
+                    alt={`Page ${index + 1}`}
+                    className="w-full h-full object-cover rounded border"
+                  />
+                  <div className="text-xs text-center mt-1">Page {index + 1}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Action buttons */}
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                onClick={finishDocument}
+                disabled={isUploading}
+                className="gap-2"
+                size="sm"
+              >
+                ✓ Finish Document
+              </Button>
+              <Button
+                onClick={cancelDocument}
+                disabled={isUploading}
+                variant="outline"
+                className="gap-2"
+                size="sm"
+              >
+                ✗ Cancel
+              </Button>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 gap-3">
           {isMobile ? (
             <>
@@ -232,19 +332,22 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
                 size="lg"
               >
                 <CameraIcon className="h-5 w-5" />
-                {isUploading ? 'Uploading...' : 'Take Photo'}
+                {isUploading ? 'Processing...' : 
+                 isCapturingDocument ? `Take Page ${currentDocumentPages.length + 1}` : 'Take Photo'}
               </Button>
               
-              <Button
-                onClick={selectFromGallery}
-                disabled={isUploading}
-                variant="outline"
-                className="gap-2 h-12"
-                size="lg"
-              >
-                <ImageIcon className="h-5 w-5" />
-                Select from Gallery
-              </Button>
+              {!isCapturingDocument && (
+                <Button
+                  onClick={selectFromGallery}
+                  disabled={isUploading}
+                  variant="outline"
+                  className="gap-2 h-12"
+                  size="lg"
+                >
+                  <ImageIcon className="h-5 w-5" />
+                  Select from Gallery
+                </Button>
+              )}
             </>
           ) : (
             <div className="space-y-2">
