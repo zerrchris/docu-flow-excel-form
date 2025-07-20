@@ -1495,7 +1495,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         {/* Single scrollable table container */}
         <div 
           ref={containerRef}
-          className="border rounded-md bg-background relative overflow-auto h-[800px]"
+          className="border rounded-md bg-background relative overflow-auto h-[750px]"
         >
           <div className="min-w-fit">
             <Table className="border-collapse w-full" style={{ minWidth: `${getTotalTableWidth()}px` }}>
