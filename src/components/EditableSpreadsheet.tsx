@@ -1638,8 +1638,9 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
           {/* Height resize handle */}
           <div
-            className="absolute bottom-0 left-0 right-0 h-3 cursor-row-resize bg-border hover:bg-primary/50 transition-colors flex items-center justify-center group"
+            className="absolute bottom-0 left-0 right-0 h-3 cursor-row-resize bg-border/50 hover:bg-primary/50 transition-colors flex items-center justify-center group z-20"
             onMouseDown={handleHeightMouseDown}
+            style={{ marginTop: '-3px' }}
           >
             <div className="w-8 h-0.5 bg-muted-foreground group-hover:bg-primary transition-colors rounded-full" />
           </div>
