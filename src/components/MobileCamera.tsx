@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Camera as CameraIcon, Upload, Image as ImageIcon } from 'lucide-react';
+import { Camera as CameraIcon, Upload, Image as ImageIcon, Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -64,6 +64,17 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
     setCurrentProject(projectName);
     setShowProjectDialog(false);
     setShowNameDialog(true);
+  };
+
+  const startNewProject = () => {
+    // Clear current project and show project dialog
+    setCurrentProject('');
+    setProjectName('');
+    // Cancel any current document being captured
+    if (isCapturingDocument) {
+      cancelDocument();
+    }
+    setShowProjectDialog(true);
   };
 
   const handleStartWithName = () => {
@@ -405,14 +416,25 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
               <p className="text-sm text-muted-foreground">
                 Project: <span className="font-medium text-primary">{currentProject}</span>
               </p>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowProjectDialog(true)}
-                className="text-xs"
-              >
-                Change
-              </Button>
+              <div className="flex gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowProjectDialog(true)}
+                  className="text-xs"
+                >
+                  Change
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={startNewProject}
+                  className="text-xs gap-1"
+                >
+                  <Plus className="h-3 w-3" />
+                  New Project
+                </Button>
+              </div>
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">
