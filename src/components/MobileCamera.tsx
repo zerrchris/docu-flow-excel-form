@@ -56,6 +56,7 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Get all folders in the user's directory
       const { data, error } = await supabase.storage
         .from('documents')
         .list(user.id, { limit: 100, offset: 0 });
@@ -65,13 +66,12 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
         return;
       }
 
-      // Extract unique project names from folder structure
+      // Extract project folders (folders have id: null)
       const projectSet = new Set<string>();
       data?.forEach(item => {
-        if (item.name.includes('/')) {
-          const projectName = item.name.split('/')[0];
-          // Convert back from storage format to display format
-          const displayName = projectName.replace(/_/g, ' ');
+        if (item.id === null && item.name) {
+          // This is a folder, convert from storage format to display format
+          const displayName = item.name.replace(/_/g, ' ');
           projectSet.add(displayName);
         }
       });
