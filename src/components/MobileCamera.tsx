@@ -23,11 +23,13 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
   const [documentPageCount, setDocumentPageCount] = useState(1);
   const [showNameDialog, setShowNameDialog] = useState(false);
   const [showProjectDialog, setShowProjectDialog] = useState(false);
+  const [showProjectSelectionDialog, setShowProjectSelectionDialog] = useState(false);
   const [currentProject, setCurrentProject] = useState('');
   const [projectName, setProjectName] = useState('');
   const [documentName, setDocumentName] = useState('');
   const [instrumentNumber, setInstrumentNumber] = useState('');
   const [bookPage, setBookPage] = useState('');
+  const [existingProjects, setExistingProjects] = useState<string[]>([]);
 
   const checkCameraPermissions = async () => {
     if (!Capacitor.isNativePlatform()) {
@@ -48,21 +50,59 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
     }
   };
 
-  const startDocumentCapture = () => {
-    console.log('Starting document capture, current project:', currentProject);
-    // Check if we have a current project, if not show project dialog first
-    if (!currentProject || currentProject.trim() === '') {
-      console.log('No current project, showing project dialog');
-      setShowProjectDialog(true);
-    } else {
-      console.log('Project exists, showing document name dialog');
-      setShowNameDialog(true);
+  const loadExistingProjects = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase.storage
+        .from('documents')
+        .list(user.id, { limit: 100, offset: 0 });
+
+      if (error) {
+        console.error('Error loading projects:', error);
+        return;
+      }
+
+      // Extract unique project names from folder structure
+      const projectSet = new Set<string>();
+      data?.forEach(item => {
+        if (item.name.includes('/')) {
+          const projectName = item.name.split('/')[0];
+          // Convert back from storage format to display format
+          const displayName = projectName.replace(/_/g, ' ');
+          projectSet.add(displayName);
+        }
+      });
+
+      setExistingProjects(Array.from(projectSet));
+    } catch (error) {
+      console.error('Error loading existing projects:', error);
     }
+  };
+
+  const startDocumentCapture = async () => {
+    // Show project selection dialog first
+    await loadExistingProjects();
+    setShowProjectSelectionDialog(true);
   };
 
   const handleStartProject = () => {
     setCurrentProject(projectName);
     setShowProjectDialog(false);
+    setShowNameDialog(true);
+  };
+
+  const handleNewProject = () => {
+    setShowProjectSelectionDialog(false);
+    setCurrentProject('');
+    setProjectName('');
+    setShowProjectDialog(true);
+  };
+
+  const handleContinueProject = (project: string) => {
+    setCurrentProject(project);
+    setShowProjectSelectionDialog(false);
     setShowNameDialog(true);
   };
 
@@ -646,6 +686,62 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
             </Button>
             <Button onClick={handleStartProject} disabled={!projectName.trim()}>
               Continue
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Project Selection Dialog */}
+      <Dialog open={showProjectSelectionDialog} onOpenChange={setShowProjectSelectionDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Choose Project</DialogTitle>
+            <DialogDescription>
+              Start a new project or continue working on an existing one
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <Button 
+              onClick={handleNewProject}
+              className="h-12 gap-2"
+              size="lg"
+            >
+              <Plus className="h-5 w-5" />
+              Start New Project
+            </Button>
+            
+            {existingProjects.length > 0 && (
+              <>
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">
+                      Or continue existing project
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="max-h-40 overflow-y-auto space-y-2">
+                  {existingProjects.map((project, index) => (
+                    <Button
+                      key={index}
+                      onClick={() => handleContinueProject(project)}
+                      variant="outline"
+                      className="h-12 w-full justify-start"
+                      size="lg"
+                    >
+                      {project}
+                    </Button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowProjectSelectionDialog(false)}>
+              Cancel
             </Button>
           </DialogFooter>
         </DialogContent>
