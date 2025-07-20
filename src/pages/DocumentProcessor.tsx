@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { toast } from '@/components/ui/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Upload, FolderOpen, Plus, AlertTriangle, Smartphone, Camera, Files } from 'lucide-react';
+import { Upload, FolderOpen, Plus, AlertTriangle, Smartphone, Files } from 'lucide-react';
 import DocumentFrame from '@/components/DocumentFrame';
 import EditableSpreadsheet from '@/components/EditableSpreadsheet';
 import AuthButton from '@/components/AuthButton';
@@ -647,59 +647,6 @@ Image: [base64 image data]`;
     setFormData({});
   };
 
-  const handleMobileCapturedDocs = async () => {
-    setShowGetStarted(false);
-    
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast({
-          title: "Authentication Required",
-          description: "Please sign in to access your mobile captured documents.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Load mobile captured documents
-      const { data, error } = await supabase.storage
-        .from('documents')
-        .list(user.id, {
-          limit: 20,
-          sortBy: { column: 'created_at', order: 'desc' }
-        });
-
-      if (error) throw error;
-
-      // Filter for mobile-captured documents
-      const mobileDocuments = data?.filter(file => 
-        file.name.startsWith('mobile_document_')
-      ) || [];
-
-      if (mobileDocuments.length === 0) {
-        toast({
-          title: "No Mobile Documents Found",
-          description: "Use the Mobile Capture feature to take photos of documents first.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      toast({
-        title: "Mobile Documents Loaded",
-        description: `Found ${mobileDocuments.length} mobile captured documents. Select one from the file upload area.`,
-      });
-
-    } catch (error: any) {
-      console.error('Error loading mobile documents:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load mobile captured documents.",
-        variant: "destructive",
-      });
-    }
-  };
-
   return (
     <div className="w-full px-4 py-6">
       <div className="flex items-center justify-between mb-8">
@@ -806,20 +753,6 @@ Image: [base64 image data]`;
                 <div className="flex flex-col text-left">
                   <span className="font-semibold">Open Existing Runsheet</span>
                   <span className="text-sm text-muted-foreground">Load a previously saved runsheet</span>
-                </div>
-              </div>
-            </Button>
-            
-            <Button
-              onClick={handleMobileCapturedDocs}
-              className="h-16 flex flex-col gap-2 text-left"
-              variant="outline"
-            >
-              <div className="flex items-center gap-3 w-full">
-                <Camera className="h-6 w-6" />
-                <div className="flex flex-col text-left">
-                  <span className="font-semibold">Work on Mobile Captured Documents</span>
-                  <span className="text-sm text-muted-foreground">Process photos taken with Mobile Capture</span>
                 </div>
               </div>
             </Button>
