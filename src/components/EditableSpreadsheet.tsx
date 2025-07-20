@@ -1812,13 +1812,19 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                   <div className="flex items-center gap-1">
                     <div className="w-2 h-2 bg-green-500 rounded-full" />
                     <span>
-                      Saved {new Date(lastSaveTime).toLocaleTimeString([], { 
+                      Auto-saved at {new Date(lastSaveTime).toLocaleTimeString([], { 
                         hour: '2-digit', 
-                        minute: '2-digit' 
+                        minute: '2-digit',
+                        second: '2-digit'
                       })}
                     </span>
                   </div>
-                ) : null}
+                ) : (
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-gray-400 rounded-full" />
+                    <span>Not saved yet</span>
+                  </div>
+                )}
               </div>
             )}
           </div>
