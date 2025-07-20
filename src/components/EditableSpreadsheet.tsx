@@ -80,6 +80,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [editingCell, setEditingCell] = useState<{rowIndex: number, column: string} | null>(null);
   const [cellValue, setCellValue] = useState<string>('');
   const [selectedCell, setSelectedCell] = useState<{rowIndex: number, column: string} | null>(null);
+  const [lastSavedState, setLastSavedState] = useState<string>('');
   const [selectedRange, setSelectedRange] = useState<{start: {rowIndex: number, columnIndex: number}, end: {rowIndex: number, columnIndex: number}} | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [copiedData, setCopiedData] = useState<string[][] | null>(null);
@@ -217,9 +218,11 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         });
 
       if (!error) {
+        const savedState = JSON.stringify({ data, columns, runsheetName, columnInstructions });
+        setLastSavedState(savedState);
         setHasUnsavedChanges(false);
         setLastSaveTime(new Date());
-        onUnsavedChanges?.(false); // Notify parent component
+        onUnsavedChanges?.(false);
         console.log('Auto-saved runsheet successfully');
       }
     } catch (error) {
@@ -245,6 +248,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           onConflict: 'user_id,name'
         });
       
+      const savedState = JSON.stringify({ data, columns, runsheetName, columnInstructions });
+      setLastSavedState(savedState);
       setHasUnsavedChanges(false);
       onUnsavedChanges?.(false);
       console.log('Force save completed');
@@ -253,20 +258,26 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     }
   }, [user, runsheetName, columns, data, columnInstructions, onUnsavedChanges]);
 
-  // Track changes and trigger more aggressive auto-save
+  // Track changes and trigger auto-save with proper change detection
   useEffect(() => {
-    setHasUnsavedChanges(true);
-    onUnsavedChanges?.(true); // Notify parent component
-    
-    // Quick auto-save: save 3 seconds after the last change
     if (!user) return;
     
-    const timeoutId = setTimeout(() => {
-      autoSaveRunsheet();
-    }, 3000); // Reduced to 3 second debounce for faster saving
+    // Create a state snapshot for comparison
+    const currentState = JSON.stringify({ data, columns, runsheetName, columnInstructions });
     
-    return () => clearTimeout(timeoutId);
-  }, [data, columns, runsheetName, columnInstructions, user, autoSaveRunsheet, onUnsavedChanges]);
+    // Only mark as unsaved if the state actually changed from the last saved state
+    if (lastSavedState && currentState !== lastSavedState) {
+      setHasUnsavedChanges(true);
+      onUnsavedChanges?.(true);
+      
+      // Quick auto-save: save 3 seconds after the last change
+      const timeoutId = setTimeout(() => {
+        autoSaveRunsheet();
+      }, 3000);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [data, columns, runsheetName, columnInstructions, user, lastSavedState]);
 
   // Aggressive fallback auto-save every 30 seconds
   useEffect(() => {
@@ -371,9 +382,11 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       }
 
       console.log('Save successful!');
+      const savedState = JSON.stringify({ data, columns, runsheetName, columnInstructions });
+      setLastSavedState(savedState);
       setHasUnsavedChanges(false);
       setLastSaveTime(new Date());
-      onUnsavedChanges?.(false); // Notify parent component
+      onUnsavedChanges?.(false);
       toast({
         title: "Runsheet saved",
         description: `"${runsheetName}" has been saved successfully.`,
