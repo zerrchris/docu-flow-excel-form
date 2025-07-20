@@ -1165,6 +1165,17 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
   // Cell editing functions
   const selectCell = (rowIndex: number, column: string) => {
+    // Save any current editing before switching cells
+    if (editingCell) {
+      const newData = [...data];
+      newData[editingCell.rowIndex] = {
+        ...newData[editingCell.rowIndex],
+        [editingCell.column]: cellValue
+      };
+      setData(newData);
+      onDataChange?.(newData);
+    }
+    
     setSelectedCell({ rowIndex, column });
     // Automatically start editing when selecting a cell
     startEditing(rowIndex, column, data[rowIndex]?.[column] || '');
