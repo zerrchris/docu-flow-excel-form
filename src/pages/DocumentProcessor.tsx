@@ -169,41 +169,7 @@ const DocumentProcessor: React.FC = () => {
     setFormData(newFormData);
   }, [columns]);
 
-  // Navigation blocking - prevent leaving with unsaved changes
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (hasUnsavedChanges) {
-        e.preventDefault();
-        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
-        return e.returnValue;
-      }
-    };
-
-    const handlePopState = (e: PopStateEvent) => {
-      if (hasUnsavedChanges) {
-        e.preventDefault();
-        const confirmed = window.confirm('You have unsaved changes. Are you sure you want to leave?');
-        if (!confirmed) {
-          // Push the current state back to prevent navigation
-          window.history.pushState(null, '', window.location.href);
-          return;
-        }
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    window.addEventListener('popstate', handlePopState);
-    
-    // Block the initial history state if there are unsaved changes
-    if (hasUnsavedChanges) {
-      window.history.pushState(null, '', window.location.href);
-    }
-    
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      window.removeEventListener('popstate', handlePopState);
-    };
-  }, [hasUnsavedChanges]);
+  // Note: Navigation blocking removed since runsheet now auto-saves
 
   // Handle navigation blocking for React Router
   const handleNavigation = useCallback((path: string) => {
