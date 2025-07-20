@@ -10,6 +10,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import AuthButton from '@/components/AuthButton';
+import ActiveRunsheetButton from '@/components/ActiveRunsheetButton';
 import extractorLogo from '@/assets/document-extractor-logo.png';
 
 interface StoredFile {
@@ -879,6 +880,7 @@ export const FileManager: React.FC = () => {
               </h1>
             </Link>
             <div className="flex items-center gap-4">
+              <ActiveRunsheetButton />
               <AuthButton />
             </div>
           </div>

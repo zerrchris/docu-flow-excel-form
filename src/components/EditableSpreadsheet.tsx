@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useActiveRunsheet } from '@/hooks/useActiveRunsheet';
 import * as XLSX from 'xlsx';
 import JSZip from 'jszip';
 import { Card } from '@/components/ui/card';
@@ -52,6 +53,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   missingColumns = []
 }) => {
   const { toast } = useToast();
+  const { setActiveRunsheet } = useActiveRunsheet();
   const [user, setUser] = useState<User | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -153,6 +155,13 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
     initAuth();
   }, []);
+
+  // Update active runsheet when name changes
+  useEffect(() => {
+    if (runsheetName && runsheetName !== 'Untitled Runsheet') {
+      setActiveRunsheet({ name: runsheetName });
+    }
+  }, [runsheetName, setActiveRunsheet]);
 
   // Listen for external trigger events from DocumentProcessor
   useEffect(() => {

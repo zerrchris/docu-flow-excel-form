@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import extractorLogo from '@/assets/document-extractor-logo.png';
 import AuthButton from '@/components/AuthButton';
+import ActiveRunsheetButton from '@/components/ActiveRunsheetButton';
 
 const Dashboard: React.FC = () => {
   const [user, setUser] = useState<SupabaseUser | null>(null);
@@ -66,6 +67,7 @@ const Dashboard: React.FC = () => {
               </h1>
             </Link>
             <div className="flex items-center gap-4">
+              <ActiveRunsheetButton />
               <AuthButton />
               {user && (
                 <Link to="/admin">
