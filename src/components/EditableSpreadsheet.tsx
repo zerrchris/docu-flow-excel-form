@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, Check, X, ArrowUp, ArrowDown, Save, FolderOpen, Download, Upload, AlignLeft, AlignCenter, AlignRight, Cloud } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Plus, Trash2, Check, X, ArrowUp, ArrowDown, Save, FolderOpen, Download, Upload, AlignLeft, AlignCenter, AlignRight, Cloud, ChevronDown, FileText, Archive } from 'lucide-react';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -397,6 +398,46 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     toast({
       title: "Runsheet loaded",
       description: `"${runsheet.name}" has been loaded successfully.`,
+    });
+  };
+
+  // Download spreadsheet only as CSV
+  const downloadSpreadsheetOnly = () => {
+    // Filter out empty rows
+    const nonEmptyData = data.filter(row => 
+      Object.values(row).some(value => value.trim() !== '')
+    );
+
+    // Create CSV content
+    const csvHeaders = columns.join(',');
+    const csvRows = nonEmptyData.map(row => 
+      columns.map(column => {
+        const value = row[column] || '';
+        const escapedValue = value.includes(',') || value.includes('"') || value.includes('\n')
+          ? `"${value.replace(/"/g, '""')}"`
+          : value;
+        return escapedValue;
+      }).join(',')
+    );
+    
+    const csvContent = [csvHeaders, ...csvRows].join('\n');
+
+    // Create and download the file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${runsheetName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.csv`);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast({
+      title: "Spreadsheet downloaded",
+      description: `"${runsheetName}" has been downloaded as a CSV file.`,
     });
   };
 
@@ -1407,16 +1448,30 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
               {isLoading ? 'Loading...' : 'Open'}
             </Button>
             
-            {/* Download Button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={downloadSpreadsheet}
-              className="gap-2"
-            >
-              <Download className="h-4 w-4" />
-              Download
-            </Button>
+            {/* Download Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  Download
+                  <ChevronDown className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={downloadSpreadsheetOnly}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Spreadsheet Only (CSV)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={downloadSpreadsheet}>
+                  <Archive className="h-4 w-4 mr-2" />
+                  Spreadsheet + Documents (ZIP)
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             
             {/* Upload Button */}
             <Button
