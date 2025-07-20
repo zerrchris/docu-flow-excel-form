@@ -165,8 +165,9 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
         <h3 className="text-lg sm:text-xl font-semibold text-foreground">Document Preview</h3>
         <div className="flex items-center gap-1 sm:gap-2 w-full sm:w-auto justify-end">
           {file && (
-            <Button variant="outline" size="sm" onClick={openInNewWindow} className="p-2 sm:px-3">
-              <ExternalLink className="h-3 w-3 sm:h-4 sm:w-4" />
+            <Button variant="outline" size="sm" onClick={openInNewWindow} className="px-3">
+              <span className="text-xs sm:text-sm">Open in new window</span>
+              <ExternalLink className="h-3 w-3 sm:h-4 sm:w-4 ml-2" />
             </Button>
           )}
           {file && isImage && (
