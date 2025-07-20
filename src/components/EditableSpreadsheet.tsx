@@ -78,6 +78,9 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [editingCell, setEditingCell] = useState<{rowIndex: number, column: string} | null>(null);
   const [cellValue, setCellValue] = useState<string>('');
   const [selectedCell, setSelectedCell] = useState<{rowIndex: number, column: string} | null>(null);
+  const [selectedRange, setSelectedRange] = useState<{start: {rowIndex: number, columnIndex: number}, end: {rowIndex: number, columnIndex: number}} | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [copiedData, setCopiedData] = useState<string[][] | null>(null);
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
   const [resizing, setResizing] = useState<{column: string, startX: number, startWidth: number} | null>(null);
   const [showAddRowsDialog, setShowAddRowsDialog] = useState(false);
@@ -1177,6 +1180,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     }
     
     setSelectedCell({ rowIndex, column });
+    // Clear range selection when selecting a single cell
+    setSelectedRange(null);
     // Automatically start editing when selecting a cell
     startEditing(rowIndex, column, data[rowIndex]?.[column] || '');
   };
@@ -1406,6 +1411,154 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       }
     }
   }, [saveEdit, cancelEdit, editingCell, columns, data, selectCell, startEditing]);
+
+  // Mouse drag selection handlers
+  const handleCellMouseDown = useCallback((e: React.MouseEvent, rowIndex: number, column: string) => {
+    if (e.button !== 0) return; // Only handle left click
+    
+    const columnIndex = columns.indexOf(column);
+    setIsDragging(true);
+    setSelectedRange({
+      start: { rowIndex, columnIndex },
+      end: { rowIndex, columnIndex }
+    });
+    setSelectedCell({ rowIndex, column });
+    e.preventDefault();
+  }, [columns]);
+
+  const handleMouseEnter = useCallback((rowIndex: number, column: string) => {
+    if (!isDragging || !selectedRange) return;
+    
+    const columnIndex = columns.indexOf(column);
+    setSelectedRange(prev => prev ? {
+      ...prev,
+      end: { rowIndex, columnIndex }
+    } : null);
+  }, [isDragging, selectedRange, columns]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  // Copy/Paste functionality
+  const copySelection = useCallback(() => {
+    if (!selectedRange) return;
+    
+    const { start, end } = selectedRange;
+    const minRow = Math.min(start.rowIndex, end.rowIndex);
+    const maxRow = Math.max(start.rowIndex, end.rowIndex);
+    const minCol = Math.min(start.columnIndex, end.columnIndex);
+    const maxCol = Math.max(start.columnIndex, end.columnIndex);
+    
+    const copiedData: string[][] = [];
+    for (let row = minRow; row <= maxRow; row++) {
+      const rowData: string[] = [];
+      for (let col = minCol; col <= maxCol; col++) {
+        const column = columns[col];
+        rowData.push(data[row]?.[column] || '');
+      }
+      copiedData.push(rowData);
+    }
+    
+    setCopiedData(copiedData);
+    
+    // Also copy to clipboard as tab-separated values
+    const clipboardText = copiedData.map(row => row.join('\t')).join('\n');
+    navigator.clipboard.writeText(clipboardText);
+    
+    toast({
+      title: "Copied",
+      description: `${copiedData.length} rows × ${copiedData[0]?.length || 0} columns copied to clipboard`,
+    });
+  }, [selectedRange, columns, data, toast]);
+
+  const pasteSelection = useCallback(async () => {
+    if (!selectedCell) return;
+    
+    let dataToPaste: string[][] = [];
+    
+    // Try to get data from internal copy first, then from clipboard
+    if (copiedData) {
+      dataToPaste = copiedData;
+    } else {
+      try {
+        const clipboardText = await navigator.clipboard.readText();
+        if (clipboardText) {
+          dataToPaste = clipboardText.split('\n').map(row => row.split('\t'));
+        }
+      } catch (error) {
+        console.warn('Failed to read clipboard:', error);
+        return;
+      }
+    }
+    
+    if (dataToPaste.length === 0) return;
+    
+    const { rowIndex: startRow, column: startColumn } = selectedCell;
+    const startColIndex = columns.indexOf(startColumn);
+    
+    const newData = [...data];
+    
+    for (let row = 0; row < dataToPaste.length; row++) {
+      const targetRowIndex = startRow + row;
+      if (targetRowIndex >= newData.length) break;
+      
+      for (let col = 0; col < dataToPaste[row].length; col++) {
+        const targetColIndex = startColIndex + col;
+        if (targetColIndex >= columns.length) break;
+        
+        const targetColumn = columns[targetColIndex];
+        newData[targetRowIndex] = {
+          ...newData[targetRowIndex],
+          [targetColumn]: dataToPaste[row][col]
+        };
+      }
+    }
+    
+    setData(newData);
+    onDataChange?.(newData);
+    
+    toast({
+      title: "Pasted",
+      description: `${dataToPaste.length} rows × ${dataToPaste[0]?.length || 0} columns pasted`,
+    });
+  }, [copiedData, selectedCell, columns, data, onDataChange, toast]);
+
+  // Check if a cell is in the selected range
+  const isCellInRange = useCallback((rowIndex: number, columnIndex: number) => {
+    if (!selectedRange) return false;
+    
+    const { start, end } = selectedRange;
+    const minRow = Math.min(start.rowIndex, end.rowIndex);
+    const maxRow = Math.max(start.rowIndex, end.rowIndex);
+    const minCol = Math.min(start.columnIndex, end.columnIndex);
+    const maxCol = Math.max(start.columnIndex, end.columnIndex);
+    
+    return rowIndex >= minRow && rowIndex <= maxRow && columnIndex >= minCol && columnIndex <= maxCol;
+  }, [selectedRange]);
+
+  // Global mouse up event listener
+  useEffect(() => {
+    const handleGlobalMouseUp = () => setIsDragging(false);
+    document.addEventListener('mouseup', handleGlobalMouseUp);
+    return () => document.removeEventListener('mouseup', handleGlobalMouseUp);
+  }, []);
+
+  // Keyboard shortcuts for copy/paste
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+        copySelection();
+        e.preventDefault();
+      } else if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+        pasteSelection();
+        e.preventDefault();
+      }
+    };
+    
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [copySelection, pasteSelection]);
 
   const deleteRow = (index: number) => {
     const newData = [...data];
@@ -1644,6 +1797,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                    {columns.map((column) => {
                     const isSelected = selectedCell?.rowIndex === rowIndex && selectedCell?.column === column;
                     const isEditing = editingCell?.rowIndex === rowIndex && editingCell?.column === column;
+                    const columnIndex = columns.indexOf(column);
+                    const isInRange = isCellInRange(rowIndex, columnIndex);
                     
                     return (
                       <TableCell 
@@ -1671,14 +1826,19 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                           />
                         ) : (
                           <div
-                            className={`min-h-[2rem] py-2 px-3 cursor-cell flex items-start transition-colors whitespace-pre-wrap
+                            className={`min-h-[2rem] py-2 px-3 cursor-cell flex items-start transition-colors whitespace-pre-wrap select-none
                               ${isSelected 
-                                ? 'bg-primary/10 border-2 border-primary ring-2 ring-primary/20' 
+                                ? 'bg-primary/20 border-2 border-primary ring-2 ring-primary/20' 
+                                : isInRange
+                                ? 'bg-primary/10 border-2 border-primary/50'
                                 : 'hover:bg-muted/50 border-2 border-transparent'
                               }
                               ${columnAlignments[column] === 'center' ? 'text-center justify-center' : 
                                 columnAlignments[column] === 'right' ? 'text-right justify-end' : 'text-left justify-start'}`}
                              onClick={() => selectCell(rowIndex, column)}
+                             onMouseDown={(e) => handleCellMouseDown(e, rowIndex, column)}
+                             onMouseEnter={() => handleMouseEnter(rowIndex, column)}
+                             onMouseUp={handleMouseUp}
                              onKeyDown={(e) => handleKeyDown(e, rowIndex, column)}
                             tabIndex={0}
                            >
