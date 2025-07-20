@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ArrowLeft, Eye, Edit2, Trash2, Search, Calendar, FileImage, Smartphone, Upload as UploadIcon, Download, CheckSquare, X, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Eye, Edit2, Trash2, Search, Calendar, FileImage, Smartphone, Upload as UploadIcon, Download, CheckSquare, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -40,8 +40,6 @@ export const FileManager: React.FC = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const [isSelectMode, setIsSelectMode] = useState(false);
-  const [showDeleteAllDialog, setShowDeleteAllDialog] = useState(false);
-  const [isDeletingAll, setIsDeletingAll] = useState(false);
 
   useEffect(() => {
     loadStoredFiles();
@@ -199,44 +197,6 @@ export const FileManager: React.FC = () => {
     }
   };
 
-  const handleDeleteAll = async () => {
-    setIsDeletingAll(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
-
-      // Get all file paths to delete
-      const filePaths = files.map(file => `${user.id}/${file.fullPath}`);
-      
-      // Delete all files in batches of 50 (Supabase limit)
-      const batchSize = 50;
-      for (let i = 0; i < filePaths.length; i += batchSize) {
-        const batch = filePaths.slice(i, i + batchSize);
-        const { error } = await supabase.storage
-          .from('documents')
-          .remove(batch);
-        
-        if (error) throw error;
-      }
-
-      toast({
-        title: "All Files Deleted",
-        description: `Successfully deleted ${files.length} files.`,
-      });
-
-      setShowDeleteAllDialog(false);
-      loadStoredFiles(); // Refresh the list
-    } catch (error: any) {
-      console.error('Error deleting all files:', error);
-      toast({
-        title: "Delete All Failed",
-        description: error.message || "Failed to delete all files.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsDeletingAll(false);
-    }
-  };
 
   const handleDeleteSelected = async () => {
     if (selectedFiles.size === 0) return;
@@ -435,16 +395,6 @@ export const FileManager: React.FC = () => {
                 >
                   <CheckSquare className="h-4 w-4" />
                   Select
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => setShowDeleteAllDialog(true)}
-                  disabled={files.length === 0}
-                  className="gap-2"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  Delete All
                 </Button>
                 <Button
                   variant="outline"
@@ -655,38 +605,6 @@ export const FileManager: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Delete All Dialog */}
-      <Dialog open={showDeleteAllDialog} onOpenChange={setShowDeleteAllDialog}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive">
-              <AlertTriangle className="h-5 w-5" />
-              Delete All Files
-            </DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete ALL {files.length} files? This action cannot be undone and will permanently remove all your stored documents.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="p-4 bg-destructive/10 rounded-md">
-            <p className="text-sm text-destructive font-medium">
-              ⚠️ This will delete:
-            </p>
-            <ul className="text-sm text-muted-foreground mt-2 space-y-1">
-              <li>• {files.filter(f => f.type === 'mobile').length} mobile captured documents</li>
-              <li>• {files.filter(f => f.type === 'uploaded').length} uploaded files</li>
-              <li>• All project folders and their contents</li>
-            </ul>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteAllDialog(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDeleteAll} disabled={isDeletingAll}>
-              {isDeletingAll ? 'Deleting All...' : 'Delete All Files'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
