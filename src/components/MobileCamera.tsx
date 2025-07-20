@@ -24,6 +24,7 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
   const [showNameDialog, setShowNameDialog] = useState(false);
   const [showProjectDialog, setShowProjectDialog] = useState(false);
   const [showProjectSelectionDialog, setShowProjectSelectionDialog] = useState(false);
+  const [showExistingProjectsDialog, setShowExistingProjectsDialog] = useState(false);
   const [currentProject, setCurrentProject] = useState('');
   const [projectName, setProjectName] = useState('');
   const [documentName, setDocumentName] = useState('');
@@ -107,8 +108,9 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
   };
 
   const handleAddToExistingProject = async () => {
+    setShowProjectSelectionDialog(false);
     await loadExistingProjects();
-    setShowProjectSelectionDialog(true);
+    setShowExistingProjectsDialog(true);
   };
 
   const startNewProject = () => {
@@ -723,6 +725,15 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
               Start New Project
             </Button>
             
+            <Button 
+              onClick={handleAddToExistingProject}
+              variant="outline"
+              className="h-12 gap-2"
+              size="lg"
+            >
+              Add to Existing Project
+            </Button>
+            
             {existingProjects.length > 0 && (
               <>
                 <div className="relative">
@@ -754,6 +765,51 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowProjectSelectionDialog(false)}>
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Existing Projects Dialog */}
+      <Dialog open={showExistingProjectsDialog} onOpenChange={setShowExistingProjectsDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Select Existing Project</DialogTitle>
+            <DialogDescription>
+              Choose a project to add your new document to
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            {existingProjects.length > 0 ? (
+              <div className="max-h-60 overflow-y-auto space-y-2">
+                {existingProjects.map((project, index) => (
+                  <Button
+                    key={index}
+                    onClick={() => {
+                      setCurrentProject(project);
+                      setShowExistingProjectsDialog(false);
+                      setShowNameDialog(true);
+                    }}
+                    variant="outline"
+                    className="h-12 w-full justify-start"
+                    size="lg"
+                  >
+                    {project}
+                  </Button>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">No existing projects found</p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Create a new project to get started
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowExistingProjectsDialog(false)}>
               Cancel
             </Button>
           </DialogFooter>
