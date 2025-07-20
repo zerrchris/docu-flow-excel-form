@@ -1343,6 +1343,42 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     } else if (e.key === 'Escape') {
       cancelEdit();
       e.preventDefault();
+    } else if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+      // Handle arrow keys while editing (Excel-like behavior)
+      if (editingCell) {
+        const currentRowIndex = editingCell.rowIndex;
+        const currentColumn = editingCell.column;
+        const columnIndex = columns.indexOf(currentColumn);
+        
+        saveEdit();
+        
+        let nextRowIndex = currentRowIndex;
+        let nextColumn = currentColumn;
+        
+        switch (e.key) {
+          case 'ArrowUp':
+            nextRowIndex = Math.max(0, currentRowIndex - 1);
+            break;
+          case 'ArrowDown':
+            nextRowIndex = Math.min(data.length - 1, currentRowIndex + 1);
+            break;
+          case 'ArrowLeft':
+            if (columnIndex > 0) {
+              nextColumn = columns[columnIndex - 1];
+            }
+            break;
+          case 'ArrowRight':
+            if (columnIndex < columns.length - 1) {
+              nextColumn = columns[columnIndex + 1];
+            }
+            break;
+        }
+        
+        setTimeout(() => {
+          selectCell(nextRowIndex, nextColumn);
+        }, 0);
+      }
+      e.preventDefault();
     } else if (e.key === 'Tab') {
       e.preventDefault();
       saveEdit();
