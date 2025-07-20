@@ -46,7 +46,7 @@ const Home: React.FC = () => {
               <AuthButton />
               {user && (
                 <Link to="/app">
-                  <Button>Open App</Button>
+                  <Button>Start a Runsheet</Button>
                 </Link>
               )}
               {!user && (
@@ -74,7 +74,7 @@ const Home: React.FC = () => {
               <Link to="/app">
                 <Button size="lg" className="gap-2">
                   <FileText className="h-5 w-5" />
-                  Open App
+                  Start a Runsheet
                 </Button>
               </Link>
             ) : (
@@ -181,7 +181,7 @@ const Home: React.FC = () => {
                   {user ? (
                     <Link to="/app" className="block">
                       <Button size="lg" className="w-full">
-                        Go to App
+                        Start a Runsheet
                       </Button>
                     </Link>
                   ) : (
