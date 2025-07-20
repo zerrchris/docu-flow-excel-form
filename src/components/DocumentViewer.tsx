@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, ZoomIn, ZoomOut, RotateCcw, ExternalLink } from 'lucide-react';
+import { Slider } from '@/components/ui/slider';
+import { AlertCircle, RotateCcw, ExternalLink } from 'lucide-react';
 import PDFViewer from './PDFViewer';
 
 interface DocumentViewerProps {
@@ -19,16 +20,13 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
   const isImage = file && file.type.startsWith('image/');
   const isPdf = file && file.type === 'application/pdf';
 
-  const handleZoomIn = () => {
-    setZoom(prev => Math.min(prev + 0.25, 3));
+  const handleZoomChange = (values: number[]) => {
+    const newZoom = values[0];
+    setZoom(newZoom);
     setPanX(0);
     setPanY(0);
   };
-  const handleZoomOut = () => {
-    setZoom(prev => Math.max(prev - 0.25, 0.25));
-    setPanX(0);
-    setPanY(0);
-  };
+
   const handleZoomReset = () => {
     setZoom(1);
     setPanX(0);
@@ -64,7 +62,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
       const currentDistance = getTouchDistance(e.touches);
       if (lastTouchDistance > 0) {
         const scale = currentDistance / lastTouchDistance;
-        setZoom(prev => Math.max(0.25, Math.min(3, prev * scale)));
+        setZoom(prev => Math.max(0.25, Math.min(5, prev * scale)));
       }
       setLastTouchDistance(currentDistance);
     }
@@ -172,15 +170,21 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
           )}
           {file && isImage && (
             <>
-              <Button variant="outline" size="sm" onClick={handleZoomOut} disabled={zoom <= 0.25} className="p-2 sm:px-3">
-                <ZoomOut className="h-3 w-3 sm:h-4 sm:w-4" />
-              </Button>
-              <span className="text-xs sm:text-sm text-muted-foreground min-w-[3rem] sm:min-w-[4rem] text-center">
+              <div className="flex items-center gap-2 min-w-[120px]">
+                <span className="text-xs text-muted-foreground">25%</span>
+                <Slider
+                  value={[zoom]}
+                  onValueChange={handleZoomChange}
+                  max={5}
+                  min={0.25}
+                  step={0.25}
+                  className="w-16 sm:w-20"
+                />
+                <span className="text-xs text-muted-foreground">500%</span>
+              </div>
+              <span className="text-xs sm:text-sm text-muted-foreground min-w-[3rem] text-center">
                 {Math.round(zoom * 100)}%
               </span>
-              <Button variant="outline" size="sm" onClick={handleZoomIn} disabled={zoom >= 3} className="p-2 sm:px-3">
-                <ZoomIn className="h-3 w-3 sm:h-4 sm:w-4" />
-              </Button>
               <Button variant="outline" size="sm" onClick={handleZoomReset} className="p-2 sm:px-3">
                 <RotateCcw className="h-3 w-3 sm:h-4 sm:w-4" />
               </Button>
