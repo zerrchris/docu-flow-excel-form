@@ -15,6 +15,9 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
   const { toast } = useToast();
   const [isUploading, setIsUploading] = useState(false);
   const [recentPhotos, setRecentPhotos] = useState<Array<{ url: string; name: string }>>([]);
+  const [currentDocumentPages, setCurrentDocumentPages] = useState<string[]>([]);
+  const [isCapturingDocument, setIsCapturingDocument] = useState(false);
+  const [documentPageCount, setDocumentPageCount] = useState(1);
 
   const checkCameraPermissions = async () => {
     if (!Capacitor.isNativePlatform()) {
