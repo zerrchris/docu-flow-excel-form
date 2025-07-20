@@ -170,19 +170,26 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       loadSpecificRunsheet(runsheetId);
     };
 
+    const handleAutoRestoreLastRunsheet = async () => {
+      console.log('Auto-restoring last runsheet');
+      await autoRestoreLastRunsheet();
+    };
+
     window.addEventListener('triggerSpreadsheetUpload', handleUploadTrigger);
     window.addEventListener('triggerSpreadsheetOpen', handleOpenTrigger);
     window.addEventListener('loadSpecificRunsheet', handleLoadSpecificRunsheet as EventListener);
+    window.addEventListener('autoRestoreLastRunsheet', handleAutoRestoreLastRunsheet);
 
     return () => {
       window.removeEventListener('triggerSpreadsheetUpload', handleUploadTrigger);
       window.removeEventListener('triggerSpreadsheetOpen', handleOpenTrigger);
       window.removeEventListener('loadSpecificRunsheet', handleLoadSpecificRunsheet as EventListener);
+      window.removeEventListener('autoRestoreLastRunsheet', handleAutoRestoreLastRunsheet);
     };
   }, []);
 
 
-  // Auto-save functionality
+  // Enhanced auto-save functionality with immediate saving
   const autoSaveRunsheet = useCallback(async () => {
     if (!user || !hasUnsavedChanges) return;
     
@@ -204,52 +211,114 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         setHasUnsavedChanges(false);
         setLastSaveTime(new Date());
         onUnsavedChanges?.(false); // Notify parent component
+        console.log('Auto-saved runsheet successfully');
       }
     } catch (error) {
       console.error('Autosave failed:', error);
     }
-  }, [user, hasUnsavedChanges, runsheetName, columns, data]);
+  }, [user, hasUnsavedChanges, runsheetName, columns, data, columnInstructions, onUnsavedChanges]);
 
-  // Track changes and trigger immediate auto-save with debouncing
+  // Force save function for critical moments (navigation, etc.)
+  const forceSave = useCallback(async () => {
+    if (!user || !runsheetName || columns.length === 0) return;
+    
+    try {
+      await supabase
+        .from('runsheets')
+        .upsert({
+          name: runsheetName,
+          columns: columns,
+          data: data,
+          column_instructions: columnInstructions,
+          user_id: user.id,
+          updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'user_id,name'
+        });
+      
+      setHasUnsavedChanges(false);
+      onUnsavedChanges?.(false);
+      console.log('Force save completed');
+    } catch (error) {
+      console.error('Force save failed:', error);
+    }
+  }, [user, runsheetName, columns, data, columnInstructions, onUnsavedChanges]);
+
+  // Track changes and trigger more aggressive auto-save
   useEffect(() => {
     setHasUnsavedChanges(true);
     onUnsavedChanges?.(true); // Notify parent component
     
-    // Debounced auto-save: save 10 seconds after the last change
+    // Quick auto-save: save 3 seconds after the last change
     if (!user) return;
     
     const timeoutId = setTimeout(() => {
       autoSaveRunsheet();
-    }, 10000); // 10 second debounce
+    }, 3000); // Reduced to 3 second debounce for faster saving
     
     return () => clearTimeout(timeoutId);
-  }, [data, columns, runsheetName, user, autoSaveRunsheet, onUnsavedChanges]);
+  }, [data, columns, runsheetName, columnInstructions, user, autoSaveRunsheet, onUnsavedChanges]);
 
-  // Fallback auto-save every 2 minutes for any missed changes
+  // Aggressive fallback auto-save every 30 seconds
   useEffect(() => {
-    if (!user || !hasUnsavedChanges) return;
+    if (!user) return;
     
     const interval = setInterval(() => {
-      autoSaveRunsheet();
-    }, 120000); // Auto-save every 2 minutes as fallback
+      if (hasUnsavedChanges) {
+        autoSaveRunsheet();
+      }
+    }, 30000); // Auto-save every 30 seconds if there are changes
 
     return () => clearInterval(interval);
   }, [user, hasUnsavedChanges, autoSaveRunsheet]);
 
-  // Save before leaving the page
+  // Enhanced page navigation and visibility handling
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (hasUnsavedChanges && user) {
-        e.preventDefault();
-        e.returnValue = '';
-        // Try to save quickly
-        autoSaveRunsheet();
+        // Force immediate save using sendBeacon for reliability
+        const payload = JSON.stringify({
+          name: runsheetName,
+          columns: columns,
+          data: data,
+          column_instructions: columnInstructions,
+          user_id: user.id,
+          updated_at: new Date().toISOString(),
+        });
+        
+        // Use sendBeacon for reliable saving during page unload
+        const saveUrl = 'https://xnpmrafjjqsissbtempj.supabase.co/functions/v1/save-runsheet';
+        navigator.sendBeacon(saveUrl, payload);
+        
+        // Also try regular save
+        forceSave();
+      }
+    };
+
+    // Save when page becomes hidden (user switches tabs or navigates)
+    const handleVisibilityChange = () => {
+      if (document.hidden && hasUnsavedChanges && user) {
+        forceSave();
+      }
+    };
+
+    // Save on blur (when user clicks away from the page)
+    const handleBlur = () => {
+      if (hasUnsavedChanges && user) {
+        forceSave();
       }
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [hasUnsavedChanges, user, autoSaveRunsheet]);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('blur', handleBlur);
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('blur', handleBlur);
+    };
+  }, [hasUnsavedChanges, user, runsheetName, columns, data, columnInstructions, forceSave]);
 
   // Save runsheet to Supabase
   const saveRunsheet = async () => {
@@ -385,6 +454,38 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Auto-restore the most recently updated runsheet
+  const autoRestoreLastRunsheet = async () => {
+    if (!user) return;
+
+    try {
+      const { data: runsheets, error } = await supabase
+        .from('runsheets')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false })
+        .limit(1);
+
+      if (error) {
+        console.error('Error fetching last runsheet:', error);
+        return;
+      }
+
+      if (runsheets && runsheets.length > 0) {
+        const lastRunsheet = runsheets[0];
+        console.log('Auto-restoring runsheet:', lastRunsheet.name);
+        loadRunsheet(lastRunsheet);
+        
+        toast({
+          title: "Runsheet restored",
+          description: `Automatically loaded your last working runsheet: "${lastRunsheet.name}"`,
+        });
+      }
+    } catch (error) {
+      console.error('Error auto-restoring runsheet:', error);
     }
   };
 

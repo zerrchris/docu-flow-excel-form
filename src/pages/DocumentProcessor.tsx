@@ -139,6 +139,17 @@ const DocumentProcessor: React.FC = () => {
       window.dispatchEvent(loadRunsheetEvent);
     }
   }, [searchParams, isLoadingPreferences]);
+
+  // Auto-restore last worked on runsheet if no specific runsheet is requested
+  useEffect(() => {
+    const runsheetId = searchParams.get('runsheet');
+    
+    if (!runsheetId && !isLoadingPreferences && !showGetStarted) {
+      // Dispatch event to auto-load the most recently updated runsheet
+      const autoRestoreEvent = new CustomEvent('autoRestoreLastRunsheet');
+      window.dispatchEvent(autoRestoreEvent);
+    }
+  }, [searchParams, isLoadingPreferences, showGetStarted]);
   
   // Update form state when columns change
   useEffect(() => {
@@ -662,6 +673,17 @@ Image: [base64 image data]`;
     setColumnInstructions(DEFAULT_EXTRACTION_INSTRUCTIONS);
     setSpreadsheetData([]);
     setFormData({});
+    
+    // Dispatch event to reset the spreadsheet
+    const resetEvent = new CustomEvent('resetSpreadsheet');
+    window.dispatchEvent(resetEvent);
+  };
+
+  const handleContinueLastWork = () => {
+    setShowGetStarted(false);
+    // Dispatch event to auto-load the most recently updated runsheet
+    const autoRestoreEvent = new CustomEvent('autoRestoreLastRunsheet');
+    window.dispatchEvent(autoRestoreEvent);
   };
 
   return (
