@@ -11,6 +11,7 @@ import BatchProcessing from '@/components/BatchProcessing';
 import { ExtractionPreferencesService } from '@/services/extractionPreferences';
 import { AdminSettingsService } from '@/services/adminSettings';
 import { supabase } from '@/integrations/supabase/client';
+import { useActiveRunsheet } from '@/hooks/useActiveRunsheet';
 
 import extractorLogo from '@/assets/document-extractor-logo.png';
 
@@ -54,6 +55,9 @@ const DocumentProcessor: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
+  
+  // Use active runsheet hook
+  const { activeRunsheet } = useActiveRunsheet();
   
   // Get started dialog state
   const [showGetStarted, setShowGetStarted] = useState(true);
@@ -137,16 +141,31 @@ const DocumentProcessor: React.FC = () => {
     }
   }, [searchParams, isLoadingPreferences]);
 
-  // Auto-restore last worked on runsheet if no specific runsheet is requested
+  // Check for active runsheet and skip get started dialog if one exists
   useEffect(() => {
     const runsheetId = searchParams.get('runsheet');
     
-    if (!runsheetId && !isLoadingPreferences && !showGetStarted) {
+    // If there's no URL parameter but there's an active runsheet, skip get started dialog
+    if (!runsheetId && !isLoadingPreferences && activeRunsheet) {
+      console.log('Active runsheet found, skipping get started dialog:', activeRunsheet.name);
+      setShowGetStarted(false);
+      
       // Dispatch event to auto-load the most recently updated runsheet
       const autoRestoreEvent = new CustomEvent('autoRestoreLastRunsheet');
       window.dispatchEvent(autoRestoreEvent);
     }
-  }, [searchParams, isLoadingPreferences, showGetStarted]);
+  }, [activeRunsheet, searchParams, isLoadingPreferences]);
+
+  // Auto-restore last worked on runsheet if no specific runsheet is requested and no active runsheet
+  useEffect(() => {
+    const runsheetId = searchParams.get('runsheet');
+    
+    if (!runsheetId && !isLoadingPreferences && !showGetStarted && !activeRunsheet) {
+      // Dispatch event to auto-load the most recently updated runsheet
+      const autoRestoreEvent = new CustomEvent('autoRestoreLastRunsheet');
+      window.dispatchEvent(autoRestoreEvent);
+    }
+  }, [searchParams, isLoadingPreferences, showGetStarted, activeRunsheet]);
   
   // Update form state when columns change
   useEffect(() => {
