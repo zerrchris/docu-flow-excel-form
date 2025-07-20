@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useActiveRunsheet } from '@/hooks/useActiveRunsheet';
 import * as XLSX from 'xlsx';
 import JSZip from 'jszip';
@@ -53,7 +54,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   missingColumns = []
 }) => {
   const { toast } = useToast();
-  const { setActiveRunsheet } = useActiveRunsheet();
+  const navigate = useNavigate();
+  const { setActiveRunsheet, clearActiveRunsheet } = useActiveRunsheet();
   const [user, setUser] = useState<User | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -401,6 +403,70 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     } finally {
       setIsSaving(false);
       console.log('Save process completed');
+    }
+  };
+
+  // Save and close runsheet - saves the data, clears active status, and navigates back to dashboard
+  const saveAndCloseRunsheet = async () => {
+    console.log('Save and Close button clicked!');
+    
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to save your runsheet.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSaving(true);
+    
+    try {
+      // First save the runsheet
+      const { error } = await supabase
+        .from('runsheets')
+        .upsert({
+          name: runsheetName,
+          columns: columns,
+          data: data,
+          column_instructions: columnInstructions,
+          user_id: user.id,
+          updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'user_id,name'
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      // Update local state
+      const savedState = JSON.stringify({ data, columns, runsheetName, columnInstructions });
+      setLastSavedState(savedState);
+      setHasUnsavedChanges(false);
+      setLastSaveTime(new Date());
+      onUnsavedChanges?.(false);
+
+      // Clear the active runsheet status
+      clearActiveRunsheet();
+
+      toast({
+        title: "Runsheet saved and closed",
+        description: `"${runsheetName}" has been saved successfully.`,
+      });
+
+      // Navigate back to dashboard
+      navigate('/app');
+
+    } catch (error: any) {
+      console.error('Save and close failed:', error);
+      toast({
+        title: "Failed to save runsheet",
+        description: error.message || "An error occurred while saving. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -1839,6 +1905,18 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             >
               <Save className="h-4 w-4" />
               {isSaving ? 'Saving...' : 'Save'}
+            </Button>
+            
+            {/* Save and Close Button */}
+            <Button
+              variant="default"
+              size="sm"
+              onClick={saveAndCloseRunsheet}
+              disabled={isSaving || !user}
+              className="gap-2"
+            >
+              <Save className="h-4 w-4" />
+              {isSaving ? 'Saving...' : 'Save & Close'}
             </Button>
             
             {/* Open Button */}
