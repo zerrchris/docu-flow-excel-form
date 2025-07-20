@@ -225,19 +225,101 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
     }
   };
 
+  const uploadCombinedDocument = async (file: File) => {
+    try {
+      // Generate filename with document metadata
+      const timestamp = Date.now();
+      const instNum = instrumentNumber ? `_${instrumentNumber.replace(/[^a-zA-Z0-9]/g, '')}` : '';
+      const bookPg = bookPage ? `_${bookPage.replace(/[^a-zA-Z0-9]/g, '')}` : '';
+      const docName = documentName ? `_${documentName.replace(/[^a-zA-Z0-9]/g, '')}` : '';
+      const extension = file.type === 'application/pdf' ? 'pdf' : 'jpg';
+      const fileName = `mobile_document${instNum}${bookPg}${docName}_${timestamp}.${extension}`;
+
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "Authentication Required",
+          description: "Please sign in to upload documents.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Upload to Supabase storage with project folder structure
+      const projectPath = currentProject ? `${currentProject.replace(/[^a-zA-Z0-9]/g, '_')}/` : '';
+      const filePath = `${user.id}/${projectPath}${fileName}`;
+      
+      const { data, error } = await supabase.storage
+        .from('documents')
+        .upload(filePath, file, {
+          contentType: file.type,
+          upsert: false
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('documents')
+        .getPublicUrl(data.path);
+
+      const publicUrl = urlData.publicUrl;
+
+      // Add to recent photos
+      const newPhoto = { url: publicUrl, name: fileName };
+      setRecentPhotos(prev => [newPhoto, ...prev.slice(0, 4)]); // Keep last 5 photos
+
+      // Notify parent component
+      onPhotoUploaded?.(publicUrl, fileName);
+
+    } catch (error: any) {
+      console.error('Error uploading combined document:', error);
+      toast({
+        title: "Upload Failed",
+        description: error.message || "Failed to upload combined document. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const finishDocument = async () => {
     if (currentDocumentPages.length === 0) return;
 
     setIsUploading(true);
     try {
-      // Upload all pages of the current document
-      for (let i = 0; i < currentDocumentPages.length; i++) {
-        await uploadPhoto(currentDocumentPages[i]);
+      if (currentDocumentPages.length === 1) {
+        // Single page - upload directly
+        await uploadPhoto(currentDocumentPages[0]);
+      } else {
+        // Multiple pages - combine into PDF first
+        const { combineImages } = await import('@/utils/imageCombiner');
+        
+        // Convert data URLs to File objects
+        const files: File[] = [];
+        for (let i = 0; i < currentDocumentPages.length; i++) {
+          const response = await fetch(currentDocumentPages[i]);
+          const blob = await response.blob();
+          const file = new File([blob], `page_${i + 1}.jpg`, { type: 'image/jpeg' });
+          files.push(file);
+        }
+
+        // Combine into PDF
+        const { file: combinedFile } = await combineImages(files, {
+          type: 'pdf',
+          quality: 0.8,
+          maxWidth: 1200
+        });
+
+        // Upload the combined PDF
+        await uploadCombinedDocument(combinedFile);
       }
 
       toast({
         title: "Document Completed",
-        description: `${currentDocumentPages.length} pages uploaded successfully.`,
+        description: `${currentDocumentPages.length} pages ${currentDocumentPages.length > 1 ? 'combined and ' : ''}uploaded successfully.`,
       });
 
       // Reset for next document
@@ -248,6 +330,7 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
       setInstrumentNumber('');
       setBookPage('');
     } catch (error) {
+      console.error('Error finishing document:', error);
       toast({
         title: "Upload Failed",
         description: "Failed to upload document pages.",
