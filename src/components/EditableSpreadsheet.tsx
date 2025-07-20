@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import * as XLSX from 'xlsx';
+import JSZip from 'jszip';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -399,9 +400,11 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     });
   };
 
-  // Download spreadsheet as CSV
-  const downloadSpreadsheet = () => {
-    // Filter out empty rows (rows where all values are empty)
+  // Download spreadsheet with attached files as ZIP
+  const downloadSpreadsheet = async () => {
+    const zip = new JSZip();
+    
+    // Filter out empty rows
     const nonEmptyData = data.filter(row => 
       Object.values(row).some(value => value.trim() !== '')
     );
@@ -411,7 +414,6 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     const csvRows = nonEmptyData.map(row => 
       columns.map(column => {
         const value = row[column] || '';
-        // Escape quotes and wrap in quotes if contains comma, quote, or newline
         const escapedValue = value.includes(',') || value.includes('"') || value.includes('\n')
           ? `"${value.replace(/"/g, '""')}"`
           : value;
@@ -420,14 +422,39 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     );
     
     const csvContent = [csvHeaders, ...csvRows].join('\n');
+    zip.file(`${runsheetName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.csv`, csvContent);
 
-    // Create and download the file
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    // Download and add document files
+    const documentUrls = nonEmptyData
+      .map(row => row['Document URL'])
+      .filter(url => url && url.trim() !== '');
+
+    const documentNames = nonEmptyData
+      .map(row => row['Document File'])
+      .filter(name => name && name.trim() !== '');
+
+    let downloadCount = 0;
+    for (let i = 0; i < documentUrls.length; i++) {
+      try {
+        const response = await fetch(documentUrls[i]);
+        if (response.ok) {
+          const blob = await response.blob();
+          const fileName = documentNames[i] || `document_${i + 1}`;
+          zip.file(`documents/${fileName}`, blob);
+          downloadCount++;
+        }
+      } catch (error) {
+        console.error(`Failed to download ${documentUrls[i]}:`, error);
+      }
+    }
+
+    // Generate and download ZIP
+    const zipBlob = await zip.generateAsync({ type: 'blob' });
     const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
+    const url = URL.createObjectURL(zipBlob);
     
     link.setAttribute('href', url);
-    link.setAttribute('download', `${runsheetName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.csv`);
+    link.setAttribute('download', `${runsheetName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_with_documents.zip`);
     link.style.visibility = 'hidden';
     
     document.body.appendChild(link);
@@ -435,8 +462,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     document.body.removeChild(link);
     
     toast({
-      title: "Spreadsheet downloaded",
-      description: `"${runsheetName}" has been downloaded as a CSV file.`,
+      title: "Download complete",
+      description: `Spreadsheet with ${downloadCount} document${downloadCount !== 1 ? 's' : ''} downloaded as ZIP.`,
     });
   };
 
