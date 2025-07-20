@@ -1516,7 +1516,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           <div className="min-w-fit">
             <Table className="border-collapse w-full" style={{ minWidth: `${getTotalTableWidth()}px` }}>
             {/* Sticky Header */}
-            <TableHeader className="sticky top-0 z-10 bg-muted/95 backdrop-blur-sm">
+            <TableHeader className="sticky top-0 z-30 bg-muted/95 backdrop-blur-sm">
               <TableRow className="hover:bg-muted/50 transition-colors">
                 {columns.map((column) => (
                    <TableHead 
