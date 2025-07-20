@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { toast } from '@/components/ui/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Upload, FolderOpen, Plus, AlertTriangle, Smartphone, Camera } from 'lucide-react';
+import { Upload, FolderOpen, Plus, AlertTriangle, Smartphone, Camera, Files } from 'lucide-react';
 import DocumentFrame from '@/components/DocumentFrame';
 import EditableSpreadsheet from '@/components/EditableSpreadsheet';
 import AuthButton from '@/components/AuthButton';
@@ -725,6 +725,15 @@ Image: [base64 image data]`;
           >
             <Smartphone className="h-4 w-4" />
             Mobile Capture
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleNavigation('/file-manager')}
+            className="gap-2"
+          >
+            <Files className="h-4 w-4" />
+            Manage Files
           </Button>
           <AuthButton />
         </div>
