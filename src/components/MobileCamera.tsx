@@ -49,10 +49,13 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
   };
 
   const startDocumentCapture = () => {
+    console.log('Starting document capture, current project:', currentProject);
     // Check if we have a current project, if not show project dialog first
-    if (!currentProject) {
+    if (!currentProject || currentProject.trim() === '') {
+      console.log('No current project, showing project dialog');
       setShowProjectDialog(true);
     } else {
+      console.log('Project exists, showing document name dialog');
       setShowNameDialog(true);
     }
   };
