@@ -1508,10 +1508,9 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         </div>
 
         {/* Single scrollable table container */}
-        <div className="relative">
-          <div 
-            ref={containerRef}
-            className="border rounded-md bg-background overflow-auto"
+        <div 
+          ref={containerRef}
+          className="border rounded-md bg-background relative overflow-auto"
           style={{ height: `${spreadsheetHeight}px` }}
         >
           <div className="min-w-fit">
@@ -1652,10 +1651,11 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           </Table>
           </div>
 
-          {/* Height resize handle - positioned outside the scrollable container */}
+          {/* Height resize handle */}
           <div
-            className="absolute bottom-0 left-0 right-0 h-3 cursor-row-resize bg-border/50 hover:bg-primary/50 transition-colors flex items-center justify-center group z-20 rounded-b-md"
+            className="absolute bottom-0 left-0 right-0 h-3 cursor-row-resize bg-border/50 hover:bg-primary/50 transition-colors flex items-center justify-center group z-20"
             onMouseDown={handleHeightMouseDown}
+            style={{ marginTop: '-3px' }}
           >
             <div className="w-8 h-0.5 bg-muted-foreground group-hover:bg-primary transition-colors rounded-full" />
           </div>
