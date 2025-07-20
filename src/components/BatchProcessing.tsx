@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Upload, Files, ChevronDown, ChevronUp } from 'lucide-react';
+import { Upload, Files, ChevronDown, ChevronUp, Smartphone } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import BatchDocumentRow from './BatchDocumentRow';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface BatchDocument {
   id: string;
@@ -28,8 +29,108 @@ const BatchProcessing: React.FC<BatchProcessingProps> = ({
   const [batchDocuments, setBatchDocuments] = useState<BatchDocument[]>([]);
   const [isUploadAreaExpanded, setIsUploadAreaExpanded] = useState(true);
   const [activeDocumentIndex, setActiveDocumentIndex] = useState<number | null>(null);
+  const [isLoadingMobileDocs, setIsLoadingMobileDocs] = useState(false);
   const activeDocumentRef = React.useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  const handleAnalyzeMobileDocs = async () => {
+    setIsLoadingMobileDocs(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "Authentication Required",
+          description: "Please sign in to access your mobile captured documents.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Get all mobile documents
+      const getAllFiles = async (path = '') => {
+        const { data, error } = await supabase.storage
+          .from('documents')
+          .list(`${user.id}${path}`, {
+            limit: 100,
+            sortBy: { column: 'created_at', order: 'desc' }
+          });
+        
+        if (error) throw error;
+        
+        let allFiles: any[] = [];
+        
+        for (const item of data || []) {
+          if (item.id === null) {
+            // This is a folder, recursively get its contents
+            const subFiles = await getAllFiles(`${path}/${item.name}`);
+            allFiles = allFiles.concat(subFiles);
+          } else if (item.name.startsWith('mobile_document')) {
+            // This is a mobile document file
+            allFiles.push({
+              ...item,
+              fullPath: `${path}/${item.name}`.replace(/^\//, ''),
+            });
+          }
+        }
+        
+        return allFiles;
+      };
+
+      const mobileFiles = await getAllFiles();
+
+      if (mobileFiles.length === 0) {
+        toast({
+          title: "No Mobile Documents Found",
+          description: "Use the Mobile Capture feature to take photos of documents first.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Convert mobile documents to File objects and add to batch
+      const newDocuments: BatchDocument[] = [];
+      
+      for (const file of mobileFiles) {
+        try {
+          const { data: urlData } = supabase.storage
+            .from('documents')
+            .getPublicUrl(`${user.id}/${file.fullPath}`);
+
+          const response = await fetch(urlData.publicUrl);
+          const blob = await response.blob();
+          const fileObj = new File([blob], file.name, { type: blob.type });
+
+          newDocuments.push({
+            id: `mobile-${Date.now()}-${Math.random()}`,
+            file: fileObj
+          });
+        } catch (error) {
+          console.error(`Failed to load ${file.name}:`, error);
+        }
+      }
+
+      setBatchDocuments(prev => [...prev, ...newDocuments]);
+      
+      toast({
+        title: "Mobile Documents Loaded",
+        description: `${newDocuments.length} mobile documents added to batch processing.`,
+      });
+
+      // Expand the section and collapse upload area
+      setIsExpanded(true);
+      setIsUploadAreaExpanded(false);
+
+    } catch (error: any) {
+      console.error('Error loading mobile documents:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load mobile captured documents.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingMobileDocs(false);
+    }
+  };
 
   const handleFilesUpload = (files: FileList | File[]) => {
     const fileArray = Array.from(files);
@@ -194,10 +295,27 @@ const BatchProcessing: React.FC<BatchProcessingProps> = ({
             {/* Batch Document Rows */}
             <div className="p-6 space-y-0">
               {batchDocuments.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
+                <div className="text-center py-8 text-muted-foreground space-y-4">
                   <Files className="h-12 w-12 mx-auto mb-3 opacity-60" />
-                  <p>No documents uploaded yet</p>
-                  <p className="text-sm">Upload documents above to start batch processing</p>
+                  <div className="space-y-2">
+                    <p className="font-medium">No documents uploaded yet</p>
+                    <p className="text-sm">Get started by analyzing your mobile captured documents</p>
+                  </div>
+                  
+                  <div className="flex flex-col items-center gap-3 pt-2">
+                    <Button
+                      onClick={handleAnalyzeMobileDocs}
+                      className="gap-2"
+                      disabled={isLoadingMobileDocs}
+                    >
+                      <Smartphone className="h-4 w-4" />
+                      {isLoadingMobileDocs ? 'Loading...' : 'Analyze Mobile Documents'}
+                    </Button>
+                    
+                    <p className="text-xs text-muted-foreground">
+                      Or upload documents above to start batch processing
+                    </p>
+                  </div>
                 </div>
               ) : (
                 <>
