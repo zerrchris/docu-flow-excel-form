@@ -3,6 +3,9 @@ import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { Capacitor } from '@capacitor/core';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Camera as CameraIcon, Upload, Image as ImageIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,6 +21,10 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
   const [currentDocumentPages, setCurrentDocumentPages] = useState<string[]>([]);
   const [isCapturingDocument, setIsCapturingDocument] = useState(false);
   const [documentPageCount, setDocumentPageCount] = useState(1);
+  const [showNameDialog, setShowNameDialog] = useState(false);
+  const [documentName, setDocumentName] = useState('');
+  const [instrumentNumber, setInstrumentNumber] = useState('');
+  const [bookPage, setBookPage] = useState('');
 
   const checkCameraPermissions = async () => {
     if (!Capacitor.isNativePlatform()) {
@@ -38,7 +45,17 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
     }
   };
 
-  const takePicture = async () => {
+  const startDocumentCapture = () => {
+    setShowNameDialog(true);
+  };
+
+  const handleStartWithName = () => {
+    setShowNameDialog(false);
+    // Proceed to take the first picture
+    takePictureAfterNaming();
+  };
+
+  const takePictureAfterNaming = async () => {
     try {
       const hasPermissions = await checkCameraPermissions();
       if (!hasPermissions) {
@@ -129,9 +146,12 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
       const response = await fetch(dataUrl);
       const blob = await response.blob();
 
-      // Generate unique filename
+      // Generate filename with document metadata
       const timestamp = Date.now();
-      const fileName = `mobile_document_${timestamp}.jpg`;
+      const instNum = instrumentNumber ? `_${instrumentNumber.replace(/[^a-zA-Z0-9]/g, '')}` : '';
+      const bookPg = bookPage ? `_${bookPage.replace(/[^a-zA-Z0-9]/g, '')}` : '';
+      const docName = documentName ? `_${documentName.replace(/[^a-zA-Z0-9]/g, '')}` : '';
+      const fileName = `mobile_document${instNum}${bookPg}${docName}_${timestamp}.jpg`;
 
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
@@ -204,6 +224,9 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
       setCurrentDocumentPages([]);
       setIsCapturingDocument(false);
       setDocumentPageCount(1);
+      setDocumentName('');
+      setInstrumentNumber('');
+      setBookPage('');
     } catch (error) {
       toast({
         title: "Upload Failed",
@@ -219,6 +242,9 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
     setCurrentDocumentPages([]);
     setIsCapturingDocument(false);
     setDocumentPageCount(1);
+    setDocumentName('');
+    setInstrumentNumber('');
+    setBookPage('');
     toast({
       title: "Document Cancelled",
       description: "Document capture cancelled.",
@@ -326,7 +352,7 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
           {isMobile ? (
             <>
               <Button
-                onClick={takePicture}
+                onClick={isCapturingDocument ? takePictureAfterNaming : startDocumentCapture}
                 disabled={isUploading}
                 className="gap-2 h-12"
                 size="lg"
@@ -395,6 +421,55 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
           </div>
         )}
       </div>
+
+      {/* Document Naming Dialog */}
+      <Dialog open={showNameDialog} onOpenChange={setShowNameDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Name Your Document</DialogTitle>
+            <DialogDescription>
+              Please provide details to help identify this document
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="document-name">Document Name (Optional)</Label>
+              <Input
+                id="document-name"
+                value={documentName}
+                onChange={(e) => setDocumentName(e.target.value)}
+                placeholder="e.g., Property Deed, Mortgage..."
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="instrument-number">Instrument Number</Label>
+              <Input
+                id="instrument-number"
+                value={instrumentNumber}
+                onChange={(e) => setInstrumentNumber(e.target.value)}
+                placeholder="e.g., 202400123456"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="book-page">Book/Page</Label>
+              <Input
+                id="book-page"
+                value={bookPage}
+                onChange={(e) => setBookPage(e.target.value)}
+                placeholder="e.g., Book 1234, Page 567"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowNameDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleStartWithName}>
+              Start Taking Photos
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };
