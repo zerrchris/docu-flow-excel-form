@@ -28,6 +28,7 @@ const BatchProcessing: React.FC<BatchProcessingProps> = ({
   const [batchDocuments, setBatchDocuments] = useState<BatchDocument[]>([]);
   const [isUploadAreaExpanded, setIsUploadAreaExpanded] = useState(true);
   const [activeDocumentIndex, setActiveDocumentIndex] = useState<number | null>(null);
+  const activeDocumentRef = React.useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   const handleFilesUpload = (files: FileList | File[]) => {
@@ -96,6 +97,18 @@ const BatchProcessing: React.FC<BatchProcessingProps> = ({
       setActiveDocumentIndex(0);
     }
   }, [batchDocuments.length, activeDocumentIndex]);
+
+  // Scroll to active document when it changes
+  React.useEffect(() => {
+    if (activeDocumentIndex !== null && activeDocumentRef.current) {
+      setTimeout(() => {
+        activeDocumentRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        });
+      }, 100); // Small delay to ensure the component is rendered
+    }
+  }, [activeDocumentIndex]);
 
   return (
     <Card className="mt-6">
@@ -197,16 +210,20 @@ const BatchProcessing: React.FC<BatchProcessingProps> = ({
                     </p>
                   </div>
                   {batchDocuments.map((doc, index) => (
-                    <BatchDocumentRow
+                    <div 
                       key={doc.id}
-                      file={doc.file}
-                      fields={fields}
-                      onRemove={() => removeBatchDocument(doc.id)}
-                      onAddToSpreadsheet={onAddToSpreadsheet}
-                      onAnalyze={onAnalyze}
-                      isAnalyzing={isAnalyzing}
-                      isActive={activeDocumentIndex === index}
-                    />
+                      ref={activeDocumentIndex === index ? activeDocumentRef : null}
+                    >
+                      <BatchDocumentRow
+                        file={doc.file}
+                        fields={fields}
+                        onRemove={() => removeBatchDocument(doc.id)}
+                        onAddToSpreadsheet={onAddToSpreadsheet}
+                        onAnalyze={onAnalyze}
+                        isAnalyzing={isAnalyzing}
+                        isActive={activeDocumentIndex === index}
+                      />
+                    </div>
                   ))}
                 </>
               )}
