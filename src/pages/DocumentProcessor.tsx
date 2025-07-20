@@ -50,10 +50,7 @@ const DocumentProcessor: React.FC = () => {
   const [missingColumns, setMissingColumns] = useState<string[]>([]);
   const [highlightMissingColumns, setHighlightMissingColumns] = useState(false);
   
-  // Navigation blocking state
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] = useState(false);
-  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
+  // Note: Navigation blocking removed since runsheet auto-saves
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -171,47 +168,19 @@ const DocumentProcessor: React.FC = () => {
 
   // Note: Navigation blocking removed since runsheet now auto-saves
 
-  // Handle navigation blocking for React Router
+  // Handle navigation - no longer blocked since runsheet auto-saves
   const handleNavigation = useCallback((path: string) => {
-    if (hasUnsavedChanges) {
-      setPendingNavigation(path);
-      setShowUnsavedChangesDialog(true);
-    } else {
-      navigate(path);
-    }
-  }, [hasUnsavedChanges, navigate]);
+    navigate(path);
+  }, [navigate]);
 
-  // Proceed with navigation after confirmation
-  const proceedWithNavigation = () => {
-    setHasUnsavedChanges(false);
-    setShowUnsavedChangesDialog(false);
-    if (pendingNavigation) {
-      navigate(pendingNavigation);
-      setPendingNavigation(null);
-    }
-  };
-
-  // Cancel navigation
-  const cancelNavigation = () => {
-    setShowUnsavedChangesDialog(false);
-    setPendingNavigation(null);
-  };
-
-  // Update unsaved changes state when spreadsheet data changes
+  // Handle spreadsheet data changes
   const handleSpreadsheetDataChange = (data: Record<string, string>[]) => {
     setSpreadsheetData(data);
-    setHasUnsavedChanges(true);
   };
 
-  // Handle unsaved changes from EditableSpreadsheet
-  const handleUnsavedChanges = useCallback((hasChanges: boolean) => {
-    setHasUnsavedChanges(hasChanges);
-  }, []);
-
-  // Update unsaved changes when columns change
+  // Handle columns change
   const handleColumnsChange = (newColumns: string[]) => {
     setColumns(newColumns);
-    setHasUnsavedChanges(true);
   };
 
   // Handle validation dialog close and scroll to columns
@@ -720,7 +689,7 @@ Image: [base64 image data]`;
         onColumnChange={handleColumnsChange}
         onDataChange={handleSpreadsheetDataChange}
         onColumnInstructionsChange={setColumnInstructions}
-        onUnsavedChanges={handleUnsavedChanges}
+        onUnsavedChanges={() => {}}
         missingColumns={highlightMissingColumns ? missingColumns : []}
       />
       
@@ -836,33 +805,6 @@ Image: [base64 image data]`;
         </DialogContent>
       </Dialog>
 
-      {/* Unsaved Changes Dialog */}
-      <Dialog open={showUnsavedChangesDialog} onOpenChange={setShowUnsavedChangesDialog}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-amber-500" />
-              Unsaved Changes
-            </DialogTitle>
-            <DialogDescription>
-              You have unsaved changes that will be lost if you leave this page.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <p className="text-sm text-muted-foreground">
-              Would you like to leave without saving your changes?
-            </p>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={cancelNavigation}>
-              Stay on Page
-            </Button>
-            <Button variant="destructive" onClick={proceedWithNavigation}>
-              Leave Without Saving
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
