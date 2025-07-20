@@ -1321,7 +1321,21 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   // Handle input key events during editing
   const handleInputKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.altKey && !e.shiftKey) {
-      saveEdit();
+      // Capture the current editing cell info before saving (since saveEdit will clear editingCell)
+      if (editingCell) {
+        const currentRowIndex = editingCell.rowIndex;
+        const currentColumn = editingCell.column;
+        
+        saveEdit();
+        
+        // Move to the next row in the same column (Excel-like behavior)
+        const nextRowIndex = currentRowIndex + 1;
+        if (nextRowIndex < data.length) {
+          setTimeout(() => {
+            selectCell(nextRowIndex, currentColumn);
+          }, 0);
+        }
+      }
       e.preventDefault();
     } else if (e.key === 'Enter' && e.altKey) {
       // Alt+Enter creates line break - allow default behavior
