@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ArrowLeft, Eye, Edit2, Trash2, Search, Calendar, FileImage, Smartphone, Upload as UploadIcon, Download, CheckSquare, X, ChevronDown, ChevronRight, Folder, FolderOpen, FileSpreadsheet, ArrowUp } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -58,6 +59,8 @@ export const FileManager: React.FC = () => {
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [currentFolder, setCurrentFolder] = useState<'root' | 'projects' | 'runsheets'>('root');
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
+  const [showViewChoiceDialog, setShowViewChoiceDialog] = useState(false);
+  const [pendingViewItem, setPendingViewItem] = useState<{ type: 'file', item: StoredFile } | { type: 'runsheet', item: Runsheet } | null>(null);
 
   useEffect(() => {
     if (currentFolder === 'projects') {
@@ -507,6 +510,41 @@ export const FileManager: React.FC = () => {
     setShowDeleteDialog(true);
   };
 
+  const handleViewChoice = (item: StoredFile | Runsheet, type: 'file' | 'runsheet') => {
+    if (type === 'file') {
+      setPendingViewItem({ type: 'file', item: item as StoredFile });
+    } else {
+      setPendingViewItem({ type: 'runsheet', item: item as Runsheet });
+    }
+    setShowViewChoiceDialog(true);
+  };
+
+  const handleViewInCurrentTab = () => {
+    if (!pendingViewItem) return;
+    
+    if (pendingViewItem.type === 'file') {
+      window.open(pendingViewItem.item.url, '_self');
+    } else {
+      navigate(`/runsheet?runsheet=${pendingViewItem.item.id}`);
+    }
+    
+    setShowViewChoiceDialog(false);
+    setPendingViewItem(null);
+  };
+
+  const handleViewInNewTab = () => {
+    if (!pendingViewItem) return;
+    
+    if (pendingViewItem.type === 'file') {
+      window.open(pendingViewItem.item.url, '_blank');
+    } else {
+      window.open(`/runsheet?runsheet=${pendingViewItem.item.id}`, '_blank');
+    }
+    
+    setShowViewChoiceDialog(false);
+    setPendingViewItem(null);
+  };
+
   const renderFileCard = (file: StoredFile) => (
     <Card key={file.id} className="p-4 hover:shadow-md transition-shadow">
       <div className="space-y-3">
@@ -561,7 +599,7 @@ export const FileManager: React.FC = () => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => window.open(file.url, '_blank')}
+                onClick={() => handleViewChoice(file, 'file')}
                 className="flex-1 gap-2"
               >
                 <Eye className="h-3 w-3" />
@@ -634,7 +672,7 @@ export const FileManager: React.FC = () => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => navigate(`/runsheet?runsheet=${runsheet.id}`)}
+                onClick={() => handleViewChoice(runsheet, 'runsheet')}
                 className="flex-1 gap-2"
               >
                 <Eye className="h-3 w-3" />
@@ -1058,6 +1096,30 @@ export const FileManager: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* View Choice Dialog */}
+      <AlertDialog open={showViewChoiceDialog} onOpenChange={setShowViewChoiceDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>How would you like to open this {pendingViewItem?.type === 'file' ? 'file' : 'runsheet'}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Choose whether to open "{pendingViewItem?.item.name}" in the current tab or a new tab.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex gap-2">
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleViewInCurrentTab}
+              className="bg-secondary text-secondary-foreground hover:bg-secondary/90"
+            >
+              Current Tab
+            </AlertDialogAction>
+            <AlertDialogAction onClick={handleViewInNewTab}>
+              New Tab
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
