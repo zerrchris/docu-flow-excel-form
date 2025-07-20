@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Plus, Trash2, Check, X, ArrowUp, ArrowDown, Save, FolderOpen, Download, Upload, AlignLeft, AlignCenter, AlignRight, Cloud, ChevronDown, FileText, Archive } from 'lucide-react';
+import { Plus, Trash2, Check, X, ArrowUp, ArrowDown, Save, FolderOpen, Download, Upload, AlignLeft, AlignCenter, AlignRight, Cloud, ChevronDown, FileText, Archive, ExternalLink } from 'lucide-react';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -1623,9 +1623,24 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                              onClick={() => selectCell(rowIndex, column)}
                              onKeyDown={(e) => handleKeyDown(e, rowIndex, column)}
                             tabIndex={0}
-                          >
-                            {row[column] || ''}
-                          </div>
+                           >
+                             {column === 'Document URL' && row[column] && row[column].trim() !== '' ? (
+                               <Button
+                                 variant="outline"
+                                 size="sm"
+                                 onClick={(e) => {
+                                   e.stopPropagation();
+                                   window.open(row[column], '_blank');
+                                 }}
+                                 className="h-7 px-2 gap-1 text-xs"
+                               >
+                                 <ExternalLink className="h-3 w-3" />
+                                 View Document
+                               </Button>
+                             ) : (
+                               row[column] || ''
+                             )}
+                           </div>
                         )}
                      </TableCell>
                    );
