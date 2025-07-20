@@ -8,10 +8,12 @@ import type { User as SupabaseUser } from '@supabase/supabase-js';
 import extractorLogo from '@/assets/document-extractor-logo.png';
 import AuthButton from '@/components/AuthButton';
 import ActiveRunsheetButton from '@/components/ActiveRunsheetButton';
+import { useActiveRunsheet } from '@/hooks/useActiveRunsheet';
 
 const Dashboard: React.FC = () => {
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const navigate = useNavigate();
+  const { activeRunsheet } = useActiveRunsheet();
 
   useEffect(() => {
     const initAuth = async () => {
@@ -93,6 +95,52 @@ const Dashboard: React.FC = () => {
               Choose your workflow to get started with document processing
             </p>
           </div>
+
+          {/* Continue Working Section */}
+          {activeRunsheet && (
+            <div className="mb-8 animate-fade-in">
+              <Card className="bg-gradient-to-r from-primary/5 to-accent/5 border-primary/20 hover:shadow-lg transition-all duration-300">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-primary/10 rounded-lg">
+                        <FileText className="h-6 w-6 text-primary" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg text-foreground">Continue Working</CardTitle>
+                        <CardDescription>
+                          Pick up where you left off on your active runsheet
+                        </CardDescription>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <div className="w-2 h-2 bg-green-500 rounded-full" />
+                      <span>Active</span>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="flex items-center justify-between p-4 bg-background/50 rounded-lg border">
+                    <div className="flex items-center gap-3">
+                      <div className="p-1.5 bg-primary/10 rounded">
+                        <FileText className="h-4 w-4 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-foreground">{activeRunsheet.name}</p>
+                        <p className="text-sm text-muted-foreground">Your active runsheet</p>
+                      </div>
+                    </div>
+                    <Button 
+                      onClick={() => navigate('/runsheet')}
+                      className="hover-scale"
+                    >
+                      Continue Working
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
           <div className="grid md:grid-cols-2 gap-6">
             {workflowOptions.map((option) => (
