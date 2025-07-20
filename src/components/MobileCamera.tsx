@@ -596,6 +596,27 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
             </div>
           )}
         </div>
+
+        {/* Recent Photos */}
+        {recentPhotos.length > 0 && (
+          <div className="space-y-2">
+            <h4 className="text-sm font-medium">Recent Photos</h4>
+            <div className="grid grid-cols-2 gap-2">
+              {recentPhotos.map((photo, index) => (
+                <div key={index} className="relative aspect-square">
+                  <img
+                    src={photo.url}
+                    alt={`Document ${index + 1}`}
+                    className="w-full h-full object-cover rounded border"
+                  />
+                  <div className="absolute bottom-1 left-1 right-1 bg-black/60 text-white text-xs p-1 rounded text-center truncate">
+                    {photo.name}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Document Naming Dialog */}
