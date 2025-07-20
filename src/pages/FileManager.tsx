@@ -631,7 +631,7 @@ export const FileManager: React.FC = () => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => navigate(`/document-processor?runsheet=${runsheet.id}`)}
+                onClick={() => navigate(`/runsheet?runsheet=${runsheet.id}`)}
                 className="flex-1 gap-2"
               >
                 <Eye className="h-3 w-3" />
