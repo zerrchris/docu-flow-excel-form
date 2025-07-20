@@ -1657,8 +1657,9 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                             value={cellValue}
                             onChange={(e) => setCellValue(e.target.value)}
                             onKeyDown={(e) => {
-                              // Allow Shift+Enter for line breaks, but handle Tab/Enter normally
-                              if ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Tab' || e.key === 'Escape') {
+                              // Allow Shift+Enter for line breaks, but handle Tab/Enter/Escape/Arrow keys
+                              if ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Tab' || e.key === 'Escape' || 
+                                  ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
                                 handleInputKeyDown(e);
                               }
                             }}
