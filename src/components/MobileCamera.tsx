@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Camera as CameraIcon, Upload, Image as ImageIcon, Plus, Search } from 'lucide-react';
+import { Camera as CameraIcon, Upload, Image as ImageIcon, Plus, Search, ArrowLeft, ZoomIn } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -33,6 +33,7 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
   const [existingProjects, setExistingProjects] = useState<Array<{name: string, lastModified: string}>>([]);
   const [recentProjects, setRecentProjects] = useState<Array<{name: string, lastModified: string}>>([]);
   const [projectSearchTerm, setProjectSearchTerm] = useState('');
+  const [fullscreenPhoto, setFullscreenPhoto] = useState<{url: string, name: string} | null>(null);
 
   const checkCameraPermissions = async () => {
     if (!Capacitor.isNativePlatform()) {
@@ -620,12 +621,19 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
             <h4 className="text-sm font-medium">Recent Photos</h4>
             <div className="grid grid-cols-2 gap-2">
               {recentPhotos.map((photo, index) => (
-                <div key={index} className="relative aspect-square">
+                <div 
+                  key={index} 
+                  className="relative aspect-square cursor-pointer group"
+                  onClick={() => setFullscreenPhoto(photo)}
+                >
                   <img
                     src={photo.url}
                     alt={`Document ${index + 1}`}
-                    className="w-full h-full object-cover rounded border"
+                    className="w-full h-full object-cover rounded border transition-transform group-hover:scale-105"
                   />
+                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity rounded flex items-center justify-center">
+                    <ZoomIn className="h-6 w-6 text-white" />
+                  </div>
                   <div className="absolute bottom-1 left-1 right-1 bg-black/60 text-white text-xs p-1 rounded text-center truncate">
                     {photo.name}
                   </div>
@@ -856,6 +864,44 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
               Cancel
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Fullscreen Photo Viewer */}
+      <Dialog open={!!fullscreenPhoto} onOpenChange={() => setFullscreenPhoto(null)}>
+        <DialogContent className="max-w-full max-h-full w-screen h-screen p-0 bg-black/95">
+          <div className="relative w-full h-full flex flex-col">
+            {/* Header with back button */}
+            <div className="absolute top-4 left-4 z-10">
+              <Button
+                onClick={() => setFullscreenPhoto(null)}
+                variant="secondary"
+                size="sm"
+                className="gap-2 bg-black/50 hover:bg-black/70 text-white border-white/20"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back
+              </Button>
+            </div>
+
+            {/* Photo */}
+            {fullscreenPhoto && (
+              <div className="flex-1 flex items-center justify-center p-4">
+                <img
+                  src={fullscreenPhoto.url}
+                  alt="Fullscreen document"
+                  className="max-w-full max-h-full object-contain"
+                />
+              </div>
+            )}
+
+            {/* Footer with filename */}
+            {fullscreenPhoto && (
+              <div className="absolute bottom-4 left-4 right-4 bg-black/60 text-white p-3 rounded text-center">
+                <p className="text-sm font-medium truncate">{fullscreenPhoto.name}</p>
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </Card>
