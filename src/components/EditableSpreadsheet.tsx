@@ -1212,6 +1212,13 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       case 'Enter':
         if (editingCell) {
           saveEdit();
+          // Move to the next row in the same column (Excel-like behavior)
+          const nextRowIndex = editingCell.rowIndex + 1;
+          if (nextRowIndex < data.length) {
+            setTimeout(() => {
+              selectCell(nextRowIndex, editingCell.column);
+            }, 0);
+          }
         } else {
           startEditing(rowIndex, column, data[rowIndex]?.[column] || '');
         }
