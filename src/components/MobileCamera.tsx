@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Camera as CameraIcon, Upload, Image as ImageIcon, Plus, Search } from 'lucide-react';
+import { Camera as CameraIcon, Upload, Image as ImageIcon, Plus, Search, X, ZoomIn } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -33,6 +33,8 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
   const [existingProjects, setExistingProjects] = useState<Array<{name: string, lastModified: string}>>([]);
   const [recentProjects, setRecentProjects] = useState<Array<{name: string, lastModified: string}>>([]);
   const [projectSearchTerm, setProjectSearchTerm] = useState('');
+  const [showImageViewer, setShowImageViewer] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<{url: string, name: string} | null>(null);
 
   const checkCameraPermissions = async () => {
     if (!Capacitor.isNativePlatform()) {
@@ -620,12 +622,22 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
             <h4 className="text-sm font-medium">Recent Photos</h4>
             <div className="grid grid-cols-2 gap-2">
               {recentPhotos.map((photo, index) => (
-                <div key={index} className="relative aspect-square">
+                <div 
+                  key={index} 
+                  className="relative aspect-square cursor-pointer group hover-scale"
+                  onClick={() => {
+                    setSelectedImage(photo);
+                    setShowImageViewer(true);
+                  }}
+                >
                   <img
                     src={photo.url}
                     alt={`Document ${index + 1}`}
-                    className="w-full h-full object-cover rounded border"
+                    className="w-full h-full object-cover rounded border transition-all duration-200 group-hover:brightness-75"
                   />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-200 rounded flex items-center justify-center">
+                    <ZoomIn className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                  </div>
                   <div className="absolute bottom-1 left-1 right-1 bg-black/60 text-white text-xs p-1 rounded text-center truncate">
                     {photo.name}
                   </div>
@@ -854,6 +866,48 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowExistingProjectsDialog(false)}>
               Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Image Viewer Dialog */}
+      <Dialog open={showImageViewer} onOpenChange={setShowImageViewer}>
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] p-2">
+          <DialogHeader className="px-4 py-2">
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-lg font-medium truncate">
+                {selectedImage?.name || 'Image Viewer'}
+              </DialogTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowImageViewer(false)}
+                className="h-8 w-8 p-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </DialogHeader>
+          <div className="flex-1 overflow-hidden">
+            {selectedImage && (
+              <div className="w-full h-full max-h-[70vh] flex items-center justify-center bg-muted rounded-lg">
+                <img
+                  src={selectedImage.url}
+                  alt={selectedImage.name}
+                  className="max-w-full max-h-full object-contain rounded animate-scale-in"
+                />
+              </div>
+            )}
+          </div>
+          <DialogFooter className="px-4 py-2">
+            <Button
+              variant="outline"
+              onClick={() => selectedImage && window.open(selectedImage.url, '_blank')}
+              className="gap-2"
+            >
+              <Upload className="h-4 w-4" />
+              Open in New Tab
             </Button>
           </DialogFooter>
         </DialogContent>
