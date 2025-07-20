@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { toast } from '@/components/ui/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -56,6 +56,7 @@ const DocumentProcessor: React.FC = () => {
   const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   
   // Get started dialog state
   const [showGetStarted, setShowGetStarted] = useState(true);
@@ -122,6 +123,22 @@ const DocumentProcessor: React.FC = () => {
       return () => clearTimeout(timeoutId);
     }
   }, [columns, columnInstructions, isLoadingPreferences]);
+
+  // Handle runsheet URL parameter to auto-load runsheet and skip welcome dialog
+  useEffect(() => {
+    const runsheetId = searchParams.get('runsheet');
+    
+    if (runsheetId && !isLoadingPreferences) {
+      console.log('Runsheet ID found in URL:', runsheetId);
+      setShowGetStarted(false);
+      
+      // Dispatch event to EditableSpreadsheet to load the specific runsheet
+      const loadRunsheetEvent = new CustomEvent('loadSpecificRunsheet', {
+        detail: { runsheetId }
+      });
+      window.dispatchEvent(loadRunsheetEvent);
+    }
+  }, [searchParams, isLoadingPreferences]);
   
   // Update form state when columns change
   useEffect(() => {

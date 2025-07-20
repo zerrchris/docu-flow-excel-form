@@ -164,12 +164,20 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       setShowOpenDialog(true);
     };
 
+    const handleLoadSpecificRunsheet = (event: CustomEvent) => {
+      const { runsheetId } = event.detail;
+      console.log('Loading specific runsheet:', runsheetId);
+      loadSpecificRunsheet(runsheetId);
+    };
+
     window.addEventListener('triggerSpreadsheetUpload', handleUploadTrigger);
     window.addEventListener('triggerSpreadsheetOpen', handleOpenTrigger);
+    window.addEventListener('loadSpecificRunsheet', handleLoadSpecificRunsheet as EventListener);
 
     return () => {
       window.removeEventListener('triggerSpreadsheetUpload', handleUploadTrigger);
       window.removeEventListener('triggerSpreadsheetOpen', handleOpenTrigger);
+      window.removeEventListener('loadSpecificRunsheet', handleLoadSpecificRunsheet as EventListener);
     };
   }, []);
 
@@ -400,6 +408,49 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       title: "Runsheet loaded",
       description: `"${runsheet.name}" has been loaded successfully.`,
     });
+  };
+
+  // Load a specific runsheet by ID (for URL parameter functionality)
+  const loadSpecificRunsheet = async (runsheetId: string) => {
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to load runsheets.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { data: runsheet, error } = await supabase
+        .from('runsheets')
+        .select('*')
+        .eq('id', runsheetId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (error) {
+        console.error('Error loading runsheet:', error);
+        toast({
+          title: "Error loading runsheet",
+          description: "The runsheet could not be found or you don't have access to it.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (runsheet) {
+        console.log('Loading runsheet from URL:', runsheet);
+        loadRunsheet(runsheet);
+      }
+    } catch (error: any) {
+      console.error('Error loading runsheet:', error);
+      toast({
+        title: "Error loading runsheet",
+        description: "Failed to load the runsheet. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Download spreadsheet only as CSV
