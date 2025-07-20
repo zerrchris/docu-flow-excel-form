@@ -8,7 +8,6 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Camera as CameraIcon, Upload, Image as ImageIcon, Plus, Search, ArrowLeft, ZoomIn } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 
 interface MobileCameraProps {
@@ -16,7 +15,6 @@ interface MobileCameraProps {
 }
 
 export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) => {
-  const navigate = useNavigate();
   const { toast } = useToast();
   const [isUploading, setIsUploading] = useState(false);
   const [recentPhotos, setRecentPhotos] = useState<Array<{ url: string; name: string }>>([]);
@@ -617,18 +615,33 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
           )}
         </div>
 
-        {/* View Documents Link */}
-        <div className="pt-2 border-t">
-          <Button
-            onClick={() => navigate('/file-manager')}
-            variant="outline"
-            className="w-full gap-2"
-            size="lg"
-          >
-            <ImageIcon className="h-4 w-4" />
-            View All Documents
-          </Button>
-        </div>
+        {/* Recent Photos */}
+        {recentPhotos.length > 0 && (
+          <div className="space-y-2">
+            <h4 className="text-sm font-medium">Recent Photos</h4>
+            <div className="grid grid-cols-2 gap-2">
+              {recentPhotos.map((photo, index) => (
+                <div 
+                  key={index} 
+                  className="relative aspect-square cursor-pointer group"
+                  onClick={() => setFullscreenPhoto(photo)}
+                >
+                  <img
+                    src={photo.url}
+                    alt={`Document ${index + 1}`}
+                    className="w-full h-full object-cover rounded border transition-transform group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity rounded flex items-center justify-center">
+                    <ZoomIn className="h-6 w-6 text-white" />
+                  </div>
+                  <div className="absolute bottom-1 left-1 right-1 bg-black/60 text-white text-xs p-1 rounded text-center truncate">
+                    {photo.name}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Document Naming Dialog */}
