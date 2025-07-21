@@ -2200,17 +2200,16 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       const extractionFields = extractionPrefs?.columns?.map(col => `${col}: ${extractionPrefs.column_instructions?.[col] || 'Extract this field'}`).join('\n') || 
         columns.filter(col => col !== 'Document File Name').map(col => `${col}: Extract this field`).join('\n');
 
-      // Convert file to base64
+      // Convert file to base64 data URL
       const reader = new FileReader();
-      const base64Promise = new Promise<string>((resolve, reject) => {
+      const dataUrlPromise = new Promise<string>((resolve, reject) => {
         reader.onload = () => {
-          const base64 = (reader.result as string).split(',')[1];
-          resolve(base64);
+          resolve(reader.result as string);
         };
         reader.onerror = reject;
       });
       reader.readAsDataURL(file);
-      const fileBase64 = await base64Promise;
+      const imageData = await dataUrlPromise;
 
       // Call analyze-document edge function
       const response = await fetch('https://xnpmrafjjqsissbtempj.supabase.co/functions/v1/analyze-document', {
@@ -2219,18 +2218,32 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          fileBase64,
-          fileName: file.name,
-          extractionPrompt: `Analyze this document and extract the following information. Return the data as a JSON object with the exact field names specified:\n\n${extractionFields}`
+          imageData,
+          prompt: `Analyze this document and extract the following information. Return the data as a JSON object with the exact field names specified:\n\n${extractionFields}`
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to analyze document');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to analyze document');
       }
 
       const analysisResult = await response.json();
-      const extractedData = analysisResult.extracted_data || {};
+      const generatedText = analysisResult.generatedText || '';
+      
+      // Parse the JSON response from AI
+      let extractedData = {};
+      try {
+        extractedData = JSON.parse(generatedText);
+      } catch (e) {
+        // If JSON parsing fails, try to extract JSON from the text
+        const jsonMatch = generatedText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          extractedData = JSON.parse(jsonMatch[0]);
+        } else {
+          throw new Error('Could not parse analysis results');
+        }
+      }
 
       // Update the row with extracted data
       const newData = [...data];
