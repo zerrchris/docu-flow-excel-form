@@ -321,7 +321,9 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
   };
 
   const openFileSelector = () => {
+    console.log('🔧 DocumentLinker: openFileSelector called, fileInputRef:', fileInputRef.current);
     fileInputRef.current?.click();
+    console.log('🔧 DocumentLinker: Triggered file input click');
   };
 
   if (currentFilename && currentFilename.trim() !== '') {
@@ -490,8 +492,15 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
           type="file"
           className="hidden"
           onChange={(e) => {
+            console.log('🔧 DocumentLinker: File input onChange triggered', e.target.files);
             const file = e.target.files?.[0];
-            if (file) handleFileSelect(file);
+            console.log('🔧 DocumentLinker: Selected file:', file);
+            if (file) {
+              console.log('🔧 DocumentLinker: About to call handleFileSelect');
+              handleFileSelect(file);
+            } else {
+              console.log('🔧 DocumentLinker: No file selected');
+            }
           }}
           accept="image/*,.pdf,.doc,.docx,.txt"
         />
