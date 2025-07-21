@@ -118,8 +118,9 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
 
       const result = await response.json();
       
-      // Use original filename instead of smart-generated filename
-      onDocumentLinked(file.name);
+      // Use the stored filename returned by the edge function, not the original filename
+      const actualStoredFilename = result.storedFilename || file.name;
+      onDocumentLinked(actualStoredFilename);
       
       toast({
         title: "Document uploaded",
