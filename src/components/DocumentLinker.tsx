@@ -33,13 +33,17 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
   const { toast } = useToast();
 
   const handleFileSelect = async (file: File) => {
+    console.log('🔧 DocumentLinker: handleFileSelect called with file:', file.name, file.size);
     if (!file) return;
 
     try {
+      console.log('🔧 DocumentLinker: Starting upload process');
       setIsUploading(true);
       
       const { data: { user } } = await supabase.auth.getUser();
+      console.log('🔧 DocumentLinker: User authentication check:', user ? 'authenticated' : 'not authenticated');
       if (!user) {
+        console.log('🔧 DocumentLinker: No user found, showing auth required toast');
         toast({
           title: "Authentication required",
           description: "Please sign in to upload documents.",
@@ -49,6 +53,12 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
       }
 
       // Create FormData for the upload
+      console.log('🔧 DocumentLinker: Creating FormData with:', {
+        fileName: file.name,
+        fileSize: file.size,
+        runsheetId,
+        rowIndex
+      });
       const formData = new FormData();
       formData.append('file', file);
       formData.append('runsheetId', runsheetId);
@@ -57,11 +67,13 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
 
       // Get auth token
       const { data: { session } } = await supabase.auth.getSession();
+      console.log('🔧 DocumentLinker: Session check:', session ? 'session exists' : 'no session');
       if (!session) {
         throw new Error('No active session');
       }
 
       // Call the store-document edge function
+      console.log('🔧 DocumentLinker: Making fetch request to store-document edge function');
       const response = await fetch(
         `https://xnpmrafjjqsissbtempj.supabase.co/functions/v1/store-document`,
         {
@@ -73,15 +85,20 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
         }
       );
 
+      console.log('🔧 DocumentLinker: Received response:', response.status, response.statusText);
       if (!response.ok) {
         const errorData = await response.json();
+        console.log('🔧 DocumentLinker: Error response data:', errorData);
         throw new Error(errorData.error || 'Upload failed');
       }
 
       const result = await response.json();
+      console.log('🔧 DocumentLinker: Upload successful, result:', result);
       
+      console.log('🔧 DocumentLinker: Calling onDocumentLinked with filename:', result.storedFilename);
       onDocumentLinked(result.storedFilename);
       
+      console.log('🔧 DocumentLinker: Showing success toast');
       toast({
         title: "Document uploaded",
         description: `${result.storedFilename} has been linked to this row.`,
