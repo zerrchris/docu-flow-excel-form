@@ -31,6 +31,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { GoogleDrivePicker } from './GoogleDrivePicker';
+import DocumentUpload from './DocumentUpload';
 import { ExtractionPreferencesService } from '@/services/extractionPreferences';
 import type { User } from '@supabase/supabase-js';
 
@@ -1919,64 +1920,131 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
               {isSaving ? 'Saving...' : 'Save & Close'}
             </Button>
             
-            {/* Open Button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={fetchSavedRunsheets}
-              disabled={isLoading || !user}
-              className="gap-2"
-            >
-              <FolderOpen className="h-4 w-4" />
-              {isLoading ? 'Loading...' : 'Open'}
-            </Button>
-            
-            {/* Download Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2"
-                >
-                  <Download className="h-4 w-4" />
-                  Download
-                  <ChevronDown className="h-3 w-3" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={downloadSpreadsheetOnly}>
-                  <FileText className="h-4 w-4 mr-2" />
-                  Spreadsheet Only (CSV)
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={downloadSpreadsheet}>
-                  <Archive className="h-4 w-4 mr-2" />
-                  Spreadsheet + Documents (ZIP)
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            
-            {/* Upload Button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleUploadClick}
-              className="gap-2"
-            >
-              <Upload className="h-4 w-4" />
-              Upload
-            </Button>
-            
-            {/* Google Drive Button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowGoogleDrivePicker(true)}
-              className="gap-2"
-            >
-              <Cloud className="h-4 w-4" />
-              Google Drive
-            </Button>
+             {/* New Runsheet Button */}
+             <Dialog>
+               <DialogTrigger asChild>
+                 <Button 
+                   variant="outline"
+                   size="sm"
+                   className="gap-2"
+                 >
+                   <Plus className="h-4 w-4" />
+                   New
+                 </Button>
+               </DialogTrigger>
+               <DialogContent className="max-w-2xl">
+                 <DialogHeader>
+                   <DialogTitle>Start New Runsheet</DialogTitle>
+                   <DialogDescription>
+                     Choose how you'd like to create your new runsheet:
+                   </DialogDescription>
+                 </DialogHeader>
+                 
+                 <div className="grid grid-cols-1 gap-4 py-4">
+                   {/* Upload Documents */}
+                   <div className="border rounded-lg p-6 hover:bg-accent/50 transition-colors">
+                     <div className="flex items-start gap-4">
+                       <div className="p-2 bg-primary/10 rounded-lg">
+                         <Upload className="h-6 w-6 text-primary" />
+                       </div>
+                       <div className="flex-1">
+                         <h3 className="font-semibold mb-2">Upload Documents</h3>
+                         <p className="text-sm text-muted-foreground mb-4">
+                           Upload PDF or image files from your computer to extract data into a new runsheet.
+                         </p>
+                         <DocumentUpload
+                           onFileSelect={(file) => {
+                             // Trigger document analysis in parent
+                             const event = new CustomEvent('documentSelected', { detail: { file } });
+                             window.dispatchEvent(event);
+                           }}
+                           onMultipleFilesSelect={(files) => {
+                             // Handle multiple files
+                             const event = new CustomEvent('multipleFilesSelected', { detail: { files } });
+                             window.dispatchEvent(event);
+                           }}
+                           allowMultiple={true}
+                         />
+                       </div>
+                     </div>
+                   </div>
+
+                   {/* Open Existing Runsheet */}
+                   <div className="border rounded-lg p-6 hover:bg-accent/50 transition-colors">
+                     <div className="flex items-start gap-4">
+                       <div className="p-2 bg-secondary/10 rounded-lg">
+                         <FolderOpen className="h-6 w-6 text-secondary" />
+                       </div>
+                       <div className="flex-1">
+                         <h3 className="font-semibold mb-2">Open Existing Runsheet</h3>
+                         <p className="text-sm text-muted-foreground mb-4">
+                           Continue working on a previously saved runsheet from your file manager.
+                         </p>
+                         <Button 
+                           onClick={() => window.location.href = '/app/files'}
+                           variant="outline"
+                           className="w-full"
+                         >
+                           <FolderOpen className="mr-2 h-4 w-4" />
+                           Browse Runsheets
+                         </Button>
+                       </div>
+                     </div>
+                   </div>
+
+                   {/* Google Drive Integration */}
+                   <div className="border rounded-lg p-6 hover:bg-accent/50 transition-colors">
+                     <div className="flex items-start gap-4">
+                       <div className="p-2 bg-blue-500/10 rounded-lg">
+                         <svg className="h-6 w-6 text-blue-500" viewBox="0 0 24 24" fill="currentColor">
+                           <path d="M6.5,8 L12,18 L17.5,8 Z M10,2 L14,2 L20,14 L4,14 Z" />
+                         </svg>
+                       </div>
+                       <div className="flex-1">
+                         <h3 className="font-semibold mb-2">Google Drive Import</h3>
+                         <p className="text-sm text-muted-foreground mb-4">
+                           Import documents directly from your Google Drive for analysis.
+                         </p>
+                         <Button 
+                           onClick={() => setShowGoogleDrivePicker(true)}
+                           variant="outline"
+                           className="w-full"
+                         >
+                           <Cloud className="mr-2 h-4 w-4" />
+                           Import from Google Drive
+                         </Button>
+                       </div>
+                     </div>
+                   </div>
+
+                   {/* Create Empty Runsheet */}
+                   <div className="border rounded-lg p-6 hover:bg-accent/50 transition-colors">
+                     <div className="flex items-start gap-4">
+                       <div className="p-2 bg-orange-500/10 rounded-lg">
+                         <Plus className="h-6 w-6 text-orange-500" />
+                       </div>
+                       <div className="flex-1">
+                         <h3 className="font-semibold mb-2">Create Empty Runsheet</h3>
+                         <p className="text-sm text-muted-foreground mb-4">
+                           Start with a blank spreadsheet and manually enter data or configure your extraction preferences.
+                         </p>
+                         <Button 
+                           onClick={() => {
+                             const resetEvent = new CustomEvent('resetSpreadsheet');
+                             window.dispatchEvent(resetEvent);
+                           }}
+                           variant="outline"
+                           className="w-full"
+                         >
+                           <Plus className="mr-2 h-4 w-4" />
+                           Create Empty Runsheet
+                         </Button>
+                       </div>
+                     </div>
+                   </div>
+                 </div>
+               </DialogContent>
+             </Dialog>
           </div>
           <div className="text-sm text-muted-foreground">
             Right-click column headers to insert or remove columns
