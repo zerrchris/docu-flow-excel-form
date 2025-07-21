@@ -182,31 +182,31 @@ const DataForm: React.FC<DataFormProps> = ({
 
   // Manual refresh function to force fields to match current spreadsheet columns
   const refreshFields = () => {
-    console.log('Manual refresh triggered - resetting fields to current spreadsheet columns:', fields);
+    console.log('Manual refresh triggered - completely resetting to current spreadsheet columns:', fields);
+    console.log('Current formData keys before refresh:', Object.keys(formData));
     
-    // Create completely new visibility object with ONLY current fields
+    // Step 1: Clear ALL existing form data completely
+    const allCurrentKeys = Object.keys(formData);
+    allCurrentKeys.forEach(key => {
+      onChange(key, ''); // Clear every single field
+    });
+    
+    // Step 2: Create completely new visibility object with ONLY current fields
     const refreshedVisibility: Record<string, boolean> = {};
     fields.forEach(field => {
       refreshedVisibility[field] = true;
+      // Ensure each current field exists in form data
+      onChange(field, '');
     });
     
-    // Clear ALL existing field data from formData that's not in current fields
-    Object.keys(formData).forEach(key => {
-      if (!fields.includes(key)) {
-        onChange(key, ''); // Clear old fields
-      }
-    });
-    
-    // Ensure all current fields exist in formData
-    fields.forEach(field => {
-      if (!(field in formData)) {
-        onChange(field, ''); // Add missing fields
-      }
-    });
-    
-    // Update visible fields
+    // Step 3: Force update visible fields state
     setVisibleFields(refreshedVisibility);
-    console.log('Manual refresh complete - visible fields reset to:', Object.keys(refreshedVisibility));
+    
+    console.log('Manual refresh complete - form reset to show only these fields:', fields);
+    console.log('New visible fields:', Object.keys(refreshedVisibility));
+    
+    // Step 4: Force a re-render by triggering a small state change
+    setShowFieldSettings(false);
   };
 
   const toggleFieldVisibility = (field: string) => {
