@@ -68,6 +68,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   
   // Track locally which columns need configuration
   const [localMissingColumns, setLocalMissingColumns] = useState<string[]>([]);
+  const [isLoadingRunsheet, setIsLoadingRunsheet] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showOpenDialog, setShowOpenDialog] = useState(false);
@@ -178,12 +179,15 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
   // Update local missing columns based on current column instructions
   useEffect(() => {
+    // Don't check for missing columns while loading a runsheet
+    if (isLoadingRunsheet) return;
+    
     const missing = columns.filter(column => 
       column !== 'Document File Name' && // Skip Document File Name - it's user-specified, not extracted
       (!columnInstructions[column] || columnInstructions[column].trim() === '')
     );
     setLocalMissingColumns(missing);
-  }, [columns, columnInstructions]);
+  }, [columns, columnInstructions, isLoadingRunsheet]);
 
   // Check user authentication status
   useEffect(() => {
@@ -734,6 +738,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   // Load a saved runsheet
   const loadRunsheet = async (runsheet: any) => {
     console.log('Loading selected runsheet:', runsheet);
+    setIsLoadingRunsheet(true);
     
     // Load column instructions first before setting columns to avoid false "missing" highlights
     let finalColumnInstructions = {};
@@ -772,6 +777,11 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     // Reset column width state for new runsheet
     setColumnWidths({});
     setHasManuallyResizedColumns(false);
+    
+    // Wait a bit to ensure state updates are complete, then re-enable missing column checks
+    setTimeout(() => {
+      setIsLoadingRunsheet(false);
+    }, 100);
     
     toast({
       title: "Runsheet loaded",
