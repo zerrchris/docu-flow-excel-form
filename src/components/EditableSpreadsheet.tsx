@@ -191,6 +191,21 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       return;
     }
     
+    // Smart check: if we have column instructions but they don't match current columns,
+    // it likely means we're in the middle of loading a different runsheet
+    const instructionColumns = Object.keys(columnInstructions);
+    if (instructionColumns.length > 0) {
+      const hasMatchingInstructions = columns.some(col => 
+        col !== 'Document File Name' && columnInstructions[col]
+      );
+      const hasNonMatchingInstructions = instructionColumns.some(col => !columns.includes(col));
+      
+      if (!hasMatchingInstructions || hasNonMatchingInstructions) {
+        console.log('Skipping missing column check - column instructions being updated');
+        return;
+      }
+    }
+    
     const missing = columns.filter(column => 
       column !== 'Document File Name' && // Skip Document File Name - it's user-specified, not extracted
       (!columnInstructions[column] || columnInstructions[column].trim() === '')
