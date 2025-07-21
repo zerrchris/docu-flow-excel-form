@@ -177,14 +177,21 @@ const DocumentProcessor: React.FC = () => {
   // Handle URL parameters for actions (upload, google-drive, etc.)
   useEffect(() => {
     const action = searchParams.get('action');
+    console.log('DocumentProcessor useEffect - action from searchParams:', action);
     
     if (action === 'upload') {
+      console.log('Upload action detected, attempting to trigger file input...');
+      
       // Trigger file input click to open upload dialog
       const triggerUpload = () => {
         const fileInput = document.getElementById('document-upload-input');
+        console.log('Looking for file input, found:', !!fileInput);
+        
         if (fileInput) {
+          console.log('Clicking file input...');
           fileInput.click();
         } else {
+          console.log('File input not found, retrying in 100ms...');
           // Retry if element not found yet
           setTimeout(triggerUpload, 100);
         }
