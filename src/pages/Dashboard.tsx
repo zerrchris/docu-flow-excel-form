@@ -32,7 +32,7 @@ const Dashboard: React.FC = () => {
 
   const workflowOptions = [
     {
-      title: "New Sheet",
+      title: "New Runsheet",
       description: "Start with a blank runsheet",
       icon: Plus,
       path: "/runsheet"
