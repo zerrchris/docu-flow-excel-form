@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { toast } from '@/components/ui/use-toast';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Upload, FolderOpen, Plus, AlertTriangle, Smartphone, Files } from 'lucide-react';
 import DocumentFrame from '@/components/DocumentFrame';
 import EditableSpreadsheet from '@/components/EditableSpreadsheet';
 import AuthButton from '@/components/AuthButton';
 import BatchProcessing from '@/components/BatchProcessing';
+import DocumentUpload from '@/components/DocumentUpload';
+import { GoogleDrivePicker } from '@/components/GoogleDrivePicker';
 import { ExtractionPreferencesService } from '@/services/extractionPreferences';
 import { AdminSettingsService } from '@/services/adminSettings';
 import { supabase } from '@/integrations/supabase/client';
@@ -659,26 +661,121 @@ Image: [base64 image data]`;
             </h1>
           </div>
           <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleNavigation('/mobile-capture')}
-              className="gap-2"
-            >
-              <Smartphone className="h-4 w-4" />
-              Mobile Capture
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleNavigation('/file-manager')}
-              className="gap-2"
-            >
-              <Files className="h-4 w-4" />
-              Manage Files
-            </Button>
             <AuthButton />
           </div>
+        </div>
+        
+        {/* New Runsheet Button */}
+        <div className="mb-4">
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="default">
+                <Plus className="mr-2 h-4 w-4" />
+                New
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <div className="flex items-center gap-3 mb-2">
+                  <img src={extractorLogo} alt="Document Extractor" className="w-10 h-10" />
+                  <DialogTitle className="text-xl">Start New Runsheet</DialogTitle>
+                </div>
+                <DialogDescription className="text-base">
+                  Choose how you'd like to create your new runsheet:
+                </DialogDescription>
+              </DialogHeader>
+              
+              <div className="grid grid-cols-1 gap-4 py-4">
+                {/* Upload Documents */}
+                <div className="border rounded-lg p-6 hover:bg-accent/50 transition-colors">
+                  <div className="flex items-start gap-4">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <Upload className="h-6 w-6 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold mb-2">Upload Documents</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Upload PDF or image files from your computer to extract data into a new runsheet.
+                      </p>
+                      <DocumentUpload
+                        onFileSelect={handleFileSelect}
+                        onMultipleFilesSelect={handleMultipleFilesSelect}
+                        allowMultiple={true}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Open Existing Runsheet */}
+                <div className="border rounded-lg p-6 hover:bg-accent/50 transition-colors">
+                  <div className="flex items-start gap-4">
+                    <div className="p-2 bg-secondary/10 rounded-lg">
+                      <FolderOpen className="h-6 w-6 text-secondary" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold mb-2">Open Existing Runsheet</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Continue working on a previously saved runsheet from your file manager.
+                      </p>
+                      <Button 
+                        onClick={() => handleNavigation('/app/files')}
+                        variant="outline"
+                        className="w-full"
+                      >
+                        <FolderOpen className="mr-2 h-4 w-4" />
+                        Browse Runsheets
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Google Drive Integration */}
+                <div className="border rounded-lg p-6 hover:bg-accent/50 transition-colors">
+                  <div className="flex items-start gap-4">
+                    <div className="p-2 bg-blue-500/10 rounded-lg">
+                      <svg className="h-6 w-6 text-blue-500" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M6.5,8 L12,18 L17.5,8 Z M10,2 L14,2 L20,14 L4,14 Z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold mb-2">Google Drive Import</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Import documents directly from your Google Drive for analysis.
+                      </p>
+                      <GoogleDrivePicker
+                        onFileSelect={(file, filename) => handleFileSelect(file)}
+                        isOpen={true}
+                        onClose={() => {}}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Create Empty Runsheet */}
+                <div className="border rounded-lg p-6 hover:bg-accent/50 transition-colors">
+                  <div className="flex items-start gap-4">
+                    <div className="p-2 bg-orange-500/10 rounded-lg">
+                      <Plus className="h-6 w-6 text-orange-500" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold mb-2">Create Empty Runsheet</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Start with a blank spreadsheet and manually enter data or configure your extraction preferences.
+                      </p>
+                      <Button 
+                        onClick={handleStartNew}
+                        variant="outline"
+                        className="w-full"
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        Create Empty Runsheet
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
         
         <div className="mt-6">
