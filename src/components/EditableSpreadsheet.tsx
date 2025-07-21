@@ -2363,61 +2363,42 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       console.log('🔍 Current data before update:', data);
       console.log('🔍 Available columns:', columns);
 
-      // Map extracted data to match column names
-      const mappedData: Record<string, string> = {};
+      // Use the extracted data directly without mapping since the row data uses the original keys
+      const finalData: Record<string, string> = {};
       
-      // Create mapping from extracted keys to column names
-      const keyMapping: Record<string, string> = {
-        "Instrument Number": "Inst Number",
-        "Book and Page": "Book/Page", 
-        "Instrument Type": "Inst Type",
-        "Recorded": "Recording Date",
-        "Dated": "Document Date",
-        "Grantor(s)": "Grantor",
-        "Grantee(s)": "Grantee", 
-        "Description": "Legal Description",
-        "Comments": "Notes",
-        "Document File Name": "Document File Name"
-      };
-
-      // Map the extracted data to the correct column names
       Object.entries(extractedData).forEach(([key, value]) => {
-        const mappedKey = keyMapping[key] || key;
-        console.log(`🔍 Mapping: "${key}" -> "${mappedKey}"`);
-        console.log(`🔍 Is "${mappedKey}" in columns?`, columns.includes(mappedKey));
+        console.log(`🔍 Processing original key "${key}", value:`, value, 'type:', typeof value);
         
-        if (columns.includes(mappedKey)) {
-          console.log(`🔍 Processing ${key} -> ${mappedKey}, value:`, value, 'type:', typeof value);
-          
-          // Handle object values (like complex Grantor/Grantee data)
-          let stringValue: string;
-          if (typeof value === 'object' && value !== null) {
-            console.log('🔍 Value is object:', value);
-            // If it's an object with name and address properties
-            if (typeof value === 'object' && 'name' in value && 'address' in value) {
-              stringValue = `${value.name}; ${value.address}`;
-            } else {
-              // For other objects, create a readable string
-              stringValue = JSON.stringify(value).replace(/[{}]/g, '').replace(/"/g, '');
-            }
+        // Handle object values (like complex Grantor/Grantee data)
+        let stringValue: string;
+        if (typeof value === 'object' && value !== null) {
+          console.log('🔍 Value is object:', value);
+          // If it's an object with Name and Address properties (capitalized)
+          if (typeof value === 'object' && 'Name' in value && 'Address' in value) {
+            stringValue = `${value.Name}; ${value.Address}`;
+          } else if (typeof value === 'object' && 'name' in value && 'address' in value) {
+            stringValue = `${value.name}; ${value.address}`;
           } else {
-            stringValue = String(value);
+            // For other objects, create a readable string
+            stringValue = JSON.stringify(value).replace(/[{}]/g, '').replace(/"/g, '');
           }
-          
-          console.log(`🔍 Setting mappedData["${mappedKey}"] = "${stringValue}"`);
-          mappedData[mappedKey] = stringValue;
+        } else {
+          stringValue = String(value);
         }
+        
+        console.log(`🔍 Setting finalData["${key}"] = "${stringValue}"`);
+        finalData[key] = stringValue;
       });
 
-      console.log('🔍 Mapped data:', mappedData);
+      console.log('🔍 Final data to merge:', finalData);
 
-      // Update the row with mapped data
+      // Update the row with extracted data using original keys
       const newData = [...data];
       console.log('🔍 Row data before update:', newData[targetRowIndex]);
       
       newData[targetRowIndex] = {
         ...newData[targetRowIndex],
-        ...mappedData
+        ...finalData
       };
       
       console.log('🔍 Row data after update:', newData[targetRowIndex]);
