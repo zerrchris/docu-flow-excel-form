@@ -29,10 +29,10 @@ const RunsheetTab: React.FC<RunsheetTabProps> = ({
     <div
       onClick={() => onSelect(id)}
       className={cn(
-        "flex items-center gap-2 px-3 py-2 border-b-2 cursor-pointer transition-all duration-200 min-w-0 max-w-48",
+        "flex items-center gap-2 px-3 py-2 border border-border border-b-0 cursor-pointer transition-all duration-200 min-w-0 max-w-48 rounded-t-md",
         isActive
-          ? "border-primary bg-background text-foreground"
-          : "border-transparent bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
+          ? "bg-background text-foreground border-primary z-10 relative"
+          : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground -mr-px"
       )}
     >
       {/* Unsaved changes indicator */}

@@ -626,19 +626,17 @@ Image: [base64 image data]`;
         isAnalyzing={isAnalyzing}
       />
       
-      <div className="mt-6">
-        <RunsheetTabs>
-          <EditableSpreadsheet 
-            initialColumns={columns}
-            initialData={spreadsheetData}
-            onColumnChange={handleColumnsChange}
-            onDataChange={handleSpreadsheetDataChange}
-            onColumnInstructionsChange={setColumnInstructions}
-            onUnsavedChanges={() => {}}
-            missingColumns={highlightMissingColumns ? missingColumns : []}
-          />
-        </RunsheetTabs>
-      </div>
+      <RunsheetTabs>
+        <EditableSpreadsheet 
+          initialColumns={columns}
+          initialData={spreadsheetData}
+          onColumnChange={handleColumnsChange}
+          onDataChange={handleSpreadsheetDataChange}
+          onColumnInstructionsChange={setColumnInstructions}
+          onUnsavedChanges={() => {}}
+          missingColumns={highlightMissingColumns ? missingColumns : []}
+        />
+      </RunsheetTabs>
       {/* Combine Images Confirmation Dialog */}
       <Dialog open={showCombineConfirmation} onOpenChange={setShowCombineConfirmation}>
         <DialogContent className="sm:max-w-[400px]">
