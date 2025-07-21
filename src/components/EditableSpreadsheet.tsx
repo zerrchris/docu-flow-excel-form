@@ -354,7 +354,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     if (runsheetName && runsheetName !== 'Untitled Runsheet') {
       setActiveRunsheet({ name: runsheetName });
     }
-  }, [runsheetName, setActiveRunsheet]);
+  }, [runsheetName]);
 
   // Listen for external trigger events from DocumentProcessor
   useEffect(() => {
