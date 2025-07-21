@@ -160,25 +160,27 @@ const Dashboard: React.FC = () => {
                 className="hover:shadow-lg transition-shadow cursor-pointer"
                 onClick={() => navigate(option.path)}
               >
-                <CardHeader className="text-center">
-                  <option.icon className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                  <CardTitle className="text-xl">{option.title}</CardTitle>
-                  <CardDescription className="text-base">
-                    {option.description}
-                  </CardDescription>
+                <CardHeader className="pb-2">
+                  <div className="flex items-center gap-3">
+                    <option.icon className="h-8 w-8 text-muted-foreground" />
+                    <div className="flex-1">
+                      <CardTitle className="text-lg">{option.title}</CardTitle>
+                      <CardDescription className="text-sm">
+                        {option.description}
+                      </CardDescription>
+                    </div>
+                    <Button 
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(option.path);
+                      }}
+                    >
+                      Open
+                    </Button>
+                  </div>
                 </CardHeader>
-                <CardContent className="pt-0">
-                  <Button 
-                    className="w-full" 
-                    variant="outline"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(option.path);
-                    }}
-                  >
-                    Open
-                  </Button>
-                </CardContent>
               </Card>
             ))}
           </div>
