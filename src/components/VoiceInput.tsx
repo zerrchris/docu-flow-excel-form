@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Mic, MicOff, Volume2, VolumeX, RotateCw, CheckCircle, AlertCircle } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Textarea } from '@/components/ui/textarea';
+import { Mic, MicOff, Volume2, VolumeX, RotateCw, CheckCircle, AlertCircle, X, Square, Wand2, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -200,8 +201,8 @@ const VoiceInput: React.FC<VoiceInputProps> = ({
   const processTranscript = async () => {
     if (!transcript.trim()) {
       toast({
-        title: "No Speech Detected",
-        description: "Please speak first, then process the text.",
+        title: "No text to process",
+        description: "Please speak some text first or enter text manually.",
         variant: "destructive",
       });
       return;
@@ -216,38 +217,34 @@ const VoiceInput: React.FC<VoiceInputProps> = ({
       const { data, error } = await supabase.functions.invoke('analyze-voice-text', {
         body: {
           text: transcript,
-          fields,
-          columnInstructions
+          fields: fields,
+          columnInstructions: columnInstructions
         }
       });
 
       if (error) {
-        throw new Error(error.message || 'Failed to analyze voice input');
-      }
-
-      if (!data.success) {
-        throw new Error(data.error || 'Analysis failed');
+        throw new Error(error.message);
       }
 
       console.log('Voice analysis result:', data);
       
-      onDataExtracted(data.extractedData);
-      
-      if (!isMuted) {
+      if (data.success && data.extractedData) {
+        onDataExtracted(data.extractedData);
         toast({
-          title: "Voice Analysis Complete",
-          description: "Information extracted and added to the form!",
+          title: "Data extracted successfully",
+          description: "Voice input has been processed and form fields updated.",
         });
+        
+        // Clear transcript after successful processing
+        clearTranscript();
+      } else {
+        throw new Error(data.error || 'Failed to extract data');
       }
-
-      // Clear transcript after successful processing
-      setTranscript('');
-      
     } catch (error) {
-      console.error('Error processing voice input:', error);
+      console.error('Error processing voice text:', error);
       toast({
-        title: "Processing Error",
-        description: error instanceof Error ? error.message : 'Failed to process voice input',
+        title: "Processing failed",
+        description: error instanceof Error ? error.message : "Failed to process voice input",
         variant: "destructive",
       });
     } finally {
@@ -260,120 +257,165 @@ const VoiceInput: React.FC<VoiceInputProps> = ({
     onTextTranscribed?.('');
   };
 
+  const handleTranscriptChange = (value: string) => {
+    setTranscript(value);
+    onTextTranscribed?.(value);
+  };
+
   const toggleMute = () => {
     setIsMuted(!isMuted);
   };
 
   if (!isSupported) {
     return (
-      <Card className="p-4 border-2 border-dashed border-muted-foreground/25">
-        <div className="text-center text-muted-foreground">
-          <AlertCircle className="h-8 w-8 mx-auto mb-2" />
-          <p className="text-sm">Voice input is not supported in this browser.</p>
-          <p className="text-xs mt-1">Try Chrome, Edge, or Safari for voice recognition.</p>
-        </div>
+      <Card className="w-full">
+        <CardContent className="p-4">
+          <p className="text-muted-foreground text-center">
+            Voice recognition is not supported in this browser
+          </p>
+        </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card className="p-4 space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-foreground">Voice Input</h3>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={toggleMute}
-          className="p-2"
-        >
-          {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-        </Button>
-      </div>
-
-      <div className="flex flex-col gap-3">
+    <Card className="w-full">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2">
+          <Mic className="h-5 w-5" />
+          Voice Input
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
         {/* Voice Controls */}
-        <div className="flex gap-2">
-          <Button
-            onClick={startListening}
-            disabled={isListening || isProcessing}
-            className={`flex-1 ${isListening ? 'bg-red-500 hover:bg-red-600' : 'bg-primary hover:bg-primary/90'}`}
-          >
-            {isListening ? (
-              <>
-                <MicOff className="h-4 w-4 mr-2" />
-                Listening... (Click to stop)
-              </>
-            ) : (
-              <>
-                <Mic className="h-4 w-4 mr-2" />
-                Start Voice Input
-              </>
-            )}
-          </Button>
-          
-          {isListening && (
+        <div className="flex items-center justify-center gap-2">
+          {!isListening ? (
             <Button
-              onClick={stopListening}
-              variant="outline"
-              className="px-3"
+              onClick={startListening}
+              disabled={isProcessing}
+              className="flex items-center gap-2"
             >
-              Stop
+              <Mic className="h-4 w-4" />
+              Start Voice Input
             </Button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={stopListening}
+                variant="destructive"
+                className="flex items-center gap-2"
+              >
+                <Square className="h-4 w-4" />
+                Stop Recording
+              </Button>
+              <Button
+                onClick={toggleMute}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                {isMuted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                {isMuted ? 'Unmute' : 'Mute'}
+              </Button>
+            </div>
           )}
         </div>
 
-        {/* Transcript Display */}
-        {transcript && (
-          <div className="space-y-2">
-            <div className="p-3 bg-muted rounded-lg">
-              <p className="text-sm font-medium text-muted-foreground mb-1">Transcribed Text:</p>
-              <p className="text-sm text-foreground">{transcript}</p>
+        {/* Live transcription indicator */}
+        {isListening && (
+          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+            <div className="flex space-x-1">
+              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
             </div>
-            
-            <div className="flex gap-2">
-              <Button
-                onClick={processTranscript}
-                disabled={isProcessing || isListening}
-                className="flex-1"
-              >
-                {isProcessing ? (
-                  <>
-                    <RotateCw className="h-4 w-4 mr-2 animate-spin" />
-                    Analyzing...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Extract Data
-                  </>
-                )}
-              </Button>
-              
-              <Button
-                onClick={clearTranscript}
-                variant="outline"
-                disabled={isProcessing || isListening}
-                className="px-3"
-              >
-                Clear
-              </Button>
-            </div>
+            <span>Listening...</span>
           </div>
         )}
 
-        {/* Instructions */}
-        {!transcript && (
-          <div className="text-center text-muted-foreground p-4">
-            <Mic className="h-8 w-8 mx-auto mb-2 opacity-50" />
-            <p className="text-sm">
-              Click "Start Voice Input" and speak about the document information.
-            </p>
-            <p className="text-xs mt-1">
-              The AI will extract data based on your current spreadsheet fields.
-            </p>
+        {/* Large Transcript Display and Edit Area */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium">
+              Transcribed Text {transcript && `(${transcript.length} characters)`}
+            </label>
+            {transcript && (
+              <Button
+                onClick={clearTranscript}
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+                Clear
+              </Button>
+            )}
           </div>
-        )}
-      </div>
+          
+          <div className="relative">
+            <Textarea
+              value={transcript}
+              onChange={(e) => handleTranscriptChange(e.target.value)}
+              placeholder="Speak or type your text here. The AI will extract relevant information from your description..."
+              className="min-h-[150px] w-full resize-y text-base leading-relaxed"
+              disabled={isListening || isProcessing}
+            />
+            
+            {/* Character count and status */}
+            <div className="absolute bottom-2 right-2 text-xs text-muted-foreground bg-background/80 px-2 py-1 rounded">
+              {transcript.length > 0 && `${transcript.length} chars`}
+              {isListening && transcript.length === 0 && "Listening for speech..."}
+            </div>
+          </div>
+
+          {/* Transcript Status */}
+          {transcript && (
+            <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-md">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="h-4 w-4 mt-0.5 text-blue-500" />
+                <div>
+                  <p className="font-medium text-foreground mb-1">Review Your Text</p>
+                  <p>
+                    Please review the transcribed text above and make any necessary corrections before processing. 
+                    The AI will extract information like names, dates, legal descriptions, and other relevant details 
+                    from your description.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Process Button */}
+        <div className="flex justify-center">
+          <Button
+            onClick={processTranscript}
+            disabled={!transcript.trim() || isProcessing || isListening}
+            className="flex items-center gap-2 min-w-[200px]"
+          >
+            {isProcessing ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Processing with AI...
+              </>
+            ) : (
+              <>
+                <Wand2 className="h-4 w-4" />
+                Extract Data from Text
+              </>
+            )}
+          </Button>
+        </div>
+
+        {/* Help Text */}
+        <div className="text-xs text-muted-foreground text-center space-y-1">
+          <p>💡 <strong>Tip:</strong> Speak naturally about the document. For example:</p>
+          <p className="italic">
+            "This is a warranty deed recorded on June 3rd 2012, from John Smith to Mary Johnson, 
+            for the northwest quarter of section 3..."
+          </p>
+        </div>
+      </CardContent>
     </Card>
   );
 };
