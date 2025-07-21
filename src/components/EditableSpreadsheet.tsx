@@ -696,6 +696,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
   // Fetch saved runsheets from Supabase
   const fetchSavedRunsheets = async () => {
+    console.log('🚀 BUTTON CLICKED - fetchSavedRunsheets function called!');
     console.log('fetchSavedRunsheets called, user:', user);
     
     if (!user) {
