@@ -474,51 +474,68 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
 
   return (
     <Card 
-      className={`p-3 border-dashed transition-colors ${
-        dragActive ? 'border-primary bg-primary/5' : 'border-muted-foreground/25'
-      }`}
+      className={`p-4 border-2 border-dashed transition-all duration-200 cursor-pointer hover:border-primary hover:bg-primary/5 ${
+        dragActive ? 'border-primary bg-primary/10 scale-[1.02]' : 'border-muted-foreground/25'
+      } ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
+      onClick={!isUploading ? openFileSelector : undefined}
     >
-      <div className="flex items-center justify-center">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={openFileSelector}
-          disabled={isUploading}
-          className="h-8 text-xs"
-        >
-          <Upload className="w-3 h-3 mr-1" />
-          {isUploading ? 'Uploading...' : 'Add Document'}
-        </Button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          className="hidden"
-          onChange={(e) => {
-            console.log('🔧 DocumentLinker: File input onChange triggered', e.target.files);
-            const file = e.target.files?.[0];
-            console.log('🔧 DocumentLinker: Selected file:', file);
-            if (file) {
-              console.log('🔧 DocumentLinker: About to call handleFileSelect');
-              handleFileSelect(file);
-            } else {
-              console.log('🔧 DocumentLinker: No file selected');
-            }
-          }}
-          onClick={(e) => {
-            console.log('🔧 DocumentLinker: File input onClick triggered');
-          }}
-          onFocus={(e) => {
-            console.log('🔧 DocumentLinker: File input onFocus triggered');
-          }}
-          onBlur={(e) => {
-            console.log('🔧 DocumentLinker: File input onBlur triggered');
-          }}
-          accept="image/*,.pdf,.doc,.docx,.txt"
-        />
+      <div className="flex flex-col items-center justify-center gap-3 text-center">
+        <div className="flex items-center justify-center w-12 h-12 rounded-full bg-muted">
+          <Upload className={`w-6 h-6 ${dragActive ? 'text-primary animate-bounce' : 'text-muted-foreground'}`} />
+        </div>
+        
+        <div className="space-y-1">
+          <p className="text-sm font-medium">
+            {isUploading ? 'Uploading...' : dragActive ? 'Drop file here' : 'Add Document'}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {isUploading ? 'Please wait...' : 'Click to browse or drag & drop'}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Supports: Images, PDF, DOC, DOCX, TXT
+          </p>
+        </div>
+
+        {isUploading && (
+          <div className="w-8 h-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        )}
       </div>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        className="hidden"
+        onChange={(e) => {
+          console.log('🔧 DocumentLinker: File input onChange triggered', e.target.files);
+          const file = e.target.files?.[0];
+          console.log('🔧 DocumentLinker: Selected file:', file);
+          if (file) {
+            console.log('🔧 DocumentLinker: About to call handleFileSelect');
+            handleFileSelect(file);
+            // Clear the input so the same file can be selected again
+            e.target.value = '';
+          } else {
+            console.log('🔧 DocumentLinker: No file selected');
+          }
+        }}
+        onClick={(e) => {
+          console.log('🔧 DocumentLinker: File input onClick triggered');
+          e.stopPropagation(); // Prevent triggering the card's onClick
+        }}
+        onFocus={(e) => {
+          console.log('🔧 DocumentLinker: File input onFocus triggered');
+        }}
+        onBlur={(e) => {
+          console.log('🔧 DocumentLinker: File input onBlur triggered');
+        }}
+        accept="image/*,.pdf,.doc,.docx,.txt"
+        disabled={isUploading}
+      />
     </Card>
   );
 };
