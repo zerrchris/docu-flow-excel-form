@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Plus, X, Save, RotateCcw } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -21,7 +22,11 @@ interface NamingPreferences {
   is_active: boolean;
 }
 
-const DocumentNamingSettings: React.FC = () => {
+interface DocumentNamingSettingsProps {
+  availableColumns?: string[];
+}
+
+const DocumentNamingSettings: React.FC<DocumentNamingSettingsProps> = ({ availableColumns = [] }) => {
   const [preferences, setPreferences] = useState<NamingPreferences>({
     preference_name: 'Default',
     priority_columns: ['name', 'title', 'invoice_number', 'document_number', 'reference', 'id'],
@@ -198,19 +203,26 @@ const DocumentNamingSettings: React.FC = () => {
           </div>
           
           <div className="flex gap-2">
-            <Input
-              placeholder="Add column name..."
-              value={newColumn}
-              onChange={(e) => setNewColumn(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  addPriorityColumn();
-                }
-              }}
-              className="flex-1"
-            />
-            <Button onClick={addPriorityColumn} size="sm">
+            <Select value={newColumn} onValueChange={setNewColumn}>
+              <SelectTrigger className="flex-1">
+                <SelectValue placeholder="Select column to add..." />
+              </SelectTrigger>
+              <SelectContent>
+                {availableColumns
+                  .filter(col => !preferences.priority_columns.includes(col))
+                  .map(column => (
+                    <SelectItem key={column} value={column}>
+                      {column}
+                    </SelectItem>
+                  ))}
+                {availableColumns.filter(col => !preferences.priority_columns.includes(col)).length === 0 && (
+                  <SelectItem value="" disabled>
+                    No available columns
+                  </SelectItem>
+                )}
+              </SelectContent>
+            </Select>
+            <Button onClick={addPriorityColumn} size="sm" disabled={!newColumn}>
               <Plus className="h-4 w-4" />
             </Button>
           </div>
