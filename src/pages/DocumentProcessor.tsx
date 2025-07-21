@@ -701,7 +701,10 @@ Image: [base64 image data]`;
             initialData={spreadsheetData}
             onColumnChange={handleColumnsChange}
             onDataChange={handleSpreadsheetDataChange}
-            onColumnInstructionsChange={setColumnInstructions}
+            onColumnInstructionsChange={(instructions) => {
+              console.log('🔧 DocumentProcessor: Column instructions changed:', instructions);
+              setColumnInstructions(instructions);
+            }}
             onUnsavedChanges={setHasUnsavedChanges}
             missingColumns={highlightMissingColumns ? missingColumns : []}
             initialRunsheetName={location.state?.runsheet?.name}

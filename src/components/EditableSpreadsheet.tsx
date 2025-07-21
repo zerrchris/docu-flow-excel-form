@@ -1316,6 +1316,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         [selectedColumn]: editingColumnInstructions
       };
       setColumnInstructions(newInstructions);
+      console.log('🔧 EditableSpreadsheet: Calling onColumnInstructionsChange with:', newInstructions);
       onColumnInstructionsChange?.(newInstructions);
 
       const newAlignments = {
