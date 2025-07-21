@@ -116,7 +116,7 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
   };
 
   return (
-    <Card className="rounded-none overflow-hidden">
+    <div className="overflow-hidden">
       <Collapsible open={isExpanded} onOpenChange={(open) => {
         setIsExpanded(open);
         // When expanding, completely reset form fields to only current spreadsheet columns
@@ -219,7 +219,7 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
           </div>
         </CollapsibleContent>
       </Collapsible>
-    </Card>
+    </div>
   );
 };
 

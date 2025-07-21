@@ -2187,8 +2187,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
 
   return (
-    <Card className="p-6 mt-6" data-spreadsheet-container>
-      <div className="flex flex-col space-y-4">
+    <div className="mt-6" data-spreadsheet-container>
+      <div className="flex flex-col space-y-4 px-6">
         <div className="flex justify-between items-center mb-2">
           <div className="flex items-center gap-3">
             <h3 className="text-lg font-semibold text-foreground">Runsheet</h3>
@@ -2406,7 +2406,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         {/* Single scrollable table container */}
         <div 
           ref={containerRef}
-          className="border rounded-md bg-background relative overflow-auto h-[750px]"
+          className="border rounded-md bg-background relative overflow-auto h-[750px] mx-6"
         >
           <div className="min-w-fit">
             <Table className="border-collapse w-full" style={{ minWidth: `${getTotalTableWidth()}px` }}>
@@ -2881,7 +2881,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           onFileSelect={performUpload}
         />
       </div>
-    </Card>
+    </div>
   );
 };
 
