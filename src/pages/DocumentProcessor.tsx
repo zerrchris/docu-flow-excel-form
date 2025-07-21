@@ -12,6 +12,7 @@ import DocumentUpload from '@/components/DocumentUpload';
 import { GoogleDrivePicker } from '@/components/GoogleDrivePicker';
 import { ExtractionPreferencesService } from '@/services/extractionPreferences';
 import { AdminSettingsService } from '@/services/adminSettings';
+import { useMultipleRunsheets } from '@/hooks/useMultipleRunsheets';
 import { supabase } from '@/integrations/supabase/client';
 
 import extractorLogo from '@/assets/document-extractor-logo.png';
@@ -34,6 +35,9 @@ const DEFAULT_EXTRACTION_INSTRUCTIONS: Record<string, string> = {
 };
 
 const DocumentProcessor: React.FC = () => {
+  // Hook to get active runsheet data  
+  const { currentRunsheet } = useMultipleRunsheets();
+  
   // Document state
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -63,6 +67,28 @@ const DocumentProcessor: React.FC = () => {
   
   // Preferences loading state
   const [isLoadingPreferences, setIsLoadingPreferences] = useState(true);
+
+  // Sync columns with active runsheet data when currentRunsheet changes
+  useEffect(() => {
+    if (currentRunsheet && currentRunsheet.columns && Array.isArray(currentRunsheet.columns)) {
+      console.log('DocumentProcessor: Syncing with active runsheet columns:', currentRunsheet.columns);
+      setColumns(currentRunsheet.columns);
+      
+      // Also sync column instructions if available
+      if (currentRunsheet.columnInstructions) {
+        setColumnInstructions(currentRunsheet.columnInstructions);
+      }
+      
+      // Sync spreadsheet data if available
+      if (currentRunsheet.data && Array.isArray(currentRunsheet.data)) {
+        setSpreadsheetData(currentRunsheet.data);
+      }
+      
+      console.log('DocumentProcessor: Successfully synced with active runsheet');
+    } else {
+      console.log('DocumentProcessor: No active runsheet or invalid runsheet data');
+    }
+  }, [currentRunsheet]);
   
   // Load user preferences and handle selected runsheet on component mount
   useEffect(() => {
