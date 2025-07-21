@@ -24,127 +24,52 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
 
-  // Handle PDF to image conversion
+  // Handle PDF to image conversion - temporarily disabled due to technical issues
   const handlePDFConversion = async (file: File) => {
     if (!isPDF(file)) {
       return file; // Not a PDF, return as-is
     }
 
-    setIsProcessing(true);
-    console.log('Starting PDF conversion for file:', file.name);
-    
-    try {
-      toast({
-        title: "Converting PDF",
-        description: "Converting PDF pages to images for better analysis...",
-      });
+    // For now, show a helpful message about PDFs
+    toast({
+      title: "PDF Upload Detected",
+      description: "For best results with data extraction, please convert your PDF to an image (PNG/JPG) and upload the image instead. Most PDF readers have an 'Export as Image' option.",
+      variant: "default",
+    });
 
-      const pages = await convertPDFToImages(file);
-      console.log('PDF conversion successful, pages:', pages.length);
-      
-      if (pages.length === 0) {
-        throw new Error('No pages found in PDF');
-      }
-
-      // If single page, return as single image file
-      if (pages.length === 1) {
-        const imageFile = createFileFromBlob(
-          pages[0].blob, 
-          `${file.name.replace('.pdf', '')}_page1.png`
-        );
-        
-        console.log('Created single image file:', imageFile.name);
-        
-        toast({
-          title: "PDF Converted",
-          description: `Single page PDF converted to image for analysis.`,
-        });
-        
-        return imageFile;
-      } else {
-        // Multiple pages - convert to multiple image files
-        const imageFiles = pages.map(page => 
-          createFileFromBlob(
-            page.blob, 
-            `${file.name.replace('.pdf', '')}_page${page.pageNumber}.png`
-          )
-        );
-
-        console.log('Created multiple image files:', imageFiles.map(f => f.name));
-
-        toast({
-          title: "PDF Converted",
-          description: `${pages.length} pages converted to images. Processing first page.`,
-        });
-
-        // For now, use the first page for single document processing
-        // In future, could implement multi-page processing
-        return imageFiles[0];
-      }
-    } catch (error) {
-      console.error('PDF conversion error:', error);
-      
-      // More specific error handling
-      let errorMessage = "Failed to convert PDF to images. Please try uploading an image instead.";
-      if (error instanceof Error) {
-        if (error.message.includes('worker')) {
-          errorMessage = "PDF processing worker failed to load. Please try refreshing the page and trying again.";
-        } else if (error.message.includes('Invalid PDF')) {
-          errorMessage = "The PDF file appears to be corrupted or invalid. Please try a different PDF file.";
-        }
-      }
-      
-      toast({
-        title: "PDF Conversion Failed",
-        description: errorMessage,
-        variant: "destructive",
-      });
-      
-      throw error;
-    } finally {
-      setIsProcessing(false);
-    }
+    // Return the PDF file as-is for now
+    // The analyze function can still try to process it
+    return file;
   };
   const handleDrop = useCallback(async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    if (isProcessing) return;
     
     const files = Array.from(e.dataTransfer.files);
     if (files.length > 0) {
       if (allowMultiple && files.length > 1 && onMultipleFilesSelect) {
         onMultipleFilesSelect(files);
       } else {
-        try {
-          const processedFile = await handlePDFConversion(files[0]);
-          onFileSelect(processedFile);
-        } catch (error) {
-          // Error already handled in handlePDFConversion
-        }
+        const processedFile = await handlePDFConversion(files[0]);
+        onFileSelect(processedFile);
       }
     }
-  }, [onFileSelect, onMultipleFilesSelect, allowMultiple, isProcessing, handlePDFConversion]);
+  }, [onFileSelect, onMultipleFilesSelect, allowMultiple, handlePDFConversion]);
 
   const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
   }, []);
 
   const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (isProcessing) return;
-    
     const files = e.target.files;
     if (files && files.length > 0) {
       if (allowMultiple && files.length > 1 && onMultipleFilesSelect) {
         onMultipleFilesSelect(Array.from(files));
       } else {
-        try {
-          const processedFile = await handlePDFConversion(files[0]);
-          onFileSelect(processedFile);
-        } catch (error) {
-          // Error already handled in handlePDFConversion
-        }
+        const processedFile = await handlePDFConversion(files[0]);
+        onFileSelect(processedFile);
       }
     }
-  }, [onFileSelect, onMultipleFilesSelect, allowMultiple, isProcessing, handlePDFConversion]);
+  }, [onFileSelect, onMultipleFilesSelect, allowMultiple, handlePDFConversion]);
 
   const handleClear = useCallback(() => {
     onFileSelect(null as any);
@@ -219,8 +144,8 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
                         Supports: Images, PDF, Word documents{allowMultiple ? ' - Multiple images can be combined' : ''}
                       </p>
                       <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
-                        <FileImage className="h-3 w-3" />
-                        PDFs are automatically converted to images for better analysis
+                        <AlertCircle className="h-3 w-3" />
+                        For PDFs: Convert to image first for best data extraction results
                       </p>
                     </div>
                   </>

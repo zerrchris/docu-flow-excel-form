@@ -1,12 +1,10 @@
 import * as pdfjsLib from 'pdfjs-dist';
+import 'pdfjs-dist/web/pdf_viewer.css';
 
-// Set up the worker for Vite - use a simpler approach
-if (typeof window !== 'undefined') {
-  // In browser environment, use CDN worker
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`;
-}
+// Disable worker for now to avoid configuration issues
+pdfjsLib.GlobalWorkerOptions.workerSrc = '';
 
-console.log('PDF.js worker configured:', pdfjsLib.GlobalWorkerOptions.workerSrc);
+console.log('PDF.js configured without worker for compatibility');
 
 export interface PDFPage {
   canvas: HTMLCanvasElement;
