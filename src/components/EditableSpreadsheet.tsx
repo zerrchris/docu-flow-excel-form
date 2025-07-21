@@ -41,6 +41,7 @@ import type { User } from '@supabase/supabase-js';
 interface SpreadsheetProps {
   initialColumns: string[];
   initialData: Record<string, string>[];
+  initialColumnInstructions?: Record<string, string>;
   onColumnChange: (columns: string[]) => void;
   onDataChange?: (data: Record<string, string>[]) => void;
   onColumnInstructionsChange?: (columnInstructions: Record<string, string>) => void;
@@ -53,6 +54,7 @@ interface SpreadsheetProps {
 const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({ 
   initialColumns, 
   initialData,
+  initialColumnInstructions = {},
   onColumnChange,
   onDataChange,
   onColumnInstructionsChange,
@@ -117,7 +119,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [editingColumnName, setEditingColumnName] = useState<string>('');
   const [editingColumnInstructions, setEditingColumnInstructions] = useState<string>('');
   const [selectedColumn, setSelectedColumn] = useState<string>('');
-  const [columnInstructions, setColumnInstructions] = useState<Record<string, string>>({});
+  const [columnInstructions, setColumnInstructions] = useState<Record<string, string>>(initialColumnInstructions);
   const [showNewRunsheetDialog, setShowNewRunsheetDialog] = useState(false);
   const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] = useState(false);
   const [columnAlignments, setColumnAlignments] = useState<Record<string, 'left' | 'center' | 'right'>>({});

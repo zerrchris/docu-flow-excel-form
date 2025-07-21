@@ -704,6 +704,7 @@ Image: [base64 image data]`;
           <EditableSpreadsheet 
             initialColumns={columns}
             initialData={spreadsheetData}
+            initialColumnInstructions={columnInstructions}
             onColumnChange={handleColumnsChange}
             onDataChange={handleSpreadsheetDataChange}
             onColumnInstructionsChange={(instructions) => {
