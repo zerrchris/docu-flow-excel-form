@@ -213,6 +213,11 @@ const DocumentProcessor: React.FC = () => {
           }
         }, 1000);
       }
+    } else if (action === 'google-drive') {
+      console.log('Google Drive action detected, opening Google Drive picker...');
+      // Trigger the Google Drive picker in the EditableSpreadsheet component
+      const googleDriveEvent = new CustomEvent('openGoogleDrivePicker');
+      window.dispatchEvent(googleDriveEvent);
     }
   }, [searchParams]);
 

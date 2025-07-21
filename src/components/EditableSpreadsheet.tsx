@@ -384,11 +384,17 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       handleFileUpload(file, file.name);
     };
 
+    const handleOpenGoogleDrivePicker = () => {
+      console.log('🔧 EditableSpreadsheet: Open Google Drive picker event received');
+      setShowGoogleDrivePicker(true);
+    };
+
     window.addEventListener('triggerSpreadsheetUpload', handleUploadTrigger);
     window.addEventListener('triggerSpreadsheetOpen', handleOpenTrigger);
     window.addEventListener('loadSpecificRunsheet', handleLoadSpecificRunsheet as EventListener);
     window.addEventListener('autoRestoreLastRunsheet', handleAutoRestoreLastRunsheet);
     window.addEventListener('importRunsheetFile', handleImportRunsheetFile as EventListener);
+    window.addEventListener('openGoogleDrivePicker', handleOpenGoogleDrivePicker);
 
     return () => {
       window.removeEventListener('triggerSpreadsheetUpload', handleUploadTrigger);
@@ -396,6 +402,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       window.removeEventListener('loadSpecificRunsheet', handleLoadSpecificRunsheet as EventListener);
       window.removeEventListener('autoRestoreLastRunsheet', handleAutoRestoreLastRunsheet);
       window.removeEventListener('importRunsheetFile', handleImportRunsheetFile as EventListener);
+      window.removeEventListener('openGoogleDrivePicker', handleOpenGoogleDrivePicker);
     };
   }, []);
 
