@@ -392,6 +392,7 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                   size="sm"
                   onClick={(e) => {
                     e.stopPropagation();
+                    console.log('Analyzing document:', uploadedFile.name);
                     onAnalyzeDocument(uploadedFile, filename);
                   }}
                   className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700"
