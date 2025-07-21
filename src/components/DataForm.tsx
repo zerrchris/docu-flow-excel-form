@@ -110,7 +110,7 @@ const DataForm: React.FC<DataFormProps> = ({
             </Label>
             {field === 'Document File Name' && (
               <div className="text-xs text-muted-foreground mb-1">
-                This will be the name of the document file
+                This will be the name of the document file (optional - defaults to uploaded filename if left empty)
               </div>
             )}
             <Textarea
