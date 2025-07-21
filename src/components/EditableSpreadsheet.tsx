@@ -2479,8 +2479,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                 You have unsaved changes in your current runsheet. What would you like to do?
               </DialogDescription>
             </DialogHeader>
-            <DialogFooter className="flex gap-3">
-              <Button variant="outline" onClick={() => setShowUnsavedChangesDialog(false)}>
+            <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+              <Button variant="outline" onClick={() => setShowUnsavedChangesDialog(false)} className="w-full sm:w-auto">
                 Cancel
               </Button>
               <Button 
@@ -2489,6 +2489,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                   setShowUnsavedChangesDialog(false);
                   setShowNewRunsheetDialog(true);
                 }}
+                className="w-full sm:w-auto"
               >
                 Continue Without Saving
               </Button>
@@ -2498,6 +2499,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                   await saveRunsheet();
                   setShowNewRunsheetDialog(true);
                 }}
+                className="w-full sm:w-auto"
               >
                 Save & Continue
               </Button>
