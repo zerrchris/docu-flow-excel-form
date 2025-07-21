@@ -1351,24 +1351,42 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
   // Helper function to update spreadsheet data
   const updateSpreadsheetData = (headers: string[], parsedData: Record<string, string>[], fileName: string) => {
+    // Ensure "Document File Name" column is always present
+    const REQUIRED_COLUMN = 'Document File Name';
+    let finalHeaders = [...headers];
+    
+    if (!finalHeaders.includes(REQUIRED_COLUMN)) {
+      finalHeaders.push(REQUIRED_COLUMN);
+      console.log(`Added missing "${REQUIRED_COLUMN}" column to imported spreadsheet`);
+    }
+    
+    // Update parsed data to include the new column if it was added
+    const updatedParsedData = parsedData.map(row => {
+      const newRow = { ...row };
+      if (!newRow[REQUIRED_COLUMN]) {
+        newRow[REQUIRED_COLUMN] = ''; // Initialize with empty string
+      }
+      return newRow;
+    });
+    
     // Add empty rows to reach minimum of 20 rows
     const minRows = 20;
-    const emptyRows = Array.from({ length: Math.max(0, minRows - parsedData.length) }, () => {
+    const emptyRows = Array.from({ length: Math.max(0, minRows - updatedParsedData.length) }, () => {
       const row: Record<string, string> = {};
-      headers.forEach(col => row[col] = '');
+      finalHeaders.forEach(col => row[col] = '');
       return row;
     });
 
-    const newData = [...parsedData, ...emptyRows];
+    const newData = [...updatedParsedData, ...emptyRows];
 
     // Update spreadsheet
-    setColumns(headers);
-    onColumnChange(headers);
+    setColumns(finalHeaders);
+    onColumnChange(finalHeaders);
     setData(newData);
     
     // Update parent component's data
     if (onDataChange) {
-      onDataChange(parsedData); // Only pass the actual data, not the empty rows
+      onDataChange(updatedParsedData); // Only pass the actual data, not the empty rows
     }
     
     // Update runsheet name based on filename
@@ -1377,7 +1395,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
     toast({
       title: "Spreadsheet uploaded",
-      description: `Successfully imported ${parsedData.length} rows with ${headers.length} columns from ${fileName}.`,
+      description: `Successfully imported ${updatedParsedData.length} rows with ${finalHeaders.length} columns from ${fileName}.`,
     });
   };
 
