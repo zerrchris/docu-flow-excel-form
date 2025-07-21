@@ -1248,6 +1248,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
   const openColumnDialog = (column: string) => {
     console.log('🔧 EditableSpreadsheet: openColumnDialog called for column:', column);
+    console.log('🔧 EditableSpreadsheet: Current columnInstructions state:', columnInstructions);
     
     // If this is the "Document File Name" column, show naming settings instead
     if (column === 'Document File Name') {
@@ -1316,6 +1317,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         [selectedColumn]: editingColumnInstructions
       };
       setColumnInstructions(newInstructions);
+      console.log('🔧 EditableSpreadsheet: [UPDATE] Current columnInstructions before update:', columnInstructions);
+      console.log('🔧 EditableSpreadsheet: [UPDATE] Setting columnInstructions to:', newInstructions);
       console.log('🔧 EditableSpreadsheet: Calling onColumnInstructionsChange with:', newInstructions);
       onColumnInstructionsChange?.(newInstructions);
 
