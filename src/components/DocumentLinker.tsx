@@ -386,6 +386,11 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
           </div>
           {!isEditingName && (
             <div className="flex items-center gap-1">
+              {/* Debug indicators */}
+              <span className="text-xs text-green-500" title="isSpreadsheetUpload">{isSpreadsheetUpload ? 'S' : ''}</span>
+              <span className="text-xs text-blue-500" title="uploadedFile">{uploadedFile ? 'F' : ''}</span>
+              <span className="text-xs text-purple-500" title="onAnalyzeDocument">{onAnalyzeDocument ? 'A' : ''}</span>
+              
               {/* Show Analyze button only for spreadsheet uploads with stored file */}
               {isSpreadsheetUpload && uploadedFile && onAnalyzeDocument && (
                 <Button
