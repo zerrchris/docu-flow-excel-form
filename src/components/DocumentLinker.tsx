@@ -36,6 +36,17 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
     console.log('🔧 DocumentLinker: handleFileSelect called with file:', file.name, file.size);
     if (!file) return;
 
+    // Check if runsheet is saved first
+    if (!runsheetId || runsheetId.trim() === '') {
+      console.log('🔧 DocumentLinker: No runsheet ID available');
+      toast({
+        title: "Save runsheet first",
+        description: "Please save your runsheet before uploading documents.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       console.log('🔧 DocumentLinker: Starting upload process');
       setIsUploading(true);
