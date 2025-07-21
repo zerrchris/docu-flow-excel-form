@@ -51,6 +51,8 @@ const DocumentProcessor: React.FC = () => {
   const [showValidationDialog, setShowValidationDialog] = useState(false);
   const [missingColumns, setMissingColumns] = useState<string[]>([]);
   const [highlightMissingColumns, setHighlightMissingColumns] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [showNavigationDialog, setShowNavigationDialog] = useState(false);
   
   // Note: Navigation blocking removed since runsheet auto-saves
   const navigate = useNavigate();
@@ -595,7 +597,13 @@ Image: [base64 image data]`;
           <Button
             variant="default"
             size="sm"
-            onClick={() => navigate('/app')}
+            onClick={() => {
+              if (hasUnsavedChanges) {
+                setShowNavigationDialog(true);
+              } else {
+                navigate('/app');
+              }
+            }}
             className="gap-2"
           >
             <Home className="h-4 w-4" />
@@ -635,7 +643,7 @@ Image: [base64 image data]`;
           onColumnChange={handleColumnsChange}
           onDataChange={handleSpreadsheetDataChange}
           onColumnInstructionsChange={setColumnInstructions}
-          onUnsavedChanges={() => {}}
+          onUnsavedChanges={setHasUnsavedChanges}
           missingColumns={highlightMissingColumns ? missingColumns : []}
         />
       </div>
@@ -693,6 +701,32 @@ Image: [base64 image data]`;
               Save All
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Navigation Confirmation Dialog */}
+      <Dialog open={showNavigationDialog} onOpenChange={setShowNavigationDialog}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Unsaved Changes</DialogTitle>
+            <DialogDescription>
+              You have unsaved changes in your runsheet. What would you like to do?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-3">
+            <Button variant="outline" onClick={() => setShowNavigationDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={() => {
+                setShowNavigationDialog(false);
+                navigate('/app');
+              }}
+            >
+              Leave Without Saving
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
