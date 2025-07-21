@@ -180,7 +180,7 @@ const DocumentProcessor: React.FC = () => {
     console.log('DocumentProcessor useEffect - action from searchParams:', action);
     
     if (action === 'upload') {
-      console.log('Upload action detected, triggering file dialog...');
+      console.log('Upload action detected, triggering runsheet file dialog...');
       
       // Create a file input programmatically if needed
       let fileInput = document.getElementById('dashboard-upload-input') as HTMLInputElement;
@@ -190,14 +190,14 @@ const DocumentProcessor: React.FC = () => {
         fileInput = document.createElement('input');
         fileInput.type = 'file';
         fileInput.id = 'dashboard-upload-input';
-        fileInput.accept = 'image/*,.pdf,.doc,.docx';
-        fileInput.multiple = true;
+        fileInput.accept = '.xlsx,.xls,.csv';
+        fileInput.multiple = false; // Single file only for runsheets
         fileInput.style.display = 'none';
         fileInput.onchange = (e) => handleDashboardFileSelect(e as any);
         document.body.appendChild(fileInput);
       }
       
-      console.log('Clicking file input...');
+      console.log('Clicking file input for runsheet upload...');
       fileInput.click();
     }
   }, [searchParams]);
@@ -206,11 +206,23 @@ const DocumentProcessor: React.FC = () => {
   const handleDashboardFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      if (files.length > 1) {
-        handleMultipleFilesSelect(Array.from(files));
-      } else {
-        handleFileSelect(files[0]);
+      // For runsheet uploads, we only handle single files
+      const selectedFile = files[0];
+      
+      // Check if it's a valid runsheet file type
+      const validExtensions = ['.xlsx', '.xls', '.csv'];
+      const fileExtension = selectedFile.name.toLowerCase().substr(selectedFile.name.lastIndexOf('.'));
+      
+      if (!validExtensions.includes(fileExtension)) {
+        toast({
+          title: "Invalid file type",
+          description: "Please select an Excel (.xlsx, .xls) or CSV (.csv) file for runsheet upload.",
+          variant: "destructive",
+        });
+        return;
       }
+      
+      handleFileSelect(selectedFile);
     }
     // Reset the input so the same file can be selected again
     e.target.value = '';
@@ -915,9 +927,9 @@ Image: [base64 image data]`;
         id="dashboard-upload-input"
         type="file"
         className="sr-only"
-        accept="image/*,.pdf,.doc,.docx"
+        accept=".xlsx,.xls,.csv"
         onChange={handleDashboardFileSelect}
-        multiple
+        multiple={false}
       />
     </div>
   );
