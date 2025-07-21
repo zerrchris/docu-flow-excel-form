@@ -121,10 +121,37 @@ const DocumentProcessor: React.FC = () => {
         setSpreadsheetData(selectedRunsheet.data);
       }
       
-      // Load runsheet columns if available
+      // Load runsheet columns if available - these should take priority over user preferences
       if (selectedRunsheet.columns && Array.isArray(selectedRunsheet.columns)) {
-        console.log('Loading runsheet columns:', selectedRunsheet.columns);
+        console.log('Loading runsheet columns (takes priority over user preferences):', selectedRunsheet.columns);
         setColumns(selectedRunsheet.columns);
+        
+        // Also update user preferences to match the runsheet columns to keep them in sync
+        const updatePreferences = async () => {
+          try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user && selectedRunsheet.column_instructions) {
+              // Filter column instructions to only include columns that exist in the runsheet
+              const filteredInstructions: Record<string, string> = {};
+              selectedRunsheet.columns.forEach(column => {
+                if (selectedRunsheet.column_instructions[column]) {
+                  filteredInstructions[column] = selectedRunsheet.column_instructions[column];
+                }
+              });
+              
+              // Save the filtered preferences to prevent future conflicts
+              await ExtractionPreferencesService.saveDefaultPreferences(
+                selectedRunsheet.columns, 
+                filteredInstructions
+              );
+              console.log('Updated user preferences to match runsheet columns');
+            }
+          } catch (error) {
+            console.error('Error updating user preferences:', error);
+          }
+        };
+        
+        updatePreferences();
       }
       
       // Load column instructions if available
