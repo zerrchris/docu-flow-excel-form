@@ -2363,39 +2363,62 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       console.log('🔍 Current data before update:', data);
       console.log('🔍 Available columns:', columns);
 
-      // Use the extracted data directly with improved object handling
-      const finalData: Record<string, string> = {};
+      // Create mapping from extracted keys to column names
+      const keyMapping: Record<string, string> = {
+        "Instrument Number": "Inst Number",
+        "Book and Page": "Book/Page", 
+        "Instrument Type": "Inst Type",
+        "Recorded": "Recording Date",
+        "Dated": "Document Date",
+        "Grantor(s)": "Grantor",
+        "Grantee(s)": "Grantee", 
+        "Description": "Legal Description",
+        "Comments": "Notes",
+        "Document File Name": "Document File Name"
+      };
+
+      // Map the extracted data to use column names as keys
+      const mappedData: Record<string, string> = {};
       
       Object.entries(extractedData).forEach(([key, value]) => {
-        // Handle object values (like complex Grantor/Grantee data)
-        let stringValue: string;
-        if (typeof value === 'object' && value !== null) {
-          // If it's an object with Name and Address properties (capitalized)
-          if (typeof value === 'object' && 'Name' in value && 'Address' in value) {
-            stringValue = `${value.Name}; ${value.Address}`;
-          } else if (typeof value === 'object' && 'name' in value && 'address' in value) {
-            stringValue = `${value.name}; ${value.address}`;
-          } else {
-            // For other objects, create a readable string without brackets
-            const objStr = JSON.stringify(value);
-            stringValue = objStr.replace(/[{}]/g, '').replace(/"/g, '').replace(/:/g, ': ').replace(/,/g, ', ');
-          }
-        } else {
-          stringValue = String(value);
-        }
+        const mappedKey = keyMapping[key] || key;
+        console.log(`🔍 Mapping "${key}" -> "${mappedKey}"`);
         
-        finalData[key] = stringValue;
+        // Only include data for columns that actually exist
+        if (columns.includes(mappedKey)) {
+          // Handle object values (like complex Grantor/Grantee data)
+          let stringValue: string;
+          if (typeof value === 'object' && value !== null) {
+            // If it's an object with Name and Address properties (capitalized)
+            if (typeof value === 'object' && 'Name' in value && 'Address' in value) {
+              stringValue = `${value.Name}; ${value.Address}`;
+            } else if (typeof value === 'object' && 'name' in value && 'address' in value) {
+              stringValue = `${value.name}; ${value.address}`;
+            } else {
+              // For other objects, create a readable string without brackets
+              const objStr = JSON.stringify(value);
+              stringValue = objStr.replace(/[{}]/g, '').replace(/"/g, '').replace(/:/g, ': ').replace(/,/g, ', ');
+            }
+          } else {
+            stringValue = String(value);
+          }
+          
+          mappedData[mappedKey] = stringValue;
+          console.log(`🔍 Set mappedData["${mappedKey}"] = "${stringValue}"`);
+        } else {
+          console.log(`🔍 Skipping "${mappedKey}" - not in columns`);
+        }
       });
 
-      console.log('🔍 Final data to merge:', finalData);
+      console.log('🔍 Final mapped data:', mappedData);
 
-      // Update the row with extracted data using original keys
+      // Update the row with mapped data
       const newData = [...data];
       console.log('🔍 Row data before update:', newData[targetRowIndex]);
       
       newData[targetRowIndex] = {
         ...newData[targetRowIndex],
-        ...finalData
+        ...mappedData
       };
       
       console.log('🔍 Row data after update:', newData[targetRowIndex]);
