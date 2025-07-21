@@ -755,9 +755,6 @@ Image: [base64 image data]`;
             <Button variant="outline" onClick={handleValidationDialogClose}>
               Continue
             </Button>
-            <Button onClick={handleSaveAllInstructions}>
-              Save All
-            </Button>
           </div>
         </DialogContent>
       </Dialog>
