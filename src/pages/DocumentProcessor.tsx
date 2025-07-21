@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-do
 import { toast } from '@/components/ui/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Upload, FolderOpen, Plus, AlertTriangle, Smartphone, Files } from 'lucide-react';
+import { Upload, FolderOpen, Plus, AlertTriangle, Smartphone, Files, Home } from 'lucide-react';
 import DocumentFrame from '@/components/DocumentFrame';
 import EditableSpreadsheet from '@/components/EditableSpreadsheet';
 import AuthButton from '@/components/AuthButton';
@@ -592,6 +592,15 @@ Image: [base64 image data]`;
           </h1>
         </div>
         <div className="flex items-center gap-3">
+          <Button
+            variant="default"
+            size="sm"
+            onClick={() => navigate('/app')}
+            className="gap-2"
+          >
+            <Home className="h-4 w-4" />
+            Dashboard
+          </Button>
           <AuthButton />
         </div>
       </div>
