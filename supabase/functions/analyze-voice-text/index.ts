@@ -82,7 +82,7 @@ ${fields.map(field => `  "${field}": "extracted_value_or_N/A"`).join(',\n')}
         messages: [
           {
             role: 'system',
-            content: 'You are a precise data extraction assistant. Extract information from spoken text and return only valid JSON with the specified fields.'
+            content: 'You are an expert at extracting structured data from natural speech. You understand legal documents, property records, and real estate terminology. You excel at parsing conversational descriptions and converting them to structured data. Always extract partial information even if incomplete - something is better than nothing.'
           },
           {
             role: 'user',
