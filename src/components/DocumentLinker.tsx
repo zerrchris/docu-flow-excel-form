@@ -121,21 +121,6 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
       // Use original filename instead of smart-generated filename
       onDocumentLinked(file.name);
       
-      // Debug: Check what was actually saved
-      setTimeout(async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data: docs } = await supabase
-            .from('documents')
-            .select('*')
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false })
-            .limit(3);
-          
-          alert(`After upload: Found ${docs?.length || 0} recent docs. Latest: runsheet=${docs?.[0]?.runsheet_id}, row=${docs?.[0]?.row_index}`);
-        }
-      }, 1000);
-      
       toast({
         title: "Document uploaded",
         description: `${file.name} has been linked to this row.`,
@@ -208,7 +193,6 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
       // If we have a stored document ID, use that instead of searching
       let document;
       if (documentId) {
-        alert(`Using stored document ID: ${documentId}`);
         const { data: doc, error: fetchError } = await supabase
           .from('documents')
           .select('*')
@@ -222,7 +206,6 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
         
         document = doc;
       } else {
-        alert(`First time lookup for runsheet: ${runsheetId}, row: ${rowIndex}`);
         // First time - search by runsheet_id + row_index
         const { data: doc, error: fetchError } = await supabase
           .from('documents')
@@ -240,13 +223,11 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
         
         // Store the document ID for future operations
         if (document) {
-          alert(`Found document, storing ID: ${document.id}`);
           setDocumentId(document.id);
         }
       }
 
       if (!document) {
-        alert(`No document found. documentId was: ${documentId}`);
         throw new Error('Document not found. Please try uploading the document again.');
       }
 
