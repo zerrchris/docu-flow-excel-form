@@ -11,6 +11,7 @@ interface DocumentLinkerProps {
   rowIndex: number;
   existingDocumentUrl?: string;
   currentFilename?: string;
+  documentPath?: string;
   onDocumentLinked: (filename: string) => void;
   onDocumentRemoved: () => void;
 }
@@ -20,6 +21,7 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
   rowIndex,
   existingDocumentUrl,
   currentFilename,
+  documentPath,
   onDocumentLinked,
   onDocumentRemoved
 }) => {
@@ -298,21 +300,46 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                 variant="ghost"
                 size="sm"
                 onClick={async () => {
-                  // Get the actual document URL from database
-                  const { data: { user } } = await supabase.auth.getUser();
-                  if (!user) return;
-                  
-                  const { data: document } = await supabase
-                    .from('documents')
-                    .select('file_path')
-                    .eq('runsheet_id', runsheetId)
-                    .eq('row_index', rowIndex)
-                    .eq('user_id', user.id)
-                    .single();
-                  
-                  if (document) {
-                    const url = supabase.storage.from('documents').getPublicUrl(document.file_path).data.publicUrl;
-                    window.open(url, '_blank');
+                  try {
+                    if (documentPath) {
+                      // Use the provided document path
+                      const url = supabase.storage.from('documents').getPublicUrl(documentPath).data.publicUrl;
+                      window.open(url, '_blank');
+                    } else {
+                      // Fallback: fetch from database
+                      const { data: { user } } = await supabase.auth.getUser();
+                      if (!user) return;
+                      
+                      const { data: document, error } = await supabase
+                        .from('documents')
+                        .select('file_path')
+                        .eq('runsheet_id', runsheetId)
+                        .eq('row_index', rowIndex)
+                        .eq('user_id', user.id)
+                        .single();
+                      
+                      if (error) {
+                        console.error('Error fetching document:', error);
+                        toast({
+                          title: "Error",
+                          description: "Could not find document to view.",
+                          variant: "destructive",
+                        });
+                        return;
+                      }
+                      
+                      if (document) {
+                        const url = supabase.storage.from('documents').getPublicUrl(document.file_path).data.publicUrl;
+                        window.open(url, '_blank');
+                      }
+                    }
+                  } catch (error) {
+                    console.error('Error viewing document:', error);
+                    toast({
+                      title: "Error",
+                      description: "Failed to open document.",
+                      variant: "destructive",
+                    });
                   }
                 }}
                 className="h-6 w-6 p-0"
