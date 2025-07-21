@@ -2116,7 +2116,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                    </Button>
                    
                    <Button
-                     onClick={() => window.location.href = '/app/files'}
+                     onClick={fetchSavedRunsheets}
                      className="h-16 flex flex-col gap-2 text-left"
                      variant="outline"
                    >
