@@ -137,7 +137,15 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       initialColumns.forEach(col => row[col] = '');
       return row;
     });
-    setData([...initialData, ...emptyRows]);
+    const newData = [...initialData, ...emptyRows];
+    
+    // Only update if the data actually changed
+    setData(prevData => {
+      if (JSON.stringify(prevData) !== JSON.stringify(newData)) {
+        return newData;
+      }
+      return prevData;
+    });
   }, [initialData, initialColumns]);
 
   // Check user authentication status
