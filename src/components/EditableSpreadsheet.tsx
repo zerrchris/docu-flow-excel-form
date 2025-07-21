@@ -2566,15 +2566,6 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
               <Button variant="outline" onClick={() => setShowColumnDialog(false)}>
                 Cancel
               </Button>
-              <Button 
-                variant="secondary" 
-                onClick={saveAsDefault}
-                disabled={isSavingAsDefault || !user}
-                className="gap-2"
-              >
-                <Save className="h-4 w-4" />
-                {isSavingAsDefault ? "Saving..." : "Save as Default"}
-              </Button>
               <Button onClick={saveColumnChanges}>
                 Save Column
               </Button>
