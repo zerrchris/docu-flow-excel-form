@@ -2404,8 +2404,21 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       console.log('🔍 Row data after update:', newData[targetRowIndex]);
       console.log('🔍 Full new data array:', newData);
       
+      console.log('🔍 About to call setData with newData');
       setData(newData);
+      console.log('🔍 setData called');
+      
+      console.log('🔍 About to call onDataChange');
       onDataChange?.(newData);
+      console.log('🔍 onDataChange called');
+      
+      // Force a re-render by updating the key or forcing state change
+      console.log('🔍 Current data state after setData:', data);
+      
+      // Add a small delay to check if state updated
+      setTimeout(() => {
+        console.log('🔍 Data state after timeout:', data);
+      }, 100);
 
       toast({
         title: "Document analyzed",
