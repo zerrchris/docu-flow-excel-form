@@ -209,14 +209,14 @@ const DocumentNamingSettings: React.FC<DocumentNamingSettingsProps> = ({ availab
               </SelectTrigger>
               <SelectContent>
                 {availableColumns
-                  .filter(col => !preferences.priority_columns.includes(col))
+                  .filter(col => col && col.trim() !== '' && !preferences.priority_columns.includes(col))
                   .map(column => (
                     <SelectItem key={column} value={column}>
                       {column}
                     </SelectItem>
                   ))}
-                {availableColumns.filter(col => !preferences.priority_columns.includes(col)).length === 0 && (
-                  <SelectItem value="" disabled>
+                {availableColumns.filter(col => col && col.trim() !== '' && !preferences.priority_columns.includes(col)).length === 0 && (
+                  <SelectItem value="no-columns" disabled>
                     No available columns
                   </SelectItem>
                 )}
