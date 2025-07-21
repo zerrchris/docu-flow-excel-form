@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { RotateCw, CheckCircle, Plus, Settings, ChevronDown, ChevronUp, Upload, Wand2, RefreshCw } from 'lucide-react';
+import { RotateCw, CheckCircle, Plus, Settings, ChevronDown, ChevronUp, Upload, Wand2, RefreshCw, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface DataFormProps {
@@ -225,6 +225,18 @@ const DataForm: React.FC<DataFormProps> = ({
     console.log('Manual refresh complete - forced reset to DEFAULT columns:', DEFAULT_COLUMNS);
   };
 
+  // Clear all field values while keeping the field structure
+  const clearFields = () => {
+    console.log('Clearing all field values');
+    
+    // Clear all current fields
+    fields.forEach(field => {
+      onChange(field, '');
+    });
+    
+    console.log('All fields cleared');
+  };
+
   const toggleFieldVisibility = (field: string) => {
     setVisibleFields(prev => ({
       ...prev,
@@ -283,8 +295,17 @@ const DataForm: React.FC<DataFormProps> = ({
         </CollapsibleContent>
       </Collapsible>
 
-      {/* Refresh Fields Button */}
+      {/* Clear Fields and Refresh Fields Buttons */}
       <div className="space-y-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={clearFields}
+          className="w-full gap-2"
+        >
+          <Trash2 className="h-4 w-4" />
+          Clear Fields
+        </Button>
         <Button
           variant="outline"
           size="sm"
@@ -295,7 +316,7 @@ const DataForm: React.FC<DataFormProps> = ({
           Refresh Fields
         </Button>
         <div className="text-xs text-muted-foreground text-center px-2">
-          The fields shown here should match your current runsheet columns. If they don't match or you're seeing old fields, click "Refresh Fields" to sync them.
+          Clear Fields removes all data. Refresh Fields resets to match your current runsheet columns.
         </div>
       </div>
 
