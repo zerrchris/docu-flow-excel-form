@@ -182,23 +182,37 @@ const DocumentProcessor: React.FC = () => {
     if (action === 'upload') {
       console.log('Upload action detected, attempting to trigger file input...');
       
-      // Trigger file input click to open upload dialog
+      // First expand the DocumentFrame to ensure the DocumentUpload component is rendered
+      setTimeout(() => {
+        const expandButton = document.querySelector('[data-state="closed"]') as HTMLButtonElement;
+        if (expandButton) {
+          console.log('Expanding DocumentFrame first...');
+          expandButton.click();
+        }
+      }, 100);
+      
+      // Then trigger file input click with retry logic
+      let retryCount = 0;
+      const maxRetries = 20; // Maximum 2 seconds of retries
+      
       const triggerUpload = () => {
         const fileInput = document.getElementById('document-upload-input');
-        console.log('Looking for file input, found:', !!fileInput);
+        console.log(`Looking for file input (attempt ${retryCount + 1}), found:`, !!fileInput);
         
         if (fileInput) {
           console.log('Clicking file input...');
           fileInput.click();
-        } else {
+        } else if (retryCount < maxRetries) {
           console.log('File input not found, retrying in 100ms...');
-          // Retry if element not found yet
+          retryCount++;
           setTimeout(triggerUpload, 100);
+        } else {
+          console.log('Max retries reached, file input not found');
         }
       };
       
-      // Initial delay to ensure component is rendered, then retry logic
-      setTimeout(triggerUpload, 100);
+      // Start trying to click the file input after giving time for expansion
+      setTimeout(triggerUpload, 300);
     }
   }, [searchParams]);
   
