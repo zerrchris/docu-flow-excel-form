@@ -2551,7 +2551,6 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                                   documentPath={(() => {
                                     const dbPath = documentMap.get(rowIndex)?.file_path;
                                     const storagePath = row['Storage Path'];
-                                    console.log(`🔧 Row ${rowIndex} DocumentLinker paths:`, { dbPath, storagePath, rowData: row });
                                     return dbPath || storagePath;
                                   })()}
                                   existingDocumentUrl={row['Document File Name'] && row['Document File Name'].trim() !== '' ? 'exists' : undefined}
