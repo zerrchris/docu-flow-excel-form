@@ -2382,7 +2382,12 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       
       Object.entries(extractedData).forEach(([key, value]) => {
         const mappedKey = keyMapping[key] || key;
-        console.log(`🔍 Mapping "${key}" -> "${mappedKey}"`);
+        console.log(`🔍 DETAILED: Original key: "${key}", Value: "${value}", Mapped to: "${mappedKey}"`);
+        
+        // Special logging for problematic fields
+        if (key === "Instrument Number" || key === "Book and Page") {
+          console.log(`🚨 IMPORTANT: ${key} = "${value}" will be stored as "${mappedKey}"`);
+        }
         
         // Only include data for columns that actually exist
         if (columns.includes(mappedKey)) {
@@ -2404,7 +2409,12 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           }
           
           mappedData[mappedKey] = stringValue;
-          console.log(`🔍 Set mappedData["${mappedKey}"] = "${stringValue}"`);
+          console.log(`🔍 FINAL: mappedData["${mappedKey}"] = "${stringValue}"`);
+          
+          // Special logging for the problematic columns
+          if (mappedKey === "Book/Page" || mappedKey === "Inst Number") {
+            console.log(`🚨 STORED: Column "${mappedKey}" will show: "${stringValue}"`);
+          }
         } else {
           console.log(`🔍 Skipping "${mappedKey}" - not in columns`);
         }
