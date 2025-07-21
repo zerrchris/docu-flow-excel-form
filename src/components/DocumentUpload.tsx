@@ -88,12 +88,12 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
                     Drag and drop your document{allowMultiple ? 's' : ''} here, or
                   </p>
                   <Button variant="outline" size="lg" asChild className="font-semibold">
-                    <label htmlFor="file-upload" className="cursor-pointer">
+                    <label htmlFor="document-upload-input" className="cursor-pointer">
                       Browse Files
                     </label>
                   </Button>
                   <input
-                    id="file-upload"
+                    id="document-upload-input"
                     type="file"
                     className="sr-only"
                     accept="image/*,.pdf,.doc,.docx"

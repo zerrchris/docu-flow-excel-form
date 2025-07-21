@@ -105,6 +105,21 @@ const DocumentProcessor: React.FC = () => {
 
     loadUserPreferences();
   }, []);
+
+  // Handle URL parameters for actions (upload, google-drive, etc.)
+  useEffect(() => {
+    const action = searchParams.get('action');
+    
+    if (action === 'upload') {
+      // Trigger file input click to open upload dialog
+      setTimeout(() => {
+        const fileInput = document.getElementById('document-upload-input');
+        if (fileInput) {
+          fileInput.click();
+        }
+      }, 500); // Small delay to ensure component is rendered
+    }
+  }, [searchParams]);
   
   // Auto-save preferences when columns or instructions change
   useEffect(() => {
