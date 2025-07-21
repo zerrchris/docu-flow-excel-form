@@ -1866,15 +1866,54 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         let nextRowIndex = rowIndex;
         let nextColumn = columns[nextColumnIndex];
         
+        // Skip Document File Name column during navigation
+        const skipDocumentFileNameColumn = (colIndex: number, direction: number): number => {
+          let newIndex = colIndex;
+          while (newIndex >= 0 && newIndex < columns.length && columns[newIndex] === 'Document File Name') {
+            newIndex += direction;
+          }
+          return newIndex;
+        };
+        
         if (nextColumnIndex >= columns.length) {
           nextColumn = columns[0];
           nextRowIndex = Math.min(rowIndex + 1, data.length - 1);
+          // Skip Document File Name if it's the first column
+          const adjustedIndex = skipDocumentFileNameColumn(0, 1);
+          if (adjustedIndex < columns.length) {
+            nextColumn = columns[adjustedIndex];
+          }
         } else if (nextColumnIndex < 0) {
           nextColumn = columns[columns.length - 1];
           nextRowIndex = Math.max(rowIndex - 1, 0);
+          // Skip Document File Name if it's the last column
+          const adjustedIndex = skipDocumentFileNameColumn(columns.length - 1, -1);
+          if (adjustedIndex >= 0) {
+            nextColumn = columns[adjustedIndex];
+          }
+        } else {
+          // Skip Document File Name column
+          const adjustedIndex = skipDocumentFileNameColumn(nextColumnIndex, e.shiftKey ? -1 : 1);
+          if (adjustedIndex >= 0 && adjustedIndex < columns.length) {
+            nextColumn = columns[adjustedIndex];
+          } else if (adjustedIndex >= columns.length) {
+            nextColumn = columns[0];
+            nextRowIndex = Math.min(rowIndex + 1, data.length - 1);
+            const finalIndex = skipDocumentFileNameColumn(0, 1);
+            if (finalIndex < columns.length) {
+              nextColumn = columns[finalIndex];
+            }
+          } else {
+            nextColumn = columns[columns.length - 1];
+            nextRowIndex = Math.max(rowIndex - 1, 0);
+            const finalIndex = skipDocumentFileNameColumn(columns.length - 1, -1);
+            if (finalIndex >= 0) {
+              nextColumn = columns[finalIndex];
+            }
+          }
         }
         
-        if (nextColumn && nextRowIndex >= 0 && nextRowIndex < data.length) {
+        if (nextColumn && nextColumn !== 'Document File Name' && nextRowIndex >= 0 && nextRowIndex < data.length) {
           selectCell(nextRowIndex, nextColumn);
           // Auto-start editing the next cell
           setTimeout(() => {
@@ -1903,7 +1942,14 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         e.preventDefault();
         if (editingCell) return;
         if (columnIndex > 0) {
-          selectCell(rowIndex, columns[columnIndex - 1]);
+          let newColumnIndex = columnIndex - 1;
+          // Skip Document File Name column
+          while (newColumnIndex >= 0 && columns[newColumnIndex] === 'Document File Name') {
+            newColumnIndex--;
+          }
+          if (newColumnIndex >= 0) {
+            selectCell(rowIndex, columns[newColumnIndex]);
+          }
         }
         break;
         
@@ -1911,7 +1957,14 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         e.preventDefault();
         if (editingCell) return;
         if (columnIndex < columns.length - 1) {
-          selectCell(rowIndex, columns[columnIndex + 1]);
+          let newColumnIndex = columnIndex + 1;
+          // Skip Document File Name column
+          while (newColumnIndex < columns.length && columns[newColumnIndex] === 'Document File Name') {
+            newColumnIndex++;
+          }
+          if (newColumnIndex < columns.length) {
+            selectCell(rowIndex, columns[newColumnIndex]);
+          }
         }
         break;
         
