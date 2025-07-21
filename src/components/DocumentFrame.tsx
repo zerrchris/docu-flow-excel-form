@@ -75,9 +75,15 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
       const fileResult = await uploadFileToStorage(file, 'documents', 'single-processed');
       
       // Create enhanced data with file information
+      // Use user-specified filename if provided, otherwise use uploaded filename
+      const userSpecifiedFilename = formData['Document File Name'];
+      const finalFilename = userSpecifiedFilename && userSpecifiedFilename.trim() 
+        ? userSpecifiedFilename.trim() 
+        : fileResult.fileName;
+      
       const dataWithFile = {
         ...formData,
-        'Document File Name': fileResult.fileName,
+        'Document File Name': finalFilename,
         'Storage Path': fileResult.path
       };
       

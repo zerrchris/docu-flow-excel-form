@@ -82,9 +82,15 @@ const BatchDocumentRow: React.FC<BatchDocumentRowProps> = ({
       const fileResult = await uploadFileToStorage(file, 'documents', 'batch-processed');
       
       // Add file information to the form data
+      // Use user-specified filename if provided, otherwise use uploaded filename
+      const userSpecifiedFilename = formData['Document File Name'];
+      const finalFilename = userSpecifiedFilename && userSpecifiedFilename.trim() 
+        ? userSpecifiedFilename.trim() 
+        : fileResult.fileName;
+      
       const dataWithFile = {
         ...formData,
-        'Document File Name': fileResult.fileName,
+        'Document File Name': finalFilename,
         'Storage Path': fileResult.path
       };
       
