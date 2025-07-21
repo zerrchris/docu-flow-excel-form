@@ -108,6 +108,11 @@ const DataForm: React.FC<DataFormProps> = ({
             <Label htmlFor={field} className="text-sm font-medium">
               {field}
             </Label>
+            {field === 'Document File Name' && (
+              <div className="text-xs text-muted-foreground mb-1">
+                This will be the name of the document file
+              </div>
+            )}
             <Textarea
               id={field}
               value={formData[field] || ''}
