@@ -79,7 +79,7 @@ const RunsheetTabs: React.FC<RunsheetTabsProps> = ({ children }) => {
     <div className="h-full flex flex-col">
       {/* Tab Bar */}
       {activeRunsheets.length > 0 && (
-        <div className="flex items-center border-b bg-muted/30">
+        <div className="flex items-center bg-muted/30">
           <div className="flex items-center overflow-x-auto flex-1">
             {activeRunsheets.map((runsheet) => (
               <RunsheetTab
