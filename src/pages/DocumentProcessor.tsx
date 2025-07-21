@@ -182,71 +182,59 @@ const DocumentProcessor: React.FC = () => {
     if (action === 'upload') {
       console.log('Upload action detected, triggering runsheet file dialog...');
       
-      // Create a file input programmatically 
-      const fileInput = document.createElement('input');
-      fileInput.type = 'file';
-      fileInput.accept = '.xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv';
-      fileInput.multiple = false;
-      fileInput.style.display = 'none';
+      // Use the hidden file input that's already in the DOM
+      const existingInput = document.getElementById('dashboard-upload-input') as HTMLInputElement;
       
-      // Attach the event handler directly
-      fileInput.addEventListener('change', (e) => {
-        console.log('🔧 File input change event triggered');
-        const target = e.target as HTMLInputElement;
-        const files = target.files;
-        if (files && files.length > 0) {
-          const selectedFile = files[0];
-          console.log('🔧 DocumentProcessor: File selected:', selectedFile.name);
-          
-          // Check if it's a valid runsheet file type
-          const validExtensions = ['.xlsx', '.xls', '.csv'];
-          const fileExtension = selectedFile.name.toLowerCase().substr(selectedFile.name.lastIndexOf('.'));
-          
-          if (!validExtensions.includes(fileExtension)) {
-            toast({
-              title: "Invalid file type",
-              description: "Please select an Excel (.xlsx, .xls) or CSV (.csv) file for runsheet upload.",
-              variant: "destructive",
-            });
-            return;
-          }
-          
-          // Trigger the spreadsheet import functionality directly
-          console.log('🔧 DocumentProcessor: Dispatching importRunsheetFile event with file:', selectedFile.name);
-          const importEvent = new CustomEvent('importRunsheetFile', {
-            detail: { file: selectedFile }
-          });
-          window.dispatchEvent(importEvent);
-          console.log('🔧 DocumentProcessor: importRunsheetFile event dispatched successfully');
-          
-          toast({
-            title: "Importing runsheet",
-            description: `Processing ${selectedFile.name}...`,
-          });
-        }
+      if (existingInput) {
+        console.log('🔧 Using existing hidden file input');
+        existingInput.click();
+      } else {
+        console.log('🔧 Creating new file input programmatically');
+        // Create a file input programmatically as fallback
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = '.xlsx,.xls,.csv';
+        fileInput.multiple = false;
+        fileInput.style.display = 'none';
         
-        // Clean up
-        document.body.removeChild(fileInput);
-      });
-      
-      document.body.appendChild(fileInput);
-      console.log('🔧 Clicking file input for runsheet upload...');
-      fileInput.click();
+        // Use a simple event handler that calls our function
+        fileInput.onchange = (e) => {
+          console.log('🔧 Programmatic file input change event triggered');
+          handleDashboardFileSelect(e as any);
+        };
+        
+        document.body.appendChild(fileInput);
+        fileInput.click();
+        
+        // Clean up after a delay
+        setTimeout(() => {
+          if (document.body.contains(fileInput)) {
+            document.body.removeChild(fileInput);
+          }
+        }, 1000);
+      }
     }
   }, [searchParams]);
 
   // Handle file selection from dashboard upload
   const handleDashboardFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('🔧 handleDashboardFileSelect called!');
+    console.log('🔧 Event target:', e.target);
+    console.log('🔧 Files:', e.target.files);
+    
     const files = e.target.files;
     if (files && files.length > 0) {
       // For runsheet uploads, we only handle single files
       const selectedFile = files[0];
+      console.log('🔧 DocumentProcessor: File selected:', selectedFile.name, 'Type:', selectedFile.type);
       
       // Check if it's a valid runsheet file type
       const validExtensions = ['.xlsx', '.xls', '.csv'];
       const fileExtension = selectedFile.name.toLowerCase().substr(selectedFile.name.lastIndexOf('.'));
+      console.log('🔧 File extension:', fileExtension);
       
       if (!validExtensions.includes(fileExtension)) {
+        console.log('🔧 Invalid file type detected');
         toast({
           title: "Invalid file type",
           description: "Please select an Excel (.xlsx, .xls) or CSV (.csv) file for runsheet upload.",
@@ -268,6 +256,8 @@ const DocumentProcessor: React.FC = () => {
         title: "Importing runsheet",
         description: `Processing ${selectedFile.name}...`,
       });
+    } else {
+      console.log('🔧 No files selected or files array is empty');
     }
     // Reset the input so the same file can be selected again
     e.target.value = '';
