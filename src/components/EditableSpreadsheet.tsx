@@ -65,6 +65,9 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const navigate = useNavigate();
   const { setActiveRunsheet, clearActiveRunsheet } = useActiveRunsheet();
   const [user, setUser] = useState<User | null>(null);
+  
+  // Track locally which columns need configuration
+  const [localMissingColumns, setLocalMissingColumns] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showOpenDialog, setShowOpenDialog] = useState(false);
@@ -172,6 +175,15 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       return prevData;
     });
   }, [initialData, initialColumns]);
+
+  // Update local missing columns based on current column instructions
+  useEffect(() => {
+    const missing = columns.filter(column => 
+      column !== 'Document File Name' && // Skip Document File Name - it's user-specified, not extracted
+      (!columnInstructions[column] || columnInstructions[column].trim() === '')
+    );
+    setLocalMissingColumns(missing);
+  }, [columns, columnInstructions]);
 
   // Check user authentication status
   useEffect(() => {
@@ -2183,7 +2195,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                        className={`font-bold text-center border-r border-border relative p-0 last:border-r-0 cursor-move
                          ${draggedColumn === column ? 'opacity-50' : ''} 
                          ${dragOverColumn === column ? 'bg-primary/20' : ''}
-                         ${missingColumns.includes(column) ? 'animate-pulse bg-yellow-100 border-2 border-yellow-400 dark:bg-yellow-900/20 dark:border-yellow-500' : ''}`}
+                         ${localMissingColumns.includes(column) ? 'bg-yellow-100 border-2 border-yellow-400 dark:bg-yellow-900/20 dark:border-yellow-500 animate-pulse' : ''}`}
                        style={{ width: `${getColumnWidth(column)}px`, minWidth: `${getColumnWidth(column)}px` }}
                        draggable
                       onDragStart={(e) => handleDragStart(e, column)}
@@ -2196,7 +2208,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                          <ContextMenuTrigger className="w-full h-full p-0 select-none">
                             <div 
                               className={`w-full h-full px-4 py-2 cursor-pointer hover:bg-primary/10 transition-colors relative
-                                ${missingColumns.includes(column) ? 'animate-bounce' : ''}`}
+                                ${localMissingColumns.includes(column) ? 'hover:bg-yellow-200 dark:hover:bg-yellow-800/30' : ''}`}
                               onClick={() => openColumnDialog(column)}
                            >
                               <div className="flex flex-col items-center">
@@ -2206,9 +2218,9 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                                     click to configure naming preferences
                                   </span>
                                 )}
-                                {missingColumns.includes(column) && (
-                                  <span className="text-xs text-yellow-600 dark:text-yellow-400 mt-1 animate-pulse">
-                                    Click to configure
+                                {localMissingColumns.includes(column) && (
+                                  <span className="text-xs text-yellow-700 dark:text-yellow-300 mt-1 font-medium animate-pulse">
+                                    Click to save
                                   </span>
                                 )}
                               </div>
