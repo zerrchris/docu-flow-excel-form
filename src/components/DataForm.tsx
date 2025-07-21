@@ -180,31 +180,53 @@ const DataForm: React.FC<DataFormProps> = ({
     };
   }, []);
 
-  // Manual refresh function to force fields to match current spreadsheet columns
-  const refreshFields = () => {
-    console.log('Manual refresh triggered - completely resetting to current spreadsheet columns:', fields);
+  // Manual refresh function to get the ACTUAL current spreadsheet columns
+  const refreshFields = async () => {
+    console.log('Manual refresh triggered - fetching ACTUAL current spreadsheet columns');
     console.log('Current formData keys before refresh:', Object.keys(formData));
+    console.log('Current fields prop:', fields);
     
-    // Force a complete form data reset by dispatching an event to the parent
-    const forceResetEvent = new CustomEvent('forceFormDataReset', { 
-      detail: { targetFields: fields }
-    });
-    window.dispatchEvent(forceResetEvent);
-    
-    // Create completely new visibility object with ONLY current fields
-    const refreshedVisibility: Record<string, boolean> = {};
-    fields.forEach(field => {
-      refreshedVisibility[field] = true;
-    });
-    
-    // Force update visible fields state
-    setVisibleFields(refreshedVisibility);
-    
-    console.log('Manual refresh complete - form reset to show only these fields:', fields);
-    console.log('New visible fields:', Object.keys(refreshedVisibility));
-    
-    // Force a re-render by triggering a small state change
-    setShowFieldSettings(false);
+    try {
+      // Get the actual current runsheet data from localStorage (most up-to-date)
+      const runsheets = JSON.parse(localStorage.getItem('runsheets') || '[]');
+      const activeRunsheetId = localStorage.getItem('activeRunsheetId');
+      const currentRunsheet = runsheets.find((r: any) => r.id === activeRunsheetId);
+      
+      let actualCurrentColumns = fields; // fallback to props
+      
+      if (currentRunsheet && currentRunsheet.columns) {
+        actualCurrentColumns = currentRunsheet.columns;
+        console.log('Found actual current runsheet columns:', actualCurrentColumns);
+      } else {
+        console.log('No current runsheet found, using fields prop as fallback:', fields);
+      }
+      
+      // Force complete reset with actual current columns
+      const forceResetEvent = new CustomEvent('forceFormDataReset', { 
+        detail: { targetFields: actualCurrentColumns }
+      });
+      window.dispatchEvent(forceResetEvent);
+      
+      // Create completely new visibility object with ONLY actual current fields
+      const refreshedVisibility: Record<string, boolean> = {};
+      actualCurrentColumns.forEach((field: string) => {
+        refreshedVisibility[field] = true;
+      });
+      
+      setVisibleFields(refreshedVisibility);
+      
+      console.log('Manual refresh complete - form reset to show these ACTUAL columns:', actualCurrentColumns);
+      console.log('New visible fields:', Object.keys(refreshedVisibility));
+      
+    } catch (error) {
+      console.error('Error refreshing fields:', error);
+      // Fallback to original behavior
+      const refreshedVisibility: Record<string, boolean> = {};
+      fields.forEach(field => {
+        refreshedVisibility[field] = true;
+      });
+      setVisibleFields(refreshedVisibility);
+    }
   };
 
   const toggleFieldVisibility = (field: string) => {
