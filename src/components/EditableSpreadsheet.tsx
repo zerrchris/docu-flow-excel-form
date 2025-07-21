@@ -2682,21 +2682,21 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                         ) : (
                           <div
                             data-cell={`${rowIndex}-${column}`}
-                            className={`min-h-[2rem] py-2 px-3 cursor-cell flex items-start transition-colors whitespace-pre-wrap select-none
-                              ${isSelected 
-                                ? 'bg-primary/20 border-2 border-primary ring-2 ring-primary/20' 
-                                : isInRange
-                                ? 'bg-primary/10 border-2 border-primary/50'
-                                : 'hover:bg-muted/50 border-2 border-transparent'
-                              }
-                              ${columnAlignments[column] === 'center' ? 'text-center justify-center' : 
-                                columnAlignments[column] === 'right' ? 'text-right justify-end' : 'text-left justify-start'}`}
-                             onClick={() => column !== 'Document File Name' && selectCell(rowIndex, column)}
-                             onMouseDown={(e) => handleCellMouseDown(e, rowIndex, column)}
-                             onMouseEnter={() => handleMouseEnter(rowIndex, column)}
-                             onMouseUp={handleMouseUp}
-                             onKeyDown={(e) => handleKeyDown(e, rowIndex, column)}
-                            tabIndex={0}
+                             className={`min-h-[2rem] py-2 px-3 ${column === 'Document File Name' ? 'cursor-default' : 'cursor-cell'} flex items-start transition-colors whitespace-pre-wrap select-none
+                               ${isSelected 
+                                 ? 'bg-primary/20 border-2 border-primary ring-2 ring-primary/20' 
+                                 : isInRange
+                                 ? 'bg-primary/10 border-2 border-primary/50'
+                                 : 'hover:bg-muted/50 border-2 border-transparent'
+                               }
+                               ${columnAlignments[column] === 'center' ? 'text-center justify-center' : 
+                                 columnAlignments[column] === 'right' ? 'text-right justify-end' : 'text-left justify-start'}`}
+                              onClick={() => column !== 'Document File Name' && selectCell(rowIndex, column)}
+                              onMouseDown={(e) => column !== 'Document File Name' && handleCellMouseDown(e, rowIndex, column)}
+                              onMouseEnter={() => handleMouseEnter(rowIndex, column)}
+                              onMouseUp={handleMouseUp}
+                              onKeyDown={(e) => column !== 'Document File Name' && handleKeyDown(e, rowIndex, column)}
+                             tabIndex={column === 'Document File Name' ? -1 : 0}
                             >
                               {column === 'Document File Name' ? (
                                 <DocumentLinker
