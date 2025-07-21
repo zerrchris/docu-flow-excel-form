@@ -38,6 +38,12 @@ const Dashboard: React.FC = () => {
       path: "/runsheet"
     },
     {
+      title: "Open Runsheet",
+      description: "Load a previously saved runsheet",
+      icon: FolderOpen,
+      path: "/file-manager"
+    },
+    {
       title: "Upload Runsheet",
       description: "Upload files from your device",
       icon: Upload,
