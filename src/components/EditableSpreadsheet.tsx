@@ -358,6 +358,35 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     };
   }, [hasUnsavedChanges, user, runsheetName, columns, data, columnInstructions, forceSave]);
 
+  // Generate unique runsheet name if there's a conflict
+  const generateUniqueRunsheetName = async (baseName: string, userId: string): Promise<string> => {
+    let uniqueName = baseName;
+    let counter = 1;
+    
+    while (true) {
+      // Check if runsheet with this name already exists
+      const { data: existingRunsheet, error } = await supabase
+        .from('runsheets')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('name', uniqueName)
+        .single();
+      
+      if (error && error.code === 'PGRST116') {
+        // No existing runsheet found - this name is available
+        return uniqueName;
+      } else if (existingRunsheet) {
+        // Name exists, try with number suffix
+        uniqueName = `${baseName} (${counter})`;
+        counter++;
+      } else {
+        // Some other error occurred
+        console.error('Error checking for existing runsheet:', error);
+        return uniqueName;
+      }
+    }
+  };
+
   // Save runsheet to Supabase
   const saveRunsheet = async () => {
     console.log('Save button clicked!');
@@ -381,17 +410,25 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     
     try {
       console.log('Attempting to save to database...');
+      
+      // Generate unique name if there's a conflict
+      const finalName = await generateUniqueRunsheetName(runsheetName, user.id);
+      
+      // Update runsheet name if it was changed to avoid conflict
+      if (finalName !== runsheetName) {
+        setRunsheetName(finalName);
+        console.log(`Runsheet name changed to avoid conflict: ${runsheetName} -> ${finalName}`);
+      }
+      
       const { error } = await supabase
         .from('runsheets')
-        .upsert({
-          name: runsheetName,
+        .insert({
+          name: finalName,
           columns: columns,
           data: data,
           column_instructions: columnInstructions,
           user_id: user.id,
           updated_at: new Date().toISOString(),
-        }, {
-          onConflict: 'user_id,name'
         });
 
       if (error) {
@@ -400,14 +437,14 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       }
 
       console.log('Save successful!');
-      const savedState = JSON.stringify({ data, columns, runsheetName, columnInstructions });
+      const savedState = JSON.stringify({ data, columns, runsheetName: finalName, columnInstructions });
       setLastSavedState(savedState);
       setHasUnsavedChanges(false);
       setLastSaveTime(new Date());
       onUnsavedChanges?.(false);
       toast({
         title: "Runsheet saved",
-        description: `"${runsheetName}" has been saved successfully.`,
+        description: `"${finalName}" has been saved successfully.`,
       });
     } catch (error: any) {
       console.error('Save failed:', error);
@@ -439,17 +476,24 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     
     try {
       // First save the runsheet
+      // Generate unique name if there's a conflict
+      const finalName = await generateUniqueRunsheetName(runsheetName, user.id);
+      
+      // Update runsheet name if it was changed to avoid conflict
+      if (finalName !== runsheetName) {
+        setRunsheetName(finalName);
+        console.log(`Runsheet name changed to avoid conflict: ${runsheetName} -> ${finalName}`);
+      }
+      
       const { error } = await supabase
         .from('runsheets')
-        .upsert({
-          name: runsheetName,
+        .insert({
+          name: finalName,
           columns: columns,
           data: data,
           column_instructions: columnInstructions,
           user_id: user.id,
           updated_at: new Date().toISOString(),
-        }, {
-          onConflict: 'user_id,name'
         });
 
       if (error) {
@@ -457,7 +501,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       }
 
       // Update local state
-      const savedState = JSON.stringify({ data, columns, runsheetName, columnInstructions });
+      const savedState = JSON.stringify({ data, columns, runsheetName: finalName, columnInstructions });
       setLastSavedState(savedState);
       setHasUnsavedChanges(false);
       setLastSaveTime(new Date());
@@ -468,7 +512,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
       toast({
         title: "Runsheet saved and closed",
-        description: `"${runsheetName}" has been saved successfully.`,
+        description: `"${finalName}" has been saved successfully.`,
       });
 
       // Navigate back to dashboard
