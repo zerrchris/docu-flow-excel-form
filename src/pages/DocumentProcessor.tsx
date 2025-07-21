@@ -182,11 +182,23 @@ const DocumentProcessor: React.FC = () => {
     if (action === 'upload') {
       console.log('Upload action detected, triggering file dialog...');
       
-      // Trigger the hidden file input
-      const fileInput = document.getElementById('dashboard-upload-input');
-      if (fileInput) {
-        fileInput.click();
+      // Create a file input programmatically if needed
+      let fileInput = document.getElementById('dashboard-upload-input') as HTMLInputElement;
+      
+      if (!fileInput) {
+        console.log('Dashboard file input not found, creating one...');
+        fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.id = 'dashboard-upload-input';
+        fileInput.accept = 'image/*,.pdf,.doc,.docx';
+        fileInput.multiple = true;
+        fileInput.style.display = 'none';
+        fileInput.onchange = (e) => handleDashboardFileSelect(e as any);
+        document.body.appendChild(fileInput);
       }
+      
+      console.log('Clicking file input...');
+      fileInput.click();
     }
   }, [searchParams]);
 
