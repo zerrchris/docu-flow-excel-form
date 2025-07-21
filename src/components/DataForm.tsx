@@ -5,7 +5,8 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { RotateCw, CheckCircle, Plus, Settings, ChevronDown, ChevronUp, Upload } from 'lucide-react';
+import { RotateCw, CheckCircle, Plus, Settings, ChevronDown, ChevronUp, Upload, Wand2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface DataFormProps {
   fields: string[];
@@ -30,6 +31,83 @@ const DataForm: React.FC<DataFormProps> = ({
 }) => {
   const [visibleFields, setVisibleFields] = useState<Record<string, boolean>>({});
   const [showFieldSettings, setShowFieldSettings] = useState(false);
+  const [isGeneratingName, setIsGeneratingName] = useState(false);
+
+  // Generate smart filename using user's naming preferences
+  const generateSmartFilename = async () => {
+    try {
+      setIsGeneratingName(true);
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Get user's naming preferences
+      const { data: preferences } = await supabase
+        .from('user_document_naming_preferences')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      // Use default preferences if none found
+      const namingPrefs = preferences || {
+        priority_columns: ['name', 'title', 'invoice_number', 'document_number', 'reference', 'id'],
+        max_filename_parts: 3,
+        separator: '_',
+        include_extension: true,
+        fallback_pattern: 'document_{row_index}_{timestamp}'
+      };
+
+      // Build filename from available form data using priority columns
+      const filenameParts: string[] = [];
+      
+      for (const column of namingPrefs.priority_columns) {
+        const value = formData[column];
+        if (value && value.trim() && value.trim() !== 'N/A') {
+          // Clean the value: remove special characters, limit length
+          let cleanValue = value.trim()
+            .replace(/[^a-zA-Z0-9\-_\s]/g, '')
+            .replace(/\s+/g, namingPrefs.separator)
+            .substring(0, 30);
+          
+          if (cleanValue) {
+            filenameParts.push(cleanValue);
+          }
+          
+          // Stop when we have enough parts
+          if (filenameParts.length >= namingPrefs.max_filename_parts) {
+            break;
+          }
+        }
+      }
+
+      // Generate filename
+      let filename;
+      if (filenameParts.length > 0) {
+        filename = filenameParts.join(namingPrefs.separator);
+      } else {
+        // Use fallback pattern
+        filename = namingPrefs.fallback_pattern
+          .replace('{row_index}', '1')
+          .replace('{timestamp}', Date.now().toString());
+      }
+
+      // Add extension if preferences say so
+      if (namingPrefs.include_extension) {
+        filename += '.pdf';
+      }
+
+      // Update the form field
+      onChange('Document File Name', filename);
+      
+    } catch (error) {
+      console.error('Error generating smart filename:', error);
+    } finally {
+      setIsGeneratingName(false);
+    }
+  };
 
   // Auto-close field settings after 5 seconds
   useEffect(() => {
@@ -109,17 +187,45 @@ const DataForm: React.FC<DataFormProps> = ({
               {field}
             </Label>
             {field === 'Document File Name' && (
-              <div className="text-xs text-muted-foreground mb-1">
-                This will be the name of the document file (optional - defaults to uploaded filename if left empty)
+              <div className="space-y-1">
+                <div className="text-xs text-muted-foreground">
+                  This will be the name of the document file (optional - defaults to uploaded filename if left empty)
+                </div>
+                <div className="flex gap-2">
+                  <Textarea
+                    id={field}
+                    value={formData[field] || ''}
+                    onChange={(e) => onChange(field, e.target.value)}
+                    className="flex-1 min-h-[40px] resize-none"
+                    rows={Math.max(1, Math.ceil((formData[field] || '').length / 50))}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={generateSmartFilename}
+                    disabled={isGeneratingName}
+                    className="px-3 h-10"
+                    title="Generate smart filename using your naming preferences"
+                  >
+                    {isGeneratingName ? (
+                      <RotateCw className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Wand2 className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
               </div>
             )}
-            <Textarea
-              id={field}
-              value={formData[field] || ''}
-              onChange={(e) => onChange(field, e.target.value)}
-              className="mt-1 min-h-[40px] resize-none"
-              rows={Math.max(1, Math.ceil((formData[field] || '').length / 50))}
-            />
+            {field !== 'Document File Name' && (
+              <Textarea
+                id={field}
+                value={formData[field] || ''}
+                onChange={(e) => onChange(field, e.target.value)}
+                className="mt-1 min-h-[40px] resize-none"
+                rows={Math.max(1, Math.ceil((formData[field] || '').length / 50))}
+              />
+            )}
           </div>
         ))}
         
