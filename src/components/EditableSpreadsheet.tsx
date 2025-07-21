@@ -2383,6 +2383,9 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       // Map the extracted data to the correct column names
       Object.entries(extractedData).forEach(([key, value]) => {
         const mappedKey = keyMapping[key] || key;
+        console.log(`🔍 Mapping: "${key}" -> "${mappedKey}"`);
+        console.log(`🔍 Is "${mappedKey}" in columns?`, columns.includes(mappedKey));
+        
         if (columns.includes(mappedKey)) {
           console.log(`🔍 Processing ${key} -> ${mappedKey}, value:`, value, 'type:', typeof value);
           
@@ -2401,7 +2404,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             stringValue = String(value);
           }
           
-          console.log(`🔍 Final string value for ${mappedKey}:`, stringValue);
+          console.log(`🔍 Setting mappedData["${mappedKey}"] = "${stringValue}"`);
           mappedData[mappedKey] = stringValue;
         }
       });
