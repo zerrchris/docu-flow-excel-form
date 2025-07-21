@@ -8,7 +8,7 @@ import DataForm from './DataForm';
 import DocumentViewer from './DocumentViewer';
 import { MobileCapturedDocuments } from './MobileCapturedDocuments';
 import DocumentUpload from './DocumentUpload';
-import VoiceInput from './VoiceInput';
+
 import RealtimeVoiceInput from './RealtimeVoiceInput';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
@@ -182,12 +182,6 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
                           onDataExtracted={handleVoiceDataExtracted}
                         />
                         
-                        {/* Legacy Voice Input (for comparison) */}
-                        <VoiceInput
-                          fields={fields}
-                          columnInstructions={columnInstructions || {}}
-                          onDataExtracted={handleVoiceDataExtracted}
-                        />
                         
                         {/* Data Form */}
                         <DataForm 
