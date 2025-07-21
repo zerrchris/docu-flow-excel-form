@@ -452,37 +452,42 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
   }
 
   return (
-    <Card 
-      className={`p-3 border-dashed transition-colors ${
-        dragActive ? 'border-primary bg-primary/5' : 'border-muted-foreground/25'
-      }`}
-      onDrop={handleDrop}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-    >
-      <div className="flex items-center justify-center">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={openFileSelector}
-          disabled={isUploading}
-          className="h-8 text-xs"
-        >
-          <Upload className="w-3 h-3 mr-1" />
-          {isUploading ? 'Uploading...' : 'Add Document'}
-        </Button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) handleFileSelect(file);
-          }}
-          accept="image/*,.pdf,.doc,.docx,.txt"
-        />
+    <div>
+      <Card 
+        className={`p-3 border-dashed transition-colors ${
+          dragActive ? 'border-primary bg-primary/5' : 'border-muted-foreground/25'
+        }`}
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+      >
+        <div className="flex items-center justify-center">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={openFileSelector}
+            disabled={isUploading}
+            className="h-8 text-xs"
+          >
+            <Upload className="w-3 h-3 mr-1" />
+            {isUploading ? 'Uploading...' : 'Add Document'}
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleFileSelect(file);
+            }}
+            accept="image/*,.pdf,.doc,.docx,.txt"
+          />
+        </div>
+      </Card>
+      <div className="text-xs text-muted-foreground mt-1 text-center">
+        This will be the name of the document file
       </div>
-    </Card>
+    </div>
   );
 };
 
