@@ -63,7 +63,7 @@ const DocumentProcessor: React.FC = () => {
   // Preferences loading state
   const [isLoadingPreferences, setIsLoadingPreferences] = useState(true);
   
-  // Load user preferences on component mount
+  // Load user preferences and handle selected runsheet on component mount
   useEffect(() => {
     const loadUserPreferences = async () => {
       setIsLoadingPreferences(true);
@@ -105,6 +105,37 @@ const DocumentProcessor: React.FC = () => {
 
     loadUserPreferences();
   }, []);
+
+  // Handle selected runsheet from navigation state
+  useEffect(() => {
+    const selectedRunsheet = location.state?.runsheet;
+    if (selectedRunsheet) {
+      console.log('Loading selected runsheet:', selectedRunsheet);
+      
+      // Load runsheet data
+      if (selectedRunsheet.data && Array.isArray(selectedRunsheet.data)) {
+        setSpreadsheetData(selectedRunsheet.data);
+      }
+      
+      // Load runsheet columns if available
+      if (selectedRunsheet.columns && Array.isArray(selectedRunsheet.columns)) {
+        setColumns(selectedRunsheet.columns);
+      }
+      
+      // Load column instructions if available
+      if (selectedRunsheet.column_instructions) {
+        setColumnInstructions(selectedRunsheet.column_instructions);
+      }
+      
+      toast({
+        title: "Runsheet loaded",
+        description: `Loaded "${selectedRunsheet.name}" with ${selectedRunsheet.data?.length || 0} rows.`,
+      });
+      
+      // Clear the navigation state to prevent reloading on subsequent renders
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, navigate, location.pathname]);
 
   // Handle URL parameters for actions (upload, google-drive, etc.)
   useEffect(() => {
