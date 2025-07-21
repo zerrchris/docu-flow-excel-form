@@ -56,15 +56,27 @@ export const useMultipleRunsheets = () => {
   const [currentTabId, setCurrentTabId] = useState<string | null>(globalCurrentTabId);
 
   useEffect(() => {
-    // FORCE CLEAR: Clear all runsheets on next load (one-time cleanup)
-    const shouldClearRunsheets = !localStorage.getItem('runsheets_cleared_2025');
-    if (shouldClearRunsheets) {
+    // AGGRESSIVE CLEANUP: Force clear all runsheets immediately
+    try {
+      // Check current data first
+      const storedData = localStorage.getItem(ACTIVE_RUNSHEETS_KEY);
+      if (storedData) {
+        const parsed = JSON.parse(storedData);
+        console.log('Found runsheets in localStorage:', parsed.length);
+        if (parsed.length > 10) {
+          console.warn('Suspicious number of runsheets detected, forcing cleanup');
+        }
+      }
+      
+      // Always clear on load - force fresh start
       localStorage.removeItem(ACTIVE_RUNSHEETS_KEY);
       localStorage.removeItem(CURRENT_TAB_KEY);
-      localStorage.setItem('runsheets_cleared_2025', 'true');
       globalActiveRunsheets = [];
       globalCurrentTabId = null;
-      console.log('Cleared all runsheets - fresh start');
+      console.log('Forced cleanup of all runsheets completed');
+      
+    } catch (error) {
+      console.error('Error during runsheet cleanup:', error);
     }
 
     // Add this component as a listener
@@ -73,11 +85,8 @@ export const useMultipleRunsheets = () => {
       setCurrentTabId(tabId);
     });
     
-    // Load from localStorage on mount if not already loaded
-    if (globalActiveRunsheets.length === 0 && !shouldClearRunsheets) {
-      loadFromLocalStorage();
-      notifyListeners();
-    }
+    // Don't load from localStorage - start fresh
+    notifyListeners();
 
     return () => {
       // Remove this component as a listener
