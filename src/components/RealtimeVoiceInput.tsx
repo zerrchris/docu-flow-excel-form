@@ -106,12 +106,12 @@ const RealtimeVoiceInput: React.FC<RealtimeVoiceInputProps> = ({
   const [isExpanded, setIsExpanded] = useState(false);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
   const { toast } = useToast();
 
   const startRecording = async () => {
     try {
+      console.log('Starting recording...');
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
           sampleRate: 24000,
@@ -122,17 +122,39 @@ const RealtimeVoiceInput: React.FC<RealtimeVoiceInputProps> = ({
         } 
       });
       
-      streamRef.current = stream;
+      audioChunksRef.current = [];
+      
+      mediaRecorderRef.current = new MediaRecorder(stream, {
+        mimeType: 'audio/webm'
+      });
+      
+      mediaRecorderRef.current.ondataavailable = async (event) => {
+        console.log('Audio data available, size:', event.data.size);
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+          // Transcribe each chunk immediately
+          await transcribeChunk(event.data);
+        }
+      };
+      
+      mediaRecorderRef.current.onstop = async () => {
+        console.log('Recording stopped, processing final chunks...');
+        // Process any remaining chunks
+        if (audioChunksRef.current.length > 0) {
+          const finalBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          await transcribeChunk(finalBlob);
+        }
+      };
+      
+      // Start recording with 3-second chunks
+      mediaRecorderRef.current.start(3000);
       setIsRecording(true);
       setTranscript('');
       
       toast({
         title: "Recording Started",
-        description: "Speak naturally - audio will be transcribed continuously",
+        description: "Speak naturally - audio will be transcribed in chunks",
       });
-
-      // Start continuous recording with 2-second chunks
-      startContinuousRecording(stream);
 
     } catch (error) {
       console.error('Error starting recording:', error);
@@ -144,61 +166,26 @@ const RealtimeVoiceInput: React.FC<RealtimeVoiceInputProps> = ({
     }
   };
 
-  const startContinuousRecording = (stream: MediaStream) => {
-    const recordChunk = async () => {
-      if (!isRecording) return;
-
-      try {
-        const mediaRecorder = new MediaRecorder(stream, {
-          mimeType: 'audio/webm'
-        });
-
-        const audioChunks: Blob[] = [];
-        
-        mediaRecorder.ondataavailable = (event) => {
-          if (event.data.size > 0) {
-            audioChunks.push(event.data);
-          }
-        };
-
-        mediaRecorder.onstop = async () => {
-          if (audioChunks.length > 0) {
-            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-            await transcribeChunk(audioBlob);
-          }
-        };
-
-        // Record for 2 seconds
-        mediaRecorder.start();
-        
-        setTimeout(() => {
-          if (mediaRecorder.state === 'recording') {
-            mediaRecorder.stop();
-          }
-        }, 2000);
-
-      } catch (error) {
-        console.error('Error in chunk recording:', error);
-      }
-    };
-
-    // Start first chunk immediately
-    recordChunk();
-    
-    // Continue recording chunks every 2 seconds
-    recordingIntervalRef.current = setInterval(recordChunk, 2000);
-  };
-
   const transcribeChunk = async (audioBlob: Blob) => {
     try {
       console.log('Transcribing audio chunk, size:', audioBlob.size);
       
+      if (audioBlob.size < 1000) {
+        console.log('Audio chunk too small, skipping transcription');
+        return;
+      }
+      
+      const base64Audio = await blobToBase64(audioBlob);
+      console.log('Base64 audio length:', base64Audio.length);
+      
       const { data, error } = await supabase.functions.invoke('transcribe-audio', {
         body: {
-          audio: await blobToBase64(audioBlob),
+          audio: base64Audio,
           format: 'webm'
         }
       });
+
+      console.log('Transcription response:', data, error);
 
       if (error) {
         console.error('Transcription error:', error);
@@ -206,12 +193,14 @@ const RealtimeVoiceInput: React.FC<RealtimeVoiceInputProps> = ({
       }
 
       if (data?.text && data.text.trim()) {
-        console.log('Transcribed text:', data.text);
+        console.log('Adding transcribed text:', data.text);
         setTranscript(prev => {
           const newTranscript = prev ? prev + ' ' + data.text.trim() : data.text.trim();
           onTextTranscribed?.(newTranscript);
           return newTranscript;
         });
+      } else {
+        console.log('No text in transcription response');
       }
     } catch (error) {
       console.error('Error transcribing chunk:', error);
@@ -223,7 +212,9 @@ const RealtimeVoiceInput: React.FC<RealtimeVoiceInputProps> = ({
       const reader = new FileReader();
       reader.onloadend = () => {
         const base64 = reader.result as string;
-        resolve(base64.split(',')[1]); // Remove data:audio/webm;base64, prefix
+        const base64Data = base64.split(',')[1];
+        console.log('Converted blob to base64, length:', base64Data.length);
+        resolve(base64Data);
       };
       reader.onerror = reject;
       reader.readAsDataURL(blob);
@@ -232,24 +223,15 @@ const RealtimeVoiceInput: React.FC<RealtimeVoiceInputProps> = ({
 
   const stopRecording = () => {
     console.log('Stopping recording...');
-    setIsRecording(false);
-    
-    // Clear the interval
-    if (recordingIntervalRef.current) {
-      clearInterval(recordingIntervalRef.current);
-      recordingIntervalRef.current = null;
-    }
-    
-    // Stop media recorder if active
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       mediaRecorderRef.current.stop();
     }
     
-    // Stop all audio tracks
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
+    if (mediaRecorderRef.current?.stream) {
+      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
     }
+    
+    setIsRecording(false);
     
     toast({
       title: "Recording Stopped",
