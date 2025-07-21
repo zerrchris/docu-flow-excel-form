@@ -209,7 +209,7 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      console.log('RENAME DEBUG:', { runsheetId, rowIndex, userId: user.id });
 
       // Get current document info
       const { data: document, error: fetchError } = await supabase
