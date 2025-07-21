@@ -124,12 +124,15 @@ const DataForm: React.FC<DataFormProps> = ({
 
   // Initialize all fields as visible when fields change - completely reset on field change
   useEffect(() => {
+    // Create a completely new visibility object with ONLY current fields
     const initialVisibility: Record<string, boolean> = {};
     fields.forEach(field => {
       initialVisibility[field] = true; // Always start with all fields visible
     });
+    // Completely replace the state - don't preserve any old field visibility
     setVisibleFields(initialVisibility);
-    console.log('DataForm: Resetting visible fields for new fields:', fields);
+    console.log('DataForm: Completely resetting visible fields for new fields:', fields);
+    console.log('DataForm: Old visible fields cleared, new visible fields:', Object.keys(initialVisibility));
   }, [fields]);
 
   const toggleFieldVisibility = (field: string) => {
@@ -139,7 +142,8 @@ const DataForm: React.FC<DataFormProps> = ({
     }));
   };
 
-  const visibleFieldsList = fields.filter(field => visibleFields[field]);
+  // Only show fields that exist in current fields AND are marked visible
+  const visibleFieldsList = fields.filter(field => visibleFields[field] === true);
   return (
     <div className="space-y-4">
       {/* Field Settings Toggle */}
