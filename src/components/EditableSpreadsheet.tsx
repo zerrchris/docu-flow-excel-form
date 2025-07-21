@@ -2363,30 +2363,27 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       console.log('🔍 Current data before update:', data);
       console.log('🔍 Available columns:', columns);
 
-      // Use the extracted data directly without mapping since the row data uses the original keys
+      // Use the extracted data directly with improved object handling
       const finalData: Record<string, string> = {};
       
       Object.entries(extractedData).forEach(([key, value]) => {
-        console.log(`🔍 Processing original key "${key}", value:`, value, 'type:', typeof value);
-        
         // Handle object values (like complex Grantor/Grantee data)
         let stringValue: string;
         if (typeof value === 'object' && value !== null) {
-          console.log('🔍 Value is object:', value);
           // If it's an object with Name and Address properties (capitalized)
           if (typeof value === 'object' && 'Name' in value && 'Address' in value) {
             stringValue = `${value.Name}; ${value.Address}`;
           } else if (typeof value === 'object' && 'name' in value && 'address' in value) {
             stringValue = `${value.name}; ${value.address}`;
           } else {
-            // For other objects, create a readable string
-            stringValue = JSON.stringify(value).replace(/[{}]/g, '').replace(/"/g, '');
+            // For other objects, create a readable string without brackets
+            const objStr = JSON.stringify(value);
+            stringValue = objStr.replace(/[{}]/g, '').replace(/"/g, '').replace(/:/g, ': ').replace(/,/g, ', ');
           }
         } else {
           stringValue = String(value);
         }
         
-        console.log(`🔍 Setting finalData["${key}"] = "${stringValue}"`);
         finalData[key] = stringValue;
       });
 
@@ -2402,23 +2399,9 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       };
       
       console.log('🔍 Row data after update:', newData[targetRowIndex]);
-      console.log('🔍 Full new data array:', newData);
       
-      console.log('🔍 About to call setData with newData');
       setData(newData);
-      console.log('🔍 setData called');
-      
-      console.log('🔍 About to call onDataChange');
       onDataChange?.(newData);
-      console.log('🔍 onDataChange called');
-      
-      // Force a re-render by updating the key or forcing state change
-      console.log('🔍 Current data state after setData:', data);
-      
-      // Add a small delay to check if state updated
-      setTimeout(() => {
-        console.log('🔍 Data state after timeout:', data);
-      }, 100);
 
       toast({
         title: "Document analyzed",
