@@ -190,6 +190,8 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      console.log('🔧 DocumentLinker: Starting rename process for filename:', editedFilename);
+
       // Get current document info
       const { data: document, error: fetchError } = await supabase
         .from('documents')
@@ -200,24 +202,48 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
         .single();
 
       if (fetchError || !document) {
+        console.error('🔧 DocumentLinker: Document fetch error:', fetchError);
         throw new Error('Document not found');
       }
 
-      // Create new file path with the sanitized edited filename for storage
+      console.log('🔧 DocumentLinker: Current document:', document);
+
+      // Create new file path with the sanitized edited filename for storage  
       const pathParts = document.file_path.split('/');
       const sanitizedEditedFilename = sanitizeFilenameForStorage(editedFilename);
       const newFilePath = `${pathParts[0]}/${pathParts[1]}/${sanitizedEditedFilename}`;
+      
+      console.log('🔧 DocumentLinker: Old file path:', document.file_path);
+      console.log('🔧 DocumentLinker: New file path:', newFilePath);
 
-      // Move file in storage
-      const { error: moveError } = await supabase.storage
+      // Check if file exists before trying to move it
+      const { data: existingFile, error: checkError } = await supabase.storage
         .from('documents')
-        .move(document.file_path, newFilePath);
+        .list(pathParts.slice(0, -1).join('/'), {
+          search: pathParts[pathParts.length - 1]
+        });
 
-      if (moveError) {
-        throw moveError;
+      console.log('🔧 DocumentLinker: File exists check:', existingFile, checkError);
+      
+      if (existingFile && existingFile.length > 0) {
+        // File exists, try to move it
+        console.log('🔧 DocumentLinker: File exists, attempting to move');
+        const { error: moveError } = await supabase.storage
+          .from('documents')
+          .move(document.file_path, newFilePath);
+
+        if (moveError) {
+          console.error('🔧 DocumentLinker: Move error:', moveError);
+          throw moveError;
+        }
+        console.log('🔧 DocumentLinker: File moved successfully');
+      } else {
+        console.log('🔧 DocumentLinker: Original file not found in storage, skipping move operation');
+        // File doesn't exist in storage, just update the database record
       }
 
       // Update document record
+      console.log('🔧 DocumentLinker: Updating database record');
       const { error: updateError } = await supabase
         .from('documents')
         .update({
@@ -228,13 +254,18 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
         .eq('id', document.id);
 
       if (updateError) {
-        // Try to move file back on error
-        await supabase.storage.from('documents').move(newFilePath, document.file_path);
+        console.error('🔧 DocumentLinker: Database update error:', updateError);
+        // Try to move file back on error (only if we moved it)
+        if (existingFile && existingFile.length > 0) {
+          await supabase.storage.from('documents').move(newFilePath, document.file_path);
+        }
         throw updateError;
       }
 
+      console.log('🔧 DocumentLinker: Database updated successfully');
+
       // Update parent with new filename
-      console.log('Calling onDocumentLinked with filename:', editedFilename);
+      console.log('🔧 DocumentLinker: Calling onDocumentLinked with filename:', editedFilename);
       onDocumentLinked(editedFilename);
 
       setIsEditingName(false);
@@ -245,10 +276,10 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
       });
 
     } catch (error) {
-      console.error('Rename error:', error);
+      console.error('🔧 DocumentLinker: Rename error:', error);
       toast({
         title: "Failed to rename document",
-        description: "There was an error renaming the document.",
+        description: error instanceof Error ? error.message : "There was an error renaming the document.",
         variant: "destructive",
       });
       setIsEditingName(false);
