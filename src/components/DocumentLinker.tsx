@@ -121,6 +121,21 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
       // Use original filename instead of smart-generated filename
       onDocumentLinked(file.name);
       
+      // Debug: Check what was actually saved
+      setTimeout(async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: docs } = await supabase
+            .from('documents')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(3);
+          
+          alert(`After upload: Found ${docs?.length || 0} recent docs. Latest: runsheet=${docs?.[0]?.runsheet_id}, row=${docs?.[0]?.row_index}`);
+        }
+      }, 1000);
+      
       toast({
         title: "Document uploaded",
         description: `${file.name} has been linked to this row.`,
