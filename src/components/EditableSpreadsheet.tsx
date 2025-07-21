@@ -1932,116 +1932,77 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                    New
                  </Button>
                </DialogTrigger>
-               <DialogContent className="max-w-2xl">
+               <DialogContent className="sm:max-w-[500px]">
                  <DialogHeader>
-                   <DialogTitle>Start New Runsheet</DialogTitle>
-                   <DialogDescription>
-                     Choose how you'd like to create your new runsheet:
+                   <DialogTitle className="text-2xl font-bold text-center">Start New Runsheet</DialogTitle>
+                   <DialogDescription className="text-center pt-2">
+                     How would you like to get started?
                    </DialogDescription>
                  </DialogHeader>
                  
-                 <div className="grid grid-cols-1 gap-4 py-4">
-                   {/* Upload Documents */}
-                   <div className="border rounded-lg p-6 hover:bg-accent/50 transition-colors">
-                     <div className="flex items-start gap-4">
-                       <div className="p-2 bg-primary/10 rounded-lg">
-                         <Upload className="h-6 w-6 text-primary" />
-                       </div>
-                       <div className="flex-1">
-                         <h3 className="font-semibold mb-2">Upload Documents</h3>
-                         <p className="text-sm text-muted-foreground mb-4">
-                           Upload PDF or image files from your computer to extract data into a new runsheet.
-                         </p>
-                         <DocumentUpload
-                           onFileSelect={(file) => {
-                             // Trigger document analysis in parent
-                             const event = new CustomEvent('documentSelected', { detail: { file } });
-                             window.dispatchEvent(event);
-                           }}
-                           onMultipleFilesSelect={(files) => {
-                             // Handle multiple files
-                             const event = new CustomEvent('multipleFilesSelected', { detail: { files } });
-                             window.dispatchEvent(event);
-                           }}
-                           allowMultiple={true}
-                         />
+                 <div className="grid gap-4 py-6">
+                   <Button
+                     onClick={() => {
+                       // Trigger document upload
+                       const event = new CustomEvent('triggerDocumentUpload');
+                       window.dispatchEvent(event);
+                     }}
+                     className="h-16 flex flex-col gap-2 text-left"
+                     variant="outline"
+                   >
+                     <div className="flex items-center gap-3 w-full">
+                       <Upload className="h-6 w-6" />
+                       <div className="flex flex-col text-left">
+                         <span className="font-semibold">Upload Documents</span>
+                         <span className="text-sm text-muted-foreground">Upload PDF or image files to extract data</span>
                        </div>
                      </div>
-                   </div>
-
-                   {/* Open Existing Runsheet */}
-                   <div className="border rounded-lg p-6 hover:bg-accent/50 transition-colors">
-                     <div className="flex items-start gap-4">
-                       <div className="p-2 bg-secondary/10 rounded-lg">
-                         <FolderOpen className="h-6 w-6 text-secondary" />
-                       </div>
-                       <div className="flex-1">
-                         <h3 className="font-semibold mb-2">Open Existing Runsheet</h3>
-                         <p className="text-sm text-muted-foreground mb-4">
-                           Continue working on a previously saved runsheet from your file manager.
-                         </p>
-                         <Button 
-                           onClick={() => window.location.href = '/app/files'}
-                           variant="outline"
-                           className="w-full"
-                         >
-                           <FolderOpen className="mr-2 h-4 w-4" />
-                           Browse Runsheets
-                         </Button>
+                   </Button>
+                   
+                   <Button
+                     onClick={() => window.location.href = '/app/files'}
+                     className="h-16 flex flex-col gap-2 text-left"
+                     variant="outline"
+                   >
+                     <div className="flex items-center gap-3 w-full">
+                       <FolderOpen className="h-6 w-6" />
+                       <div className="flex flex-col text-left">
+                         <span className="font-semibold">Open Existing Runsheet</span>
+                         <span className="text-sm text-muted-foreground">Load a previously saved runsheet</span>
                        </div>
                      </div>
-                   </div>
-
-                   {/* Google Drive Integration */}
-                   <div className="border rounded-lg p-6 hover:bg-accent/50 transition-colors">
-                     <div className="flex items-start gap-4">
-                       <div className="p-2 bg-blue-500/10 rounded-lg">
-                         <svg className="h-6 w-6 text-blue-500" viewBox="0 0 24 24" fill="currentColor">
-                           <path d="M6.5,8 L12,18 L17.5,8 Z M10,2 L14,2 L20,14 L4,14 Z" />
-                         </svg>
-                       </div>
-                       <div className="flex-1">
-                         <h3 className="font-semibold mb-2">Google Drive Import</h3>
-                         <p className="text-sm text-muted-foreground mb-4">
-                           Import documents directly from your Google Drive for analysis.
-                         </p>
-                         <Button 
-                           onClick={() => setShowGoogleDrivePicker(true)}
-                           variant="outline"
-                           className="w-full"
-                         >
-                           <Cloud className="mr-2 h-4 w-4" />
-                           Import from Google Drive
-                         </Button>
+                   </Button>
+                   
+                   <Button
+                     onClick={() => setShowGoogleDrivePicker(true)}
+                     className="h-16 flex flex-col gap-2 text-left"
+                     variant="outline"
+                   >
+                     <div className="flex items-center gap-3 w-full">
+                       <Cloud className="h-6 w-6" />
+                       <div className="flex flex-col text-left">
+                         <span className="font-semibold">Google Drive Import</span>
+                         <span className="text-sm text-muted-foreground">Import documents from Google Drive</span>
                        </div>
                      </div>
-                   </div>
-
-                   {/* Create Empty Runsheet */}
-                   <div className="border rounded-lg p-6 hover:bg-accent/50 transition-colors">
-                     <div className="flex items-start gap-4">
-                       <div className="p-2 bg-orange-500/10 rounded-lg">
-                         <Plus className="h-6 w-6 text-orange-500" />
-                       </div>
-                       <div className="flex-1">
-                         <h3 className="font-semibold mb-2">Create Empty Runsheet</h3>
-                         <p className="text-sm text-muted-foreground mb-4">
-                           Start with a blank spreadsheet and manually enter data or configure your extraction preferences.
-                         </p>
-                         <Button 
-                           onClick={() => {
-                             const resetEvent = new CustomEvent('resetSpreadsheet');
-                             window.dispatchEvent(resetEvent);
-                           }}
-                           variant="outline"
-                           className="w-full"
-                         >
-                           <Plus className="mr-2 h-4 w-4" />
-                           Create Empty Runsheet
-                         </Button>
+                   </Button>
+                   
+                   <Button
+                     onClick={() => {
+                       const resetEvent = new CustomEvent('resetSpreadsheet');
+                       window.dispatchEvent(resetEvent);
+                     }}
+                     className="h-16 flex flex-col gap-2 text-left"
+                     variant="default"
+                   >
+                     <div className="flex items-center gap-3 w-full">
+                       <Plus className="h-6 w-6" />
+                       <div className="flex flex-col text-left">
+                         <span className="font-semibold">Start New Runsheet</span>
+                         <span className="text-sm text-muted-foreground">Begin with a fresh, empty runsheet</span>
                        </div>
                      </div>
-                   </div>
+                   </Button>
                  </div>
                </DialogContent>
              </Dialog>
