@@ -119,37 +119,15 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
     <div className="overflow-hidden">
       <Collapsible open={isExpanded} onOpenChange={(open) => {
         setIsExpanded(open);
-        // When expanding, completely reset form fields to only current spreadsheet columns
+        // When expanding, just ensure the DataForm component refreshes to show current fields
         if (open) {
-          console.log('Document processing expanded - resetting form to current spreadsheet columns only:', fields);
-          console.log('DEBUG: Current fields passed to DocumentFrame:', fields);
-          console.log('DEBUG: Current formData keys before reset:', Object.keys(formData));
+          console.log('Document processing expanded - ensuring form shows current fields:', fields);
           
-          // Clear ALL existing form data first
-          const currentFormKeys = Object.keys(formData);
-          
-          // Send a batch reset event to ensure clean state
-          const resetEvent = new CustomEvent('documentFormReset', { 
-            detail: { newFields: fields }
+          // Dispatch event to trigger DataForm refresh
+          const refreshEvent = new CustomEvent('documentFormRefresh', { 
+            detail: { currentFields: fields }
           });
-          window.dispatchEvent(resetEvent);
-          
-          // Clear existing fields first
-          currentFormKeys.forEach(key => {
-            if (!fields.includes(key)) {
-              onChange(key, ''); // Only clear fields that aren't in the new field list
-            }
-          });
-          
-          // Then ensure all current spreadsheet columns exist (but preserve any existing values)
-          fields.forEach(field => {
-            if (!(field in formData)) {
-              onChange(field, '');
-            }
-          });
-          
-          console.log('Form reset complete - only current columns should be visible');
-          console.log('DEBUG: Target fields after reset:', fields);
+          window.dispatchEvent(refreshEvent);
         }
       }}>
         <CollapsibleTrigger asChild>
