@@ -38,7 +38,7 @@ const Dashboard: React.FC = () => {
       path: "/runsheet"
     },
     {
-      title: "Upload Documents",
+      title: "Upload Runsheet",
       description: "Upload files from your device",
       icon: Upload,
       path: "/runsheet?action=upload"
