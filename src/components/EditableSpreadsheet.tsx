@@ -2307,15 +2307,17 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                                   runsheetId={currentRunsheetId || ''}
                                   rowIndex={rowIndex}
                                   existingDocumentUrl={row['Document URL'] || (documentMap.get(rowIndex) ? DocumentService.getDocumentUrl(documentMap.get(rowIndex)!.file_path) : undefined)}
-                                  onDocumentLinked={(documentUrl, filename) => {
-                                    const newData = [...data];
-                                    newData[rowIndex] = {
-                                      ...newData[rowIndex],
-                                      'Document File': filename,
-                                      'Document URL': documentUrl
-                                    };
-                                    setData(newData);
-                                    onDataChange?.(newData);
+                                   onDocumentLinked={(documentUrl, filename) => {
+                                     console.log('onDocumentLinked called with:', documentUrl, filename);
+                                     const newData = [...data];
+                                     newData[rowIndex] = {
+                                       ...newData[rowIndex],
+                                       'Document File': filename,
+                                       'Document URL': documentUrl
+                                     };
+                                     console.log('Updating row data:', newData[rowIndex]);
+                                     setData(newData);
+                                     onDataChange?.(newData);
                                     
                                     // Refresh document map
                                     if (currentRunsheetId) {

@@ -183,6 +183,7 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
 
       // Get new URL and update parent
       const newUrl = supabase.storage.from('documents').getPublicUrl(newFilePath).data.publicUrl;
+      console.log('Calling onDocumentLinked with:', newUrl, editedFilename);
       onDocumentLinked(newUrl, editedFilename);
 
       setIsEditingName(false);
