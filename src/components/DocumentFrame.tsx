@@ -40,6 +40,7 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [hasAddedToSpreadsheet, setHasAddedToSpreadsheet] = useState(false);
   const { toast } = useToast();
 
   // Listen for mobile document selection events
@@ -90,6 +91,9 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
       // Call onAddToSpreadsheet with the enhanced data
       onAddToSpreadsheet(dataWithFile);
       
+      // Mark as added to spreadsheet to show upload button
+      setHasAddedToSpreadsheet(true);
+      
       toast({
         title: "Success",
         description: `Document "${file.name}" processed and uploaded successfully.`,
@@ -103,6 +107,9 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
       });
       // Still add to spreadsheet but without file data
       onAddToSpreadsheet();
+      
+      // Mark as added to spreadsheet to show upload button
+      setHasAddedToSpreadsheet(true);
     } finally {
       setIsUploading(false);
     }
@@ -165,9 +172,13 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
                           onChange={onChange}
                           onAnalyze={handleAnalyze}
                           onAddToSpreadsheet={handleAddToSpreadsheet}
-                          onResetDocument={onResetDocument}
+                          onResetDocument={() => {
+                            setHasAddedToSpreadsheet(false);  // Reset state for new upload
+                            onResetDocument();
+                          }}
                           isAnalyzing={isAnalyzing}
                           isUploading={isUploading}
+                          hasAddedToSpreadsheet={hasAddedToSpreadsheet}
                         />
                       </div>
                     </div>
