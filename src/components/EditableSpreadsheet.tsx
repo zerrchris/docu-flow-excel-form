@@ -719,7 +719,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       if (runsheets && runsheets.length > 0) {
         const lastRunsheet = runsheets[0];
         console.log('Auto-restoring runsheet:', lastRunsheet.name);
-        loadRunsheet(lastRunsheet);
+        await loadRunsheet(lastRunsheet);
         
         toast({
           title: "Runsheet restored",
@@ -738,29 +738,32 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     onColumnChange(runsheet.columns);
     setData(runsheet.data);
     
-    // Try to load user's default extraction preferences first, then fall back to runsheet data
+    // Load column instructions - prioritize user preferences, then runsheet data
+    let finalColumnInstructions = {};
+    
     try {
       const userPreferences = await ExtractionPreferencesService.getDefaultPreferences();
       
       if (userPreferences && userPreferences.column_instructions) {
         // Use user's saved extraction preferences
-        setColumnInstructions(userPreferences.column_instructions as Record<string, string>);
-        onColumnInstructionsChange?.(userPreferences.column_instructions as Record<string, string>);
+        finalColumnInstructions = userPreferences.column_instructions as Record<string, string>;
         console.log('Applied user extraction preferences to runsheet');
       } else if (runsheet.column_instructions) {
         // Fall back to runsheet's embedded column instructions
-        setColumnInstructions(runsheet.column_instructions);
-        onColumnInstructionsChange?.(runsheet.column_instructions);
+        finalColumnInstructions = runsheet.column_instructions;
         console.log('Applied runsheet embedded column instructions');
       }
     } catch (error) {
       console.error('Error loading extraction preferences:', error);
       // Fall back to runsheet data on error
       if (runsheet.column_instructions) {
-        setColumnInstructions(runsheet.column_instructions);
-        onColumnInstructionsChange?.(runsheet.column_instructions);
+        finalColumnInstructions = runsheet.column_instructions;
       }
     }
+    
+    // Set column instructions after loading is complete
+    setColumnInstructions(finalColumnInstructions);
+    onColumnInstructionsChange?.(finalColumnInstructions);
     
     setShowOpenDialog(false);
     // Reset column width state for new runsheet
@@ -818,7 +821,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
       if (runsheet) {
         console.log('Loading runsheet from URL:', runsheet);
-        loadRunsheet(runsheet);
+        await loadRunsheet(runsheet);
       }
     } catch (error: any) {
       console.error('Error loading runsheet:', error);
@@ -2472,7 +2475,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                     <div
                       key={runsheet.id}
                       className="border rounded-lg p-4 hover:bg-muted/50 cursor-pointer transition-colors"
-                      onClick={() => loadRunsheet(runsheet)}
+                      onClick={async () => await loadRunsheet(runsheet)}
                     >
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
