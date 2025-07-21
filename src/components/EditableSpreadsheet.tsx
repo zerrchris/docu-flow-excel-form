@@ -2306,7 +2306,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                                 <DocumentLinker
                                   runsheetId={currentRunsheetId || ''}
                                   rowIndex={rowIndex}
-                                  existingDocumentUrl={documentMap.get(rowIndex) ? DocumentService.getDocumentUrl(documentMap.get(rowIndex)!.file_path) : undefined}
+                                  existingDocumentUrl={row['Document URL'] || (documentMap.get(rowIndex) ? DocumentService.getDocumentUrl(documentMap.get(rowIndex)!.file_path) : undefined)}
                                   onDocumentLinked={(documentUrl, filename) => {
                                     const newData = [...data];
                                     newData[rowIndex] = {
