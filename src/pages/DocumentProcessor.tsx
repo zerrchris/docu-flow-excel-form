@@ -615,7 +615,12 @@ Image: [base64 image data]`;
       
       // If data contains a storage path, create a document record
       if (finalData['Storage Path']) {
+        console.log('🔧 DocumentProcessor: Creating document record for Storage Path:', finalData['Storage Path']);
+        console.log('🔧 DocumentProcessor: Target row index:', targetRowIndex);
+        console.log('🔧 DocumentProcessor: Full data:', finalData);
         createDocumentRecord(finalData, targetRowIndex);
+      } else {
+        console.log('🔧 DocumentProcessor: No Storage Path found in finalData:', finalData);
       }
       
       console.log('New spreadsheetData after adding:', newData);
