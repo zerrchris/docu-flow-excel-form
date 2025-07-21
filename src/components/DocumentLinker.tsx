@@ -444,6 +444,9 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
             </div>
           )}
         </div>
+        <div className="text-xs text-muted-foreground mt-1">
+          This will be the name of the document file
+        </div>
       </Card>
     );
   }
