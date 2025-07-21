@@ -2451,8 +2451,12 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                     return (
                       <TableCell 
                         key={`${rowIndex}-${column}`}
-                        className="border-r border-border p-0 last:border-r-0 relative"
-                        style={{ width: `${getColumnWidth(column)}px`, minWidth: `${getColumnWidth(column)}px` }}
+                        className={`border-r border-border last:border-r-0 relative ${isEditing ? 'p-0' : 'p-0'}`}
+                        style={{ 
+                          width: `${getColumnWidth(column)}px`, 
+                          minWidth: `${getColumnWidth(column)}px`,
+                          height: isEditing ? 'auto' : 'auto'
+                        }}
                       >
                         {isEditing ? (
                           <Textarea
@@ -2466,11 +2470,15 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                                 handleInputKeyDown(e);
                               }
                             }}
-                            className={`h-full min-h-[2rem] border-none rounded-none bg-background focus:ring-2 focus:ring-primary resize-none overflow-hidden p-2 ${
+                            className={`w-full h-full min-h-[60px] border-2 border-primary rounded-none bg-background focus:ring-0 focus:outline-none resize-none p-2 ${
                               columnAlignments[column] === 'center' ? 'text-center' : 
                               columnAlignments[column] === 'right' ? 'text-right' : 'text-left'
                             }`}
-                            style={{ minHeight: '60px' }}
+                            style={{ 
+                              minHeight: '60px',
+                              width: '100%',
+                              height: '100%'
+                            }}
                           />
                         ) : (
                           <div
