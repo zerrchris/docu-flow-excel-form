@@ -540,27 +540,21 @@ Image: [base64 image data]`;
       return;
     }
 
-    // Check for new columns in the target data and add them
-    const newColumns = Object.keys(targetData).filter(key => !columns.includes(key));
-    if (newColumns.length > 0) {
-      console.log('Found new columns to add:', newColumns);
-      const updatedColumns = [...columns, ...newColumns];
-      setColumns(updatedColumns);
-      
-      // Also update the column instructions for new columns
-      const newInstructions = { ...columnInstructions };
-      newColumns.forEach(col => {
-        if (!newInstructions[col]) {
-          newInstructions[col] = `Extract ${col} information from the document`;
-        }
-      });
-      setColumnInstructions(newInstructions);
-      
-      console.log('Updated columns:', updatedColumns);
-      console.log('Updated column instructions:', newInstructions);
-    }
+    // For single document processing, don't permanently add new columns to the global state
+    // Only include data that matches existing columns to prevent persistent fields
+    const filteredData: Record<string, string> = {};
+    columns.forEach(column => {
+      filteredData[column] = targetData[column] || '';
+    });
+    
+    // Use filtered data instead of allowing new columns to persist
+    const finalData = filteredData;
+    
+    console.log('Original analyzed data:', targetData);
+    console.log('Filtered data to match current columns:', finalData);
+    console.log('Current columns (unchanged):', columns);
 
-    console.log('Adding data to spreadsheet:', targetData);
+    console.log('Adding filtered data to spreadsheet:', finalData);
     console.log('Current spreadsheetData before adding:', spreadsheetData);
     
     setSpreadsheetData(prev => {
@@ -573,11 +567,11 @@ Image: [base64 image data]`;
       if (firstEmptyRowIndex >= 0) {
         // Insert data into the first empty row
         newData = [...prev];
-        newData[firstEmptyRowIndex] = { ...targetData };
+        newData[firstEmptyRowIndex] = { ...finalData };
         console.log('Inserted data at row index:', firstEmptyRowIndex);
       } else {
         // If no empty row found, append to the end
-        newData = [...prev, { ...targetData }];
+        newData = [...prev, { ...finalData }];
         console.log('Appended data to end of spreadsheet');
       }
       
