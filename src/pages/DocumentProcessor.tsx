@@ -173,22 +173,15 @@ const DocumentProcessor: React.FC = () => {
 
   // Load user preferences on component mount
   
-  // Update form state when columns change
+  // Update form state when columns change - completely reset form data to match current columns only
   useEffect(() => {
-    const newFormData = { ...formData };
-    // Add any new columns
+    const newFormData: Record<string, string> = {};
+    // Only include current columns, don't preserve old data
     columns.forEach(column => {
-      if (!(column in newFormData)) {
-        newFormData[column] = '';
-      }
-    });
-    // Remove any columns that are no longer present
-    Object.keys(newFormData).forEach(key => {
-      if (!columns.includes(key)) {
-        delete newFormData[key];
-      }
+      newFormData[column] = '';
     });
     setFormData(newFormData);
+    console.log('Form data reset to match current columns:', columns);
   }, [columns]);
 
   // Note: Navigation blocking removed since runsheet now auto-saves
