@@ -679,6 +679,10 @@ Image: [base64 image data]`;
             initialRunsheetName={location.state?.runsheet?.name}
             initialRunsheetId={location.state?.runsheetId}
           />
+          {/* Debug info to check column sync */}
+          <div className="mt-2 p-2 bg-yellow-100 text-xs">
+            <strong>DEBUG - DocumentProcessor columns:</strong> {JSON.stringify(columns)}
+          </div>
         </div>
       </div>
       {/* Combine Images Confirmation Dialog */}
