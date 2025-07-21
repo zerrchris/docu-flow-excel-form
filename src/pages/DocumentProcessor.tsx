@@ -422,9 +422,10 @@ const DocumentProcessor: React.FC = () => {
       return {};
     }
 
-    // Check if all columns have extraction instructions configured
+    // Check if all columns have extraction instructions configured (excluding Document File Name)
     const columnsWithoutInstructions = columns.filter(column => 
-      !columnInstructions[column] || columnInstructions[column].trim() === ''
+      column !== 'Document File Name' && // Skip Document File Name - it's user-specified, not extracted
+      (!columnInstructions[column] || columnInstructions[column].trim() === '')
     );
     
     if (columnsWithoutInstructions.length > 0) {
@@ -450,8 +451,9 @@ const DocumentProcessor: React.FC = () => {
         reader.readAsDataURL(targetFile);
       });
 
-      // Build extraction prompt using column instructions
+      // Build extraction prompt using column instructions (excluding Document File Name)
       const extractionFields = Object.entries(columnInstructions)
+        .filter(([column]) => column !== 'Document File Name') // Skip Document File Name in AI extraction
         .map(([column, instruction]) => `- ${column}: ${instruction}`)
         .join('\n');
 
@@ -478,7 +480,7 @@ Instructions:
 
 Expected JSON format:
 {
-${Object.keys(columnInstructions).map(col => `  "${col}": "extracted value"`).join(',\n')}
+${Object.entries(columnInstructions).filter(([column]) => column !== 'Document File Name').map(([col]) => `  "${col}": "extracted value"`).join(',\n')}
 }
 
 Image: [base64 image data]`;
