@@ -66,8 +66,8 @@ const Home: React.FC = () => {
             Document Data Extraction
           </h2>
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Transform your document processing workflow with RunsheetPro. Extract data from documents, 
-            organize it in customizable spreadsheets, and save your work securely in the cloud.
+            Turn messy documents into organized data in minutes. Upload any document, let AI extract the key information, 
+            and manage everything in powerful spreadsheets that sync across all your devices.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             {user ? (
