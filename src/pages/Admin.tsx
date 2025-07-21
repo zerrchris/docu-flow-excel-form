@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -9,8 +9,10 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Users, Shield, UserCheck, Settings } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { ArrowLeft, Users, Shield, UserCheck, Settings, Home } from 'lucide-react';
+import extractorLogo from '@/assets/document-extractor-logo.png';
+import AuthButton from '@/components/AuthButton';
+import ActiveRunsheetButton from '@/components/ActiveRunsheetButton';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 interface Profile {
@@ -210,28 +212,45 @@ const Admin: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <Link to="/" className="inline-flex items-center text-muted-foreground hover:text-foreground">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Home
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <Link to="/" className="flex items-center gap-4">
+              <img 
+                src={extractorLogo} 
+                alt="RunsheetPro Logo" 
+                className="h-12 w-12"
+              />
+              <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                RunsheetPro
+              </h1>
             </Link>
-            <Button
-              variant="default"
-              size="sm"
-              onClick={() => navigate('/app')}
-              className="gap-2"
-            >
-              <Shield className="h-4 w-4" />
-              Dashboard
-            </Button>
+            <div className="flex items-center gap-4">
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => navigate('/app')}
+                className="gap-2"
+              >
+                <Home className="h-4 w-4" />
+                Dashboard
+              </Button>
+              <ActiveRunsheetButton />
+              <AuthButton />
+            </div>
           </div>
+        </div>
+      </header>
+
+      <div className="container mx-auto px-4 py-8">
+
+        {/* Page Title */}
+        <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
             <Shield className="w-8 h-8 text-primary" />
-            <h1 className="text-3xl font-bold">Admin Panel</h1>
+            <h2 className="text-3xl font-bold">Admin Panel</h2>
           </div>
           <p className="text-muted-foreground">Manage users and their permissions</p>
         </div>

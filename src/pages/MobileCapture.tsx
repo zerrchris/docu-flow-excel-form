@@ -4,10 +4,13 @@ import { MobileCamera } from '@/components/MobileCamera';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Monitor, Smartphone, CheckCircle, Clock } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, Monitor, Smartphone, CheckCircle, Clock, Home } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import extractorLogo from '@/assets/document-extractor-logo.png';
+import AuthButton from '@/components/AuthButton';
+import ActiveRunsheetButton from '@/components/ActiveRunsheetButton';
 
 interface CapturedDocument {
   id: string;
@@ -93,33 +96,46 @@ export const MobileCapture: React.FC = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="sticky top-0 z-50 bg-background border-b">
-        <div className="flex items-center justify-between p-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate('/app')}
-            className="gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Dashboard
-          </Button>
-          
-          <div className="flex items-center gap-2">
-            {isMobile ? (
-              <Badge variant="default" className="gap-1">
-                <Smartphone className="h-3 w-3" />
-                Mobile
-              </Badge>
-            ) : (
-              <Badge variant="secondary" className="gap-1">
-                <Monitor className="h-3 w-3" />
-                Web
-              </Badge>
-            )}
+      <header className="border-b">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <Link to="/" className="flex items-center gap-4">
+              <img 
+                src={extractorLogo} 
+                alt="RunsheetPro Logo" 
+                className="h-12 w-12"
+              />
+              <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                RunsheetPro
+              </h1>
+            </Link>
+            <div className="flex items-center gap-4">
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => navigate('/app')}
+                className="gap-2"
+              >
+                <Home className="h-4 w-4" />
+                Dashboard
+              </Button>
+              <ActiveRunsheetButton />
+              <AuthButton />
+              {isMobile ? (
+                <Badge variant="default" className="gap-1">
+                  <Smartphone className="h-3 w-3" />
+                  Mobile
+                </Badge>
+              ) : (
+                <Badge variant="secondary" className="gap-1">
+                  <Monitor className="h-3 w-3" />
+                  Web
+                </Badge>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      </header>
 
       <div className="container mx-auto p-4 space-y-6">
         {/* Welcome Message */}

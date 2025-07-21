@@ -593,42 +593,44 @@ Image: [base64 image data]`;
 
 
   return (
-    <div className="w-full px-4 py-6">
-      <div className="flex items-center justify-between mb-8">
-        <div 
-          onClick={() => handleNavigation('/')} 
-          className="flex items-center gap-4 hover:opacity-80 transition-opacity cursor-pointer"
-        >
-          <img 
-            src={extractorLogo} 
-            alt="Document Data Extractor Logo" 
-            className="h-16 w-16"
-          />
-          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            RunsheetPro
-          </h1>
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <Link to="/" className="flex items-center gap-4">
+              <img 
+                src={extractorLogo} 
+                alt="RunsheetPro Logo" 
+                className="h-12 w-12"
+              />
+              <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                RunsheetPro
+              </h1>
+            </Link>
+            <div className="flex items-center gap-4">
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => {
+                  if (hasUnsavedChanges) {
+                    setShowNavigationDialog(true);
+                  } else {
+                    navigate('/app');
+                  }
+                }}
+                className="gap-2"
+              >
+                <Home className="h-4 w-4" />
+                Dashboard
+              </Button>
+              <AuthButton />
+            </div>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          <Button
-            variant="default"
-            size="sm"
-            onClick={() => {
-              if (hasUnsavedChanges) {
-                setShowNavigationDialog(true);
-              } else {
-                navigate('/app');
-              }
-            }}
-            className="gap-2"
-          >
-            <Home className="h-4 w-4" />
-            Dashboard
-          </Button>
-          <AuthButton />
-        </div>
-      </div>
+      </header>
       
-      <div className="mt-6">
+      <div className="container mx-auto px-4 py-6">
         <DocumentFrame 
           file={file}
           previewUrl={previewUrl}
@@ -642,25 +644,25 @@ Image: [base64 image data]`;
           onResetDocument={resetDocument}
           isAnalyzing={isAnalyzing}
         />
-      </div>
-      
-      <BatchProcessing 
-        fields={columns}
-        onAddToSpreadsheet={addToSpreadsheet}
-        onAnalyze={analyzeDocument}
-        isAnalyzing={isAnalyzing}
-      />
-      
-      <div className="mt-6">
-        <EditableSpreadsheet 
-          initialColumns={columns}
-          initialData={spreadsheetData}
-          onColumnChange={handleColumnsChange}
-          onDataChange={handleSpreadsheetDataChange}
-          onColumnInstructionsChange={setColumnInstructions}
-          onUnsavedChanges={setHasUnsavedChanges}
-          missingColumns={highlightMissingColumns ? missingColumns : []}
+        
+        <BatchProcessing 
+          fields={columns}
+          onAddToSpreadsheet={addToSpreadsheet}
+          onAnalyze={analyzeDocument}
+          isAnalyzing={isAnalyzing}
         />
+        
+        <div className="mt-6">
+          <EditableSpreadsheet 
+            initialColumns={columns}
+            initialData={spreadsheetData}
+            onColumnChange={handleColumnsChange}
+            onDataChange={handleSpreadsheetDataChange}
+            onColumnInstructionsChange={setColumnInstructions}
+            onUnsavedChanges={setHasUnsavedChanges}
+            missingColumns={highlightMissingColumns ? missingColumns : []}
+          />
+        </div>
       </div>
       {/* Combine Images Confirmation Dialog */}
       <Dialog open={showCombineConfirmation} onOpenChange={setShowCombineConfirmation}>
