@@ -2160,7 +2160,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
 
   return (
-    <Card className="p-6 mt-6" data-spreadsheet-container>
+    <Card className="p-6 mt-6 w-full" data-spreadsheet-container>
       <div className="flex flex-col space-y-4">
         <div className="flex justify-between items-center mb-2">
           <div className="flex items-center gap-3">
@@ -2379,7 +2379,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         {/* Single scrollable table container */}
         <div 
           ref={containerRef}
-          className="border rounded-md bg-background relative overflow-auto h-[750px]"
+          className="border rounded-md bg-background relative overflow-auto w-full"
+          style={{ height: 'calc(100vh - 300px)' }}
         >
           <div className="min-w-fit">
             <Table className="border-collapse w-full" style={{ minWidth: `${getTotalTableWidth()}px` }}>
