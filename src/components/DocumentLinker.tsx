@@ -195,6 +195,18 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
       return;
     }
 
+    // Check if runsheetId is valid
+    if (!runsheetId || runsheetId.trim() === '') {
+      console.error('🔧 DocumentLinker: Invalid runsheetId:', runsheetId);
+      toast({
+        title: "Error",
+        description: "Invalid runsheet ID. Please save the runsheet first.",
+        variant: "destructive",
+      });
+      setIsEditingName(false);
+      return;
+    }
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
