@@ -298,6 +298,57 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     };
   }, [user, currentRunsheetId]);
 
+  // Process pending document records when runsheet is saved
+  useEffect(() => {
+    const processPendingDocuments = async () => {
+      if (!user || !currentRunsheetId) return;
+      
+      const pendingDocs = JSON.parse(sessionStorage.getItem('pendingDocuments') || '[]');
+      if (pendingDocs.length === 0) return;
+      
+      console.log('🔧 EditableSpreadsheet: Processing pending documents:', pendingDocs);
+      
+      try {
+        for (const doc of pendingDocs) {
+          const { error } = await supabase
+            .from('documents')
+            .insert({
+              user_id: user.id,
+              runsheet_id: currentRunsheetId,
+              row_index: doc.rowIndex,
+              file_path: doc.storagePath,
+              stored_filename: doc.fileName,
+              original_filename: doc.fileName,
+              content_type: 'application/pdf'
+            });
+          
+          if (error) {
+            console.error('Error creating pending document record:', error);
+          } else {
+            console.log('Created pending document record for row', doc.rowIndex);
+          }
+        }
+        
+        // Clear pending documents after processing
+        sessionStorage.removeItem('pendingDocuments');
+        
+        // Refresh document map
+        const documents = await DocumentService.getDocumentMapForRunsheet(currentRunsheetId);
+        setDocumentMap(documents);
+        
+        console.log('🔧 EditableSpreadsheet: Processed all pending documents and refreshed map');
+        
+      } catch (error) {
+        console.error('Error processing pending documents:', error);
+      }
+    };
+    
+    // Only process if we have a runsheet ID and user
+    if (currentRunsheetId && user) {
+      processPendingDocuments();
+    }
+  }, [currentRunsheetId, user]);
+
   // Update active runsheet when name changes
   useEffect(() => {
     if (runsheetName && runsheetName !== 'Untitled Runsheet') {

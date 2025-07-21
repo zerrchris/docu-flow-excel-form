@@ -663,7 +663,21 @@ Image: [base64 image data]`;
       // Get the current runsheet ID from location state
       const runsheetId = location.state?.runsheetId;
       if (!runsheetId) {
-        console.log('No runsheet ID available, skipping document record creation');
+        console.log('🔧 DocumentProcessor: No runsheet ID available, document record will be created when runsheet is saved');
+        
+        // Store the document info for later creation when the runsheet is saved
+        const documentInfo = {
+          rowIndex,
+          storagePath: data['Storage Path'],
+          fileName: data['Document File Name'] || 'Unknown Document'
+        };
+        
+        // Store in sessionStorage to be processed later
+        const pendingDocs = JSON.parse(sessionStorage.getItem('pendingDocuments') || '[]');
+        pendingDocs.push(documentInfo);
+        sessionStorage.setItem('pendingDocuments', JSON.stringify(pendingDocs));
+        
+        console.log('🔧 DocumentProcessor: Stored document info for later creation:', documentInfo);
         return;
       }
 
@@ -671,6 +685,8 @@ Image: [base64 image data]`;
       const fileName = data['Document File Name'] || 'Unknown Document';
       
       if (storagePath) {
+        console.log('🔧 DocumentProcessor: Creating document record with runsheet ID:', runsheetId);
+        
         const { error } = await supabase
           .from('documents')
           .insert({
