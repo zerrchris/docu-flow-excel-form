@@ -225,7 +225,6 @@ const Dashboard: React.FC = () => {
               className="justify-start gap-3 h-16"
               onClick={() => {
                 setShowStartDialog(false);
-                // Navigate to runsheet and trigger upload dialog
                 navigate('/runsheet?action=upload');
               }}
             >
@@ -262,7 +261,6 @@ const Dashboard: React.FC = () => {
               className="justify-start gap-3 h-16"
               onClick={() => {
                 setShowStartDialog(false);
-                // Navigate to runsheet and trigger Google Drive picker
                 navigate('/runsheet?action=google-drive');
               }}
             >
