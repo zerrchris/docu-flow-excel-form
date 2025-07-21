@@ -56,6 +56,12 @@ const Dashboard: React.FC = () => {
       path: "/runsheet?action=google-drive"
     },
     {
+      title: "Manage Files",
+      description: "Organize and manage your uploaded documents",
+      icon: FileText,
+      path: "/file-manager"
+    },
+    {
       title: "Mobile Camera",
       description: "Capture documents on the go with your mobile device",
       icon: Camera,
