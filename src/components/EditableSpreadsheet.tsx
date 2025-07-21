@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Plus, Trash2, Check, X, ArrowUp, ArrowDown, Save, FolderOpen, Download, Upload, AlignLeft, AlignCenter, AlignRight, Cloud, ChevronDown, FileText, Archive, ExternalLink } from 'lucide-react';
+import { Plus, Trash2, Check, X, ArrowUp, ArrowDown, Save, FolderOpen, Download, Upload, AlignLeft, AlignCenter, AlignRight, Cloud, ChevronDown, FileText, Archive, ExternalLink, AlertTriangle } from 'lucide-react';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -27,6 +27,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -123,6 +133,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [selectedColumn, setSelectedColumn] = useState<string>('');
   const [columnInstructions, setColumnInstructions] = useState<Record<string, string>>({});
   const [showNewRunsheetDialog, setShowNewRunsheetDialog] = useState(false);
+  const [showAnalyzeWarningDialog, setShowAnalyzeWarningDialog] = useState(false);
+  const [pendingAnalysis, setPendingAnalysis] = useState<{file: File, filename: string, rowIndex: number} | null>(null);
   const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] = useState(false);
   const [columnAlignments, setColumnAlignments] = useState<Record<string, 'left' | 'center' | 'right'>>({});
   const [editingColumnAlignment, setEditingColumnAlignment] = useState<'left' | 'center' | 'right'>('left');
@@ -2891,10 +2903,26 @@ ${extractionFields}`
                                       return newMap;
                                     });
                                    }}
-                                   onAnalyzeDocument={async (file, filename) => {
-                                     console.log('🔧 EditableSpreadsheet: onAnalyzeDocument called for row:', rowIndex);
-                                     await analyzeDocumentAndPopulateRow(file, rowIndex);
-                                   }}
+                                    onAnalyzeDocument={async (file, filename) => {
+                                      console.log('🔧 EditableSpreadsheet: onAnalyzeDocument called for row:', rowIndex);
+                                      
+                                      // Check if row has existing data (excluding Document File Name column)
+                                      const rowData = data[rowIndex];
+                                      const hasExistingData = columns.some(col => 
+                                        col !== 'Document File Name' && 
+                                        rowData[col] && 
+                                        rowData[col].trim() !== ''
+                                      );
+
+                                      if (hasExistingData) {
+                                        // Show warning dialog
+                                        setPendingAnalysis({ file, filename, rowIndex });
+                                        setShowAnalyzeWarningDialog(true);
+                                      } else {
+                                        // Proceed with analysis
+                                        await analyzeDocumentAndPopulateRow(file, rowIndex);
+                                      }
+                                    }}
                                    isSpreadsheetUpload={true}
                                    autoAnalyze={false}
                                 />
@@ -3184,6 +3212,40 @@ ${extractionFields}`
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Analyze Document Warning Dialog */}
+        <AlertDialog open={showAnalyzeWarningDialog} onOpenChange={setShowAnalyzeWarningDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-warning" />
+                Replace Existing Data?
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                This row already contains data. Analyzing the document will replace all existing data in this row with the extracted information from the document.
+                <br /><br />
+                Are you sure you want to continue?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => {
+                setShowAnalyzeWarningDialog(false);
+                setPendingAnalysis(null);
+              }}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={async () => {
+                if (pendingAnalysis) {
+                  setShowAnalyzeWarningDialog(false);
+                  await analyzeDocumentAndPopulateRow(pendingAnalysis.file, pendingAnalysis.rowIndex);
+                  setPendingAnalysis(null);
+                }
+              }}>
+                Replace Data
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {/* Google Drive Picker */}
         <GoogleDrivePicker
