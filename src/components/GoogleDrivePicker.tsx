@@ -154,26 +154,41 @@ export const GoogleDrivePicker: React.FC<GoogleDrivePickerProps> = ({
   const loadDriveFiles = async (token: string) => {
     setIsLoadingFiles(true);
     try {
+      console.log('🔧 Loading Google Drive files with token:', token ? 'present' : 'missing');
+      
       // Query for spreadsheet files
       const query = "mimeType='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' or " +
                    "mimeType='application/vnd.ms-excel' or " +
                    "mimeType='application/vnd.google-apps.spreadsheet' or " +
                    "mimeType='text/csv'";
       
-      const response = await fetch(
-        `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name,mimeType,size)`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        }
-      );
+      console.log('🔧 Query:', query);
+      const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name,mimeType,size)`;
+      console.log('🔧 Request URL:', url);
+      
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+      console.log('🔧 Response status:', response.status);
+      console.log('🔧 Response ok:', response.ok);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('🔧 API Error:', errorText);
+        throw new Error(`API request failed: ${response.status} ${errorText}`);
+      }
       
       const data = await response.json();
+      console.log('🔧 API Response data:', data);
+      console.log('🔧 Files found:', data.files?.length || 0);
+      
       setFiles(data.files || []);
     } catch (error) {
-      toast.error('Failed to load Google Drive files');
-      console.error('Error loading files:', error);
+      console.error('🔧 Error loading files:', error);
+      toast.error('Failed to load Google Drive files: ' + error.message);
     } finally {
       setIsLoadingFiles(false);
     }
