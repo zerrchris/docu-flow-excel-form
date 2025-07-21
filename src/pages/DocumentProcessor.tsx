@@ -180,8 +180,11 @@ const DocumentProcessor: React.FC = () => {
     columns.forEach(column => {
       newFormData[column] = '';
     });
+    
+    // Force clear any existing form data that doesn't match current columns
     setFormData(newFormData);
     console.log('Form data reset to match current columns:', columns);
+    console.log('Previous form data cleared, new form data:', newFormData);
   }, [columns]);
 
   // Note: Navigation blocking removed since runsheet now auto-saves
