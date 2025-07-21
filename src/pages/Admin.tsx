@@ -214,10 +214,21 @@ const Admin: React.FC = () => {
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
-          <Link to="/" className="inline-flex items-center text-muted-foreground hover:text-foreground mb-4">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Home
-          </Link>
+          <div className="flex items-center justify-between mb-4">
+            <Link to="/" className="inline-flex items-center text-muted-foreground hover:text-foreground">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Home
+            </Link>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => navigate('/app')}
+              className="gap-2"
+            >
+              <Shield className="h-4 w-4" />
+              Dashboard
+            </Button>
+          </div>
           <div className="flex items-center gap-3 mb-2">
             <Shield className="w-8 h-8 text-primary" />
             <h1 className="text-3xl font-bold">Admin Panel</h1>

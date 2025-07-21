@@ -929,11 +929,11 @@ export const FileManager: React.FC = () => {
               <Button
                 variant="default"
                 size="sm"
-                onClick={() => navigate('/runsheet')}
+                onClick={() => navigate('/app')}
                 className="gap-2"
               >
                 <Home className="h-4 w-4" />
-                Start Working
+                Dashboard
               </Button>
               <ActiveRunsheetButton />
               <AuthButton />
