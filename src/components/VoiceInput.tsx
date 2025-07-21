@@ -282,33 +282,29 @@ const VoiceInput: React.FC<VoiceInputProps> = ({
 
   return (
     <Collapsible open={isExpanded} onOpenChange={setIsExpanded} className="w-full">
-      <Card className="w-full">
-        <CollapsibleTrigger asChild>
-          <CardHeader className="pb-3 cursor-pointer hover:bg-muted/50 transition-colors">
-            <CardTitle className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Mic className="h-5 w-5" />
-                Voice Input
+      <CollapsibleTrigger asChild>
+        <Button variant="outline" size="sm" className="w-full justify-between">
+          <div className="flex items-center gap-2">
+            <Mic className="h-4 w-4" />
+            Voice Input
+            {isListening && (
+              <div className="flex items-center gap-1 text-red-500">
+                <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                <span className="text-xs">Recording</span>
               </div>
-              <div className="flex items-center gap-2">
-                {isListening && (
-                  <div className="flex items-center gap-1 text-sm text-red-500">
-                    <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                    <span className="text-xs">Recording</span>
-                  </div>
-                )}
-                {isExpanded ? (
-                  <ChevronUp className="h-4 w-4" />
-                ) : (
-                  <ChevronDown className="h-4 w-4" />
-                )}
-              </div>
-            </CardTitle>
-          </CardHeader>
-        </CollapsibleTrigger>
-        
-        <CollapsibleContent>
-          <CardContent className="space-y-4">
+            )}
+          </div>
+          {isExpanded ? (
+            <ChevronUp className="h-4 w-4" />
+          ) : (
+            <ChevronDown className="h-4 w-4" />
+          )}
+        </Button>
+      </CollapsibleTrigger>
+      
+      <CollapsibleContent className="mt-2">
+        <Card className="w-full">
+          <CardContent className="p-4 space-y-4">
             {/* Voice Controls */}
             <div className="flex items-center justify-center gap-2">
               {!isListening ? (
@@ -438,8 +434,8 @@ const VoiceInput: React.FC<VoiceInputProps> = ({
               </p>
             </div>
           </CardContent>
-        </CollapsibleContent>
-      </Card>
+        </Card>
+      </CollapsibleContent>
     </Collapsible>
   );
 };
