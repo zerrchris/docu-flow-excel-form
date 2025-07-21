@@ -185,27 +185,25 @@ const DataForm: React.FC<DataFormProps> = ({
     console.log('Manual refresh triggered - completely resetting to current spreadsheet columns:', fields);
     console.log('Current formData keys before refresh:', Object.keys(formData));
     
-    // Step 1: Clear ALL existing form data completely
-    const allCurrentKeys = Object.keys(formData);
-    allCurrentKeys.forEach(key => {
-      onChange(key, ''); // Clear every single field
+    // Force a complete form data reset by dispatching an event to the parent
+    const forceResetEvent = new CustomEvent('forceFormDataReset', { 
+      detail: { targetFields: fields }
     });
+    window.dispatchEvent(forceResetEvent);
     
-    // Step 2: Create completely new visibility object with ONLY current fields
+    // Create completely new visibility object with ONLY current fields
     const refreshedVisibility: Record<string, boolean> = {};
     fields.forEach(field => {
       refreshedVisibility[field] = true;
-      // Ensure each current field exists in form data
-      onChange(field, '');
     });
     
-    // Step 3: Force update visible fields state
+    // Force update visible fields state
     setVisibleFields(refreshedVisibility);
     
     console.log('Manual refresh complete - form reset to show only these fields:', fields);
     console.log('New visible fields:', Object.keys(refreshedVisibility));
     
-    // Step 4: Force a re-render by triggering a small state change
+    // Force a re-render by triggering a small state change
     setShowFieldSettings(false);
   };
 

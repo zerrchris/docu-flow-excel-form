@@ -330,6 +330,30 @@ const DocumentProcessor: React.FC = () => {
     console.log('Old form data cleared, new form data keys:', Object.keys(newFormData));
   }, [columns]);
 
+  // Listen for force form data reset events from DataForm refresh button
+  useEffect(() => {
+    const handleForceFormDataReset = (event: CustomEvent) => {
+      const { targetFields } = event.detail;
+      console.log('DocumentProcessor: Received force form data reset event for fields:', targetFields);
+      
+      // Create completely new form data object with only target fields
+      const newFormData: Record<string, string> = {};
+      targetFields.forEach((field: string) => {
+        newFormData[field] = '';
+      });
+      
+      // Force replace the entire form data object
+      setFormData(newFormData);
+      console.log('DocumentProcessor: Force reset complete - new form data keys:', Object.keys(newFormData));
+    };
+
+    window.addEventListener('forceFormDataReset', handleForceFormDataReset as EventListener);
+    
+    return () => {
+      window.removeEventListener('forceFormDataReset', handleForceFormDataReset as EventListener);
+    };
+  }, []);
+
   // Note: Navigation blocking removed since runsheet now auto-saves
 
   // Handle navigation - no longer blocked since runsheet auto-saves
