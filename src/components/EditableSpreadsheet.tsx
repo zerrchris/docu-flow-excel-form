@@ -1000,13 +1000,18 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
   // Download spreadsheet only as Excel
   const downloadSpreadsheetOnly = () => {
-    // Filter out empty rows
-    const nonEmptyData = data.filter(row => 
-      Object.values(row).some(value => value.trim() !== '')
-    );
+    // Use all data as displayed (including empty rows)
+    const displayData = data.map(row => {
+      const orderedRow: Record<string, string> = {};
+      // Ensure columns are in the same order as displayed
+      columns.forEach(column => {
+        orderedRow[column] = row[column] || '';
+      });
+      return orderedRow;
+    });
 
     const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(nonEmptyData);
+    const ws = XLSX.utils.json_to_sheet(displayData, { header: columns });
     XLSX.utils.book_append_sheet(wb, ws, 'Runsheet');
     
     XLSX.writeFile(wb, `${runsheetName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.xlsx`);
@@ -1031,14 +1036,18 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     try {
       const zip = new JSZip();
       
-      // Filter out empty rows
-      const nonEmptyData = data.filter(row => 
-        Object.values(row).some(value => value.trim() !== '')
-      );
+      // Create CSV content with exact display format
+      const displayData = data.map(row => {
+        const orderedRow: Record<string, string> = {};
+        // Ensure columns are in the same order as displayed
+        columns.forEach(column => {
+          orderedRow[column] = row[column] || '';
+        });
+        return orderedRow;
+      });
 
-      // Create CSV content
       const csvHeaders = columns.join(',');
-      const csvRows = nonEmptyData.map(row => 
+      const csvRows = displayData.map(row => 
         columns.map(column => {
           const value = row[column] || '';
           const escapedValue = value.includes(',') || value.includes('"') || value.includes('\n')
