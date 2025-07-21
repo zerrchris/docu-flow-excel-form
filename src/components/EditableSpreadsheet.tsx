@@ -2202,7 +2202,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
       let imageData: string;
 
-      // If file has no type (likely from storage), try to determine type from extension
+      // If file has no type (likely from storage), create a new File with correct type
       if (!file.type || file.type === 'application/octet-stream') {
         const extension = file.name.split('.').pop()?.toLowerCase();
         let mimeType = 'image/png'; // default
@@ -2223,10 +2223,20 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             break;
         }
 
-        // Convert file to base64 manually with correct MIME type
-        const arrayBuffer = await file.arrayBuffer();
-        const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
-        imageData = `data:${mimeType};base64,${base64}`;
+        // Create a new File object with the correct MIME type
+        const fileBlob = new Blob([file], { type: mimeType });
+        const correctedFile = new File([fileBlob], file.name, { type: mimeType });
+        
+        // Convert the corrected file to base64 data URL
+        const reader = new FileReader();
+        const dataUrlPromise = new Promise<string>((resolve, reject) => {
+          reader.onload = () => {
+            resolve(reader.result as string);
+          };
+          reader.onerror = reject;
+        });
+        reader.readAsDataURL(correctedFile);
+        imageData = await dataUrlPromise;
       } else {
         // Convert file to base64 data URL normally
         const reader = new FileReader();
