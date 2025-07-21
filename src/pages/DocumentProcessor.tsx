@@ -180,41 +180,29 @@ const DocumentProcessor: React.FC = () => {
     console.log('DocumentProcessor useEffect - action from searchParams:', action);
     
     if (action === 'upload') {
-      console.log('Upload action detected, attempting to trigger file input...');
+      console.log('Upload action detected, triggering file dialog...');
       
-      // First expand the DocumentFrame to ensure the DocumentUpload component is rendered
-      setTimeout(() => {
-        const expandButton = document.querySelector('[data-state="closed"]') as HTMLButtonElement;
-        if (expandButton) {
-          console.log('Expanding DocumentFrame first...');
-          expandButton.click();
-        }
-      }, 100);
-      
-      // Then trigger file input click with retry logic
-      let retryCount = 0;
-      const maxRetries = 20; // Maximum 2 seconds of retries
-      
-      const triggerUpload = () => {
-        const fileInput = document.getElementById('document-upload-input');
-        console.log(`Looking for file input (attempt ${retryCount + 1}), found:`, !!fileInput);
-        
-        if (fileInput) {
-          console.log('Clicking file input...');
-          fileInput.click();
-        } else if (retryCount < maxRetries) {
-          console.log('File input not found, retrying in 100ms...');
-          retryCount++;
-          setTimeout(triggerUpload, 100);
-        } else {
-          console.log('Max retries reached, file input not found');
-        }
-      };
-      
-      // Start trying to click the file input after giving time for expansion
-      setTimeout(triggerUpload, 300);
+      // Trigger the hidden file input
+      const fileInput = document.getElementById('dashboard-upload-input');
+      if (fileInput) {
+        fileInput.click();
+      }
     }
   }, [searchParams]);
+
+  // Handle file selection from dashboard upload
+  const handleDashboardFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      if (files.length > 1) {
+        handleMultipleFilesSelect(Array.from(files));
+      } else {
+        handleFileSelect(files[0]);
+      }
+    }
+    // Reset the input so the same file can be selected again
+    e.target.value = '';
+  };
   
   // Auto-save preferences when columns or instructions change
   useEffect(() => {
@@ -909,6 +897,16 @@ Image: [base64 image data]`;
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Hidden file input for dashboard upload action */}
+      <input
+        id="dashboard-upload-input"
+        type="file"
+        className="sr-only"
+        accept="image/*,.pdf,.doc,.docx"
+        onChange={handleDashboardFileSelect}
+        multiple
+      />
     </div>
   );
 };
