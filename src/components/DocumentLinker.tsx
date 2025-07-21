@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { Upload, File, ExternalLink, Trash2, Download } from 'lucide-react';
+import { Upload, File, ExternalLink, Trash2, Download, Edit2, Check, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -23,6 +23,8 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
 }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editedFilename, setEditedFilename] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -127,6 +129,80 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
     }
   };
 
+  const handleRenameDocument = async () => {
+    if (!editedFilename.trim()) {
+      setIsEditingName(false);
+      return;
+    }
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Get current document info
+      const { data: document, error: fetchError } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('runsheet_id', runsheetId)
+        .eq('row_index', rowIndex)
+        .eq('user_id', user.id)
+        .single();
+
+      if (fetchError || !document) {
+        throw new Error('Document not found');
+      }
+
+      // Create new file path with the edited filename
+      const pathParts = document.file_path.split('/');
+      const newFilePath = `${pathParts[0]}/${pathParts[1]}/${editedFilename}`;
+
+      // Move file in storage
+      const { error: moveError } = await supabase.storage
+        .from('documents')
+        .move(document.file_path, newFilePath);
+
+      if (moveError) {
+        throw moveError;
+      }
+
+      // Update document record
+      const { error: updateError } = await supabase
+        .from('documents')
+        .update({
+          stored_filename: editedFilename,
+          file_path: newFilePath,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', document.id);
+
+      if (updateError) {
+        // Try to move file back on error
+        await supabase.storage.from('documents').move(newFilePath, document.file_path);
+        throw updateError;
+      }
+
+      // Get new URL and update parent
+      const newUrl = supabase.storage.from('documents').getPublicUrl(newFilePath).data.publicUrl;
+      onDocumentLinked(newUrl, editedFilename);
+
+      setIsEditingName(false);
+      
+      toast({
+        title: "Document renamed",
+        description: `File renamed to "${editedFilename}".`,
+      });
+
+    } catch (error) {
+      console.error('Rename error:', error);
+      toast({
+        title: "Failed to rename document",
+        description: "There was an error renaming the document.",
+        variant: "destructive",
+      });
+      setIsEditingName(false);
+    }
+  };
+
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragActive(false);
@@ -157,30 +233,84 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
     return (
       <Card className="p-3 border-dashed">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <File className="w-4 h-4 text-muted-foreground" />
-            <span className="text-sm font-medium truncate max-w-[150px]" title={filename}>
-              {filename}
-            </span>
+          <div className="flex items-center gap-2 flex-1">
+            <File className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+            {isEditingName ? (
+              <div className="flex items-center gap-1 flex-1">
+                <Input
+                  value={editedFilename}
+                  onChange={(e) => setEditedFilename(e.target.value)}
+                  className="h-6 text-xs flex-1"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleRenameDocument();
+                    if (e.key === 'Escape') setIsEditingName(false);
+                  }}
+                  autoFocus
+                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleRenameDocument}
+                  className="h-6 w-6 p-0 text-green-600"
+                >
+                  <Check className="w-3 h-3" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsEditingName(false)}
+                  className="h-6 w-6 p-0 text-red-600"
+                >
+                  <X className="w-3 h-3" />
+                </Button>
+              </div>
+            ) : (
+              <span 
+                className="text-sm font-medium truncate flex-1 cursor-pointer hover:text-primary" 
+                title={filename}
+                onClick={() => {
+                  setEditedFilename(filename);
+                  setIsEditingName(true);
+                }}
+              >
+                {filename}
+              </span>
+            )}
           </div>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => window.open(existingDocumentUrl, '_blank')}
-              className="h-6 w-6 p-0"
-            >
-              <ExternalLink className="w-3 h-3" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleRemoveDocument}
-              className="h-6 w-6 p-0 text-destructive hover:text-destructive"
-            >
-              <Trash2 className="w-3 h-3" />
-            </Button>
-          </div>
+          {!isEditingName && (
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setEditedFilename(filename);
+                  setIsEditingName(true);
+                }}
+                className="h-6 w-6 p-0"
+                title="Rename file"
+              >
+                <Edit2 className="w-3 h-3" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => window.open(existingDocumentUrl, '_blank')}
+                className="h-6 w-6 p-0"
+                title="View document"
+              >
+                <ExternalLink className="w-3 h-3" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleRemoveDocument}
+                className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                title="Remove document"
+              >
+                <Trash2 className="w-3 h-3" />
+              </Button>
+            </div>
+          )}
         </div>
       </Card>
     );
