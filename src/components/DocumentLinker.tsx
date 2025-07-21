@@ -10,6 +10,7 @@ interface DocumentLinkerProps {
   runsheetId: string;
   rowIndex: number;
   existingDocumentUrl?: string;
+  currentFilename?: string;
   onDocumentLinked: (filename: string) => void;
   onDocumentRemoved: () => void;
 }
@@ -18,6 +19,7 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
   runsheetId,
   rowIndex,
   existingDocumentUrl,
+  currentFilename,
   onDocumentLinked,
   onDocumentRemoved
 }) => {
@@ -227,8 +229,9 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
     fileInputRef.current?.click();
   };
 
-  if (existingDocumentUrl) {
-    const filename = existingDocumentUrl.split('/').pop() || 'document';
+  if (currentFilename && currentFilename.trim() !== '') {
+    // Use the current filename from the Document File column
+    const filename = currentFilename || 'document';
     
     return (
       <Card className="p-3 border-dashed">
@@ -294,7 +297,24 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => window.open(existingDocumentUrl, '_blank')}
+                onClick={async () => {
+                  // Get the actual document URL from database
+                  const { data: { user } } = await supabase.auth.getUser();
+                  if (!user) return;
+                  
+                  const { data: document } = await supabase
+                    .from('documents')
+                    .select('file_path')
+                    .eq('runsheet_id', runsheetId)
+                    .eq('row_index', rowIndex)
+                    .eq('user_id', user.id)
+                    .single();
+                  
+                  if (document) {
+                    const url = supabase.storage.from('documents').getPublicUrl(document.file_path).data.publicUrl;
+                    window.open(url, '_blank');
+                  }
+                }}
                 className="h-6 w-6 p-0"
                 title="View document"
               >
