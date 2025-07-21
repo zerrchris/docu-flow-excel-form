@@ -222,7 +222,17 @@ const DocumentProcessor: React.FC = () => {
         return;
       }
       
-      handleFileSelect(selectedFile);
+      // Trigger the spreadsheet import functionality
+      // Create a custom event that the EditableSpreadsheet component can listen to
+      const importEvent = new CustomEvent('importRunsheetFile', {
+        detail: { file: selectedFile }
+      });
+      window.dispatchEvent(importEvent);
+      
+      toast({
+        title: "Importing runsheet",
+        description: `Processing ${selectedFile.name}...`,
+      });
     }
     // Reset the input so the same file can be selected again
     e.target.value = '';

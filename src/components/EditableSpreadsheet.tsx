@@ -377,16 +377,24 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       await autoRestoreLastRunsheet();
     };
 
+    const handleImportRunsheetFile = (event: CustomEvent) => {
+      const { file } = event.detail;
+      console.log('Import runsheet file event received:', file.name);
+      handleFileUpload(file, file.name);
+    };
+
     window.addEventListener('triggerSpreadsheetUpload', handleUploadTrigger);
     window.addEventListener('triggerSpreadsheetOpen', handleOpenTrigger);
     window.addEventListener('loadSpecificRunsheet', handleLoadSpecificRunsheet as EventListener);
     window.addEventListener('autoRestoreLastRunsheet', handleAutoRestoreLastRunsheet);
+    window.addEventListener('importRunsheetFile', handleImportRunsheetFile as EventListener);
 
     return () => {
       window.removeEventListener('triggerSpreadsheetUpload', handleUploadTrigger);
       window.removeEventListener('triggerSpreadsheetOpen', handleOpenTrigger);
       window.removeEventListener('loadSpecificRunsheet', handleLoadSpecificRunsheet as EventListener);
       window.removeEventListener('autoRestoreLastRunsheet', handleAutoRestoreLastRunsheet);
+      window.removeEventListener('importRunsheetFile', handleImportRunsheetFile as EventListener);
     };
   }, []);
 
