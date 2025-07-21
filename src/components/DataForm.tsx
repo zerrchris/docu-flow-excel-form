@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { RotateCw, CheckCircle, Plus, Settings, ChevronDown, ChevronUp, Upload, Wand2 } from 'lucide-react';
+import { RotateCw, CheckCircle, Plus, Settings, ChevronDown, ChevronUp, Upload, Wand2, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface DataFormProps {
@@ -180,6 +180,35 @@ const DataForm: React.FC<DataFormProps> = ({
     };
   }, []);
 
+  // Manual refresh function to force fields to match current spreadsheet columns
+  const refreshFields = () => {
+    console.log('Manual refresh triggered - resetting fields to current spreadsheet columns:', fields);
+    
+    // Create completely new visibility object with ONLY current fields
+    const refreshedVisibility: Record<string, boolean> = {};
+    fields.forEach(field => {
+      refreshedVisibility[field] = true;
+    });
+    
+    // Clear ALL existing field data from formData that's not in current fields
+    Object.keys(formData).forEach(key => {
+      if (!fields.includes(key)) {
+        onChange(key, ''); // Clear old fields
+      }
+    });
+    
+    // Ensure all current fields exist in formData
+    fields.forEach(field => {
+      if (!(field in formData)) {
+        onChange(field, ''); // Add missing fields
+      }
+    });
+    
+    // Update visible fields
+    setVisibleFields(refreshedVisibility);
+    console.log('Manual refresh complete - visible fields reset to:', Object.keys(refreshedVisibility));
+  };
+
   const toggleFieldVisibility = (field: string) => {
     setVisibleFields(prev => ({
       ...prev,
@@ -230,6 +259,17 @@ const DataForm: React.FC<DataFormProps> = ({
           </div>
         </CollapsibleContent>
       </Collapsible>
+
+      {/* Refresh Fields Button */}
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={refreshFields}
+        className="w-full gap-2"
+      >
+        <RefreshCw className="h-4 w-4" />
+        Refresh Fields
+      </Button>
 
       {/* Form Fields - Only show visible ones */}
       <div className="space-y-2">
