@@ -1,7 +1,12 @@
 import * as pdfjsLib from 'pdfjs-dist';
 
-// Set up the worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+// Set up the worker for Vite - use a simpler approach
+if (typeof window !== 'undefined') {
+  // In browser environment, use CDN worker
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`;
+}
+
+console.log('PDF.js worker configured:', pdfjsLib.GlobalWorkerOptions.workerSrc);
 
 export interface PDFPage {
   canvas: HTMLCanvasElement;
@@ -17,14 +22,48 @@ export interface PDFPage {
  */
 export const convertPDFToImages = async (file: File, scale: number = 2): Promise<PDFPage[]> => {
   try {
-    console.log('Starting PDF to image conversion...');
+    console.log('Starting PDF to image conversion...', {
+      fileName: file.name,
+      fileSize: file.size,
+      fileType: file.type
+    });
     
-    // Convert file to array buffer
-    const arrayBuffer = await file.arrayBuffer();
+    // Validate file
+    if (!file || file.size === 0) {
+      throw new Error('Invalid file: File is empty or undefined');
+    }
     
-    // Load the PDF document
-    const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+    if (!isPDF(file)) {
+      throw new Error('Invalid file: File is not a PDF');
+    }
+    
+    // Convert file to array buffer with timeout
+    const arrayBuffer = await Promise.race([
+      file.arrayBuffer(),
+      new Promise<never>((_, reject) => 
+        setTimeout(() => reject(new Error('File reading timeout')), 30000)
+      )
+    ]);
+    
+    console.log('File read successfully, size:', arrayBuffer.byteLength);
+    
+    // Load the PDF document with timeout
+    const pdf = await Promise.race([
+      pdfjsLib.getDocument({
+        data: arrayBuffer,
+        useSystemFonts: true,
+        verbosity: 0, // Reduce console noise
+      }).promise,
+      new Promise<never>((_, reject) => 
+        setTimeout(() => reject(new Error('PDF loading timeout')), 30000)
+      )
+    ]);
+    
     console.log(`PDF loaded with ${pdf.numPages} pages`);
+    
+    if (pdf.numPages === 0) {
+      throw new Error('PDF has no pages');
+    }
     
     const pages: PDFPage[] = [];
     

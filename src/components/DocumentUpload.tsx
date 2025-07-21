@@ -31,6 +31,8 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
     }
 
     setIsProcessing(true);
+    console.log('Starting PDF conversion for file:', file.name);
+    
     try {
       toast({
         title: "Converting PDF",
@@ -38,6 +40,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
       });
 
       const pages = await convertPDFToImages(file);
+      console.log('PDF conversion successful, pages:', pages.length);
       
       if (pages.length === 0) {
         throw new Error('No pages found in PDF');
@@ -49,6 +52,8 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
           pages[0].blob, 
           `${file.name.replace('.pdf', '')}_page1.png`
         );
+        
+        console.log('Created single image file:', imageFile.name);
         
         toast({
           title: "PDF Converted",
@@ -65,6 +70,8 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
           )
         );
 
+        console.log('Created multiple image files:', imageFiles.map(f => f.name));
+
         toast({
           title: "PDF Converted",
           description: `${pages.length} pages converted to images. Processing first page.`,
@@ -76,11 +83,23 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
       }
     } catch (error) {
       console.error('PDF conversion error:', error);
+      
+      // More specific error handling
+      let errorMessage = "Failed to convert PDF to images. Please try uploading an image instead.";
+      if (error instanceof Error) {
+        if (error.message.includes('worker')) {
+          errorMessage = "PDF processing worker failed to load. Please try refreshing the page and trying again.";
+        } else if (error.message.includes('Invalid PDF')) {
+          errorMessage = "The PDF file appears to be corrupted or invalid. Please try a different PDF file.";
+        }
+      }
+      
       toast({
         title: "PDF Conversion Failed",
-        description: "Failed to convert PDF to images. Please try uploading an image instead.",
+        description: errorMessage,
         variant: "destructive",
       });
+      
       throw error;
     } finally {
       setIsProcessing(false);
