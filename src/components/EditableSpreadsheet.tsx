@@ -2339,26 +2339,42 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       const analysisResult = await response.json();
       const generatedText = analysisResult.generatedText || '';
       
+      console.log('🔍 Raw AI response:', generatedText);
+      
       // Parse the JSON response from AI
       let extractedData = {};
       try {
         extractedData = JSON.parse(generatedText);
+        console.log('🔍 Parsed extracted data:', extractedData);
       } catch (e) {
+        console.log('🔍 JSON parsing failed, trying to extract JSON from text...');
         // If JSON parsing fails, try to extract JSON from the text
         const jsonMatch = generatedText.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           extractedData = JSON.parse(jsonMatch[0]);
+          console.log('🔍 Extracted data from regex match:', extractedData);
         } else {
+          console.error('🔍 Could not find JSON in response:', generatedText);
           throw new Error('Could not parse analysis results');
         }
       }
 
+      console.log('🔍 Target row index:', targetRowIndex);
+      console.log('🔍 Current data before update:', data);
+      console.log('🔍 Available columns:', columns);
+
       // Update the row with extracted data
       const newData = [...data];
+      console.log('🔍 Row data before update:', newData[targetRowIndex]);
+      
       newData[targetRowIndex] = {
         ...newData[targetRowIndex],
         ...extractedData
       };
+      
+      console.log('🔍 Row data after update:', newData[targetRowIndex]);
+      console.log('🔍 Full new data array:', newData);
+      
       setData(newData);
       onDataChange?.(newData);
 
