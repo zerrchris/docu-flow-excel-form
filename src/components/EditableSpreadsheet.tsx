@@ -2346,6 +2346,9 @@ ${extractionFields}`
 
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('🔍 Document analysis error response:', errorData);
+        console.error('🔍 Response status:', response.status);
+        console.error('🔍 Response headers:', Object.fromEntries(response.headers.entries()));
         throw new Error(errorData.error || 'Failed to analyze document');
       }
 
