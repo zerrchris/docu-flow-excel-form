@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, Camera, FolderOpen, Upload, Users, Settings } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { FileText, Camera, FolderOpen, Upload, Users, Settings, Plus, Cloud } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
@@ -12,6 +13,7 @@ import { useActiveRunsheet } from '@/hooks/useActiveRunsheet';
 
 const Dashboard: React.FC = () => {
   const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [showStartDialog, setShowStartDialog] = useState(false);
   const navigate = useNavigate();
   const { activeRunsheet } = useActiveRunsheet();
 
@@ -149,7 +151,7 @@ const Dashboard: React.FC = () => {
                 className={`hover:shadow-lg transition-shadow cursor-pointer ${
                   option.primary ? 'ring-2 ring-primary/20' : ''
                 }`}
-                onClick={() => navigate(option.path)}
+                onClick={() => option.primary ? setShowStartDialog(true) : navigate(option.path)}
               >
                 <CardHeader className="text-center">
                   <option.icon className={`h-12 w-12 mx-auto mb-4 ${
@@ -164,6 +166,10 @@ const Dashboard: React.FC = () => {
                   <Button 
                     className="w-full" 
                     variant={option.primary ? "default" : "outline"}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      option.primary ? setShowStartDialog(true) : navigate(option.path);
+                    }}
                   >
                     {option.primary ? "Get Started" : "Open"}
                   </Button>
@@ -180,6 +186,97 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
       </main>
+
+      {/* Get Started Dialog */}
+      <Dialog open={showStartDialog} onOpenChange={setShowStartDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-primary" />
+              Start a New Runsheet
+            </DialogTitle>
+            <DialogDescription>
+              Choose how you'd like to begin processing documents
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid grid-cols-1 gap-3 py-4">
+            <Button
+              variant="outline"
+              size="lg"
+              className="justify-start gap-3 h-16"
+              onClick={() => {
+                setShowStartDialog(false);
+                navigate('/runsheet');
+              }}
+            >
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <Plus className="h-5 w-5 text-primary" />
+              </div>
+              <div className="text-left">
+                <div className="font-medium">New Sheet</div>
+                <div className="text-sm text-muted-foreground">Start with a blank runsheet</div>
+              </div>
+            </Button>
+
+            <Button
+              variant="outline"
+              size="lg"
+              className="justify-start gap-3 h-16"
+              onClick={() => {
+                setShowStartDialog(false);
+                // Navigate to runsheet and trigger upload dialog
+                navigate('/runsheet?action=upload');
+              }}
+            >
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <Upload className="h-5 w-5 text-primary" />
+              </div>
+              <div className="text-left">
+                <div className="font-medium">Upload Documents</div>
+                <div className="text-sm text-muted-foreground">Upload files from your device</div>
+              </div>
+            </Button>
+
+            <Button
+              variant="outline"
+              size="lg"
+              className="justify-start gap-3 h-16"
+              onClick={() => {
+                setShowStartDialog(false);
+                navigate('/file-manager');
+              }}
+            >
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <FolderOpen className="h-5 w-5 text-primary" />
+              </div>
+              <div className="text-left">
+                <div className="font-medium">Open Existing</div>
+                <div className="text-sm text-muted-foreground">Load a previously saved runsheet</div>
+              </div>
+            </Button>
+
+            <Button
+              variant="outline"
+              size="lg"
+              className="justify-start gap-3 h-16"
+              onClick={() => {
+                setShowStartDialog(false);
+                // Navigate to runsheet and trigger Google Drive picker
+                navigate('/runsheet?action=google-drive');
+              }}
+            >
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <Cloud className="h-5 w-5 text-primary" />
+              </div>
+              <div className="text-left">
+                <div className="font-medium">Google Drive</div>
+                <div className="text-sm text-muted-foreground">Import from Google Drive</div>
+              </div>
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
