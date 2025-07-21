@@ -9,6 +9,7 @@ import DocumentViewer from './DocumentViewer';
 import { MobileCapturedDocuments } from './MobileCapturedDocuments';
 import DocumentUpload from './DocumentUpload';
 import VoiceInput from './VoiceInput';
+import RealtimeVoiceInput from './RealtimeVoiceInput';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 
@@ -174,7 +175,14 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
                       <div className="space-y-4">
                         <h4 className="text-md font-medium text-foreground">Document Data</h4>
                         
-                        {/* Voice Input Component */}
+                        {/* Real-time Voice Input */}
+                        <RealtimeVoiceInput
+                          fields={fields}
+                          columnInstructions={columnInstructions || {}}
+                          onDataExtracted={handleVoiceDataExtracted}
+                        />
+                        
+                        {/* Legacy Voice Input (for comparison) */}
                         <VoiceInput
                           fields={fields}
                           columnInstructions={columnInstructions || {}}
