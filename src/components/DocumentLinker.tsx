@@ -200,6 +200,7 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
       if (!user) return;
 
       console.log('🔧 DocumentLinker: Starting rename process for filename:', editedFilename);
+      console.log('🔧 DocumentLinker: Query parameters:', { runsheetId, rowIndex, userId: user.id });
 
       // Get current document info
       const { data: document, error: fetchError } = await supabase
@@ -208,11 +209,18 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
         .eq('runsheet_id', runsheetId)
         .eq('row_index', rowIndex)
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
-      if (fetchError || !document) {
+      console.log('🔧 DocumentLinker: Document query result:', { document, fetchError });
+
+      if (fetchError) {
         console.error('🔧 DocumentLinker: Document fetch error:', fetchError);
-        throw new Error('Document not found');
+        throw new Error(`Database error: ${fetchError.message}`);
+      }
+
+      if (!document) {
+        console.error('🔧 DocumentLinker: No document found with the given parameters');
+        throw new Error('Document not found. Please try uploading the document again.');
       }
 
       console.log('🔧 DocumentLinker: Current document:', document);
