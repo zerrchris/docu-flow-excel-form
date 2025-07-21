@@ -182,7 +182,6 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       column !== 'Document File Name' && // Skip Document File Name - it's user-specified, not extracted
       (!columnInstructions[column] || columnInstructions[column].trim() === '')
     );
-    console.log('Checking missing columns:', { columns, columnInstructions, missing });
     setLocalMissingColumns(missing);
   }, [columns, columnInstructions]);
 
@@ -734,12 +733,9 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
   // Load a saved runsheet
   const loadRunsheet = async (runsheet: any) => {
-    setRunsheetName(runsheet.name);
-    setColumns(runsheet.columns);
-    onColumnChange(runsheet.columns);
-    setData(runsheet.data);
+    console.log('Loading selected runsheet:', runsheet);
     
-    // Load column instructions - prioritize user preferences, then runsheet data
+    // Load column instructions first before setting columns to avoid false "missing" highlights
     let finalColumnInstructions = {};
     
     try {
@@ -762,9 +758,15 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       }
     }
     
-    // Set column instructions after loading is complete
+    // Now set everything together to avoid triggering missing column checks prematurely
+    setRunsheetName(runsheet.name);
+    setData(runsheet.data);
     setColumnInstructions(finalColumnInstructions);
     onColumnInstructionsChange?.(finalColumnInstructions);
+    
+    // Set columns last, after column instructions are ready
+    setColumns(runsheet.columns);
+    onColumnChange(runsheet.columns);
     
     setShowOpenDialog(false);
     // Reset column width state for new runsheet
