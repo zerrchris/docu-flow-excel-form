@@ -581,6 +581,12 @@ Image: [base64 image data]`;
       filteredData[column] = targetData[column] || '';
     });
     
+    // Always preserve Storage Path if it exists, even if not in current columns
+    // This is needed for document record creation
+    if (targetData['Storage Path']) {
+      filteredData['Storage Path'] = targetData['Storage Path'];
+    }
+    
     // Use filtered data instead of allowing new columns to persist
     const finalData = filteredData;
     
