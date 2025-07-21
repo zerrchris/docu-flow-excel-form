@@ -40,12 +40,17 @@ const DocumentNamingSettings: React.FC<DocumentNamingSettingsProps> = ({ availab
   });
   const [newColumn, setNewColumn] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false); // Start as false to prevent flash
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false); // Track if we've loaded preferences
   const { toast } = useToast();
 
   useEffect(() => {
-    loadUserPreferences();
-  }, []);
+    // Only show loading if we haven't loaded preferences yet
+    if (!hasLoadedOnce) {
+      setIsLoading(true);
+      loadUserPreferences();
+    }
+  }, [hasLoadedOnce]);
 
   const loadUserPreferences = async () => {
     try {
@@ -72,6 +77,7 @@ const DocumentNamingSettings: React.FC<DocumentNamingSettingsProps> = ({ availab
       console.error('Error loading preferences:', error);
     } finally {
       setIsLoading(false);
+      setHasLoadedOnce(true); // Mark that we've loaded preferences at least once
     }
   };
 
