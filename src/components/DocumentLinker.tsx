@@ -507,6 +507,15 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
               console.log('🔧 DocumentLinker: No file selected');
             }
           }}
+          onClick={(e) => {
+            console.log('🔧 DocumentLinker: File input onClick triggered');
+          }}
+          onFocus={(e) => {
+            console.log('🔧 DocumentLinker: File input onFocus triggered');
+          }}
+          onBlur={(e) => {
+            console.log('🔧 DocumentLinker: File input onBlur triggered');
+          }}
           accept="image/*,.pdf,.doc,.docx,.txt"
         />
       </div>
