@@ -2495,7 +2495,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                                   runsheetId={currentRunsheetId || ''}
                                   rowIndex={rowIndex}
                                   currentFilename={row['Document File Name']}
-                                  documentPath={documentMap.get(rowIndex)?.file_path}
+                                  documentPath={documentMap.get(rowIndex)?.file_path || row['Storage Path']}
                                   existingDocumentUrl={row['Document File Name'] && row['Document File Name'].trim() !== '' ? 'exists' : undefined}
                                    onDocumentLinked={(filename) => {
                                      console.log('onDocumentLinked called with filename:', filename);
