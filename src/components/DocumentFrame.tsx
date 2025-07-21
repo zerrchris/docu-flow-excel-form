@@ -79,13 +79,16 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
 
   // Handle adding to spreadsheet with file upload
   const handleAddToSpreadsheet = async () => {
+    console.log('DocumentFrame: handleAddToSpreadsheet called, file:', file);
     if (!file) {
+      console.log('DocumentFrame: No file, calling onAddToSpreadsheet without file');
       onAddToSpreadsheet();
       return;
     }
 
     setIsUploading(true);
     try {
+      console.log('DocumentFrame: Attempting to upload file to storage:', file.name);
       // Upload file to storage
       const fileResult = await uploadFileToStorage(file, 'documents', 'single-processed');
       
