@@ -268,7 +268,9 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
       console.log('🔧 DocumentLinker: Calling onDocumentLinked with filename:', editedFilename);
       onDocumentLinked(editedFilename);
 
+      // Force immediate state update
       setIsEditingName(false);
+      setEditedFilename('');
       
       toast({
         title: "Document renamed",
@@ -321,6 +323,9 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
   if (currentFilename && currentFilename.trim() !== '') {
     // Use the current filename from the Document File Name column
     const filename = currentFilename || 'document';
+    
+    console.log('🔧 DocumentLinker: Rendering with currentFilename:', currentFilename);
+    console.log('🔧 DocumentLinker: Using filename:', filename);
     
     return (
       <Card className="p-3 border-dashed">

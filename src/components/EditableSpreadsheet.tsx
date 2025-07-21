@@ -2552,6 +2552,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                             >
                               {column === 'Document File Name' ? (
                                 <DocumentLinker
+                                  key={`${rowIndex}-${row['Document File Name']}`}
                                   runsheetId={currentRunsheetId || ''}
                                   rowIndex={rowIndex}
                                   currentFilename={row['Document File Name']}
@@ -2562,23 +2563,25 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                                   })()}
                                   existingDocumentUrl={row['Document File Name'] && row['Document File Name'].trim() !== '' ? 'exists' : undefined}
                                    onDocumentLinked={(filename) => {
-                                     console.log('onDocumentLinked called with filename:', filename);
-                                     const newData = [...data];
-                                     newData[rowIndex] = {
-                                       ...newData[rowIndex],
-                                       'Document File Name': filename
-                                     };
-                                     console.log('Updating row data:', newData[rowIndex]);
-                                     setData(newData);
-                                     onDataChange?.(newData);
-                                    
-                                     // Refresh document map after a short delay to ensure DB is updated
-                                     if (currentRunsheetId) {
-                                       setTimeout(() => {
-                                         DocumentService.getDocumentMapForRunsheet(currentRunsheetId).then(setDocumentMap);
-                                       }, 500);
-                                     }
-                                  }}
+                                      console.log('🔧 EditableSpreadsheet: onDocumentLinked called with filename:', filename);
+                                      console.log('🔧 EditableSpreadsheet: Current row data before update:', data[rowIndex]);
+                                      const newData = [...data];
+                                      newData[rowIndex] = {
+                                        ...newData[rowIndex],
+                                        'Document File Name': filename
+                                      };
+                                      console.log('🔧 EditableSpreadsheet: New row data after update:', newData[rowIndex]);
+                                      setData(newData);
+                                      onDataChange?.(newData);
+                                     
+                                      // Refresh document map after a short delay to ensure DB is updated
+                                      if (currentRunsheetId) {
+                                        setTimeout(() => {
+                                          console.log('🔧 EditableSpreadsheet: Refreshing document map');
+                                          DocumentService.getDocumentMapForRunsheet(currentRunsheetId).then(setDocumentMap);
+                                        }, 500);
+                                      }
+                                   }}
                                    onDocumentRemoved={() => {
                                      const newData = [...data];
                                      newData[rowIndex] = {
