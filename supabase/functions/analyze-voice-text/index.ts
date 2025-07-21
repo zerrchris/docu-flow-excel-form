@@ -61,8 +61,9 @@ CRITICAL INSTRUCTIONS:
 6. If someone mentions recording information, book/page numbers, or instrument numbers, capture them
 7. Any property descriptions, lot numbers, section references go in Legal Description
 8. Conversational notes or observations go in Notes field
-9. Only use "N/A" if the information is truly not mentioned anywhere in the speech
-10. Return ONLY valid JSON - no explanations
+9. For "Document File Name" field, always leave it empty ("") since this is voice input without a document
+10. Only use "N/A" if the information is truly not mentioned anywhere in the speech
+11. Return ONLY valid JSON - no explanations
 
 Expected JSON format:
 {
@@ -118,7 +119,12 @@ ${fields.map(field => `  "${field}": "extracted_value_or_N/A"`).join(',\n')}
       // Fallback: create a basic object with the original text
       extractedData = {};
       fields.forEach(field => {
-        extractedData[field] = 'N/A';
+        // For voice transcription, document file name should be empty, not N/A
+        if (field === 'Document File Name') {
+          extractedData[field] = '';
+        } else {
+          extractedData[field] = 'N/A';
+        }
       });
       extractedData['Notes'] = text; // Store original text in notes if available
     }
@@ -126,7 +132,12 @@ ${fields.map(field => `  "${field}": "extracted_value_or_N/A"`).join(',\n')}
     // Ensure all required fields are present
     fields.forEach(field => {
       if (!(field in extractedData)) {
-        extractedData[field] = 'N/A';
+        // For voice transcription, document file name should be empty, not N/A
+        if (field === 'Document File Name') {
+          extractedData[field] = '';
+        } else {
+          extractedData[field] = 'N/A';
+        }
       }
     });
 
