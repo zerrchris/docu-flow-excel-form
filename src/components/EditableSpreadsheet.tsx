@@ -2327,7 +2327,18 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         },
         body: JSON.stringify({
           imageData,
-          prompt: `Analyze this document and extract the following information. Return the data as a JSON object with the exact field names specified:\n\n${extractionFields}`
+          prompt: `Analyze this document and extract the following information. 
+
+IMPORTANT INSTRUCTIONS:
+- "Instrument Number" should be the actual document number (like "2022-817"), NOT a date or time
+- "Book and Page" should be the book/page reference number
+- "Recording Date" should be the date when the document was recorded (may include time)
+- "Document Date" should be the date when the document was created/signed
+- Be very careful to distinguish between dates and document numbers
+
+Return the data as a JSON object with the exact field names specified:
+
+${extractionFields}`
         }),
       });
 
@@ -2382,12 +2393,6 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       
       Object.entries(extractedData).forEach(([key, value]) => {
         const mappedKey = keyMapping[key] || key;
-        console.log(`🔍 DETAILED: Original key: "${key}", Value: "${value}", Mapped to: "${mappedKey}"`);
-        
-        // Special logging for problematic fields
-        if (key === "Instrument Number" || key === "Book and Page") {
-          console.log(`🚨 IMPORTANT: ${key} = "${value}" will be stored as "${mappedKey}"`);
-        }
         
         // Only include data for columns that actually exist
         if (columns.includes(mappedKey)) {
@@ -2409,14 +2414,6 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           }
           
           mappedData[mappedKey] = stringValue;
-          console.log(`🔍 FINAL: mappedData["${mappedKey}"] = "${stringValue}"`);
-          
-          // Special logging for the problematic columns
-          if (mappedKey === "Book/Page" || mappedKey === "Inst Number") {
-            console.log(`🚨 STORED: Column "${mappedKey}" will show: "${stringValue}"`);
-          }
-        } else {
-          console.log(`🔍 Skipping "${mappedKey}" - not in columns`);
         }
       });
 
