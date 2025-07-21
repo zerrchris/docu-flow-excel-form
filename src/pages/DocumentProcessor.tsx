@@ -47,6 +47,7 @@ const DocumentProcessor: React.FC = () => {
   const [spreadsheetData, setSpreadsheetData] = useState<Record<string, string>[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [columnInstructions, setColumnInstructions] = useState<Record<string, string>>({});
+  const [isManuallySaving, setIsManuallySaving] = useState(false);
   const [showValidationDialog, setShowValidationDialog] = useState(false);
   const [missingColumns, setMissingColumns] = useState<string[]>([]);
   const [highlightMissingColumns, setHighlightMissingColumns] = useState(false);
@@ -154,9 +155,9 @@ const DocumentProcessor: React.FC = () => {
     }
   }, [searchParams]);
   
-  // Auto-save preferences when columns or instructions change
+  // Auto-save preferences when columns or instructions change (but not during manual save)
   useEffect(() => {
-    if (!isLoadingPreferences && columns.length > 0 && Object.keys(columnInstructions).length > 0) {
+    if (!isLoadingPreferences && !isManuallySaving && columns.length > 0 && Object.keys(columnInstructions).length > 0) {
       const savePreferences = async () => {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
@@ -169,7 +170,7 @@ const DocumentProcessor: React.FC = () => {
       const timeoutId = setTimeout(savePreferences, 1000);
       return () => clearTimeout(timeoutId);
     }
-  }, [columns, columnInstructions, isLoadingPreferences]);
+  }, [columns, columnInstructions, isLoadingPreferences, isManuallySaving]);
 
   // Load user preferences on component mount
   
@@ -234,6 +235,8 @@ const DocumentProcessor: React.FC = () => {
   // Handle save all extraction instructions
   const handleSaveAllInstructions = async () => {
     try {
+      setIsManuallySaving(true); // Disable auto-save during manual save
+      
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
@@ -271,6 +274,8 @@ const DocumentProcessor: React.FC = () => {
         description: "An error occurred while saving. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsManuallySaving(false); // Re-enable auto-save
     }
   };
 
