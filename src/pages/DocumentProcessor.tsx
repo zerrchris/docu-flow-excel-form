@@ -692,6 +692,7 @@ Image: [base64 image data]`;
             onColumnInstructionsChange={setColumnInstructions}
             onUnsavedChanges={setHasUnsavedChanges}
             missingColumns={highlightMissingColumns ? missingColumns : []}
+            initialRunsheetName={location.state?.runsheet?.name}
           />
         </div>
       </div>

@@ -43,6 +43,7 @@ interface SpreadsheetProps {
   onColumnInstructionsChange?: (columnInstructions: Record<string, string>) => void;
   onUnsavedChanges?: (hasUnsavedChanges: boolean) => void;
   missingColumns?: string[];
+  initialRunsheetName?: string;
 }
 
 const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({ 
@@ -52,7 +53,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   onDataChange,
   onColumnInstructionsChange,
   onUnsavedChanges,
-  missingColumns = []
+  missingColumns = [],
+  initialRunsheetName
 }) => {
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -63,7 +65,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [showOpenDialog, setShowOpenDialog] = useState(false);
   const [showUploadWarningDialog, setShowUploadWarningDialog] = useState(false);
   const [savedRunsheets, setSavedRunsheets] = useState<any[]>([]);
-  const [runsheetName, setRunsheetName] = useState<string>('Untitled Runsheet');
+  const [runsheetName, setRunsheetName] = useState<string>(initialRunsheetName || 'Untitled Runsheet');
   const [editingRunsheetName, setEditingRunsheetName] = useState<boolean>(false);
   const [tempRunsheetName, setTempRunsheetName] = useState<string>('');
   const [lastSaveTime, setLastSaveTime] = useState<Date | null>(null);
@@ -169,6 +171,13 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
     initAuth();
   }, []);
+
+  // Update runsheet name when initialRunsheetName prop changes
+  useEffect(() => {
+    if (initialRunsheetName && initialRunsheetName !== runsheetName) {
+      setRunsheetName(initialRunsheetName);
+    }
+  }, [initialRunsheetName]);
 
   // Update active runsheet when name changes
   useEffect(() => {
