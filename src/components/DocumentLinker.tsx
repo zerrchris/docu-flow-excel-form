@@ -219,45 +219,67 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // If we have a stored document ID, use that instead of searching
-      let document;
-      if (documentId) {
-        const { data: doc, error: fetchError } = await supabase
-          .from('documents')
-          .select('*')
-          .eq('id', documentId)
-          .eq('user_id', user.id)
-          .maybeSingle();
-        
-        if (fetchError) {
-          throw new Error(`Database error: ${fetchError.message}`);
-        }
-        
-        document = doc;
-      } else {
-        // First time - search by runsheet_id + row_index
-        const { data: doc, error: fetchError } = await supabase
-          .from('documents')
-          .select('*')
-          .eq('runsheet_id', runsheetId)
-          .eq('row_index', rowIndex)
-          .eq('user_id', user.id)
-          .maybeSingle();
+      // Function to find document with retry logic for timing issues
+      const findDocumentWithRetry = async (maxRetries = 3) => {
+        for (let attempt = 0; attempt <= maxRetries; attempt++) {
+          let document = null;
+          
+          if (documentId) {
+            // Try to find by document ID first
+            const { data: doc, error: fetchError } = await supabase
+              .from('documents')
+              .select('*')
+              .eq('id', documentId)
+              .eq('user_id', user.id)
+              .maybeSingle();
+            
+            if (fetchError) {
+              throw new Error(`Database error: ${fetchError.message}`);
+            }
+            
+            document = doc;
+          }
+          
+          if (!document) {
+            // Search by runsheet_id + row_index
+            const { data: doc, error: fetchError } = await supabase
+              .from('documents')
+              .select('*')
+              .eq('runsheet_id', runsheetId)
+              .eq('row_index', rowIndex)
+              .eq('user_id', user.id)
+              .maybeSingle();
 
-        if (fetchError) {
-          throw new Error(`Database error: ${fetchError.message}`);
-        }
+            if (fetchError) {
+              throw new Error(`Database error: ${fetchError.message}`);
+            }
 
-        document = doc;
-        
-        // Store the document ID for future operations
-        if (document) {
-          setDocumentId(document.id);
+            document = doc;
+            
+            // Store the document ID for future operations
+            if (document) {
+              setDocumentId(document.id);
+            }
+          }
+          
+          if (document) {
+            return document;
+          }
+          
+          // If not found and we have retries left, wait and try again
+          if (attempt < maxRetries) {
+            console.log(`Document not found, retrying in ${(attempt + 1) * 500}ms... (attempt ${attempt + 1}/${maxRetries + 1})`);
+            await new Promise(resolve => setTimeout(resolve, (attempt + 1) * 500));
+          }
         }
-      }
+        
+        return null;
+      };
+
+      const document = await findDocumentWithRetry();
 
       if (!document) {
-        throw new Error('Document not found. Please try uploading the document again.');
+        throw new Error('Document not found. The document may still be processing. Please wait a moment and try again.');
       }
 
       // Create new file path with the sanitized edited filename for storage  
