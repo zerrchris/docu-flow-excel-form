@@ -190,7 +190,7 @@ const DocumentProcessor: React.FC = () => {
         fileInput = document.createElement('input');
         fileInput.type = 'file';
         fileInput.id = 'dashboard-upload-input';
-        fileInput.accept = '.xlsx,.xls,.csv';
+        fileInput.accept = '.xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv';
         fileInput.multiple = false; // Single file only for runsheets
         fileInput.style.display = 'none';
         fileInput.onchange = (e) => handleDashboardFileSelect(e as any);
@@ -927,7 +927,7 @@ Image: [base64 image data]`;
         id="dashboard-upload-input"
         type="file"
         className="sr-only"
-        accept=".xlsx,.xls,.csv"
+        accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv"
         onChange={handleDashboardFileSelect}
         multiple={false}
       />
