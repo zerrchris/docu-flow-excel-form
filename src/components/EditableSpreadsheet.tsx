@@ -2200,16 +2200,45 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       const extractionFields = extractionPrefs?.columns?.map(col => `${col}: ${extractionPrefs.column_instructions?.[col] || 'Extract this field'}`).join('\n') || 
         columns.filter(col => col !== 'Document File Name').map(col => `${col}: Extract this field`).join('\n');
 
-      // Convert file to base64 data URL
-      const reader = new FileReader();
-      const dataUrlPromise = new Promise<string>((resolve, reject) => {
-        reader.onload = () => {
-          resolve(reader.result as string);
-        };
-        reader.onerror = reject;
-      });
-      reader.readAsDataURL(file);
-      const imageData = await dataUrlPromise;
+      let imageData: string;
+
+      // If file has no type (likely from storage), try to determine type from extension
+      if (!file.type || file.type === 'application/octet-stream') {
+        const extension = file.name.split('.').pop()?.toLowerCase();
+        let mimeType = 'image/png'; // default
+        
+        switch (extension) {
+          case 'jpg':
+          case 'jpeg':
+            mimeType = 'image/jpeg';
+            break;
+          case 'png':
+            mimeType = 'image/png';
+            break;
+          case 'gif':
+            mimeType = 'image/gif';
+            break;
+          case 'webp':
+            mimeType = 'image/webp';
+            break;
+        }
+
+        // Convert file to base64 manually with correct MIME type
+        const arrayBuffer = await file.arrayBuffer();
+        const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+        imageData = `data:${mimeType};base64,${base64}`;
+      } else {
+        // Convert file to base64 data URL normally
+        const reader = new FileReader();
+        const dataUrlPromise = new Promise<string>((resolve, reject) => {
+          reader.onload = () => {
+            resolve(reader.result as string);
+          };
+          reader.onerror = reject;
+        });
+        reader.readAsDataURL(file);
+        imageData = await dataUrlPromise;
+      }
 
       // Call analyze-document edge function
       const response = await fetch('https://xnpmrafjjqsissbtempj.supabase.co/functions/v1/analyze-document', {
