@@ -2384,7 +2384,19 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       Object.entries(extractedData).forEach(([key, value]) => {
         const mappedKey = keyMapping[key] || key;
         if (columns.includes(mappedKey)) {
-          mappedData[mappedKey] = String(value);
+          // Handle object values (like complex Grantor/Grantee data)
+          let stringValue: string;
+          if (typeof value === 'object' && value !== null) {
+            // If it's an object, convert it to a readable string
+            if ('name' in value && 'address' in value) {
+              stringValue = `${value.name}; ${value.address}`;
+            } else {
+              stringValue = JSON.stringify(value);
+            }
+          } else {
+            stringValue = String(value);
+          }
+          mappedData[mappedKey] = stringValue;
         }
       });
 
