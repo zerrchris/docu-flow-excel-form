@@ -193,6 +193,7 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
       // If we have a stored document ID, use that instead of searching
       let document;
       if (documentId) {
+        alert(`Using stored document ID: ${documentId}`);
         const { data: doc, error: fetchError } = await supabase
           .from('documents')
           .select('*')
@@ -206,6 +207,7 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
         
         document = doc;
       } else {
+        alert(`First time lookup for runsheet: ${runsheetId}, row: ${rowIndex}`);
         // First time - search by runsheet_id + row_index
         const { data: doc, error: fetchError } = await supabase
           .from('documents')
@@ -223,11 +225,13 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
         
         // Store the document ID for future operations
         if (document) {
+          alert(`Found document, storing ID: ${document.id}`);
           setDocumentId(document.id);
         }
       }
 
       if (!document) {
+        alert(`No document found. documentId was: ${documentId}`);
         throw new Error('Document not found. Please try uploading the document again.');
       }
 
