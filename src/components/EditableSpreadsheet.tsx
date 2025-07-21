@@ -182,6 +182,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       column !== 'Document File Name' && // Skip Document File Name - it's user-specified, not extracted
       (!columnInstructions[column] || columnInstructions[column].trim() === '')
     );
+    console.log('Checking missing columns:', { columns, columnInstructions, missing });
     setLocalMissingColumns(missing);
   }, [columns, columnInstructions]);
 
