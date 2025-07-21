@@ -581,14 +581,22 @@ Image: [base64 image data]`;
       filteredData[column] = targetData[column] || '';
     });
     
+    console.log('🔧 DEBUG: filteredData after column filtering:', filteredData);
+    console.log('🔧 DEBUG: targetData Storage Path:', targetData['Storage Path']);
+    
     // Always preserve Storage Path if it exists, even if not in current columns
     // This is needed for document record creation
     if (targetData['Storage Path']) {
       filteredData['Storage Path'] = targetData['Storage Path'];
+      console.log('🔧 DEBUG: Added Storage Path to filteredData:', filteredData['Storage Path']);
+    } else {
+      console.log('🔧 DEBUG: No Storage Path found in targetData');
     }
     
     // Use filtered data instead of allowing new columns to persist
     const finalData = filteredData;
+    
+    console.log('🔧 DEBUG: finalData before spreadsheet addition:', finalData);
     
     console.log('Original analyzed data:', targetData);
     console.log('Filtered data to match current columns:', finalData);
