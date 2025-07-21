@@ -308,7 +308,7 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
   };
 
   if (currentFilename && currentFilename.trim() !== '') {
-    // Use the current filename from the Document File column
+    // Use the current filename from the Document File Name column
     const filename = currentFilename || 'document';
     
     return (

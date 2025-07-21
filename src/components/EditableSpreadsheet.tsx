@@ -78,7 +78,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   
   // Helper function to ensure document columns exist
   const ensureDocumentColumns = (columnsList: string[]): string[] => {
-    const documentColumns = ['Document File'];
+    const documentColumns = ['Document File Name'];
     const missingColumns = documentColumns.filter(col => !columnsList.includes(col));
     
     if (missingColumns.length > 0) {
@@ -846,7 +846,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       .filter(url => url && url.trim() !== '');
 
     const documentNames = nonEmptyData
-      .map(row => row['Document File'])
+      .map(row => row['Document File Name'])
       .filter(name => name && name.trim() !== '');
 
     let downloadCount = 0;
@@ -1269,8 +1269,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   };
 
   const openColumnDialog = (column: string) => {
-    // If this is the "Document File" column, show naming settings instead
-    if (column === 'Document File') {
+    // If this is the "Document File Name" column, show naming settings instead
+    if (column === 'Document File Name') {
       setShowNamingSettings(true);
       return;
     }
@@ -2310,19 +2310,19 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                              onKeyDown={(e) => handleKeyDown(e, rowIndex, column)}
                             tabIndex={0}
                             >
-                              {column === 'Document File' ? (
+                              {column === 'Document File Name' ? (
                                 <DocumentLinker
                                   runsheetId={currentRunsheetId || ''}
                                   rowIndex={rowIndex}
-                                  currentFilename={row['Document File']}
+                                  currentFilename={row['Document File Name']}
                                   documentPath={documentMap.get(rowIndex)?.file_path}
-                                  existingDocumentUrl={row['Document File'] && row['Document File'].trim() !== '' ? 'exists' : undefined}
+                                  existingDocumentUrl={row['Document File Name'] && row['Document File Name'].trim() !== '' ? 'exists' : undefined}
                                    onDocumentLinked={(filename) => {
                                      console.log('onDocumentLinked called with filename:', filename);
                                      const newData = [...data];
                                      newData[rowIndex] = {
                                        ...newData[rowIndex],
-                                       'Document File': filename
+                                       'Document File Name': filename
                                      };
                                      console.log('Updating row data:', newData[rowIndex]);
                                      setData(newData);
@@ -2337,7 +2337,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                                      const newData = [...data];
                                      newData[rowIndex] = {
                                        ...newData[rowIndex],
-                                       'Document File': ''
+                                       'Document File Name': ''
                                      };
                                      setData(newData);
                                      onDataChange?.(newData);

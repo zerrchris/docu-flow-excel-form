@@ -84,7 +84,7 @@ const BatchDocumentRow: React.FC<BatchDocumentRowProps> = ({
       // Add file information to the form data
       const dataWithFile = {
         ...formData,
-        'Document File': fileResult.fileName,
+        'Document File Name': fileResult.fileName,
         'Document URL': fileResult.url,
         'Storage Path': fileResult.path
       };

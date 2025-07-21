@@ -77,7 +77,7 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
       // Create enhanced data with file information
       const dataWithFile = {
         ...formData,
-        'Document File': fileResult.fileName,
+        'Document File Name': fileResult.fileName,
         'Document URL': fileResult.url,
         'Storage Path': fileResult.path
       };
