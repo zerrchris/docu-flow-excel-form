@@ -182,22 +182,55 @@ const DocumentProcessor: React.FC = () => {
     if (action === 'upload') {
       console.log('Upload action detected, triggering runsheet file dialog...');
       
-      // Create a file input programmatically if needed
-      let fileInput = document.getElementById('dashboard-upload-input') as HTMLInputElement;
+      // Create a file input programmatically 
+      const fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.accept = '.xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv';
+      fileInput.multiple = false;
+      fileInput.style.display = 'none';
       
-      if (!fileInput) {
-        console.log('Dashboard file input not found, creating one...');
-        fileInput = document.createElement('input');
-        fileInput.type = 'file';
-        fileInput.id = 'dashboard-upload-input';
-        fileInput.accept = '.xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv';
-        fileInput.multiple = false; // Single file only for runsheets
-        fileInput.style.display = 'none';
-        fileInput.onchange = (e) => handleDashboardFileSelect(e as any);
-        document.body.appendChild(fileInput);
-      }
+      // Attach the event handler directly
+      fileInput.addEventListener('change', (e) => {
+        console.log('🔧 File input change event triggered');
+        const target = e.target as HTMLInputElement;
+        const files = target.files;
+        if (files && files.length > 0) {
+          const selectedFile = files[0];
+          console.log('🔧 DocumentProcessor: File selected:', selectedFile.name);
+          
+          // Check if it's a valid runsheet file type
+          const validExtensions = ['.xlsx', '.xls', '.csv'];
+          const fileExtension = selectedFile.name.toLowerCase().substr(selectedFile.name.lastIndexOf('.'));
+          
+          if (!validExtensions.includes(fileExtension)) {
+            toast({
+              title: "Invalid file type",
+              description: "Please select an Excel (.xlsx, .xls) or CSV (.csv) file for runsheet upload.",
+              variant: "destructive",
+            });
+            return;
+          }
+          
+          // Trigger the spreadsheet import functionality directly
+          console.log('🔧 DocumentProcessor: Dispatching importRunsheetFile event with file:', selectedFile.name);
+          const importEvent = new CustomEvent('importRunsheetFile', {
+            detail: { file: selectedFile }
+          });
+          window.dispatchEvent(importEvent);
+          console.log('🔧 DocumentProcessor: importRunsheetFile event dispatched successfully');
+          
+          toast({
+            title: "Importing runsheet",
+            description: `Processing ${selectedFile.name}...`,
+          });
+        }
+        
+        // Clean up
+        document.body.removeChild(fileInput);
+      });
       
-      console.log('Clicking file input for runsheet upload...');
+      document.body.appendChild(fileInput);
+      console.log('🔧 Clicking file input for runsheet upload...');
       fileInput.click();
     }
   }, [searchParams]);
