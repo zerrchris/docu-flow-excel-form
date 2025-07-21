@@ -840,29 +840,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     const csvContent = [csvHeaders, ...csvRows].join('\n');
     zip.file(`${runsheetName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.csv`, csvContent);
 
-    // Download and add document files
-    const documentUrls = nonEmptyData
-      .map(row => row['Document URL'])
-      .filter(url => url && url.trim() !== '');
-
-    const documentNames = nonEmptyData
-      .map(row => row['Document File Name'])
-      .filter(name => name && name.trim() !== '');
-
-    let downloadCount = 0;
-    for (let i = 0; i < documentUrls.length; i++) {
-      try {
-        const response = await fetch(documentUrls[i]);
-        if (response.ok) {
-          const blob = await response.blob();
-          const fileName = documentNames[i] || `document_${i + 1}`;
-          zip.file(`documents/${fileName}`, blob);
-          downloadCount++;
-        }
-      } catch (error) {
-        console.error(`Failed to download ${documentUrls[i]}:`, error);
-      }
-    }
+    // Note: Document files are no longer downloaded as URLs are not stored in spreadsheet
 
     // Generate and download ZIP
     const zipBlob = await zip.generateAsync({ type: 'blob' });
@@ -879,7 +857,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     
     toast({
       title: "Download complete",
-      description: `Spreadsheet with ${downloadCount} document${downloadCount !== 1 ? 's' : ''} downloaded as ZIP.`,
+      description: "Spreadsheet downloaded as ZIP.",
     });
   };
 

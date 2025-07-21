@@ -78,7 +78,6 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
       const dataWithFile = {
         ...formData,
         'Document File Name': fileResult.fileName,
-        'Document URL': fileResult.url,
         'Storage Path': fileResult.path
       };
       
