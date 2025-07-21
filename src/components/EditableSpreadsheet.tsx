@@ -2411,10 +2411,12 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                                      setData(newData);
                                      onDataChange?.(newData);
                                     
-                                    // Refresh document map
-                                    if (currentRunsheetId) {
-                                      DocumentService.getDocumentMapForRunsheet(currentRunsheetId).then(setDocumentMap);
-                                    }
+                                     // Refresh document map after a short delay to ensure DB is updated
+                                     if (currentRunsheetId) {
+                                       setTimeout(() => {
+                                         DocumentService.getDocumentMapForRunsheet(currentRunsheetId).then(setDocumentMap);
+                                       }, 500);
+                                     }
                                   }}
                                    onDocumentRemoved={() => {
                                      const newData = [...data];
