@@ -99,6 +99,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [selectedColumn, setSelectedColumn] = useState<string>('');
   const [columnInstructions, setColumnInstructions] = useState<Record<string, string>>({});
   const [showNewRunsheetDialog, setShowNewRunsheetDialog] = useState(false);
+  const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] = useState(false);
   const [columnAlignments, setColumnAlignments] = useState<Record<string, 'left' | 'center' | 'right'>>({});
   const [editingColumnAlignment, setEditingColumnAlignment] = useState<'left' | 'center' | 'right'>('left');
   const [showGoogleDrivePicker, setShowGoogleDrivePicker] = useState(false);
@@ -1982,16 +1983,22 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             
               {/* New Runsheet Button */}
               <Dialog open={showNewRunsheetDialog} onOpenChange={setShowNewRunsheetDialog}>
-               <DialogTrigger asChild>
-                 <Button 
-                   variant="outline"
-                   size="sm"
-                   className="gap-2"
-                 >
-                   <Plus className="h-4 w-4" />
-                   New
-                 </Button>
-               </DialogTrigger>
+                <DialogTrigger asChild>
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    onClick={(e) => {
+                      if (hasUnsavedChanges) {
+                        e.preventDefault();
+                        setShowUnsavedChangesDialog(true);
+                      }
+                    }}
+                  >
+                    <Plus className="h-4 w-4" />
+                    New
+                  </Button>
+                </DialogTrigger>
                <DialogContent className="sm:max-w-[500px]">
                  <DialogHeader>
                    <DialogTitle className="text-2xl font-bold text-center">Start New Runsheet</DialogTitle>
@@ -2458,6 +2465,41 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
               </Button>
               <Button onClick={saveColumnChanges}>
                 Save Column
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+         </Dialog>
+
+        {/* Unsaved Changes Dialog for New Runsheet */}
+        <Dialog open={showUnsavedChangesDialog} onOpenChange={setShowUnsavedChangesDialog}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Unsaved Changes</DialogTitle>
+              <DialogDescription>
+                You have unsaved changes in your current runsheet. What would you like to do?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="flex gap-3">
+              <Button variant="outline" onClick={() => setShowUnsavedChangesDialog(false)}>
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={() => {
+                  setShowUnsavedChangesDialog(false);
+                  setShowNewRunsheetDialog(true);
+                }}
+              >
+                Continue Without Saving
+              </Button>
+              <Button 
+                onClick={async () => {
+                  setShowUnsavedChangesDialog(false);
+                  await saveRunsheet();
+                  setShowNewRunsheetDialog(true);
+                }}
+              >
+                Save & Continue
               </Button>
             </DialogFooter>
           </DialogContent>
