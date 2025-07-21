@@ -64,8 +64,6 @@ const DocumentProcessor: React.FC = () => {
   const { activeRunsheet } = useActiveRunsheet();
   const { addRunsheet, hasActiveRunsheets } = useMultipleRunsheets();
   
-  // Get started dialog state
-  const [showGetStarted, setShowGetStarted] = useState(true);
   
   // Preferences loading state
   const [isLoadingPreferences, setIsLoadingPreferences] = useState(true);
@@ -130,45 +128,7 @@ const DocumentProcessor: React.FC = () => {
     }
   }, [columns, columnInstructions, isLoadingPreferences]);
 
-  // Handle runsheet URL parameter to auto-load runsheet and skip welcome dialog
-  useEffect(() => {
-    const runsheetId = searchParams.get('runsheet');
-    
-    if (runsheetId && !isLoadingPreferences) {
-      console.log('Runsheet ID found in URL:', runsheetId);
-      setShowGetStarted(false);
-      
-      // Dispatch event to EditableSpreadsheet to load the specific runsheet
-      const loadRunsheetEvent = new CustomEvent('loadSpecificRunsheet', {
-        detail: { runsheetId }
-      });
-      window.dispatchEvent(loadRunsheetEvent);
-    }
-  }, [searchParams, isLoadingPreferences]);
-
-  // Check for active runsheets and skip get started dialog if any exist
-  useEffect(() => {
-    const runsheetId = searchParams.get('runsheet');
-    
-    // If there's no URL parameter but there are active runsheets, skip get started dialog
-    if (!runsheetId && !isLoadingPreferences && hasActiveRunsheets) {
-      console.log('Active runsheets found, skipping get started dialog');
-      setShowGetStarted(false);
-      
-      // No need to auto-restore as tabs will handle the active runsheets
-    }
-  }, [hasActiveRunsheets, searchParams, isLoadingPreferences]);
-
-  // Auto-restore last worked on runsheet if no specific runsheet is requested and no active runsheet
-  useEffect(() => {
-    const runsheetId = searchParams.get('runsheet');
-    
-    if (!runsheetId && !isLoadingPreferences && !showGetStarted && !activeRunsheet) {
-      // Dispatch event to auto-load the most recently updated runsheet
-      const autoRestoreEvent = new CustomEvent('autoRestoreLastRunsheet');
-      window.dispatchEvent(autoRestoreEvent);
-    }
-  }, [searchParams, isLoadingPreferences, showGetStarted, activeRunsheet]);
+  // Load user preferences on component mount
   
   // Update form state when columns change
   useEffect(() => {
@@ -608,23 +568,8 @@ Image: [base64 image data]`;
     setFormData(emptyFormData);
   };
 
-  // Get started dialog handlers
-  const handleUploadRunsheet = () => {
-    setShowGetStarted(false);
-    // Trigger the upload functionality from EditableSpreadsheet
-    const uploadEvent = new CustomEvent('triggerSpreadsheetUpload');
-    window.dispatchEvent(uploadEvent);
-  };
-
-  const handleOpenExisting = () => {
-    setShowGetStarted(false);
-    // Trigger the open existing functionality from EditableSpreadsheet
-    const openEvent = new CustomEvent('triggerSpreadsheetOpen');
-    window.dispatchEvent(openEvent);
-  };
-
+  // Handle starting a new runsheet
   const handleStartNew = () => {
-    setShowGetStarted(false);
     // Reset to default state with default extraction instructions
     setColumns(DEFAULT_COLUMNS);
     setColumnInstructions(DEFAULT_EXTRACTION_INSTRUCTIONS);
@@ -636,12 +581,6 @@ Image: [base64 image data]`;
     window.dispatchEvent(resetEvent);
   };
 
-  const handleContinueLastWork = () => {
-    setShowGetStarted(false);
-    // Dispatch event to auto-load the most recently updated runsheet
-    const autoRestoreEvent = new CustomEvent('autoRestoreLastRunsheet');
-    window.dispatchEvent(autoRestoreEvent);
-  };
 
   return (
     <RunsheetTabs>
@@ -812,60 +751,6 @@ Image: [base64 image data]`;
         />
       </div>
       
-      {/* Get Started Dialog */}
-      <Dialog open={showGetStarted} onOpenChange={setShowGetStarted}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-center">Welcome to RunsheetPro</DialogTitle>
-            <DialogDescription className="text-center pt-2">
-              How would you like to get started today?
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-6">
-            <Button
-              onClick={handleUploadRunsheet}
-              className="h-16 flex flex-col gap-2 text-left"
-              variant="outline"
-            >
-              <div className="flex items-center gap-3 w-full">
-                <Upload className="h-6 w-6" />
-                <div className="flex flex-col text-left">
-                  <span className="font-semibold">Upload Runsheet</span>
-                  <span className="text-sm text-muted-foreground">Import an existing CSV or Excel file</span>
-                </div>
-              </div>
-            </Button>
-            
-            <Button
-              onClick={handleOpenExisting}
-              className="h-16 flex flex-col gap-2 text-left"
-              variant="outline"
-            >
-              <div className="flex items-center gap-3 w-full">
-                <FolderOpen className="h-6 w-6" />
-                <div className="flex flex-col text-left">
-                  <span className="font-semibold">Open Existing Runsheet</span>
-                  <span className="text-sm text-muted-foreground">Load a previously saved runsheet</span>
-                </div>
-              </div>
-            </Button>
-            
-            <Button
-              onClick={handleStartNew}
-              className="h-16 flex flex-col gap-2 text-left"
-              variant="default"
-            >
-              <div className="flex items-center gap-3 w-full">
-                <Plus className="h-6 w-6" />
-                <div className="flex flex-col text-left">
-                  <span className="font-semibold">Start New Runsheet</span>
-                  <span className="text-sm text-muted-foreground">Begin with a fresh, empty runsheet</span>
-                </div>
-              </div>
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Combine Images Confirmation Dialog */}
       <Dialog open={showCombineConfirmation} onOpenChange={setShowCombineConfirmation}>
