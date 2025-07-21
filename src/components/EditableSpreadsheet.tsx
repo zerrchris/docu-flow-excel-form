@@ -727,6 +727,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       if (runsheets && runsheets.length > 0) {
         const lastRunsheet = runsheets[0];
         console.log('Auto-restoring runsheet:', lastRunsheet.name);
+        setIsLoadingRunsheet(true);
         await loadRunsheet(lastRunsheet);
         
         toast({
@@ -838,6 +839,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
       if (runsheet) {
         console.log('Loading runsheet from URL:', runsheet);
+        setIsLoadingRunsheet(true);
         await loadRunsheet(runsheet);
       }
     } catch (error: any) {
@@ -2492,7 +2494,10 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                     <div
                       key={runsheet.id}
                       className="border rounded-lg p-4 hover:bg-muted/50 cursor-pointer transition-colors"
-                      onClick={async () => await loadRunsheet(runsheet)}
+                      onClick={async () => {
+                        setIsLoadingRunsheet(true);
+                        await loadRunsheet(runsheet);
+                      }}
                     >
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
