@@ -37,7 +37,14 @@ serve(async (req) => {
       return `- ${field}: ${instruction}`;
     }).join('\n');
 
-    const extractionPrompt = `You are a data extraction assistant. Extract specific information from the following spoken text and return it as a JSON object with the exact field names provided.
+    const extractionPrompt = `You are a specialized data extraction assistant for processing SPOKEN voice input. You excel at understanding natural speech patterns and extracting structured data from conversational descriptions.
+
+IMPORTANT: This is SPOKEN TEXT, so expect:
+- Natural speech patterns with "um", "uh", filler words
+- Information may be stated in any order
+- Numbers might be spelled out (e.g., "twenty twelve" = "2012")
+- Dates in conversational format (e.g., "June third twenty twelve" = "06/03/2012")
+- Legal descriptions with directional terms (e.g., "northwest quarter", "section three")
 
 FIELDS TO EXTRACT:
 ${fieldInstructions}
@@ -45,12 +52,17 @@ ${fieldInstructions}
 SPOKEN TEXT:
 "${text}"
 
-INSTRUCTIONS:
-1. Extract information for each field based on the spoken content
-2. If information for a field is not available in the text, use "N/A"
-3. Be as accurate and specific as possible
-4. Return ONLY a valid JSON object with the field names as keys
-5. Do not include any explanation or additional text
+CRITICAL INSTRUCTIONS:
+1. Listen carefully for ANY mention of the target information, even if buried in conversational speech
+2. Convert spoken numbers/dates to proper format (e.g., "twenty twelve" → "2012", "June third" → "06/03")
+3. Extract partial information even if incomplete (e.g., if they say "section 3" put that in Legal Description)
+4. Look for legal terms: deed, warranty deed, quit claim, easement, etc. for document types
+5. Names mentioned are likely Grantor/Grantee even if not explicitly stated as such
+6. If someone mentions recording information, book/page numbers, or instrument numbers, capture them
+7. Any property descriptions, lot numbers, section references go in Legal Description
+8. Conversational notes or observations go in Notes field
+9. Only use "N/A" if the information is truly not mentioned anywhere in the speech
+10. Return ONLY valid JSON - no explanations
 
 Expected JSON format:
 {
