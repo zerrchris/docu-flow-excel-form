@@ -98,6 +98,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [editingColumnInstructions, setEditingColumnInstructions] = useState<string>('');
   const [selectedColumn, setSelectedColumn] = useState<string>('');
   const [columnInstructions, setColumnInstructions] = useState<Record<string, string>>({});
+  const [showNewRunsheetDialog, setShowNewRunsheetDialog] = useState(false);
   const [columnAlignments, setColumnAlignments] = useState<Record<string, 'left' | 'center' | 'right'>>({});
   const [editingColumnAlignment, setEditingColumnAlignment] = useState<'left' | 'center' | 'right'>('left');
   const [showGoogleDrivePicker, setShowGoogleDrivePicker] = useState(false);
@@ -1979,8 +1980,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
               {isSaving ? 'Saving...' : 'Save & Close'}
             </Button>
             
-             {/* New Runsheet Button */}
-             <Dialog>
+              {/* New Runsheet Button */}
+              <Dialog open={showNewRunsheetDialog} onOpenChange={setShowNewRunsheetDialog}>
                <DialogTrigger asChild>
                  <Button 
                    variant="outline"
@@ -2045,23 +2046,49 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                        </div>
                      </div>
                    </Button>
-                   
-                   <Button
-                     onClick={() => {
-                       const resetEvent = new CustomEvent('resetSpreadsheet');
-                       window.dispatchEvent(resetEvent);
-                     }}
-                     className="h-16 flex flex-col gap-2 text-left"
-                     variant="default"
-                   >
-                     <div className="flex items-center gap-3 w-full">
-                       <Plus className="h-6 w-6" />
-                       <div className="flex flex-col text-left">
-                         <span className="font-semibold">Start New Runsheet</span>
-                         <span className="text-sm text-muted-foreground">Begin with a fresh, empty runsheet</span>
-                       </div>
-                     </div>
-                   </Button>
+                    
+                    <Button
+                      onClick={() => {
+                        // Reset all data to default state
+                        setRunsheetName('Untitled Runsheet');
+                        setData(Array.from({ length: 20 }, () => {
+                          const row: Record<string, string> = {};
+                          initialColumns.forEach(col => row[col] = '');
+                          return row;
+                        }));
+                        setColumns(initialColumns);
+                        setSelectedCell(null);
+                        setEditingCell(null);
+                        setCellValue('');
+                        setSelectedRange(null);
+                        setHasUnsavedChanges(false);
+                        setLastSavedState('');
+                        onDataChange?.(Array.from({ length: 20 }, () => {
+                          const row: Record<string, string> = {};
+                          initialColumns.forEach(col => row[col] = '');
+                          return row;
+                        }));
+                        onColumnChange(initialColumns);
+                        
+                        // Close the dialog
+                        setShowNewRunsheetDialog(false);
+                        
+                        toast({
+                          title: "New runsheet started",
+                          description: "Started with a fresh, empty runsheet.",
+                        });
+                      }}
+                      className="h-16 flex flex-col gap-2 text-left"
+                      variant="default"
+                    >
+                      <div className="flex items-center gap-3 w-full">
+                        <Plus className="h-6 w-6" />
+                        <div className="flex flex-col text-left">
+                          <span className="font-semibold">Start New Runsheet</span>
+                          <span className="text-sm text-muted-foreground">Begin with a fresh, empty runsheet</span>
+                        </div>
+                      </div>
+                    </Button>
                  </div>
                </DialogContent>
              </Dialog>
