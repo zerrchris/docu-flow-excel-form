@@ -186,7 +186,6 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
       setIsEditingName(false);
       return;
     }
-
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
