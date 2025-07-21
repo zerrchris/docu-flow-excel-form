@@ -265,8 +265,16 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     const loadDocuments = async () => {
       if (!user || !currentRunsheetId) return;
       
+      // Don't reload documents immediately during save process
+      if (isSaving) {
+        console.log('Skipping document load during save process');
+        return;
+      }
+      
       try {
+        console.log('Loading documents for runsheet:', currentRunsheetId);
         const documents = await DocumentService.getDocumentMapForRunsheet(currentRunsheetId);
+        console.log('Loaded documents:', documents);
         setDocumentMap(documents);
       } catch (error) {
         console.error('Error loading documents:', error);
@@ -274,7 +282,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     };
 
     loadDocuments();
-  }, [user, currentRunsheetId]);
+  }, [user, currentRunsheetId, isSaving]);
 
   // Listen for document record creation events to refresh the document map
   useEffect(() => {
@@ -602,7 +610,9 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     console.log('User state:', user);
     console.log('Runsheet name:', runsheetName);
     console.log('Columns:', columns);
-    console.log('Data:', data);
+    console.log('Data before save:', JSON.stringify(data, null, 2));
+    console.log('Document map before save:', documentMap);
+    console.log('Column instructions before save:', columnInstructions);
 
     if (!user) {
       console.log('No user - showing auth required toast');
@@ -889,6 +899,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   // Load a saved runsheet
   const loadRunsheet = async (runsheet: any) => {
     console.log('Loading selected runsheet:', runsheet);
+    console.log('Runsheet data being loaded:', JSON.stringify(runsheet.data, null, 2));
     setIsLoadingRunsheet(true);
     
     // Load column instructions first before setting columns to avoid false "missing" highlights
