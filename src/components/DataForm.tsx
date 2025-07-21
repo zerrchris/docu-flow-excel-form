@@ -180,53 +180,49 @@ const DataForm: React.FC<DataFormProps> = ({
     };
   }, []);
 
-  // Manual refresh function to get the ACTUAL current spreadsheet columns
+  // Manual refresh function to force reset to DEFAULT columns
   const refreshFields = async () => {
-    console.log('Manual refresh triggered - fetching ACTUAL current spreadsheet columns');
+    console.log('Manual refresh triggered - forcing reset to DEFAULT columns');
     console.log('Current formData keys before refresh:', Object.keys(formData));
     console.log('Current fields prop:', fields);
     
-    try {
-      // Get the actual current runsheet data from localStorage (most up-to-date)
-      const runsheets = JSON.parse(localStorage.getItem('runsheets') || '[]');
-      const activeRunsheetId = localStorage.getItem('activeRunsheetId');
-      const currentRunsheet = runsheets.find((r: any) => r.id === activeRunsheetId);
-      
-      let actualCurrentColumns = fields; // fallback to props
-      
-      if (currentRunsheet && currentRunsheet.columns) {
-        actualCurrentColumns = currentRunsheet.columns;
-        console.log('Found actual current runsheet columns:', actualCurrentColumns);
-      } else {
-        console.log('No current runsheet found, using fields prop as fallback:', fields);
-      }
-      
-      // Force complete reset with actual current columns
-      const forceResetEvent = new CustomEvent('forceFormDataReset', { 
-        detail: { targetFields: actualCurrentColumns }
-      });
-      window.dispatchEvent(forceResetEvent);
-      
-      // Create completely new visibility object with ONLY actual current fields
-      const refreshedVisibility: Record<string, boolean> = {};
-      actualCurrentColumns.forEach((field: string) => {
-        refreshedVisibility[field] = true;
-      });
-      
-      setVisibleFields(refreshedVisibility);
-      
-      console.log('Manual refresh complete - form reset to show these ACTUAL columns:', actualCurrentColumns);
-      console.log('New visible fields:', Object.keys(refreshedVisibility));
-      
-    } catch (error) {
-      console.error('Error refreshing fields:', error);
-      // Fallback to original behavior
-      const refreshedVisibility: Record<string, boolean> = {};
-      fields.forEach(field => {
-        refreshedVisibility[field] = true;
-      });
-      setVisibleFields(refreshedVisibility);
-    }
+    // These are the actual default columns from DocumentProcessor
+    const DEFAULT_COLUMNS = [
+      'Inst Number', 
+      'Book/Page', 
+      'Inst Type', 
+      'Recording Date', 
+      'Document Date', 
+      'Grantor', 
+      'Grantee', 
+      'Legal Description', 
+      'Notes', 
+      'Document File Name'
+    ];
+    
+    console.log('Forcing reset to these DEFAULT columns:', DEFAULT_COLUMNS);
+    
+    // Force the DocumentProcessor to reset to defaults by dispatching a special event
+    const forceDefaultsEvent = new CustomEvent('forceResetToDefaults', { 
+      detail: { defaultColumns: DEFAULT_COLUMNS }
+    });
+    window.dispatchEvent(forceDefaultsEvent);
+    
+    // Also do the regular form data reset
+    const forceResetEvent = new CustomEvent('forceFormDataReset', { 
+      detail: { targetFields: DEFAULT_COLUMNS }
+    });
+    window.dispatchEvent(forceResetEvent);
+    
+    // Create visibility for default columns
+    const refreshedVisibility: Record<string, boolean> = {};
+    DEFAULT_COLUMNS.forEach((field: string) => {
+      refreshedVisibility[field] = true;
+    });
+    
+    setVisibleFields(refreshedVisibility);
+    
+    console.log('Manual refresh complete - forced reset to DEFAULT columns:', DEFAULT_COLUMNS);
   };
 
   const toggleFieldVisibility = (field: string) => {

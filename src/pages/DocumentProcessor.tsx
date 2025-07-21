@@ -354,6 +354,29 @@ const DocumentProcessor: React.FC = () => {
     };
   }, []);
 
+  // Listen for force reset to defaults events from DataForm refresh button
+  useEffect(() => {
+    const handleForceResetToDefaults = (event: CustomEvent) => {
+      const { defaultColumns } = event.detail;
+      console.log('DocumentProcessor: Received force reset to defaults event for columns:', defaultColumns);
+      
+      // Force reset the DocumentProcessor state to defaults
+      setColumns(defaultColumns);
+      setColumnInstructions(DEFAULT_EXTRACTION_INSTRUCTIONS);
+      
+      // Clear spreadsheet data to start fresh
+      setSpreadsheetData([]);
+      
+      console.log('DocumentProcessor: Force reset to defaults complete');
+    };
+
+    window.addEventListener('forceResetToDefaults', handleForceResetToDefaults as EventListener);
+    
+    return () => {
+      window.removeEventListener('forceResetToDefaults', handleForceResetToDefaults as EventListener);
+    };
+  }, []);
+
   // Note: Navigation blocking removed since runsheet now auto-saves
 
   // Handle navigation - no longer blocked since runsheet auto-saves
