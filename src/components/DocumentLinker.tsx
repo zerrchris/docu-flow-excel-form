@@ -29,8 +29,14 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
   const [dragActive, setDragActive] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedFilename, setEditedFilename] = useState('');
+  const [localFilename, setLocalFilename] = useState(currentFilename || '');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  // Update local filename when props change
+  React.useEffect(() => {
+    setLocalFilename(currentFilename || '');
+  }, [currentFilename]);
 
   // Function to sanitize filename for storage while preserving extension
   const sanitizeFilenameForStorage = (filename: string): string => {
@@ -264,6 +270,9 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
 
       console.log('🔧 DocumentLinker: Database updated successfully');
 
+      // Update local state immediately
+      setLocalFilename(editedFilename);
+
       // Update parent with new filename
       console.log('🔧 DocumentLinker: Calling onDocumentLinked with filename:', editedFilename);
       onDocumentLinked(editedFilename);
@@ -320,15 +329,22 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
     }
   };
 
-  if (currentFilename && currentFilename.trim() !== '') {
-    // Use the current filename from the Document File Name column
-    const filename = currentFilename || 'document';
+  if (localFilename && localFilename.trim() !== '') {
+    // Use the local filename (updated immediately) or fallback to prop
+    const filename = localFilename || currentFilename || 'document';
     
+    console.log('🔧 DocumentLinker: Rendering with localFilename:', localFilename);
     console.log('🔧 DocumentLinker: Rendering with currentFilename:', currentFilename);
     console.log('🔧 DocumentLinker: Using filename:', filename);
     
     return (
-      <Card className="p-3 border-dashed">
+      <Card 
+        className="p-3 border-dashed"
+        onClick={(e) => {
+          e.stopPropagation(); // Prevent cell selection
+          e.preventDefault(); // Prevent default behavior
+        }}
+      >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 flex-1">
             <File className="w-4 h-4 text-muted-foreground flex-shrink-0" />
@@ -490,15 +506,19 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
     );
   }
 
-  return (
-    <Card 
-      className={`p-3 border-dashed transition-colors ${
-        dragActive ? 'border-primary bg-primary/5' : 'border-muted-foreground/25'
-      }`}
-      onDrop={handleDrop}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-    >
+    return (
+      <Card 
+        className={`p-3 border-dashed transition-colors ${
+          dragActive ? 'border-primary bg-primary/5' : 'border-muted-foreground/25'
+        }`}
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onClick={(e) => {
+          e.stopPropagation(); // Prevent cell selection
+          e.preventDefault(); // Prevent default behavior
+        }}
+      >
       <div className="flex items-center justify-center">
         <Button
           variant="ghost"
