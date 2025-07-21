@@ -35,6 +35,7 @@ import DocumentUpload from './DocumentUpload';
 import DocumentLinker from './DocumentLinker';
 import { DocumentService, type DocumentRecord } from '@/services/documentService';
 import { ExtractionPreferencesService } from '@/services/extractionPreferences';
+import DocumentNamingSettings from './DocumentNamingSettings';
 import type { User } from '@supabase/supabase-js';
 
 interface SpreadsheetProps {
@@ -126,6 +127,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [hasManuallyResizedColumns, setHasManuallyResizedColumns] = useState(false);
   const [documentMap, setDocumentMap] = useState<Map<number, DocumentRecord>>(new Map());
   const [currentRunsheetId, setCurrentRunsheetId] = useState<string | null>(null);
+  const [showNamingSettings, setShowNamingSettings] = useState(false);
   
   // Ref for container width measurement
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1267,6 +1269,12 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   };
 
   const openColumnDialog = (column: string) => {
+    // If this is the "Document File" column, show naming settings instead
+    if (column === 'Document File') {
+      setShowNamingSettings(true);
+      return;
+    }
+    
     setSelectedColumn(column);
     setEditingColumnName(column);
     
@@ -2468,6 +2476,24 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
               </Button>
               <Button variant="destructive" onClick={proceedWithUpload}>
                 Replace Data
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Document Naming Settings Dialog */}
+        <Dialog open={showNamingSettings} onOpenChange={setShowNamingSettings}>
+          <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Document Naming Settings</DialogTitle>
+              <DialogDescription>
+                Configure how documents are automatically named when linked to this runsheet.
+              </DialogDescription>
+            </DialogHeader>
+            <DocumentNamingSettings />
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowNamingSettings(false)}>
+                Close
               </Button>
             </DialogFooter>
           </DialogContent>
