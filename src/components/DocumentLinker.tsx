@@ -14,6 +14,7 @@ interface DocumentLinkerProps {
   documentPath?: string;
   onDocumentLinked: (filename: string) => void;
   onDocumentRemoved: () => void;
+  onAnalyzeDocument?: (file: File, filename: string) => void; // New prop for triggering analysis
 }
 
 const DocumentLinker: React.FC<DocumentLinkerProps> = ({
@@ -23,7 +24,8 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
   currentFilename,
   documentPath,
   onDocumentLinked,
-  onDocumentRemoved
+  onDocumentRemoved,
+  onAnalyzeDocument
 }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
