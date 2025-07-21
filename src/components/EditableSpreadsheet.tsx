@@ -2192,6 +2192,69 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     setRowsToAdd(1);
   };
 
+  // Analyze document and populate row data
+  const analyzeDocumentAndPopulateRow = async (file: File, targetRowIndex: number) => {
+    try {
+      // Get extraction preferences
+      const extractionPrefs = await ExtractionPreferencesService.getDefaultPreferences();
+      const extractionFields = extractionPrefs?.columns?.map(col => `${col}: ${extractionPrefs.column_instructions?.[col] || 'Extract this field'}`).join('\n') || 
+        columns.filter(col => col !== 'Document File Name').map(col => `${col}: Extract this field`).join('\n');
+
+      // Convert file to base64
+      const reader = new FileReader();
+      const base64Promise = new Promise<string>((resolve, reject) => {
+        reader.onload = () => {
+          const base64 = (reader.result as string).split(',')[1];
+          resolve(base64);
+        };
+        reader.onerror = reject;
+      });
+      reader.readAsDataURL(file);
+      const fileBase64 = await base64Promise;
+
+      // Call analyze-document edge function
+      const response = await fetch('https://xnpmrafjjqsissbtempj.supabase.co/functions/v1/analyze-document', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fileBase64,
+          fileName: file.name,
+          extractionPrompt: `Analyze this document and extract the following information. Return the data as a JSON object with the exact field names specified:\n\n${extractionFields}`
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to analyze document');
+      }
+
+      const analysisResult = await response.json();
+      const extractedData = analysisResult.extracted_data || {};
+
+      // Update the row with extracted data
+      const newData = [...data];
+      newData[targetRowIndex] = {
+        ...newData[targetRowIndex],
+        ...extractedData
+      };
+      setData(newData);
+      onDataChange?.(newData);
+
+      toast({
+        title: "Document analyzed",
+        description: "Data has been extracted and populated in the row.",
+      });
+
+    } catch (error) {
+      console.error('Document analysis error:', error);
+      toast({
+        title: "Analysis failed",
+        description: "Failed to analyze document. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <div className="mt-6" data-spreadsheet-container>
@@ -2596,8 +2659,12 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                                       return newMap;
                                     });
                                    }}
+                                   onAnalyzeDocument={async (file, filename) => {
+                                     console.log('🔧 EditableSpreadsheet: onAnalyzeDocument called for row:', rowIndex);
+                                     await analyzeDocumentAndPopulateRow(file, rowIndex);
+                                   }}
                                 />
-                              ) : (
+                               ) : (
                                 row[column] || ''
                               )}
                             </div>

@@ -124,6 +124,11 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
       const actualStoredFilename = result.storedFilename || file.name;
       onDocumentLinked(actualStoredFilename);
       
+      // Trigger automatic document analysis if callback is provided
+      if (onAnalyzeDocument) {
+        onAnalyzeDocument(file, actualStoredFilename);
+      }
+      
       toast({
         title: "Document uploaded",
         description: `${file.name} has been linked to this row.`,
