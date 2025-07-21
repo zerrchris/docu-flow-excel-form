@@ -180,12 +180,18 @@ const DocumentProcessor: React.FC = () => {
     
     if (action === 'upload') {
       // Trigger file input click to open upload dialog
-      setTimeout(() => {
+      const triggerUpload = () => {
         const fileInput = document.getElementById('document-upload-input');
         if (fileInput) {
           fileInput.click();
+        } else {
+          // Retry if element not found yet
+          setTimeout(triggerUpload, 100);
         }
-      }, 500); // Small delay to ensure component is rendered
+      };
+      
+      // Initial delay to ensure component is rendered, then retry logic
+      setTimeout(triggerUpload, 100);
     }
   }, [searchParams]);
   
