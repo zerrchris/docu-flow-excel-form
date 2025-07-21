@@ -122,13 +122,14 @@ const DataForm: React.FC<DataFormProps> = ({
     }
   }, [showFieldSettings]);
 
-  // Initialize all fields as visible when fields change
+  // Initialize all fields as visible when fields change - completely reset on field change
   useEffect(() => {
     const initialVisibility: Record<string, boolean> = {};
     fields.forEach(field => {
-      initialVisibility[field] = visibleFields[field] ?? true;
+      initialVisibility[field] = true; // Always start with all fields visible
     });
     setVisibleFields(initialVisibility);
+    console.log('DataForm: Resetting visible fields for new fields:', fields);
   }, [fields]);
 
   const toggleFieldVisibility = (field: string) => {
