@@ -60,12 +60,10 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
   };
 
   const handleFileSelect = async (file: File) => {
-    console.log('🔧 DocumentLinker: handleFileSelect called with file:', file.name, file.size);
     if (!file) return;
 
     // Check if runsheet is saved first
     if (!runsheetId || runsheetId.trim() === '') {
-      console.log('🔧 DocumentLinker: No runsheet ID available');
       toast({
         title: "Save runsheet first",
         description: "Please save your runsheet before uploading documents.",
@@ -75,13 +73,10 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
     }
 
     try {
-      console.log('🔧 DocumentLinker: Starting upload process');
       setIsUploading(true);
       
       const { data: { user } } = await supabase.auth.getUser();
-      console.log('🔧 DocumentLinker: User authentication check:', user ? 'authenticated' : 'not authenticated');
       if (!user) {
-        console.log('🔧 DocumentLinker: No user found, showing auth required toast');
         toast({
           title: "Authentication required",
           description: "Please sign in to upload documents.",
@@ -91,12 +86,6 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
       }
 
       // Create FormData for the upload
-      console.log('🔧 DocumentLinker: Creating FormData with:', {
-        fileName: file.name,
-        fileSize: file.size,
-        runsheetId,
-        rowIndex
-      });
       const formData = new FormData();
       formData.append('file', file);
       formData.append('runsheetId', runsheetId);
@@ -105,13 +94,11 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
 
       // Get auth token
       const { data: { session } } = await supabase.auth.getSession();
-      console.log('🔧 DocumentLinker: Session check:', session ? 'session exists' : 'no session');
       if (!session) {
         throw new Error('No active session');
       }
 
       // Call the store-document edge function
-      console.log('🔧 DocumentLinker: Making fetch request to store-document edge function');
       const response = await fetch(
         `https://xnpmrafjjqsissbtempj.supabase.co/functions/v1/store-document`,
         {
@@ -123,28 +110,22 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
         }
       );
 
-      console.log('🔧 DocumentLinker: Received response:', response.status, response.statusText);
       if (!response.ok) {
         const errorData = await response.json();
-        console.log('🔧 DocumentLinker: Error response data:', errorData);
         throw new Error(errorData.error || 'Upload failed');
       }
 
       const result = await response.json();
-      console.log('🔧 DocumentLinker: Upload successful, result:', result);
       
       // Use original filename instead of smart-generated filename
-      console.log('🔧 DocumentLinker: Calling onDocumentLinked with original filename:', file.name);
       onDocumentLinked(file.name);
       
-      console.log('🔧 DocumentLinker: Showing success toast');
       toast({
         title: "Document uploaded",
         description: `${file.name} has been linked to this row.`,
       });
 
     } catch (error) {
-      console.error('Upload error:', error);
       toast({
         title: "Upload failed",
         description: error instanceof Error ? error.message : "Failed to upload document.",
@@ -180,7 +161,6 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
       });
 
     } catch (error) {
-      console.error('Remove error:', error);
       toast({
         title: "Failed to remove document",
         description: "There was an error removing the document.",
@@ -197,7 +177,6 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
 
     // Check if runsheetId is valid
     if (!runsheetId || runsheetId.trim() === '') {
-      console.error('🔧 DocumentLinker: Invalid runsheetId:', runsheetId);
       toast({
         title: "Error",
         description: "Invalid runsheet ID. Please save the runsheet first.",
@@ -209,7 +188,7 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      console.log('RENAME DEBUG:', { runsheetId, rowIndex, userId: user.id });
+      if (!user) return;
 
       // Get current document info
       const { data: document, error: fetchError } = await supabase
@@ -228,44 +207,30 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
         throw new Error('Document not found. Please try uploading the document again.');
       }
 
-      console.log('🔧 DocumentLinker: Current document:', document);
-
       // Create new file path with the sanitized edited filename for storage  
       const pathParts = document.file_path.split('/');
       const sanitizedEditedFilename = sanitizeFilenameForStorage(editedFilename);
       const newFilePath = `${pathParts[0]}/${pathParts[1]}/${sanitizedEditedFilename}`;
       
-      console.log('🔧 DocumentLinker: Old file path:', document.file_path);
-      console.log('🔧 DocumentLinker: New file path:', newFilePath);
-
       // Check if file exists before trying to move it
       const { data: existingFile, error: checkError } = await supabase.storage
         .from('documents')
         .list(pathParts.slice(0, -1).join('/'), {
           search: pathParts[pathParts.length - 1]
         });
-
-      console.log('🔧 DocumentLinker: File exists check:', existingFile, checkError);
       
       if (existingFile && existingFile.length > 0) {
         // File exists, try to move it
-        console.log('🔧 DocumentLinker: File exists, attempting to move');
         const { error: moveError } = await supabase.storage
           .from('documents')
           .move(document.file_path, newFilePath);
 
         if (moveError) {
-          console.error('🔧 DocumentLinker: Move error:', moveError);
           throw moveError;
         }
-        console.log('🔧 DocumentLinker: File moved successfully');
-      } else {
-        console.log('🔧 DocumentLinker: Original file not found in storage, skipping move operation');
-        // File doesn't exist in storage, just update the database record
       }
 
       // Update document record
-      console.log('🔧 DocumentLinker: Updating database record');
       const { error: updateError } = await supabase
         .from('documents')
         .update({
@@ -276,15 +241,12 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
         .eq('id', document.id);
 
       if (updateError) {
-        console.error('🔧 DocumentLinker: Database update error:', updateError);
         // Try to move file back on error (only if we moved it)
         if (existingFile && existingFile.length > 0) {
           await supabase.storage.from('documents').move(newFilePath, document.file_path);
         }
         throw updateError;
       }
-
-      console.log('🔧 DocumentLinker: Database updated successfully');
 
       // Update local state immediately and mark that we have local changes
       setLocalFilename(editedFilename);
@@ -293,7 +255,6 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
       setEditedFilename('');
 
       // Update parent with new filename
-      console.log('🔧 DocumentLinker: Calling onDocumentLinked with filename:', editedFilename);
       onDocumentLinked(editedFilename);
       
       toast({
@@ -302,7 +263,6 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
       });
 
     } catch (error) {
-      console.error('🔧 DocumentLinker: Rename error:', error);
       toast({
         title: "Failed to rename document",
         description: error instanceof Error ? error.message : "There was an error renaming the document.",
@@ -334,23 +294,14 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
   };
 
   const openFileSelector = () => {
-    console.log('🔧 DocumentLinker: openFileSelector called, fileInputRef:', fileInputRef.current);
     if (fileInputRef.current) {
-      console.log('🔧 DocumentLinker: About to trigger file input click');
       fileInputRef.current.click();
-      console.log('🔧 DocumentLinker: File input click triggered');
-    } else {
-      console.log('🔧 DocumentLinker: ERROR - fileInputRef.current is null!');
     }
   };
 
   if (localFilename && localFilename.trim() !== '') {
     // Use the local filename (updated immediately) or fallback to prop
     const filename = localFilename || currentFilename || 'document';
-    
-    console.log('🔧 DocumentLinker: Rendering with localFilename:', localFilename);
-    console.log('🔧 DocumentLinker: Rendering with currentFilename:', currentFilename);
-    console.log('🔧 DocumentLinker: Using filename:', filename);
     
     return (
       <Card 
@@ -410,24 +361,16 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                 size="sm"
                 onClick={async (e) => {
                   e.stopPropagation(); // Prevent cell edit mode
-                  console.log('🔧 DocumentLinker: View button clicked');
-                  console.log('🔧 DocumentLinker: documentPath:', documentPath);
-                  console.log('🔧 DocumentLinker: runsheetId:', runsheetId);
-                  console.log('🔧 DocumentLinker: rowIndex:', rowIndex);
                   
                   try {
                     if (documentPath) {
-                      console.log('🔧 DocumentLinker: Using provided document path:', documentPath);
                       // Use the provided document path
                       const url = supabase.storage.from('documents').getPublicUrl(documentPath).data.publicUrl;
-                      console.log('🔧 DocumentLinker: Generated URL:', url);
                       window.open(url, '_blank');
                     } else {
-                      console.log('🔧 DocumentLinker: No document path provided, falling back to database query');
                       // Fallback: fetch from database
                       const { data: { user } } = await supabase.auth.getUser();
                       if (!user) {
-                        console.log('🔧 DocumentLinker: No user found for database fallback');
                         return;
                       }
                       
@@ -440,7 +383,6 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                         .single();
                       
                       if (error) {
-                        console.error('🔧 DocumentLinker: Error fetching document from database:', error);
                         toast({
                           title: "Error",
                           description: "Could not find document to view.",
@@ -450,12 +392,9 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                       }
                       
                       if (document) {
-                        console.log('🔧 DocumentLinker: Found document in database:', document);
                         const url = supabase.storage.from('documents').getPublicUrl(document.file_path).data.publicUrl;
-                        console.log('🔧 DocumentLinker: Generated URL from database:', url);
                         window.open(url, '_blank');
                       } else {
-                        console.log('🔧 DocumentLinker: No document found in database');
                         toast({
                           title: "Error",
                           description: "Document not found in database.",
@@ -464,7 +403,6 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                       }
                     }
                   } catch (error) {
-                    console.error('🔧 DocumentLinker: Error viewing document:', error);
                     toast({
                       title: "Error",
                       description: "Failed to open document.",
@@ -525,24 +463,10 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
           type="file"
           className="hidden"
           onChange={(e) => {
-            console.log('🔧 DocumentLinker: File input onChange triggered', e.target.files);
             const file = e.target.files?.[0];
-            console.log('🔧 DocumentLinker: Selected file:', file);
             if (file) {
-              console.log('🔧 DocumentLinker: About to call handleFileSelect');
               handleFileSelect(file);
-            } else {
-              console.log('🔧 DocumentLinker: No file selected');
             }
-          }}
-          onClick={(e) => {
-            console.log('🔧 DocumentLinker: File input onClick triggered');
-          }}
-          onFocus={(e) => {
-            console.log('🔧 DocumentLinker: File input onFocus triggered');
-          }}
-          onBlur={(e) => {
-            console.log('🔧 DocumentLinker: File input onBlur triggered');
           }}
           accept="image/*,.pdf,.doc,.docx,.txt"
         />
