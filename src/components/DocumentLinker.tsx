@@ -204,6 +204,7 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
       setIsEditingName(false);
       return;
     }
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -385,14 +386,6 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
           </div>
           {!isEditingName && (
             <div className="flex items-center gap-1">
-              {/* Temporary debug indicator */}
-              {isSpreadsheetUpload && (
-                <span className="text-xs text-green-500">S</span>
-              )}
-              {uploadedFile && (
-                <span className="text-xs text-blue-500">F</span>
-              )}
-              
               {/* Show Analyze button only for spreadsheet uploads with stored file */}
               {isSpreadsheetUpload && uploadedFile && onAnalyzeDocument && (
                 <Button
