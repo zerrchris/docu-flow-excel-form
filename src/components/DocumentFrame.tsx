@@ -125,25 +125,31 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
           console.log('DEBUG: Current fields passed to DocumentFrame:', fields);
           console.log('DEBUG: Current formData keys before reset:', Object.keys(formData));
           
-          // Create completely new form data with only current fields
-          const newFormData: Record<string, string> = {};
-          fields.forEach(field => {
-            newFormData[field] = '';
-          });
-          
-          // Clear ALL existing form data first by setting each key to empty
+          // Clear ALL existing form data first
           const currentFormKeys = Object.keys(formData);
+          
+          // Send a batch reset event to ensure clean state
+          const resetEvent = new CustomEvent('documentFormReset', { 
+            detail: { newFields: fields }
+          });
+          window.dispatchEvent(resetEvent);
+          
+          // Clear existing fields first
           currentFormKeys.forEach(key => {
-            onChange(key, ''); // Clear each existing field
+            if (!fields.includes(key)) {
+              onChange(key, ''); // Only clear fields that aren't in the new field list
+            }
           });
           
-          // Then set only the current spreadsheet columns
+          // Then ensure all current spreadsheet columns exist (but preserve any existing values)
           fields.forEach(field => {
-            onChange(field, '');
+            if (!(field in formData)) {
+              onChange(field, '');
+            }
           });
           
           console.log('Form reset complete - only current columns should be visible');
-          console.log('DEBUG: New formData keys after reset:', Object.keys(newFormData));
+          console.log('DEBUG: Target fields after reset:', fields);
         }
       }}>
         <CollapsibleTrigger asChild>

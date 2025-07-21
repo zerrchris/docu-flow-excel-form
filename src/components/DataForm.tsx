@@ -137,6 +137,27 @@ const DataForm: React.FC<DataFormProps> = ({
     console.log('DEBUG: DataForm formData keys:', Object.keys(formData));
   }, [fields]);
 
+  // Listen for document form reset events
+  useEffect(() => {
+    const handleDocumentFormReset = (event: CustomEvent) => {
+      const { newFields } = event.detail;
+      console.log('DataForm: Received document form reset event with new fields:', newFields);
+      
+      // Immediately reset visible fields to match new fields
+      const resetVisibility: Record<string, boolean> = {};
+      newFields.forEach((field: string) => {
+        resetVisibility[field] = true;
+      });
+      setVisibleFields(resetVisibility);
+    };
+
+    window.addEventListener('documentFormReset', handleDocumentFormReset as EventListener);
+    
+    return () => {
+      window.removeEventListener('documentFormReset', handleDocumentFormReset as EventListener);
+    };
+  }, []);
+
   const toggleFieldVisibility = (field: string) => {
     setVisibleFields(prev => ({
       ...prev,
