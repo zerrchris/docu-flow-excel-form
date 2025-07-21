@@ -214,7 +214,13 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
           .select('*')
           .eq('user_id', user.id);
         
-        alert(`Debug - Document not found. User has ${userDocs?.length || 0} total documents. Looking for runsheet: ${runsheetId}, row: ${rowIndex}`);
+        // Let's also check what documents exist for this runsheet
+        const { data: runsheetDocs } = await supabase
+          .from('documents')
+          .select('*')
+          .eq('runsheet_id', runsheetId);
+        
+        alert(`Debug - Document not found. User has ${userDocs?.length || 0} total documents. Looking for runsheet: ${runsheetId}, row: ${rowIndex}. Runsheet has ${runsheetDocs?.length || 0} documents with rows: ${runsheetDocs?.map(d => d.row_index).join(', ')}`);
         throw new Error('Document not found. Please try uploading the document again.');
       }
 
