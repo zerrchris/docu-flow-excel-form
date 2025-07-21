@@ -222,7 +222,7 @@ const DocumentProcessor: React.FC = () => {
         return;
       }
       
-      // Trigger the spreadsheet import functionality
+      // Trigger the spreadsheet import functionality directly
       // Create a custom event that the EditableSpreadsheet component can listen to
       const importEvent = new CustomEvent('importRunsheetFile', {
         detail: { file: selectedFile }
