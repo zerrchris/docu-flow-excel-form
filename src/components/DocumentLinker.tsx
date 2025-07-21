@@ -308,6 +308,9 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
       // Update parent with original filename
       onDocumentLinked(originalFilename);
       
+      // Close edit mode
+      setIsEditingName(false);
+      
       toast({
         title: "Reverted to original name",
         description: `File name reverted to "${originalFilename}".`,
