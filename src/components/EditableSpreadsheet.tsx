@@ -180,12 +180,16 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   // Update local missing columns based on current column instructions
   useEffect(() => {
     // Don't check for missing columns while loading a runsheet
-    if (isLoadingRunsheet) return;
+    if (isLoadingRunsheet) {
+      console.log('Skipping missing column check - runsheet is loading');
+      return;
+    }
     
     const missing = columns.filter(column => 
       column !== 'Document File Name' && // Skip Document File Name - it's user-specified, not extracted
       (!columnInstructions[column] || columnInstructions[column].trim() === '')
     );
+    console.log('Missing columns check:', { columns, columnInstructions, missing, isLoadingRunsheet });
     setLocalMissingColumns(missing);
   }, [columns, columnInstructions, isLoadingRunsheet]);
 
