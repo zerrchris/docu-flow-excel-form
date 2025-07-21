@@ -591,6 +591,7 @@ Image: [base64 image data]`;
     console.log('Adding filtered data to spreadsheet:', finalData);
     console.log('Current spreadsheetData before adding:', spreadsheetData);
     
+    
     setSpreadsheetData(prev => {
       // Find the first completely empty row
       const firstEmptyRowIndex = prev.findIndex(row => 
@@ -598,15 +599,23 @@ Image: [base64 image data]`;
       );
       
       let newData;
+      let targetRowIndex;
       if (firstEmptyRowIndex >= 0) {
         // Insert data into the first empty row
         newData = [...prev];
         newData[firstEmptyRowIndex] = { ...finalData };
+        targetRowIndex = firstEmptyRowIndex;
         console.log('Inserted data at row index:', firstEmptyRowIndex);
       } else {
         // If no empty row found, append to the end
         newData = [...prev, { ...finalData }];
-        console.log('Appended data to end of spreadsheet');
+        targetRowIndex = prev.length; // New row index is the current length
+        console.log('Appended data to end of spreadsheet at index:', targetRowIndex);
+      }
+      
+      // If data contains a storage path, create a document record
+      if (finalData['Storage Path']) {
+        createDocumentRecord(finalData, targetRowIndex);
       }
       
       console.log('New spreadsheetData after adding:', newData);
@@ -624,6 +633,46 @@ Image: [base64 image data]`;
       emptyFormData[column] = '';
     });
     setFormData(emptyFormData);
+  };
+
+  // Helper function to create a document record in the database
+  const createDocumentRecord = async (data: Record<string, string>, rowIndex: number) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Get the current runsheet ID from location state
+      const runsheetId = location.state?.runsheetId;
+      if (!runsheetId) {
+        console.log('No runsheet ID available, skipping document record creation');
+        return;
+      }
+
+      const storagePath = data['Storage Path'];
+      const fileName = data['Document File Name'] || 'Unknown Document';
+      
+      if (storagePath) {
+        const { error } = await supabase
+          .from('documents')
+          .insert({
+            user_id: user.id,
+            runsheet_id: runsheetId,
+            row_index: rowIndex,
+            file_path: storagePath,
+            stored_filename: fileName,
+            original_filename: fileName,
+            content_type: 'application/pdf' // Default for most documents
+          });
+        
+        if (error) {
+          console.error('Error creating document record:', error);
+        } else {
+          console.log('Document record created successfully for row', rowIndex);
+        }
+      }
+    } catch (error) {
+      console.error('Error in createDocumentRecord:', error);
+    }
   };
 
   // Handle starting a new runsheet
