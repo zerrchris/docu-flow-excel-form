@@ -200,7 +200,23 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
       if (!user) return;
 
       console.log('🔧 DocumentLinker: Starting rename process for filename:', editedFilename);
-      console.log('🔧 DocumentLinker: Query parameters:', { runsheetId, rowIndex, userId: user.id });
+      console.log('🔧 DocumentLinker: Props at rename time:', { 
+        runsheetId, 
+        rowIndex, 
+        currentFilename, 
+        localFilename,
+        documentPath 
+      });
+      console.log('🔧 DocumentLinker: User ID:', user.id);
+
+      // First, let's see what documents exist for this user
+      const { data: allUserDocs, error: allDocsError } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('user_id', user.id);
+
+      console.log('🔧 DocumentLinker: All user documents:', allUserDocs);
+      console.log('🔧 DocumentLinker: All docs query error:', allDocsError);
 
       // Get current document info
       const { data: document, error: fetchError } = await supabase
@@ -220,6 +236,16 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
 
       if (!document) {
         console.error('🔧 DocumentLinker: No document found with the given parameters');
+        console.log('🔧 DocumentLinker: Looking for documents with runsheet_id:', runsheetId);
+        
+        // Let's see if there are any documents with this runsheet_id
+        const { data: runsheetDocs } = await supabase
+          .from('documents')
+          .select('*')
+          .eq('runsheet_id', runsheetId);
+        
+        console.log('🔧 DocumentLinker: Documents with this runsheet_id:', runsheetDocs);
+        
         throw new Error('Document not found. Please try uploading the document again.');
       }
 
