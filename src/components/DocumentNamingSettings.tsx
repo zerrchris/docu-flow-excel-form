@@ -295,11 +295,23 @@ const DocumentNamingSettings: React.FC = () => {
         {/* Preview */}
         <div className="space-y-2">
           <Label className="text-sm font-semibold">Preview</Label>
-          <div className="bg-muted p-3 rounded text-sm">
-            <strong>Example:</strong> If your spreadsheet has data like "Acme Corp" in name column and "Invoice 2024" in title column:<br />
-            <code className="bg-background px-2 py-1 rounded mt-1 inline-block">
-              Acme_Corp{preferences.separator}Invoice_2024{preferences.separator}[third_column]{preferences.include_extension ? '.pdf' : ''}
-            </code>
+          <div className="bg-muted p-3 rounded text-sm space-y-3">
+            <div>
+              <strong>Basic Example:</strong> If your spreadsheet has data like "Acme Corp" in name column and "Invoice 2024" in title column:<br />
+              <code className="bg-background px-2 py-1 rounded mt-1 inline-block">
+                Acme_Corp{preferences.separator}Invoice_2024{preferences.separator}[third_column]{preferences.include_extension ? '.pdf' : ''}
+              </code>
+            </div>
+            
+            <div className="pt-2 border-t">
+              <strong>Real Estate Example:</strong> For instrument number, book, and page data:<br />
+              <div className="text-xs text-muted-foreground mt-1 mb-2">
+                Priority columns: instrument_number, book, page | Data: "202400123", "150", "75"
+              </div>
+              <code className="bg-background px-2 py-1 rounded inline-block">
+                202400123{preferences.separator}150{preferences.separator}75{preferences.include_extension ? '.pdf' : ''}
+              </code>
+            </div>
           </div>
         </div>
       </CardContent>
