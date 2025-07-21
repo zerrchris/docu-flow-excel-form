@@ -114,6 +114,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
   const [resizing, setResizing] = useState<{column: string, startX: number, startWidth: number} | null>(null);
   const [showAddRowsDialog, setShowAddRowsDialog] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [rowsToAdd, setRowsToAdd] = useState<number>(1);
   const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
@@ -2226,6 +2227,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   };
 
   const analyzeDocumentAndPopulateRow = async (file: File, targetRowIndex: number) => {
+    setIsAnalyzing(true);
     try {
       console.log('🔍 Starting document analysis for:', file.name, 'type:', file.type, 'size:', file.size);
       
@@ -2445,6 +2447,8 @@ ${extractionFields}`
         description: "Failed to analyze document. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsAnalyzing(false);
     }
   };
 
@@ -3142,6 +3146,21 @@ ${extractionFields}`
                 Save & Continue
               </Button>
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Document Analysis Loading Dialog */}
+        <Dialog open={isAnalyzing} onOpenChange={() => {}}>
+          <DialogContent className="sm:max-w-[400px]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-3">
+                <div className="animate-spin h-5 w-5 border-2 border-primary border-t-transparent rounded-full"></div>
+                Analyzing Document
+              </DialogTitle>
+              <DialogDescription>
+                Please wait while we extract data from your document. This may take a few moments.
+              </DialogDescription>
+            </DialogHeader>
           </DialogContent>
         </Dialog>
 
