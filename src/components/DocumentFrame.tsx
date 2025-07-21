@@ -122,13 +122,20 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
         // When expanding, completely reset form fields to only current spreadsheet columns
         if (open) {
           console.log('Document processing expanded - resetting form to current spreadsheet columns only:', fields);
-          // Clear ALL existing form data first
-          const currentFormKeys = Object.keys(formData);
-          currentFormKeys.forEach(key => {
-            onChange(key, ''); // Clear each field
+          
+          // Create completely new form data with only current fields
+          const newFormData: Record<string, string> = {};
+          fields.forEach(field => {
+            newFormData[field] = '';
           });
           
-          // Then set only the current spreadsheet columns as empty fields
+          // Clear ALL existing form data first by setting each key to empty
+          const currentFormKeys = Object.keys(formData);
+          currentFormKeys.forEach(key => {
+            onChange(key, ''); // Clear each existing field
+          });
+          
+          // Then set only the current spreadsheet columns
           fields.forEach(field => {
             onChange(field, '');
           });
