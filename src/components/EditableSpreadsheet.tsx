@@ -2663,6 +2663,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                                      console.log('🔧 EditableSpreadsheet: onAnalyzeDocument called for row:', rowIndex);
                                      await analyzeDocumentAndPopulateRow(file, rowIndex);
                                    }}
+                                   isSpreadsheetUpload={true}
+                                   autoAnalyze={false}
                                 />
                                ) : (
                                 row[column] || ''

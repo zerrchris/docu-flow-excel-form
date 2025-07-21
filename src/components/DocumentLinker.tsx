@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { Upload, File, ExternalLink, Trash2, Download, Edit2 } from 'lucide-react';
+import { Upload, File, ExternalLink, Trash2, Download, Edit2, Brain } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -14,7 +14,9 @@ interface DocumentLinkerProps {
   documentPath?: string;
   onDocumentLinked: (filename: string) => void;
   onDocumentRemoved: () => void;
-  onAnalyzeDocument?: (file: File, filename: string) => void; // New prop for triggering analysis
+  onAnalyzeDocument?: (file: File, filename: string) => void;
+  isSpreadsheetUpload?: boolean; // Flag to distinguish spreadsheet uploads from processor uploads
+  autoAnalyze?: boolean; // Setting to control auto-analysis
 }
 
 const DocumentLinker: React.FC<DocumentLinkerProps> = ({
@@ -25,7 +27,9 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
   documentPath,
   onDocumentLinked,
   onDocumentRemoved,
-  onAnalyzeDocument
+  onAnalyzeDocument,
+  isSpreadsheetUpload = false,
+  autoAnalyze = false
 }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
@@ -34,6 +38,7 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
   const [localFilename, setLocalFilename] = useState(currentFilename || '');
   const [hasLocalChanges, setHasLocalChanges] = useState(false);
   const [documentId, setDocumentId] = useState<string | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null); // Store file for analysis
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -124,8 +129,13 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
       const actualStoredFilename = result.storedFilename || file.name;
       onDocumentLinked(actualStoredFilename);
       
-      // Trigger automatic document analysis if callback is provided
-      if (onAnalyzeDocument) {
+      // Store file for potential analysis if this is a spreadsheet upload
+      if (isSpreadsheetUpload) {
+        setUploadedFile(file);
+      }
+      
+      // Trigger automatic document analysis only if auto-analyze is enabled
+      if (autoAnalyze && onAnalyzeDocument) {
         onAnalyzeDocument(file, actualStoredFilename);
       }
       
@@ -375,6 +385,21 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
           </div>
           {!isEditingName && (
             <div className="flex items-center gap-1">
+              {/* Show Analyze button only for spreadsheet uploads with stored file */}
+              {isSpreadsheetUpload && uploadedFile && onAnalyzeDocument && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAnalyzeDocument(uploadedFile, filename);
+                  }}
+                  className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700"
+                  title="Analyze document and extract data"
+                >
+                  <Brain className="w-3 h-3" />
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="sm"
