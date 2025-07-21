@@ -190,6 +190,9 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Debug: Show current props
+      alert(`Debug - runsheetId: "${runsheetId}", rowIndex: ${rowIndex}, userId: "${user.id}"`);
+
       // Get current document info
       const { data: document, error: fetchError } = await supabase
         .from('documents')
