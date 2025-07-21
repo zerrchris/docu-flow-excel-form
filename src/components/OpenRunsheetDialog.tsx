@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, Calendar, Loader2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { FileText, Calendar, Loader2, Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
@@ -23,6 +24,7 @@ interface OpenRunsheetDialogProps {
 const OpenRunsheetDialog: React.FC<OpenRunsheetDialogProps> = ({ open, onOpenChange }) => {
   const [runsheets, setRunsheets] = useState<Runsheet[]>([]);
   const [loading, setLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -58,6 +60,11 @@ const OpenRunsheetDialog: React.FC<OpenRunsheetDialogProps> = ({ open, onOpenCha
     onOpenChange(false);
   };
 
+  // Filter runsheets based on search query
+  const filteredRunsheets = runsheets.filter(runsheet =>
+    runsheet.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
@@ -71,13 +78,32 @@ const OpenRunsheetDialog: React.FC<OpenRunsheetDialogProps> = ({ open, onOpenCha
           </DialogDescription>
         </DialogHeader>
         
+        {/* Search Field */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search runsheets..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        
         <div className="flex-1 overflow-y-auto py-4">
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               <span className="ml-2 text-muted-foreground">Loading runsheets...</span>
             </div>
-          ) : runsheets.length === 0 ? (
+          ) : filteredRunsheets.length === 0 && searchQuery ? (
+            <div className="text-center py-8">
+              <Search className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium text-foreground mb-2">No runsheets found</h3>
+              <p className="text-muted-foreground">
+                No runsheets match your search for "{searchQuery}". Try a different search term.
+              </p>
+            </div>
+          ) : filteredRunsheets.length === 0 ? (
             <div className="text-center py-8">
               <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium text-foreground mb-2">No runsheets found</h3>
@@ -87,7 +113,7 @@ const OpenRunsheetDialog: React.FC<OpenRunsheetDialogProps> = ({ open, onOpenCha
             </div>
           ) : (
             <div className="grid gap-3">
-              {runsheets.map((runsheet) => (
+              {filteredRunsheets.map((runsheet) => (
                 <Card 
                   key={runsheet.id} 
                   className="hover:shadow-md transition-shadow cursor-pointer"
