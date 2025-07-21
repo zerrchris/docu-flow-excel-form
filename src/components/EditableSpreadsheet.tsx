@@ -478,35 +478,57 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     try {
       console.log('Attempting to save to database...');
       
-      // Generate unique name if there's a conflict
-      const finalName = await generateUniqueRunsheetName(runsheetName, user.id);
+      let savedRunsheet;
+      let finalName = runsheetName; // Default to current name
       
-      // Update runsheet name if it was changed to avoid conflict
-      if (finalName !== runsheetName) {
-        setRunsheetName(finalName);
-        console.log(`Runsheet name changed to avoid conflict: ${runsheetName} -> ${finalName}`);
-      }
-      
-      const { data: savedRunsheet, error } = await supabase
-        .from('runsheets')
-        .insert({
-          name: finalName,
-          columns: columns,
-          data: data,
-          column_instructions: columnInstructions,
-          user_id: user.id,
-          updated_at: new Date().toISOString(),
-        })
-        .select('id')
-        .single();
+      if (currentRunsheetId) {
+        // Update existing runsheet
+        console.log('Updating existing runsheet with ID:', currentRunsheetId);
+        const { data: updateResult, error } = await supabase
+          .from('runsheets')
+          .update({
+            name: runsheetName,
+            columns: columns,
+            data: data,
+            column_instructions: columnInstructions,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', currentRunsheetId)
+          .eq('user_id', user.id)
+          .select('id')
+          .single();
+        
+        if (error) throw error;
+        savedRunsheet = updateResult;
+      } else {
+        // Create new runsheet - check for name conflicts
+        finalName = await generateUniqueRunsheetName(runsheetName, user.id);
+        
+        // Update runsheet name if it was changed to avoid conflict
+        if (finalName !== runsheetName) {
+          setRunsheetName(finalName);
+          console.log(`Runsheet name changed to avoid conflict: ${runsheetName} -> ${finalName}`);
+        }
+        
+        const { data: insertResult, error } = await supabase
+          .from('runsheets')
+          .insert({
+            name: finalName,
+            columns: columns,
+            data: data,
+            column_instructions: columnInstructions,
+            user_id: user.id,
+            updated_at: new Date().toISOString(),
+          })
+          .select('id')
+          .single();
 
-      if (error || !savedRunsheet) {
-        console.error('Database error:', error);
-        throw error;
+        if (error) throw error;
+        savedRunsheet = insertResult;
+        
+        // Set the current runsheet ID for document linking
+        setCurrentRunsheetId(savedRunsheet.id);
       }
-
-      // Set the current runsheet ID for document linking
-      setCurrentRunsheetId(savedRunsheet.id);
 
       console.log('Save successful!');
       const savedState = JSON.stringify({ data, columns, runsheetName: finalName, columnInstructions });
