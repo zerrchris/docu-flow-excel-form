@@ -30,13 +30,16 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedFilename, setEditedFilename] = useState('');
   const [localFilename, setLocalFilename] = useState(currentFilename || '');
+  const [hasLocalChanges, setHasLocalChanges] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  // Update local filename when props change
+  // Update local filename when props change, but only if we haven't made local changes
   React.useEffect(() => {
-    setLocalFilename(currentFilename || '');
-  }, [currentFilename]);
+    if (!hasLocalChanges) {
+      setLocalFilename(currentFilename || '');
+    }
+  }, [currentFilename, hasLocalChanges]);
 
   // Function to sanitize filename for storage while preserving extension
   const sanitizeFilenameForStorage = (filename: string): string => {
@@ -270,8 +273,9 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
 
       console.log('🔧 DocumentLinker: Database updated successfully');
 
-      // Update local state immediately and force re-render
+      // Update local state immediately and mark that we have local changes
       setLocalFilename(editedFilename);
+      setHasLocalChanges(true);
       setIsEditingName(false);
       setEditedFilename('');
 
