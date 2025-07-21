@@ -841,7 +841,7 @@ Image: [base64 image data]`;
         </div>
       </header>
       
-      <div className="container mx-auto px-4 py-6">
+      <div className="max-w-[90rem] mx-auto px-4 py-6">
         <DocumentFrame 
           file={file}
           previewUrl={previewUrl}
