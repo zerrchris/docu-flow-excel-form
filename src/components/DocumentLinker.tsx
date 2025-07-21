@@ -362,15 +362,26 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                 variant="ghost"
                 size="sm"
                 onClick={async () => {
+                  console.log('🔧 DocumentLinker: View button clicked');
+                  console.log('🔧 DocumentLinker: documentPath:', documentPath);
+                  console.log('🔧 DocumentLinker: runsheetId:', runsheetId);
+                  console.log('🔧 DocumentLinker: rowIndex:', rowIndex);
+                  
                   try {
                     if (documentPath) {
+                      console.log('🔧 DocumentLinker: Using provided document path:', documentPath);
                       // Use the provided document path
                       const url = supabase.storage.from('documents').getPublicUrl(documentPath).data.publicUrl;
+                      console.log('🔧 DocumentLinker: Generated URL:', url);
                       window.open(url, '_blank');
                     } else {
+                      console.log('🔧 DocumentLinker: No document path provided, falling back to database query');
                       // Fallback: fetch from database
                       const { data: { user } } = await supabase.auth.getUser();
-                      if (!user) return;
+                      if (!user) {
+                        console.log('🔧 DocumentLinker: No user found for database fallback');
+                        return;
+                      }
                       
                       const { data: document, error } = await supabase
                         .from('documents')
@@ -381,7 +392,7 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                         .single();
                       
                       if (error) {
-                        console.error('Error fetching document:', error);
+                        console.error('🔧 DocumentLinker: Error fetching document from database:', error);
                         toast({
                           title: "Error",
                           description: "Could not find document to view.",
@@ -391,12 +402,21 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                       }
                       
                       if (document) {
+                        console.log('🔧 DocumentLinker: Found document in database:', document);
                         const url = supabase.storage.from('documents').getPublicUrl(document.file_path).data.publicUrl;
+                        console.log('🔧 DocumentLinker: Generated URL from database:', url);
                         window.open(url, '_blank');
+                      } else {
+                        console.log('🔧 DocumentLinker: No document found in database');
+                        toast({
+                          title: "Error",
+                          description: "Document not found in database.",
+                          variant: "destructive",
+                        });
                       }
                     }
                   } catch (error) {
-                    console.error('Error viewing document:', error);
+                    console.error('🔧 DocumentLinker: Error viewing document:', error);
                     toast({
                       title: "Error",
                       description: "Failed to open document.",
