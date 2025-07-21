@@ -1738,17 +1738,19 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     // Clear range selection when selecting a single cell
     setSelectedRange(null);
     
-    // Scroll the selected cell into view
+    // Scroll the selected cell into view after layout updates
     setTimeout(() => {
       const cellElement = document.querySelector(`[data-cell="${rowIndex}-${column}"]`);
       if (cellElement) {
+        // Force layout recalculation before scrolling
+        cellElement.getBoundingClientRect();
         cellElement.scrollIntoView({
           behavior: 'smooth',
           block: 'nearest',
           inline: 'nearest'
         });
       }
-    }, 0);
+    }, 100); // Increased delay to allow for layout updates
     
     // Automatically start editing when selecting a cell
     startEditing(rowIndex, column, data[rowIndex]?.[column] || '');
