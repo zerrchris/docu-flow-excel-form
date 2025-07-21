@@ -41,6 +41,56 @@ export type Database = {
         }
         Relationships: []
       }
+      documents: {
+        Row: {
+          content_type: string | null
+          created_at: string
+          file_path: string
+          file_size: number | null
+          id: string
+          original_filename: string
+          row_index: number
+          runsheet_id: string | null
+          stored_filename: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content_type?: string | null
+          created_at?: string
+          file_path: string
+          file_size?: number | null
+          id?: string
+          original_filename: string
+          row_index: number
+          runsheet_id?: string | null
+          stored_filename: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content_type?: string | null
+          created_at?: string
+          file_path?: string
+          file_size?: number | null
+          id?: string
+          original_filename?: string
+          row_index?: number
+          runsheet_id?: string | null
+          stored_filename?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documents_runsheet_id_fkey"
+            columns: ["runsheet_id"]
+            isOneToOne: false
+            referencedRelation: "runsheets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -163,6 +213,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_document_filename: {
+        Args: {
+          runsheet_data: Json
+          row_index: number
+          original_filename: string
+        }
+        Returns: string
+      }
       has_role: {
         Args: {
           _user_id: string

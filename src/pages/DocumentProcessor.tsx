@@ -133,7 +133,13 @@ const DocumentProcessor: React.FC = () => {
       });
       
       // Clear the navigation state to prevent reloading on subsequent renders
-      navigate(location.pathname, { replace: true, state: {} });
+      navigate(location.pathname, { 
+        replace: true, 
+        state: { 
+          ...location.state, 
+          runsheetId: selectedRunsheet.id // Pass the runsheet ID
+        } 
+      });
     }
   }, [location.state, navigate, location.pathname]);
 
@@ -693,6 +699,7 @@ Image: [base64 image data]`;
             onUnsavedChanges={setHasUnsavedChanges}
             missingColumns={highlightMissingColumns ? missingColumns : []}
             initialRunsheetName={location.state?.runsheet?.name}
+            initialRunsheetId={location.state?.runsheetId}
           />
         </div>
       </div>

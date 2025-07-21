@@ -32,6 +32,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { GoogleDrivePicker } from './GoogleDrivePicker';
 import DocumentUpload from './DocumentUpload';
+import DocumentLinker from './DocumentLinker';
+import { DocumentService, type DocumentRecord } from '@/services/documentService';
 import { ExtractionPreferencesService } from '@/services/extractionPreferences';
 import type { User } from '@supabase/supabase-js';
 
@@ -44,6 +46,7 @@ interface SpreadsheetProps {
   onUnsavedChanges?: (hasUnsavedChanges: boolean) => void;
   missingColumns?: string[];
   initialRunsheetName?: string;
+  initialRunsheetId?: string;
 }
 
 const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({ 
@@ -54,7 +57,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   onColumnInstructionsChange,
   onUnsavedChanges,
   missingColumns = [],
-  initialRunsheetName
+  initialRunsheetName,
+  initialRunsheetId
 }) => {
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -70,7 +74,20 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [tempRunsheetName, setTempRunsheetName] = useState<string>('');
   const [lastSaveTime, setLastSaveTime] = useState<Date | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [columns, setColumns] = useState<string[]>(initialColumns);
+  
+  // Helper function to ensure document columns exist
+  const ensureDocumentColumns = (columnsList: string[]): string[] => {
+    const documentColumns = ['Document File', 'Document URL'];
+    const missingColumns = documentColumns.filter(col => !columnsList.includes(col));
+    
+    if (missingColumns.length > 0) {
+      return [...columnsList, ...missingColumns];
+    }
+    
+    return columnsList;
+  };
+  
+  const [columns, setColumns] = useState<string[]>(() => ensureDocumentColumns(initialColumns));
   const [data, setData] = useState<Record<string, string>[]>(() => {
     // Ensure we always have at least 20 rows
     const minRows = 20;
@@ -107,6 +124,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [showGoogleDrivePicker, setShowGoogleDrivePicker] = useState(false);
   const [isSavingAsDefault, setIsSavingAsDefault] = useState(false);
   const [hasManuallyResizedColumns, setHasManuallyResizedColumns] = useState(false);
+  const [documentMap, setDocumentMap] = useState<Map<number, DocumentRecord>>(new Map());
+  const [currentRunsheetId, setCurrentRunsheetId] = useState<string | null>(null);
   
   // Ref for container width measurement
   const containerRef = useRef<HTMLDivElement>(null);
@@ -178,6 +197,29 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       setRunsheetName(initialRunsheetName);
     }
   }, [initialRunsheetName]);
+
+  // Set initial runsheet ID if provided
+  useEffect(() => {
+    if (initialRunsheetId) {
+      setCurrentRunsheetId(initialRunsheetId);
+    }
+  }, [initialRunsheetId]);
+
+  // Load documents when runsheet changes
+  useEffect(() => {
+    const loadDocuments = async () => {
+      if (!user || !currentRunsheetId) return;
+      
+      try {
+        const documents = await DocumentService.getDocumentMapForRunsheet(currentRunsheetId);
+        setDocumentMap(documents);
+      } catch (error) {
+        console.error('Error loading documents:', error);
+      }
+    };
+
+    loadDocuments();
+  }, [user, currentRunsheetId]);
 
   // Update active runsheet when name changes
   useEffect(() => {
@@ -431,7 +473,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         console.log(`Runsheet name changed to avoid conflict: ${runsheetName} -> ${finalName}`);
       }
       
-      const { error } = await supabase
+      const { data: savedRunsheet, error } = await supabase
         .from('runsheets')
         .insert({
           name: finalName,
@@ -440,12 +482,17 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           column_instructions: columnInstructions,
           user_id: user.id,
           updated_at: new Date().toISOString(),
-        });
+        })
+        .select('id')
+        .single();
 
-      if (error) {
+      if (error || !savedRunsheet) {
         console.error('Database error:', error);
         throw error;
       }
+
+      // Set the current runsheet ID for document linking
+      setCurrentRunsheetId(savedRunsheet.id);
 
       console.log('Save successful!');
       const savedState = JSON.stringify({ data, columns, runsheetName: finalName, columnInstructions });
@@ -1517,7 +1564,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     setSelectedCell({ rowIndex, column });
   }, []);
 
-  const saveEdit = useCallback(() => {
+  const saveEdit = useCallback(async () => {
     if (editingCell) {
       const newData = [...data];
       newData[editingCell.rowIndex] = {
@@ -1525,9 +1572,19 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         [editingCell.column]: cellValue
       };
       setData(newData);
+      onDataChange?.(newData);
+      
+      // Trigger document filename updates if data changed and we have a runsheet ID
+      if (currentRunsheetId && user) {
+        // Debounced document update - wait a moment to avoid too many calls
+        setTimeout(() => {
+          DocumentService.updateDocumentFilenames(currentRunsheetId, newData);
+        }, 2000);
+      }
+      
       setEditingCell(null);
     }
-  }, [editingCell, cellValue, data]);
+  }, [editingCell, cellValue, data, onDataChange, currentRunsheetId, user]);
 
   const cancelEdit = useCallback(() => {
     setEditingCell(null);
@@ -2244,24 +2301,60 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                              onMouseUp={handleMouseUp}
                              onKeyDown={(e) => handleKeyDown(e, rowIndex, column)}
                             tabIndex={0}
-                           >
-                             {column === 'Document URL' && row[column] && row[column].trim() !== '' ? (
-                               <Button
-                                 variant="outline"
-                                 size="sm"
-                                 onClick={(e) => {
-                                   e.stopPropagation();
-                                   window.open(row[column], '_blank');
-                                 }}
-                                 className="h-7 px-2 gap-1 text-xs"
-                               >
-                                 <ExternalLink className="h-3 w-3" />
-                                 View Document
-                               </Button>
-                             ) : (
-                               row[column] || ''
-                             )}
-                           </div>
+                            >
+                              {column === 'Document File' ? (
+                                <DocumentLinker
+                                  runsheetId={currentRunsheetId || ''}
+                                  rowIndex={rowIndex}
+                                  existingDocumentUrl={documentMap.get(rowIndex) ? DocumentService.getDocumentUrl(documentMap.get(rowIndex)!.file_path) : undefined}
+                                  onDocumentLinked={(documentUrl, filename) => {
+                                    const newData = [...data];
+                                    newData[rowIndex] = {
+                                      ...newData[rowIndex],
+                                      'Document File': filename,
+                                      'Document URL': documentUrl
+                                    };
+                                    setData(newData);
+                                    onDataChange?.(newData);
+                                    
+                                    // Refresh document map
+                                    if (currentRunsheetId) {
+                                      DocumentService.getDocumentMapForRunsheet(currentRunsheetId).then(setDocumentMap);
+                                    }
+                                  }}
+                                  onDocumentRemoved={() => {
+                                    const newData = [...data];
+                                    newData[rowIndex] = {
+                                      ...newData[rowIndex],
+                                      'Document File': '',
+                                      'Document URL': ''
+                                    };
+                                    setData(newData);
+                                    onDataChange?.(newData);
+                                    setDocumentMap(prev => {
+                                      const newMap = new Map(prev);
+                                      newMap.delete(rowIndex);
+                                      return newMap;
+                                    });
+                                  }}
+                                />
+                              ) : column === 'Document URL' && row[column] && row[column].trim() !== '' ? (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    window.open(row[column], '_blank');
+                                  }}
+                                  className="h-7 px-2 gap-1 text-xs"
+                                >
+                                  <ExternalLink className="h-3 w-3" />
+                                  View Document
+                                </Button>
+                              ) : (
+                                row[column] || ''
+                              )}
+                            </div>
                         )}
                      </TableCell>
                    );
