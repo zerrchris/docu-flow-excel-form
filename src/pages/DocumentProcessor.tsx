@@ -423,10 +423,13 @@ const DocumentProcessor: React.FC = () => {
     }
 
     // Check if all columns have extraction instructions configured (excluding Document File Name)
+    console.log('Current columns:', columns);
+    console.log('Current columnInstructions:', columnInstructions);
     const columnsWithoutInstructions = columns.filter(column => 
       column !== 'Document File Name' && // Skip Document File Name - it's user-specified, not extracted
       (!columnInstructions[column] || columnInstructions[column].trim() === '')
     );
+    console.log('Columns without instructions:', columnsWithoutInstructions);
     
     if (columnsWithoutInstructions.length > 0) {
       setMissingColumns(columnsWithoutInstructions);
