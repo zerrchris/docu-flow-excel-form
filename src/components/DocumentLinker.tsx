@@ -31,6 +31,7 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
   const [editedFilename, setEditedFilename] = useState('');
   const [localFilename, setLocalFilename] = useState(currentFilename || '');
   const [hasLocalChanges, setHasLocalChanges] = useState(false);
+  const [documentId, setDocumentId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -190,37 +191,44 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Debug: Show current props
-      alert(`Debug - runsheetId: "${runsheetId}", rowIndex: ${rowIndex}, userId: "${user.id}"`);
+      // If we have a stored document ID, use that instead of searching
+      let document;
+      if (documentId) {
+        const { data: doc, error: fetchError } = await supabase
+          .from('documents')
+          .select('*')
+          .eq('id', documentId)
+          .eq('user_id', user.id)
+          .maybeSingle();
+        
+        if (fetchError) {
+          throw new Error(`Database error: ${fetchError.message}`);
+        }
+        
+        document = doc;
+      } else {
+        // First time - search by runsheet_id + row_index
+        const { data: doc, error: fetchError } = await supabase
+          .from('documents')
+          .select('*')
+          .eq('runsheet_id', runsheetId)
+          .eq('row_index', rowIndex)
+          .eq('user_id', user.id)
+          .maybeSingle();
 
-      // Get current document info
-      const { data: document, error: fetchError } = await supabase
-        .from('documents')
-        .select('*')
-        .eq('runsheet_id', runsheetId)
-        .eq('row_index', rowIndex)
-        .eq('user_id', user.id)
-        .maybeSingle();
+        if (fetchError) {
+          throw new Error(`Database error: ${fetchError.message}`);
+        }
 
-      if (fetchError) {
-        alert(`Debug - Query error: ${fetchError.message}`);
-        throw new Error(`Database error: ${fetchError.message}`);
+        document = doc;
+        
+        // Store the document ID for future operations
+        if (document) {
+          setDocumentId(document.id);
+        }
       }
 
       if (!document) {
-        // Let's check if ANY documents exist for this user
-        const { data: userDocs } = await supabase
-          .from('documents')
-          .select('*')
-          .eq('user_id', user.id);
-        
-        // Let's also check what documents exist for this runsheet
-        const { data: runsheetDocs } = await supabase
-          .from('documents')
-          .select('*')
-          .eq('runsheet_id', runsheetId);
-        
-        alert(`Debug - Document not found. User has ${userDocs?.length || 0} total documents. Looking for runsheet: ${runsheetId}, row: ${rowIndex}. Runsheet has ${runsheetDocs?.length || 0} documents with rows: ${runsheetDocs?.map(d => d.row_index).join(', ')}`);
         throw new Error('Document not found. Please try uploading the document again.');
       }
 
