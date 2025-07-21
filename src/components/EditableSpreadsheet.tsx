@@ -2363,13 +2363,40 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       console.log('🔍 Current data before update:', data);
       console.log('🔍 Available columns:', columns);
 
-      // Update the row with extracted data
+      // Map extracted data to match column names
+      const mappedData: Record<string, string> = {};
+      
+      // Create mapping from extracted keys to column names
+      const keyMapping: Record<string, string> = {
+        "Instrument Number": "Inst Number",
+        "Book and Page": "Book/Page", 
+        "Instrument Type": "Inst Type",
+        "Recorded": "Recording Date",
+        "Dated": "Document Date",
+        "Grantor(s)": "Grantor",
+        "Grantee(s)": "Grantee", 
+        "Description": "Legal Description",
+        "Comments": "Notes",
+        "Document File Name": "Document File Name"
+      };
+
+      // Map the extracted data to the correct column names
+      Object.entries(extractedData).forEach(([key, value]) => {
+        const mappedKey = keyMapping[key] || key;
+        if (columns.includes(mappedKey)) {
+          mappedData[mappedKey] = String(value);
+        }
+      });
+
+      console.log('🔍 Mapped data:', mappedData);
+
+      // Update the row with mapped data
       const newData = [...data];
       console.log('🔍 Row data before update:', newData[targetRowIndex]);
       
       newData[targetRowIndex] = {
         ...newData[targetRowIndex],
-        ...extractedData
+        ...mappedData
       };
       
       console.log('🔍 Row data after update:', newData[targetRowIndex]);
