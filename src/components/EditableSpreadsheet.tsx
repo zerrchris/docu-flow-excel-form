@@ -1862,58 +1862,38 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           saveEdit();
         }
         
-        const nextColumnIndex = e.shiftKey ? columnIndex - 1 : columnIndex + 1;
+        let nextColumnIndex = e.shiftKey ? columnIndex - 1 : columnIndex + 1;
         let nextRowIndex = rowIndex;
-        let nextColumn = columns[nextColumnIndex];
         
-        // Skip Document File Name column during navigation
-        const skipDocumentFileNameColumn = (colIndex: number, direction: number): number => {
-          let newIndex = colIndex;
-          while (newIndex >= 0 && newIndex < columns.length && columns[newIndex] === 'Document File Name') {
-            newIndex += direction;
-          }
-          return newIndex;
-        };
-        
+        // Handle wrapping to next/previous row
         if (nextColumnIndex >= columns.length) {
-          nextColumn = columns[0];
+          nextColumnIndex = 0;
           nextRowIndex = Math.min(rowIndex + 1, data.length - 1);
-          // Skip Document File Name if it's the first column
-          const adjustedIndex = skipDocumentFileNameColumn(0, 1);
-          if (adjustedIndex < columns.length) {
-            nextColumn = columns[adjustedIndex];
-          }
         } else if (nextColumnIndex < 0) {
-          nextColumn = columns[columns.length - 1];
+          nextColumnIndex = columns.length - 1;
           nextRowIndex = Math.max(rowIndex - 1, 0);
-          // Skip Document File Name if it's the last column
-          const adjustedIndex = skipDocumentFileNameColumn(columns.length - 1, -1);
-          if (adjustedIndex >= 0) {
-            nextColumn = columns[adjustedIndex];
-          }
-        } else {
-          // Skip Document File Name column
-          const adjustedIndex = skipDocumentFileNameColumn(nextColumnIndex, e.shiftKey ? -1 : 1);
-          if (adjustedIndex >= 0 && adjustedIndex < columns.length) {
-            nextColumn = columns[adjustedIndex];
-          } else if (adjustedIndex >= columns.length) {
-            nextColumn = columns[0];
-            nextRowIndex = Math.min(rowIndex + 1, data.length - 1);
-            const finalIndex = skipDocumentFileNameColumn(0, 1);
-            if (finalIndex < columns.length) {
-              nextColumn = columns[finalIndex];
+        }
+        
+        // Skip Document File Name column
+        while (nextColumnIndex >= 0 && nextColumnIndex < columns.length && columns[nextColumnIndex] === 'Document File Name') {
+          if (e.shiftKey) {
+            nextColumnIndex--;
+            if (nextColumnIndex < 0) {
+              nextColumnIndex = columns.length - 1;
+              nextRowIndex = Math.max(nextRowIndex - 1, 0);
             }
           } else {
-            nextColumn = columns[columns.length - 1];
-            nextRowIndex = Math.max(rowIndex - 1, 0);
-            const finalIndex = skipDocumentFileNameColumn(columns.length - 1, -1);
-            if (finalIndex >= 0) {
-              nextColumn = columns[finalIndex];
+            nextColumnIndex++;
+            if (nextColumnIndex >= columns.length) {
+              nextColumnIndex = 0;
+              nextRowIndex = Math.min(nextRowIndex + 1, data.length - 1);
             }
           }
         }
         
-        if (nextColumn && nextColumn !== 'Document File Name' && nextRowIndex >= 0 && nextRowIndex < data.length) {
+        const nextColumn = columns[nextColumnIndex];
+        
+        if (nextColumn && nextRowIndex >= 0 && nextRowIndex < data.length) {
           selectCell(nextRowIndex, nextColumn);
           // Auto-start editing the next cell
           setTimeout(() => {
@@ -2711,7 +2691,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                               }
                               ${columnAlignments[column] === 'center' ? 'text-center justify-center' : 
                                 columnAlignments[column] === 'right' ? 'text-right justify-end' : 'text-left justify-start'}`}
-                             onClick={() => selectCell(rowIndex, column)}
+                             onClick={() => column !== 'Document File Name' && selectCell(rowIndex, column)}
                              onMouseDown={(e) => handleCellMouseDown(e, rowIndex, column)}
                              onMouseEnter={() => handleMouseEnter(rowIndex, column)}
                              onMouseUp={handleMouseUp}
