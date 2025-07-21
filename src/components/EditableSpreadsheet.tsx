@@ -2455,7 +2455,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                         style={{ 
                           width: `${getColumnWidth(column)}px`, 
                           minWidth: `${getColumnWidth(column)}px`,
-                          height: isEditing ? 'auto' : 'auto'
+                          height: isEditing ? 'fit-content' : 'auto',
+                          minHeight: isEditing ? '60px' : 'auto'
                         }}
                       >
                         {isEditing ? (
@@ -2470,15 +2471,16 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                                 handleInputKeyDown(e);
                               }
                             }}
-                            className={`w-full h-full min-h-[60px] border-2 border-primary rounded-none bg-background focus:ring-0 focus:outline-none resize-none p-2 ${
+                            className={`w-full border-2 border-primary rounded-none bg-background focus:ring-0 focus:outline-none resize-none p-2 ${
                               columnAlignments[column] === 'center' ? 'text-center' : 
                               columnAlignments[column] === 'right' ? 'text-right' : 'text-left'
                             }`}
                             style={{ 
                               minHeight: '60px',
                               width: '100%',
-                              height: '100%'
+                              height: 'auto'
                             }}
+                            rows={Math.max(3, Math.ceil(cellValue.length / 50))}
                           />
                         ) : (
                           <div
