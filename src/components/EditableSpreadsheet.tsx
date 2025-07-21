@@ -2196,14 +2196,19 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                                 ${missingColumns.includes(column) ? 'animate-bounce' : ''}`}
                               onClick={() => openColumnDialog(column)}
                            >
-                             <div className="flex flex-col items-center">
-                               <span className="font-bold">{column}</span>
-                               {missingColumns.includes(column) && (
-                                 <span className="text-xs text-yellow-600 dark:text-yellow-400 mt-1 animate-pulse">
-                                   Click to configure
-                                 </span>
-                               )}
-                             </div>
+                              <div className="flex flex-col items-center">
+                                <span className="font-bold">{column}</span>
+                                {column === 'Document File Name' && (
+                                  <span className="text-xs text-muted-foreground mt-1">
+                                    click to configure naming preferences
+                                  </span>
+                                )}
+                                {missingColumns.includes(column) && (
+                                  <span className="text-xs text-yellow-600 dark:text-yellow-400 mt-1 animate-pulse">
+                                    Click to configure
+                                  </span>
+                                )}
+                              </div>
                              {/* Resize handle */}
                              <div
                                className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/30 bg-border/50"
