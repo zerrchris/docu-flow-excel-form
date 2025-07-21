@@ -189,7 +189,7 @@ const DataForm: React.FC<DataFormProps> = ({
             {field === 'Document File Name' && (
               <div className="space-y-1">
                 <div className="text-xs text-muted-foreground">
-                  This will be the name of the document file (optional - defaults to uploaded filename if left empty)
+                  This will be the name of the document file (optional - defaults to uploaded filename if left empty). Click the magic wand button to auto-generate using your smart naming preferences.
                 </div>
                 <div className="flex gap-2">
                   <Textarea
