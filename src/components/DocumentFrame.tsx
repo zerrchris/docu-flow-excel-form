@@ -8,6 +8,7 @@ import DataForm from './DataForm';
 import DocumentViewer from './DocumentViewer';
 import { MobileCapturedDocuments } from './MobileCapturedDocuments';
 import DocumentUpload from './DocumentUpload';
+import VoiceInput from './VoiceInput';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 
@@ -16,6 +17,7 @@ interface DocumentFrameProps {
   previewUrl: string | null;
   fields: string[];
   formData: Record<string, string>;
+  columnInstructions?: Record<string, string>;
   onChange: (field: string, value: string) => void;
   onAnalyze: () => void;
   onAddToSpreadsheet: (data?: Record<string, string>) => void;
@@ -30,6 +32,7 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
   previewUrl,
   fields,
   formData,
+  columnInstructions,
   onChange,
   onAnalyze,
   onAddToSpreadsheet,
@@ -61,6 +64,16 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
   const handleAnalyze = () => {
     console.log('DocumentFrame handleAnalyze called - calling onAnalyze() without parameters');
     onAnalyze();
+  };
+
+  // Handle voice data extraction
+  const handleVoiceDataExtracted = (extractedData: Record<string, string>) => {
+    // Update form data with extracted voice data
+    Object.entries(extractedData).forEach(([field, value]) => {
+      if (fields.includes(field)) {
+        onChange(field, value);
+      }
+    });
   };
 
   // Handle adding to spreadsheet with file upload
@@ -158,8 +171,17 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
                 <ResizablePanel defaultSize={33} minSize={25} maxSize={75}>
                   <div className="h-full border-r border-border">
                     <div className="p-6 h-full overflow-auto">
-                      <div className="space-y-2">
+                      <div className="space-y-4">
                         <h4 className="text-md font-medium text-foreground">Document Data</h4>
+                        
+                        {/* Voice Input Component */}
+                        <VoiceInput
+                          fields={fields}
+                          columnInstructions={columnInstructions || {}}
+                          onDataExtracted={handleVoiceDataExtracted}
+                        />
+                        
+                        {/* Data Form */}
                         <DataForm 
                           fields={fields}
                           formData={formData}

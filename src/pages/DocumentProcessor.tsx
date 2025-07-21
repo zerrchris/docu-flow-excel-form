@@ -925,6 +925,7 @@ Image: [base64 image data]`;
           previewUrl={previewUrl}
           fields={columns}
           formData={formData}
+          columnInstructions={columnInstructions}
           onChange={handleFieldChange}
           onAnalyze={analyzeDocument}
           onAddToSpreadsheet={addToSpreadsheet}
