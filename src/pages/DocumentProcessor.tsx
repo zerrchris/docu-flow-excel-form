@@ -239,8 +239,6 @@ const DocumentProcessor: React.FC = () => {
 
   // Handle columns change
   const handleColumnsChange = (newColumns: string[]) => {
-    console.log('DEBUG: Columns changed from spreadsheet:', newColumns);
-    console.log('DEBUG: Previous columns in DocumentProcessor:', columns);
     setColumns(newColumns);
   };
 
