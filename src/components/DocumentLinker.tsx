@@ -270,16 +270,14 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
 
       console.log('🔧 DocumentLinker: Database updated successfully');
 
-      // Update local state immediately
+      // Update local state immediately and force re-render
       setLocalFilename(editedFilename);
+      setIsEditingName(false);
+      setEditedFilename('');
 
       // Update parent with new filename
       console.log('🔧 DocumentLinker: Calling onDocumentLinked with filename:', editedFilename);
       onDocumentLinked(editedFilename);
-
-      // Force immediate state update
-      setIsEditingName(false);
-      setEditedFilename('');
       
       toast({
         title: "Document renamed",
