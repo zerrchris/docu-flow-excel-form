@@ -322,8 +322,13 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
 
   const openFileSelector = () => {
     console.log('🔧 DocumentLinker: openFileSelector called, fileInputRef:', fileInputRef.current);
-    fileInputRef.current?.click();
-    console.log('🔧 DocumentLinker: Triggered file input click');
+    if (fileInputRef.current) {
+      console.log('🔧 DocumentLinker: About to trigger file input click');
+      fileInputRef.current.click();
+      console.log('🔧 DocumentLinker: File input click triggered');
+    } else {
+      console.log('🔧 DocumentLinker: ERROR - fileInputRef.current is null!');
+    }
   };
 
   if (currentFilename && currentFilename.trim() !== '') {
