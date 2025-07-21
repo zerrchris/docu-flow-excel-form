@@ -49,6 +49,16 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
     }
   }, [currentFilename, hasLocalChanges]);
 
+  // Keep uploadedFile when we have a document linked for spreadsheet uploads
+  React.useEffect(() => {
+    if (isSpreadsheetUpload && currentFilename && !uploadedFile) {
+      // For existing documents, create a placeholder that allows analysis
+      const blob = new Blob([''], { type: 'application/octet-stream' });
+      const placeholderFile = new globalThis.File([blob], currentFilename || 'document', { type: 'application/octet-stream' });
+      setUploadedFile(placeholderFile);
+    }
+  }, [isSpreadsheetUpload, currentFilename, uploadedFile]);
+
   // Function to sanitize filename for storage while preserving extension
   const sanitizeFilenameForStorage = (filename: string): string => {
     // Extract extension first
