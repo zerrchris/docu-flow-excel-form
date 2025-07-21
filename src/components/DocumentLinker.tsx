@@ -349,7 +349,8 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation(); // Prevent cell edit mode
                   setEditedFilename(filename);
                   setIsEditingName(true);
                 }}
@@ -361,7 +362,8 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={async () => {
+                onClick={async (e) => {
+                  e.stopPropagation(); // Prevent cell edit mode
                   console.log('🔧 DocumentLinker: View button clicked');
                   console.log('🔧 DocumentLinker: documentPath:', documentPath);
                   console.log('🔧 DocumentLinker: runsheetId:', runsheetId);
@@ -432,7 +434,10 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={handleRemoveDocument}
+                onClick={(e) => {
+                  e.stopPropagation(); // Prevent cell edit mode
+                  handleRemoveDocument();
+                }}
                 className="h-6 w-6 p-0 text-destructive hover:text-destructive"
                 title="Remove document"
               >
