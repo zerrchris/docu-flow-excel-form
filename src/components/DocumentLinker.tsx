@@ -32,14 +32,22 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  // Function to sanitize filename for storage
+  // Function to sanitize filename for storage while preserving extension
   const sanitizeFilenameForStorage = (filename: string): string => {
-    // Replace spaces with underscores and remove/replace problematic characters
-    return filename
+    // Extract extension first
+    const lastDotIndex = filename.lastIndexOf('.');
+    const name = lastDotIndex > 0 ? filename.substring(0, lastDotIndex) : filename;
+    const extension = lastDotIndex > 0 ? filename.substring(lastDotIndex) : '';
+    
+    // Sanitize the name part only
+    const sanitizedName = name
       .replace(/\s+/g, '_')           // Replace spaces with underscores
       .replace(/[^\w\-_.]/g, '')      // Remove special characters except word chars, hyphens, underscores, dots
       .replace(/_{2,}/g, '_')         // Replace multiple underscores with single
       .replace(/^_+|_+$/g, '');       // Remove leading/trailing underscores
+    
+    // Return sanitized name + original extension
+    return sanitizedName + extension;
   };
 
   const handleFileSelect = async (file: File) => {
