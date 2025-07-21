@@ -540,6 +540,26 @@ Image: [base64 image data]`;
       return;
     }
 
+    // Check for new columns in the target data and add them
+    const newColumns = Object.keys(targetData).filter(key => !columns.includes(key));
+    if (newColumns.length > 0) {
+      console.log('Found new columns to add:', newColumns);
+      const updatedColumns = [...columns, ...newColumns];
+      setColumns(updatedColumns);
+      
+      // Also update the column instructions for new columns
+      const newInstructions = { ...columnInstructions };
+      newColumns.forEach(col => {
+        if (!newInstructions[col]) {
+          newInstructions[col] = `Extract ${col} information from the document`;
+        }
+      });
+      setColumnInstructions(newInstructions);
+      
+      console.log('Updated columns:', updatedColumns);
+      console.log('Updated column instructions:', newInstructions);
+    }
+
     console.log('Adding data to spreadsheet:', targetData);
     console.log('Current spreadsheetData before adding:', spreadsheetData);
     
@@ -570,7 +590,7 @@ Image: [base64 image data]`;
       description: "The current data has been added as a new row.",
     });
 
-    // Reset form data for next entry
+    // Reset form data for next entry - use current columns (which may have been updated)
     const emptyFormData: Record<string, string> = {};
     columns.forEach(column => {
       emptyFormData[column] = '';
