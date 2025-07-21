@@ -118,6 +118,7 @@ const DocumentProcessor: React.FC = () => {
       
       // Load runsheet columns if available
       if (selectedRunsheet.columns && Array.isArray(selectedRunsheet.columns)) {
+        console.log('Loading runsheet columns:', selectedRunsheet.columns);
         setColumns(selectedRunsheet.columns);
       }
       
@@ -208,6 +209,7 @@ const DocumentProcessor: React.FC = () => {
 
   // Handle columns change
   const handleColumnsChange = (newColumns: string[]) => {
+    console.log('Columns changed from spreadsheet:', newColumns);
     setColumns(newColumns);
   };
 
