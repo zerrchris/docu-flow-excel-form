@@ -13,9 +13,6 @@ import { GoogleDrivePicker } from '@/components/GoogleDrivePicker';
 import { ExtractionPreferencesService } from '@/services/extractionPreferences';
 import { AdminSettingsService } from '@/services/adminSettings';
 import { supabase } from '@/integrations/supabase/client';
-import { useActiveRunsheet } from '@/hooks/useActiveRunsheet';
-import { useMultipleRunsheets } from '@/hooks/useMultipleRunsheets';
-import RunsheetTabs from '@/components/RunsheetTabs';
 
 import extractorLogo from '@/assets/document-extractor-logo.png';
 
@@ -59,10 +56,6 @@ const DocumentProcessor: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  
-  // Use active runsheet hooks
-  const { activeRunsheet } = useActiveRunsheet();
-  const { addRunsheet, hasActiveRunsheets } = useMultipleRunsheets();
   
   
   // Preferences loading state
@@ -627,17 +620,15 @@ Image: [base64 image data]`;
       />
       
       <div className="mt-6">
-        <RunsheetTabs>
-          <EditableSpreadsheet 
-            initialColumns={columns}
-            initialData={spreadsheetData}
-            onColumnChange={handleColumnsChange}
-            onDataChange={handleSpreadsheetDataChange}
-            onColumnInstructionsChange={setColumnInstructions}
-            onUnsavedChanges={() => {}}
-            missingColumns={highlightMissingColumns ? missingColumns : []}
-          />
-        </RunsheetTabs>
+        <EditableSpreadsheet 
+          initialColumns={columns}
+          initialData={spreadsheetData}
+          onColumnChange={handleColumnsChange}
+          onDataChange={handleSpreadsheetDataChange}
+          onColumnInstructionsChange={setColumnInstructions}
+          onUnsavedChanges={() => {}}
+          missingColumns={highlightMissingColumns ? missingColumns : []}
+        />
       </div>
       {/* Combine Images Confirmation Dialog */}
       <Dialog open={showCombineConfirmation} onOpenChange={setShowCombineConfirmation}>
