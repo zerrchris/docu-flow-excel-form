@@ -998,89 +998,103 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     }
   };
 
-  // Download spreadsheet only as CSV
+  // Download spreadsheet only as Excel
   const downloadSpreadsheetOnly = () => {
     // Filter out empty rows
     const nonEmptyData = data.filter(row => 
       Object.values(row).some(value => value.trim() !== '')
     );
 
-    // Create CSV content
-    const csvHeaders = columns.join(',');
-    const csvRows = nonEmptyData.map(row => 
-      columns.map(column => {
-        const value = row[column] || '';
-        const escapedValue = value.includes(',') || value.includes('"') || value.includes('\n')
-          ? `"${value.replace(/"/g, '""')}"`
-          : value;
-        return escapedValue;
-      }).join(',')
-    );
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(nonEmptyData);
+    XLSX.utils.book_append_sheet(wb, ws, 'Runsheet');
     
-    const csvContent = [csvHeaders, ...csvRows].join('\n');
-
-    // Create and download the file
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    
-    link.setAttribute('href', url);
-    link.setAttribute('download', `${runsheetName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.csv`);
-    link.style.visibility = 'hidden';
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    XLSX.writeFile(wb, `${runsheetName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.xlsx`);
     
     toast({
       title: "Spreadsheet downloaded",
-      description: `"${runsheetName}" has been downloaded as a CSV file.`,
+      description: `"${runsheetName}" has been downloaded as an Excel file.`,
     });
   };
 
   // Download spreadsheet with attached files as ZIP
   const downloadSpreadsheet = async () => {
-    const zip = new JSZip();
-    
-    // Filter out empty rows
-    const nonEmptyData = data.filter(row => 
-      Object.values(row).some(value => value.trim() !== '')
-    );
+    if (!currentRunsheetId || !user) {
+      toast({
+        title: "Error",
+        description: "Please save the runsheet first",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    // Create CSV content
-    const csvHeaders = columns.join(',');
-    const csvRows = nonEmptyData.map(row => 
-      columns.map(column => {
-        const value = row[column] || '';
-        const escapedValue = value.includes(',') || value.includes('"') || value.includes('\n')
-          ? `"${value.replace(/"/g, '""')}"`
-          : value;
-        return escapedValue;
-      }).join(',')
-    );
-    
-    const csvContent = [csvHeaders, ...csvRows].join('\n');
-    zip.file(`${runsheetName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.csv`, csvContent);
+    try {
+      const zip = new JSZip();
+      
+      // Filter out empty rows
+      const nonEmptyData = data.filter(row => 
+        Object.values(row).some(value => value.trim() !== '')
+      );
 
-    // Note: Document files are no longer downloaded as URLs are not stored in spreadsheet
+      // Create CSV content
+      const csvHeaders = columns.join(',');
+      const csvRows = nonEmptyData.map(row => 
+        columns.map(column => {
+          const value = row[column] || '';
+          const escapedValue = value.includes(',') || value.includes('"') || value.includes('\n')
+            ? `"${value.replace(/"/g, '""')}"`
+            : value;
+          return escapedValue;
+        }).join(',')
+      );
+      
+      const csvContent = [csvHeaders, ...csvRows].join('\n');
+      zip.file(`${runsheetName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.csv`, csvContent);
 
-    // Generate and download ZIP
-    const zipBlob = await zip.generateAsync({ type: 'blob' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(zipBlob);
-    
-    link.setAttribute('href', url);
-    link.setAttribute('download', `${runsheetName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_with_documents.zip`);
-    link.style.visibility = 'hidden';
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    toast({
-      title: "Download complete",
-      description: "Spreadsheet downloaded as ZIP.",
-    });
+      // Add documents from storage to ZIP
+      const documentsFolder = zip.folder("documents");
+      
+      for (const [rowIndex, document] of documentMap) {
+        try {
+          const { data: fileData } = await supabase.storage
+            .from('documents')
+            .download(document.file_path);
+          
+          if (fileData) {
+            const filename = `Row_${rowIndex + 1}_${document.original_filename}`;
+            documentsFolder?.file(filename, fileData);
+          }
+        } catch (error) {
+          console.error(`Error downloading document for row ${rowIndex}:`, error);
+        }
+      }
+
+      // Generate and download ZIP
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(zipBlob);
+      
+      link.setAttribute('href', url);
+      link.setAttribute('download', `${runsheetName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_with_documents.zip`);
+      link.style.visibility = 'hidden';
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast({
+        title: "Download complete",
+        description: `Runsheet and ${documentMap.size} documents downloaded as ZIP.`,
+      });
+      
+    } catch (error) {
+      console.error('Error creating download package:', error);
+      toast({
+        title: "Download failed",
+        description: "Failed to create download package",
+        variant: "destructive",
+      });
+    }
   };
 
   // Show upload warning dialog
@@ -2585,6 +2599,31 @@ ${extractionFields}`
               <Save className="h-4 w-4" />
               {isSaving ? 'Saving...' : 'Save & Close'}
             </Button>
+
+            {/* Download Button */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  Download
+                  <ChevronDown className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={downloadSpreadsheetOnly}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Spreadsheet Only
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={downloadSpreadsheet}>
+                  <Archive className="h-4 w-4 mr-2" />
+                  Spreadsheet & Documents
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             
               {/* New Runsheet Button */}
               <Dialog open={showNewRunsheetDialog} onOpenChange={setShowNewRunsheetDialog}>
