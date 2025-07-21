@@ -41,7 +41,6 @@ import type { User } from '@supabase/supabase-js';
 interface SpreadsheetProps {
   initialColumns: string[];
   initialData: Record<string, string>[];
-  initialColumnInstructions?: Record<string, string>;
   onColumnChange: (columns: string[]) => void;
   onDataChange?: (data: Record<string, string>[]) => void;
   onColumnInstructionsChange?: (columnInstructions: Record<string, string>) => void;
@@ -54,7 +53,6 @@ interface SpreadsheetProps {
 const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({ 
   initialColumns, 
   initialData,
-  initialColumnInstructions = {},
   onColumnChange,
   onDataChange,
   onColumnInstructionsChange,
@@ -119,7 +117,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [editingColumnName, setEditingColumnName] = useState<string>('');
   const [editingColumnInstructions, setEditingColumnInstructions] = useState<string>('');
   const [selectedColumn, setSelectedColumn] = useState<string>('');
-  const [columnInstructions, setColumnInstructions] = useState<Record<string, string>>(initialColumnInstructions);
+  const [columnInstructions, setColumnInstructions] = useState<Record<string, string>>({});
   const [showNewRunsheetDialog, setShowNewRunsheetDialog] = useState(false);
   const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] = useState(false);
   const [columnAlignments, setColumnAlignments] = useState<Record<string, 'left' | 'center' | 'right'>>({});
@@ -1250,7 +1248,6 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
   const openColumnDialog = (column: string) => {
     console.log('🔧 EditableSpreadsheet: openColumnDialog called for column:', column);
-    console.log('🔧 EditableSpreadsheet: Current columnInstructions state:', columnInstructions);
     
     // If this is the "Document File Name" column, show naming settings instead
     if (column === 'Document File Name') {
@@ -1319,9 +1316,6 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         [selectedColumn]: editingColumnInstructions
       };
       setColumnInstructions(newInstructions);
-      console.log('🔧 EditableSpreadsheet: [UPDATE] Current columnInstructions before update:', columnInstructions);
-      console.log('🔧 EditableSpreadsheet: [UPDATE] Setting columnInstructions to:', newInstructions);
-      console.log('🔧 EditableSpreadsheet: Calling onColumnInstructionsChange with:', newInstructions);
       onColumnInstructionsChange?.(newInstructions);
 
       const newAlignments = {
@@ -2565,6 +2559,15 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             <DialogFooter className="gap-2">
               <Button variant="outline" onClick={() => setShowColumnDialog(false)}>
                 Cancel
+              </Button>
+              <Button 
+                variant="secondary" 
+                onClick={saveAsDefault}
+                disabled={isSavingAsDefault || !user}
+                className="gap-2"
+              >
+                <Save className="h-4 w-4" />
+                {isSavingAsDefault ? "Saving..." : "Save as Default"}
               </Button>
               <Button onClick={saveColumnChanges}>
                 Save Column

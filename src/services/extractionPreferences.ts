@@ -80,17 +80,11 @@ export class ExtractionPreferencesService {
     }
 
     try {
-      console.log('🔧 ExtractionPreferencesService.saveDefaultPreferences called with:');
-      console.log('🔧 Columns:', columns);
-      console.log('🔧 Column Instructions:', columnInstructions);
-      
       // First, check if default preferences already exist
       const existing = await this.getDefaultPreferences();
-      console.log('🔧 Existing preferences:', existing);
 
       if (existing) {
         // Update existing default preferences
-        console.log('🔧 Updating existing preferences with ID:', existing.id);
         const { error } = await supabase
           .from('user_extraction_preferences')
           .update({
@@ -101,13 +95,11 @@ export class ExtractionPreferencesService {
           .eq('id', existing.id);
 
         if (error) {
-          console.error('🔧 Error updating default preferences:', error);
+          console.error('Error updating default preferences:', error);
           return false;
         }
-        console.log('🔧 Successfully updated existing preferences');
       } else {
         // Create new default preferences
-        console.log('🔧 Creating new default preferences');
         const { error } = await supabase
           .from('user_extraction_preferences')
           .insert({
@@ -119,10 +111,9 @@ export class ExtractionPreferencesService {
           });
 
         if (error) {
-          console.error('🔧 Error creating default preferences:', error);
+          console.error('Error creating default preferences:', error);
           return false;
         }
-        console.log('🔧 Successfully created new preferences');
       }
 
       return true;

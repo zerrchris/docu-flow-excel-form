@@ -47,7 +47,6 @@ const DocumentProcessor: React.FC = () => {
   const [spreadsheetData, setSpreadsheetData] = useState<Record<string, string>[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [columnInstructions, setColumnInstructions] = useState<Record<string, string>>({});
-  const [isManuallySaving, setIsManuallySaving] = useState(false);
   const [showValidationDialog, setShowValidationDialog] = useState(false);
   const [missingColumns, setMissingColumns] = useState<string[]>([]);
   const [highlightMissingColumns, setHighlightMissingColumns] = useState(false);
@@ -155,9 +154,9 @@ const DocumentProcessor: React.FC = () => {
     }
   }, [searchParams]);
   
-  // Auto-save preferences when columns or instructions change (but not during manual save)
+  // Auto-save preferences when columns or instructions change
   useEffect(() => {
-    if (!isLoadingPreferences && !isManuallySaving && columns.length > 0 && Object.keys(columnInstructions).length > 0) {
+    if (!isLoadingPreferences && columns.length > 0 && Object.keys(columnInstructions).length > 0) {
       const savePreferences = async () => {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
@@ -170,7 +169,7 @@ const DocumentProcessor: React.FC = () => {
       const timeoutId = setTimeout(savePreferences, 1000);
       return () => clearTimeout(timeoutId);
     }
-  }, [columns, columnInstructions, isLoadingPreferences, isManuallySaving]);
+  }, [columns, columnInstructions, isLoadingPreferences]);
 
   // Load user preferences on component mount
   
@@ -235,8 +234,6 @@ const DocumentProcessor: React.FC = () => {
   // Handle save all extraction instructions
   const handleSaveAllInstructions = async () => {
     try {
-      setIsManuallySaving(true); // Disable auto-save during manual save
-      
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
@@ -247,10 +244,6 @@ const DocumentProcessor: React.FC = () => {
         });
         return;
       }
-
-      console.log('🔧 Saving all instructions with:');
-      console.log('🔧 Columns:', columns);
-      console.log('🔧 Column Instructions:', columnInstructions);
 
       const success = await ExtractionPreferencesService.saveDefaultPreferences(columns, columnInstructions);
       
@@ -274,8 +267,6 @@ const DocumentProcessor: React.FC = () => {
         description: "An error occurred while saving. Please try again.",
         variant: "destructive",
       });
-    } finally {
-      setIsManuallySaving(false); // Re-enable auto-save
     }
   };
 
@@ -704,13 +695,9 @@ Image: [base64 image data]`;
           <EditableSpreadsheet 
             initialColumns={columns}
             initialData={spreadsheetData}
-            initialColumnInstructions={columnInstructions}
             onColumnChange={handleColumnsChange}
             onDataChange={handleSpreadsheetDataChange}
-            onColumnInstructionsChange={(instructions) => {
-              console.log('🔧 DocumentProcessor: Column instructions changed:', instructions);
-              setColumnInstructions(instructions);
-            }}
+            onColumnInstructionsChange={setColumnInstructions}
             onUnsavedChanges={setHasUnsavedChanges}
             missingColumns={highlightMissingColumns ? missingColumns : []}
             initialRunsheetName={location.state?.runsheet?.name}
