@@ -1737,6 +1737,19 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     setSelectedCell({ rowIndex, column });
     // Clear range selection when selecting a single cell
     setSelectedRange(null);
+    
+    // Scroll the selected cell into view
+    setTimeout(() => {
+      const cellElement = document.querySelector(`[data-cell="${rowIndex}-${column}"]`);
+      if (cellElement) {
+        cellElement.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest',
+          inline: 'nearest'
+        });
+      }
+    }, 0);
+    
     // Automatically start editing when selecting a cell
     startEditing(rowIndex, column, data[rowIndex]?.[column] || '');
   };
@@ -2484,6 +2497,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                           />
                         ) : (
                           <div
+                            data-cell={`${rowIndex}-${column}`}
                             className={`min-h-[2rem] py-2 px-3 cursor-cell flex items-start transition-colors whitespace-pre-wrap select-none
                               ${isSelected 
                                 ? 'bg-primary/20 border-2 border-primary ring-2 ring-primary/20' 
