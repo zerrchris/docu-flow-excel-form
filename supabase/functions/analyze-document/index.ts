@@ -28,6 +28,22 @@ serve(async (req) => {
     }
 
     console.log('Analyzing document with vision API');
+    console.log('Image data prefix:', imageData.substring(0, 100));
+
+    // Validate base64 data URL format
+    if (!imageData.startsWith('data:')) {
+      console.error('Invalid data URL format - missing data: prefix');
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid image data format. Expected data URL format.',
+          details: 'Image data must be in data URL format (data:image/type;base64,...)'
+        }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
 
     // Check if the data is a PDF (PDFs can't be processed by vision API)
     if (imageData.includes('data:application/pdf')) {
@@ -62,6 +78,39 @@ serve(async (req) => {
       );
     }
 
+    // Validate base64 content
+    const base64Part = imageData.split(',')[1];
+    if (!base64Part) {
+      console.error('Invalid data URL - missing base64 content');
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid image data format. Missing base64 content.',
+          details: 'Data URL must contain base64 encoded image data'
+        }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    // Test base64 decoding
+    try {
+      atob(base64Part);
+    } catch (e) {
+      console.error('Invalid base64 encoding:', e.message);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid base64 encoding in image data.',
+          details: 'The base64 content cannot be decoded'
+        }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -69,7 +118,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4.1-2025-04-14',
+        model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemMessage },
           { 

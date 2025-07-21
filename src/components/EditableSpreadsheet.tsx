@@ -2225,9 +2225,10 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     setRowsToAdd(1);
   };
 
-  // Analyze document and populate row data
   const analyzeDocumentAndPopulateRow = async (file: File, targetRowIndex: number) => {
     try {
+      console.log('🔍 Starting document analysis for:', file.name, 'type:', file.type, 'size:', file.size);
+      
       // Get extraction preferences
       const extractionPrefs = await ExtractionPreferencesService.getDefaultPreferences();
       const extractionFields = extractionPrefs?.columns?.map(col => `${col}: ${extractionPrefs.column_instructions?.[col] || 'Extract this field'}`).join('\n') || 
@@ -2235,47 +2236,82 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
       let imageData: string;
 
-      // If file has no type (likely from storage), create a new File with correct type
+      // If file has no type or is generic (likely from storage), we need to fetch the actual file data
       if (!file.type || file.type === 'application/octet-stream') {
-        const extension = file.name.split('.').pop()?.toLowerCase();
-        let mimeType = 'image/png'; // default
+        console.log('🔧 File has no/generic MIME type, fetching from storage...');
         
-        switch (extension) {
-          case 'jpg':
-          case 'jpeg':
-            mimeType = 'image/jpeg';
-            break;
-          case 'png':
-            mimeType = 'image/png';
-            break;
-          case 'gif':
-            mimeType = 'image/gif';
-            break;
-          case 'webp':
-            mimeType = 'image/webp';
-            break;
-        }
+        // Get the document from storage to get the actual file data
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('User not authenticated');
 
-        // Create a new File object with the correct MIME type
-        const fileBlob = new Blob([file], { type: mimeType });
-        const correctedFile = new File([fileBlob], file.name, { type: mimeType });
-        
-        // Convert the corrected file to base64 data URL
-        const reader = new FileReader();
-        const dataUrlPromise = new Promise<string>((resolve, reject) => {
-          reader.onload = () => {
-            resolve(reader.result as string);
-          };
-          reader.onerror = reject;
-        });
-        reader.readAsDataURL(correctedFile);
-        imageData = await dataUrlPromise;
+        const { data: document } = await supabase
+          .from('documents')
+          .select('file_path')
+          .eq('runsheet_id', currentRunsheetId)
+          .eq('row_index', targetRowIndex)
+          .eq('user_id', user.id)
+          .single();
+
+        if (document?.file_path) {
+          // Download the file from storage
+          const { data: fileData, error } = await supabase.storage
+            .from('documents')
+            .download(document.file_path);
+
+          if (error) {
+            console.error('Error downloading file from storage:', error);
+            throw new Error('Failed to download file from storage');
+          }
+
+          // Determine MIME type from file extension
+          const extension = file.name.split('.').pop()?.toLowerCase();
+          let mimeType = 'image/png'; // default
+          
+          switch (extension) {
+            case 'jpg':
+            case 'jpeg':
+              mimeType = 'image/jpeg';
+              break;
+            case 'png':
+              mimeType = 'image/png';
+              break;
+            case 'gif':
+              mimeType = 'image/gif';
+              break;
+            case 'webp':
+              mimeType = 'image/webp';
+              break;
+          }
+
+          console.log('🔧 Using MIME type:', mimeType, 'for extension:', extension);
+
+          // Create a new File object with the correct MIME type and actual data
+          const correctedFile = new File([fileData], file.name, { type: mimeType });
+          
+          // Convert to base64 data URL
+          const reader = new FileReader();
+          const dataUrlPromise = new Promise<string>((resolve, reject) => {
+            reader.onload = () => {
+              const result = reader.result as string;
+              console.log('🔧 Generated data URL prefix:', result.substring(0, 50) + '...');
+              resolve(result);
+            };
+            reader.onerror = reject;
+          });
+          reader.readAsDataURL(correctedFile);
+          imageData = await dataUrlPromise;
+        } else {
+          throw new Error('Document not found in storage');
+        }
       } else {
+        console.log('🔧 File has valid MIME type:', file.type);
         // Convert file to base64 data URL normally
         const reader = new FileReader();
         const dataUrlPromise = new Promise<string>((resolve, reject) => {
           reader.onload = () => {
-            resolve(reader.result as string);
+            const result = reader.result as string;
+            console.log('🔧 Generated data URL prefix:', result.substring(0, 50) + '...');
+            resolve(result);
           };
           reader.onerror = reject;
         });
