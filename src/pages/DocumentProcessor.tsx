@@ -67,6 +67,14 @@ const DocumentProcessor: React.FC = () => {
   // Load user preferences and handle selected runsheet on component mount
   useEffect(() => {
     const loadUserPreferences = async () => {
+      // Don't load user preferences if we have a runsheet - runsheet columns take priority
+      const selectedRunsheet = location.state?.runsheet;
+      if (selectedRunsheet && selectedRunsheet.columns) {
+        console.log('Skipping user preferences load - using runsheet columns instead');
+        setIsLoadingPreferences(false);
+        return;
+      }
+      
       setIsLoadingPreferences(true);
       try {
         const { data: { user } } = await supabase.auth.getUser();
@@ -75,7 +83,7 @@ const DocumentProcessor: React.FC = () => {
           const preferences = await ExtractionPreferencesService.getDefaultPreferences();
           
           if (preferences && preferences.columns && preferences.column_instructions) {
-            // Load saved preferences
+            // Load saved preferences only if no runsheet is active
             setColumns(preferences.columns);
             setColumnInstructions(preferences.column_instructions as Record<string, string>);
             console.log('Loaded user preferences:', preferences);
@@ -706,10 +714,6 @@ Image: [base64 image data]`;
             initialRunsheetName={location.state?.runsheet?.name}
             initialRunsheetId={location.state?.runsheetId}
           />
-          {/* Debug info to check column sync */}
-          <div className="mt-2 p-2 bg-yellow-100 text-xs">
-            <strong>DEBUG - DocumentProcessor columns:</strong> {JSON.stringify(columns)}
-          </div>
         </div>
       </div>
       {/* Combine Images Confirmation Dialog */}
