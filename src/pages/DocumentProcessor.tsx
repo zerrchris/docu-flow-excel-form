@@ -245,6 +245,10 @@ const DocumentProcessor: React.FC = () => {
         return;
       }
 
+      console.log('🔧 Saving all instructions with:');
+      console.log('🔧 Columns:', columns);
+      console.log('🔧 Column Instructions:', columnInstructions);
+
       const success = await ExtractionPreferencesService.saveDefaultPreferences(columns, columnInstructions);
       
       if (success) {
