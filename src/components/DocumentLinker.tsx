@@ -203,10 +203,18 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
         .maybeSingle();
 
       if (fetchError) {
+        alert(`Debug - Query error: ${fetchError.message}`);
         throw new Error(`Database error: ${fetchError.message}`);
       }
 
       if (!document) {
+        // Let's check if ANY documents exist for this user
+        const { data: userDocs } = await supabase
+          .from('documents')
+          .select('*')
+          .eq('user_id', user.id);
+        
+        alert(`Debug - Document not found. User has ${userDocs?.length || 0} total documents. Looking for runsheet: ${runsheetId}, row: ${rowIndex}`);
         throw new Error('Document not found. Please try uploading the document again.');
       }
 
