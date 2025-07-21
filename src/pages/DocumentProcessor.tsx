@@ -583,50 +583,50 @@ Image: [base64 image data]`;
 
 
   return (
-    <RunsheetTabs>
-      <div className="w-full px-4 py-6">
-        <div className="flex items-center justify-between mb-8">
-          <div 
-            onClick={() => handleNavigation('/')} 
-            className="flex items-center gap-4 hover:opacity-80 transition-opacity cursor-pointer"
-          >
-            <img 
-              src={extractorLogo} 
-              alt="Document Data Extractor Logo" 
-              className="h-16 w-16"
-            />
-            <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              RunsheetPro
-            </h1>
-          </div>
-          <div className="flex items-center gap-3">
-            <AuthButton />
-          </div>
-        </div>
-        
-        <div className="mt-6">
-          <DocumentFrame 
-            file={file}
-            previewUrl={previewUrl}
-            fields={columns}
-            formData={formData}
-            onChange={handleFieldChange}
-            onAnalyze={analyzeDocument}
-            onAddToSpreadsheet={addToSpreadsheet}
-            onFileSelect={handleFileSelect}
-            onMultipleFilesSelect={handleMultipleFilesSelect}
-            onResetDocument={resetDocument}
-            isAnalyzing={isAnalyzing}
+    <div className="w-full px-4 py-6">
+      <div className="flex items-center justify-between mb-8">
+        <div 
+          onClick={() => handleNavigation('/')} 
+          className="flex items-center gap-4 hover:opacity-80 transition-opacity cursor-pointer"
+        >
+          <img 
+            src={extractorLogo} 
+            alt="Document Data Extractor Logo" 
+            className="h-16 w-16"
           />
+          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            RunsheetPro
+          </h1>
         </div>
-        
-        <BatchProcessing 
+        <div className="flex items-center gap-3">
+          <AuthButton />
+        </div>
+      </div>
+      
+      <div className="mt-6">
+        <DocumentFrame 
+          file={file}
+          previewUrl={previewUrl}
           fields={columns}
-          onAddToSpreadsheet={addToSpreadsheet}
+          formData={formData}
+          onChange={handleFieldChange}
           onAnalyze={analyzeDocument}
+          onAddToSpreadsheet={addToSpreadsheet}
+          onFileSelect={handleFileSelect}
+          onMultipleFilesSelect={handleMultipleFilesSelect}
+          onResetDocument={resetDocument}
           isAnalyzing={isAnalyzing}
         />
-        
+      </div>
+      
+      <BatchProcessing 
+        fields={columns}
+        onAddToSpreadsheet={addToSpreadsheet}
+        onAnalyze={analyzeDocument}
+        isAnalyzing={isAnalyzing}
+      />
+      
+      <RunsheetTabs>
         <EditableSpreadsheet 
           initialColumns={columns}
           initialData={spreadsheetData}
@@ -636,9 +636,7 @@ Image: [base64 image data]`;
           onUnsavedChanges={() => {}}
           missingColumns={highlightMissingColumns ? missingColumns : []}
         />
-      </div>
-      
-
+      </RunsheetTabs>
       {/* Combine Images Confirmation Dialog */}
       <Dialog open={showCombineConfirmation} onOpenChange={setShowCombineConfirmation}>
         <DialogContent className="sm:max-w-[400px]">
@@ -695,8 +693,7 @@ Image: [base64 image data]`;
           </div>
         </DialogContent>
       </Dialog>
-
-    </RunsheetTabs>
+    </div>
   );
 };
 
