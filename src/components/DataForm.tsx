@@ -238,6 +238,13 @@ const DataForm: React.FC<DataFormProps> = ({
 
   // Only show fields that exist in current fields AND are marked visible
   const visibleFieldsList = fields.filter(field => visibleFields[field] === true);
+  
+  // Add debugging to see what's actually being rendered
+  console.log('DEBUG DataForm render - fields prop:', fields);
+  console.log('DEBUG DataForm render - visibleFields state:', visibleFields);
+  console.log('DEBUG DataForm render - visibleFieldsList (what will render):', visibleFieldsList);
+  console.log('DEBUG DataForm render - formData keys:', Object.keys(formData));
+  
   return (
     <div className="space-y-4">
       {/* Field Settings Toggle */}
