@@ -2468,7 +2468,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                 Configure how documents are automatically named when linked to this runsheet.
               </DialogDescription>
             </DialogHeader>
-            <DocumentNamingSettings />
+            <DocumentNamingSettings availableColumns={columns} />
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowNamingSettings(false)}>
                 Close
