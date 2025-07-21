@@ -10,7 +10,7 @@ interface DocumentLinkerProps {
   runsheetId: string;
   rowIndex: number;
   existingDocumentUrl?: string;
-  onDocumentLinked: (documentUrl: string, filename: string) => void;
+  onDocumentLinked: (filename: string) => void;
   onDocumentRemoved: () => void;
 }
 
@@ -76,7 +76,7 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
 
       const result = await response.json();
       
-      onDocumentLinked(result.fileUrl, result.storedFilename);
+      onDocumentLinked(result.storedFilename);
       
       toast({
         title: "Document uploaded",
@@ -181,10 +181,9 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
         throw updateError;
       }
 
-      // Get new URL and update parent
-      const newUrl = supabase.storage.from('documents').getPublicUrl(newFilePath).data.publicUrl;
-      console.log('Calling onDocumentLinked with:', newUrl, editedFilename);
-      onDocumentLinked(newUrl, editedFilename);
+      // Update parent with new filename
+      console.log('Calling onDocumentLinked with filename:', editedFilename);
+      onDocumentLinked(editedFilename);
 
       setIsEditingName(false);
       

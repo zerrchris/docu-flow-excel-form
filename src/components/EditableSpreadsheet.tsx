@@ -77,7 +77,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   
   // Helper function to ensure document columns exist
   const ensureDocumentColumns = (columnsList: string[]): string[] => {
-    const documentColumns = ['Document File', 'Document URL'];
+    const documentColumns = ['Document File'];
     const missingColumns = documentColumns.filter(col => !columnsList.includes(col));
     
     if (missingColumns.length > 0) {
@@ -2306,14 +2306,13 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                                 <DocumentLinker
                                   runsheetId={currentRunsheetId || ''}
                                   rowIndex={rowIndex}
-                                  existingDocumentUrl={row['Document URL'] || (documentMap.get(rowIndex) ? DocumentService.getDocumentUrl(documentMap.get(rowIndex)!.file_path) : undefined)}
-                                   onDocumentLinked={(documentUrl, filename) => {
-                                     console.log('onDocumentLinked called with:', documentUrl, filename);
+                                  existingDocumentUrl={row['Document File'] && row['Document File'].trim() !== '' ? (documentMap.get(rowIndex) ? DocumentService.getDocumentUrl(documentMap.get(rowIndex)!.file_path) : undefined) : undefined}
+                                   onDocumentLinked={(filename) => {
+                                     console.log('onDocumentLinked called with filename:', filename);
                                      const newData = [...data];
                                      newData[rowIndex] = {
                                        ...newData[rowIndex],
-                                       'Document File': filename,
-                                       'Document URL': documentUrl
+                                       'Document File': filename
                                      };
                                      console.log('Updating row data:', newData[rowIndex]);
                                      setData(newData);
@@ -2324,35 +2323,21 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                                       DocumentService.getDocumentMapForRunsheet(currentRunsheetId).then(setDocumentMap);
                                     }
                                   }}
-                                  onDocumentRemoved={() => {
-                                    const newData = [...data];
-                                    newData[rowIndex] = {
-                                      ...newData[rowIndex],
-                                      'Document File': '',
-                                      'Document URL': ''
-                                    };
-                                    setData(newData);
-                                    onDataChange?.(newData);
+                                   onDocumentRemoved={() => {
+                                     const newData = [...data];
+                                     newData[rowIndex] = {
+                                       ...newData[rowIndex],
+                                       'Document File': ''
+                                     };
+                                     setData(newData);
+                                     onDataChange?.(newData);
                                     setDocumentMap(prev => {
                                       const newMap = new Map(prev);
                                       newMap.delete(rowIndex);
                                       return newMap;
                                     });
-                                  }}
+                                   }}
                                 />
-                              ) : column === 'Document URL' && row[column] && row[column].trim() !== '' ? (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    window.open(row[column], '_blank');
-                                  }}
-                                  className="h-7 px-2 gap-1 text-xs"
-                                >
-                                  <ExternalLink className="h-3 w-3" />
-                                  View Document
-                                </Button>
                               ) : (
                                 row[column] || ''
                               )}
