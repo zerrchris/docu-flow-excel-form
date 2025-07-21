@@ -732,16 +732,36 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   };
 
   // Load a saved runsheet
-  const loadRunsheet = (runsheet: any) => {
+  const loadRunsheet = async (runsheet: any) => {
     setRunsheetName(runsheet.name);
     setColumns(runsheet.columns);
     onColumnChange(runsheet.columns);
     setData(runsheet.data);
-    // Load column instructions if they exist
-    if (runsheet.column_instructions) {
-      setColumnInstructions(runsheet.column_instructions);
-      onColumnInstructionsChange?.(runsheet.column_instructions);
+    
+    // Try to load user's default extraction preferences first, then fall back to runsheet data
+    try {
+      const userPreferences = await ExtractionPreferencesService.getDefaultPreferences();
+      
+      if (userPreferences && userPreferences.column_instructions) {
+        // Use user's saved extraction preferences
+        setColumnInstructions(userPreferences.column_instructions as Record<string, string>);
+        onColumnInstructionsChange?.(userPreferences.column_instructions as Record<string, string>);
+        console.log('Applied user extraction preferences to runsheet');
+      } else if (runsheet.column_instructions) {
+        // Fall back to runsheet's embedded column instructions
+        setColumnInstructions(runsheet.column_instructions);
+        onColumnInstructionsChange?.(runsheet.column_instructions);
+        console.log('Applied runsheet embedded column instructions');
+      }
+    } catch (error) {
+      console.error('Error loading extraction preferences:', error);
+      // Fall back to runsheet data on error
+      if (runsheet.column_instructions) {
+        setColumnInstructions(runsheet.column_instructions);
+        onColumnInstructionsChange?.(runsheet.column_instructions);
+      }
     }
+    
     setShowOpenDialog(false);
     // Reset column width state for new runsheet
     setColumnWidths({});
