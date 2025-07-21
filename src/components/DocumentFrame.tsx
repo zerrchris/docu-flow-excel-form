@@ -112,25 +112,21 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
     <Card className="rounded-none overflow-hidden">
       <Collapsible open={isExpanded} onOpenChange={(open) => {
         setIsExpanded(open);
-        // When expanding, populate form fields fresh from current spreadsheet columns
+        // When expanding, completely reset form fields to only current spreadsheet columns
         if (open) {
-          console.log('Document processing expanded - clearing old form data and using current fields:', fields);
-          const freshFormData: Record<string, string> = {};
+          console.log('Document processing expanded - resetting form to current spreadsheet columns only:', fields);
+          // Clear ALL existing form data first
+          const currentFormKeys = Object.keys(formData);
+          currentFormKeys.forEach(key => {
+            onChange(key, ''); // Clear each field
+          });
+          
+          // Then set only the current spreadsheet columns as empty fields
           fields.forEach(field => {
-            freshFormData[field] = '';
+            onChange(field, '');
           });
-          // Clear any old form data and set fresh fields
-          Object.keys(formData).forEach(key => {
-            if (!fields.includes(key)) {
-              // Remove old fields that don't exist in current spreadsheet
-              const updatedFormData = {...formData};
-              delete updatedFormData[key];
-            }
-          });
-          // Populate with current fields only
-          fields.forEach(field => {
-            onChange(field, formData[field] || '');
-          });
+          
+          console.log('Form reset complete - only current columns should be visible');
         }
       }}>
         <CollapsibleTrigger asChild>
