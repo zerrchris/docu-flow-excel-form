@@ -284,15 +284,20 @@ const DataForm: React.FC<DataFormProps> = ({
       </Collapsible>
 
       {/* Refresh Fields Button */}
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={refreshFields}
-        className="w-full gap-2"
-      >
-        <RefreshCw className="h-4 w-4" />
-        Refresh Fields
-      </Button>
+      <div className="space-y-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={refreshFields}
+          className="w-full gap-2"
+        >
+          <RefreshCw className="h-4 w-4" />
+          Refresh Fields
+        </Button>
+        <div className="text-xs text-muted-foreground text-center px-2">
+          The fields shown here should match your current runsheet columns. If they don't match or you're seeing old fields, click "Refresh Fields" to sync them.
+        </div>
+      </div>
 
       {/* Form Fields - Only show visible ones */}
       <div className="space-y-2">
