@@ -17,6 +17,7 @@ interface DataFormProps {
   onResetDocument?: () => void;
   isAnalyzing: boolean;
   isUploading?: boolean;
+  hasAddedToSpreadsheet?: boolean;
 }
 
 const DataForm: React.FC<DataFormProps> = ({ 
@@ -27,7 +28,8 @@ const DataForm: React.FC<DataFormProps> = ({
   onAddToSpreadsheet,
   onResetDocument,
   isAnalyzing,
-  isUploading = false
+  isUploading = false,
+  hasAddedToSpreadsheet = false
 }) => {
   const [visibleFields, setVisibleFields] = useState<Record<string, boolean>>({});
   const [showFieldSettings, setShowFieldSettings] = useState(false);
@@ -275,7 +277,7 @@ const DataForm: React.FC<DataFormProps> = ({
           </Button>
         </div>
         
-        {onResetDocument && (
+        {onResetDocument && hasAddedToSpreadsheet && (
           <Button
             variant="outline"
             onClick={onResetDocument}
