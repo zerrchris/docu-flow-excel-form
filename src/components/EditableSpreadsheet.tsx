@@ -696,7 +696,10 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
   // Fetch saved runsheets from Supabase
   const fetchSavedRunsheets = async () => {
+    console.log('fetchSavedRunsheets called, user:', user);
+    
     if (!user) {
+      console.log('No user found, showing auth toast');
       toast({
         title: "Authentication required",
         description: "Please sign in to view saved runsheets.",
@@ -705,25 +708,33 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       return;
     }
 
+    console.log('Setting loading to true');
     setIsLoading(true);
     try {
+      console.log('Fetching runsheets from database...');
       const { data: runsheets, error } = await supabase
         .from('runsheets')
         .select('*')
         .eq('user_id', user.id)
         .order('updated_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Database error:', error);
+        throw error;
+      }
 
+      console.log('Runsheets fetched successfully:', runsheets?.length || 0);
       setSavedRunsheets(runsheets || []);
       setShowOpenDialog(true);
     } catch (error: any) {
+      console.error('Error in fetchSavedRunsheets:', error);
       toast({
         title: "Failed to load runsheets",
         description: error.message,
         variant: "destructive",
       });
     } finally {
+      console.log('Setting loading to false');
       setIsLoading(false);
     }
   };
