@@ -56,27 +56,32 @@ export const useMultipleRunsheets = () => {
   const [currentTabId, setCurrentTabId] = useState<string | null>(globalCurrentTabId);
 
   useEffect(() => {
-    // AGGRESSIVE CLEANUP: Force clear all runsheets immediately
+    // SMART CLEANUP: Only clear if there's obviously corrupted data
     try {
-      // Check current data first
       const storedData = localStorage.getItem(ACTIVE_RUNSHEETS_KEY);
       if (storedData) {
         const parsed = JSON.parse(storedData);
         console.log('Found runsheets in localStorage:', parsed.length);
-        if (parsed.length > 10) {
+        
+        // Only clear if there are suspiciously many runsheets (likely corrupted)
+        if (parsed.length > 50) {
           console.warn('Suspicious number of runsheets detected, forcing cleanup');
+          localStorage.removeItem(ACTIVE_RUNSHEETS_KEY);
+          localStorage.removeItem(CURRENT_TAB_KEY);
+          globalActiveRunsheets = [];
+          globalCurrentTabId = null;
+          console.log('Cleared corrupted runsheet data');
+        } else {
+          console.log('Normal number of runsheets, preserving data');
         }
       }
-      
-      // Always clear on load - force fresh start
+    } catch (error) {
+      console.error('Error during runsheet cleanup:', error);
+      // If data is corrupted (can't parse), clear it
       localStorage.removeItem(ACTIVE_RUNSHEETS_KEY);
       localStorage.removeItem(CURRENT_TAB_KEY);
       globalActiveRunsheets = [];
       globalCurrentTabId = null;
-      console.log('Forced cleanup of all runsheets completed');
-      
-    } catch (error) {
-      console.error('Error during runsheet cleanup:', error);
     }
 
     // Add this component as a listener
@@ -85,8 +90,11 @@ export const useMultipleRunsheets = () => {
       setCurrentTabId(tabId);
     });
     
-    // Don't load from localStorage - start fresh
-    notifyListeners();
+    // Load from localStorage on mount if not already loaded
+    if (globalActiveRunsheets.length === 0) {
+      loadFromLocalStorage();
+      notifyListeners();
+    }
 
     return () => {
       // Remove this component as a listener
