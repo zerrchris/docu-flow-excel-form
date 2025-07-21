@@ -9,6 +9,7 @@ const corsHeaders = {
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -17,7 +18,8 @@ serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    // Use service role for auth verification
+    const supabaseService = createClient(supabaseUrl, supabaseServiceKey);
 
     // Get user from authorization header
     const authHeader = req.headers.get('authorization');
@@ -28,7 +30,7 @@ serve(async (req) => {
       );
     }
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser(
+    const { data: { user }, error: authError } = await supabaseService.auth.getUser(
       authHeader.replace('Bearer ', '')
     );
 
@@ -38,6 +40,15 @@ serve(async (req) => {
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // Create user-authenticated client for database operations
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: {
+          Authorization: authHeader
+        }
+      }
+    });
 
     const formData = await req.formData();
     const file = formData.get('file') as File;
