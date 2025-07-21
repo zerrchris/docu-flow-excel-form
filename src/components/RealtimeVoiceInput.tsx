@@ -106,7 +106,8 @@ const RealtimeVoiceInput: React.FC<RealtimeVoiceInputProps> = ({
   const [isExpanded, setIsExpanded] = useState(false);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const { toast } = useToast();
 
   const startRecording = async () => {
@@ -121,35 +122,17 @@ const RealtimeVoiceInput: React.FC<RealtimeVoiceInputProps> = ({
         } 
       });
       
-      // Clear any previous chunks
-      audioChunksRef.current = [];
-      
-      mediaRecorderRef.current = new MediaRecorder(stream, {
-        mimeType: 'audio/webm'
-      });
-      
-      mediaRecorderRef.current.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
-      };
-      
-      // Process audio every 3 seconds
-      mediaRecorderRef.current.start(3000);
+      streamRef.current = stream;
       setIsRecording(true);
       setTranscript('');
       
       toast({
         title: "Recording Started",
-        description: "Speak naturally - audio will be transcribed every few seconds",
+        description: "Speak naturally - audio will be transcribed continuously",
       });
 
-      // Handle chunks as they come in
-      mediaRecorderRef.current.ondataavailable = async (event) => {
-        if (event.data.size > 0) {
-          await transcribeChunk(event.data);
-        }
-      };
+      // Start continuous recording with 2-second chunks
+      startContinuousRecording(stream);
 
     } catch (error) {
       console.error('Error starting recording:', error);
@@ -161,8 +144,55 @@ const RealtimeVoiceInput: React.FC<RealtimeVoiceInputProps> = ({
     }
   };
 
+  const startContinuousRecording = (stream: MediaStream) => {
+    const recordChunk = async () => {
+      if (!isRecording) return;
+
+      try {
+        const mediaRecorder = new MediaRecorder(stream, {
+          mimeType: 'audio/webm'
+        });
+
+        const audioChunks: Blob[] = [];
+        
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            audioChunks.push(event.data);
+          }
+        };
+
+        mediaRecorder.onstop = async () => {
+          if (audioChunks.length > 0) {
+            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+            await transcribeChunk(audioBlob);
+          }
+        };
+
+        // Record for 2 seconds
+        mediaRecorder.start();
+        
+        setTimeout(() => {
+          if (mediaRecorder.state === 'recording') {
+            mediaRecorder.stop();
+          }
+        }, 2000);
+
+      } catch (error) {
+        console.error('Error in chunk recording:', error);
+      }
+    };
+
+    // Start first chunk immediately
+    recordChunk();
+    
+    // Continue recording chunks every 2 seconds
+    recordingIntervalRef.current = setInterval(recordChunk, 2000);
+  };
+
   const transcribeChunk = async (audioBlob: Blob) => {
     try {
+      console.log('Transcribing audio chunk, size:', audioBlob.size);
+      
       const { data, error } = await supabase.functions.invoke('transcribe-audio', {
         body: {
           audio: await blobToBase64(audioBlob),
@@ -175,9 +205,13 @@ const RealtimeVoiceInput: React.FC<RealtimeVoiceInputProps> = ({
         return;
       }
 
-      if (data?.text) {
-        setTranscript(prev => prev + ' ' + data.text);
-        onTextTranscribed?.(transcript + ' ' + data.text);
+      if (data?.text && data.text.trim()) {
+        console.log('Transcribed text:', data.text);
+        setTranscript(prev => {
+          const newTranscript = prev ? prev + ' ' + data.text.trim() : data.text.trim();
+          onTextTranscribed?.(newTranscript);
+          return newTranscript;
+        });
       }
     } catch (error) {
       console.error('Error transcribing chunk:', error);
@@ -197,12 +231,30 @@ const RealtimeVoiceInput: React.FC<RealtimeVoiceInputProps> = ({
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current) {
-      mediaRecorderRef.current.stop();
-      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
-      mediaRecorderRef.current = null;
-    }
+    console.log('Stopping recording...');
     setIsRecording(false);
+    
+    // Clear the interval
+    if (recordingIntervalRef.current) {
+      clearInterval(recordingIntervalRef.current);
+      recordingIntervalRef.current = null;
+    }
+    
+    // Stop media recorder if active
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      mediaRecorderRef.current.stop();
+    }
+    
+    // Stop all audio tracks
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    
+    toast({
+      title: "Recording Stopped",
+      description: "Processing final audio...",
+    });
   };
 
   const processTranscript = async () => {
