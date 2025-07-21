@@ -347,7 +347,6 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                   size="sm"
                   onClick={(e) => {
                     e.stopPropagation(); // Prevent cell edit mode
-                    e.preventDefault(); // Prevent default behavior
                     handleRenameDocument();
                   }}
                   className="h-6 w-6 p-0 text-green-600"
@@ -359,7 +358,6 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                   size="sm"
                   onClick={(e) => {
                     e.stopPropagation(); // Prevent cell edit mode
-                    e.preventDefault(); // Prevent default behavior
                     setIsEditingName(false);
                     setEditedFilename('');
                   }}
