@@ -27,6 +27,8 @@ interface DocumentNamingSettingsProps {
 }
 
 const DocumentNamingSettings: React.FC<DocumentNamingSettingsProps> = ({ availableColumns = [] }) => {
+  console.log('🔧 DocumentNamingSettings: Component rendering, availableColumns:', availableColumns);
+  
   const [preferences, setPreferences] = useState<NamingPreferences>({
     preference_name: 'Default',
     priority_columns: ['name', 'title', 'invoice_number', 'document_number', 'reference', 'id'],
@@ -166,6 +168,7 @@ const DocumentNamingSettings: React.FC<DocumentNamingSettingsProps> = ({ availab
   };
 
   if (isLoading) {
+    console.log('🔧 DocumentNamingSettings: Showing loading state');
     return <div className="p-4">Loading settings...</div>;
   }
 

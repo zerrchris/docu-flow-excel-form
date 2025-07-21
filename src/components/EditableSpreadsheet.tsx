@@ -1247,8 +1247,11 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   };
 
   const openColumnDialog = (column: string) => {
+    console.log('🔧 EditableSpreadsheet: openColumnDialog called for column:', column);
+    
     // If this is the "Document File Name" column, show naming settings instead
     if (column === 'Document File Name') {
+      console.log('🔧 EditableSpreadsheet: Opening naming settings dialog');
       setShowNamingSettings(true);
       return;
     }
@@ -2465,7 +2468,10 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         </Dialog>
 
         {/* Document Naming Settings Dialog */}
-        <Dialog open={showNamingSettings} onOpenChange={setShowNamingSettings}>
+        <Dialog open={showNamingSettings} onOpenChange={(open) => {
+          console.log('🔧 EditableSpreadsheet: Dialog onOpenChange called with:', open);
+          setShowNamingSettings(open);
+        }}>
           <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Document Naming Settings</DialogTitle>
