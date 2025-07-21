@@ -9,9 +9,11 @@ import extractorLogo from '@/assets/document-extractor-logo.png';
 import AuthButton from '@/components/AuthButton';
 import ActiveRunsheetButton from '@/components/ActiveRunsheetButton';
 import { useActiveRunsheet } from '@/hooks/useActiveRunsheet';
+import OpenRunsheetDialog from '@/components/OpenRunsheetDialog';
 
 const Dashboard: React.FC = () => {
   const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [showOpenDialog, setShowOpenDialog] = useState(false);
   const navigate = useNavigate();
   const { activeRunsheet } = useActiveRunsheet();
 
@@ -41,7 +43,7 @@ const Dashboard: React.FC = () => {
       title: "Open Runsheet",
       description: "Load a previously saved runsheet",
       icon: FolderOpen,
-      path: "/file-manager"
+      action: "open-dialog"
     },
     {
       title: "Upload Runsheet",
@@ -162,9 +164,15 @@ const Dashboard: React.FC = () => {
           <div className="grid grid-cols-1 gap-6 max-w-2xl mx-auto">
             {workflowOptions.map((option) => (
               <Card 
-                key={option.path} 
+                key={option.title} 
                 className="hover:shadow-lg transition-shadow cursor-pointer"
-                onClick={() => navigate(option.path)}
+                onClick={() => {
+                  if (option.action === "open-dialog") {
+                    setShowOpenDialog(true);
+                  } else if (option.path) {
+                    navigate(option.path);
+                  }
+                }}
               >
                 <CardHeader className="pb-2">
                   <div className="flex items-center gap-3">
@@ -180,7 +188,11 @@ const Dashboard: React.FC = () => {
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation();
-                        navigate(option.path);
+                        if (option.action === "open-dialog") {
+                          setShowOpenDialog(true);
+                        } else if (option.path) {
+                          navigate(option.path);
+                        }
                       }}
                     >
                       Open
@@ -200,6 +212,11 @@ const Dashboard: React.FC = () => {
         </div>
       </main>
 
+      {/* Open Runsheet Dialog */}
+      <OpenRunsheetDialog 
+        open={showOpenDialog} 
+        onOpenChange={setShowOpenDialog} 
+      />
     </div>
   );
 };
