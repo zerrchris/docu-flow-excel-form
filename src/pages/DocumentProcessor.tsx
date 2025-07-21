@@ -231,44 +231,6 @@ const DocumentProcessor: React.FC = () => {
     }, 100);
   };
 
-  // Handle save all extraction instructions
-  const handleSaveAllInstructions = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        toast({
-          title: "Authentication required",
-          description: "Please sign in to save extraction preferences.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const success = await ExtractionPreferencesService.saveDefaultPreferences(columns, columnInstructions);
-      
-      if (success) {
-        toast({
-          title: "Configuration saved",
-          description: "All extraction instructions have been saved as your default preferences.",
-        });
-        setShowValidationDialog(false);
-      } else {
-        toast({
-          title: "Save failed",
-          description: "Failed to save extraction preferences. Please try again.",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error('Error saving all instructions:', error);
-      toast({
-        title: "Save error",
-        description: "An error occurred while saving. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
 
   // Handle document reset - clear file and form data
   const resetDocument = () => {
