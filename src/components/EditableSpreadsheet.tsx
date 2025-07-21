@@ -281,14 +281,14 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       setHasUnsavedChanges(true);
       onUnsavedChanges?.(true);
       
-      // Quick auto-save: save 3 seconds after the last change
+      // Delayed auto-save: save 30 seconds after the last change to give user time for navigation prompts
       const timeoutId = setTimeout(() => {
         autoSaveRunsheet();
-      }, 3000);
+      }, 30000); // Increased from 3 seconds to 30 seconds
       
       return () => clearTimeout(timeoutId);
     }
-  }, [data, columns, runsheetName, columnInstructions, user, lastSavedState]);
+  }, [data, columns, runsheetName, columnInstructions, user, lastSavedState, autoSaveRunsheet, onUnsavedChanges]);
 
   // Aggressive fallback auto-save every 30 seconds
   useEffect(() => {
