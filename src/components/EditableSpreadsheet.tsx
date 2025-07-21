@@ -2236,11 +2236,11 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
       let imageData: string;
 
-      // If file has no type or is generic (likely from storage), we need to fetch the actual file data
+      // If file has no type or is generic, try to determine from file extension
       if (!file.type || file.type === 'application/octet-stream') {
-        console.log('🔧 File has no/generic MIME type, fetching from storage...');
+        console.log('🔧 File has no/generic MIME type, checking if it exists in storage...');
         
-        // Get the document from storage to get the actual file data
+        // Try to get the document from storage first
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('User not authenticated');
 
@@ -2253,6 +2253,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           .single();
 
         if (document?.file_path) {
+          console.log('🔧 Document found in storage, downloading...');
           // Download the file from storage
           const { data: fileData, error } = await supabase.storage
             .from('documents')
@@ -2301,7 +2302,46 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           reader.readAsDataURL(correctedFile);
           imageData = await dataUrlPromise;
         } else {
-          throw new Error('Document not found in storage');
+          // Document not in storage yet, treat as a new file upload
+          console.log('🔧 Document not in storage, treating as new file upload');
+          
+          // Determine MIME type from file extension for new files
+          const extension = file.name.split('.').pop()?.toLowerCase();
+          let mimeType = 'image/png'; // default
+          
+          switch (extension) {
+            case 'jpg':
+            case 'jpeg':
+              mimeType = 'image/jpeg';
+              break;
+            case 'png':
+              mimeType = 'image/png';
+              break;
+            case 'gif':
+              mimeType = 'image/gif';
+              break;
+            case 'webp':
+              mimeType = 'image/webp';
+              break;
+          }
+
+          console.log('🔧 Using MIME type:', mimeType, 'for new file extension:', extension);
+
+          // Create a new File object with the correct MIME type
+          const correctedFile = new File([file], file.name, { type: mimeType });
+          
+          // Convert to base64 data URL
+          const reader = new FileReader();
+          const dataUrlPromise = new Promise<string>((resolve, reject) => {
+            reader.onload = () => {
+              const result = reader.result as string;
+              console.log('🔧 Generated data URL prefix for new file:', result.substring(0, 50) + '...');
+              resolve(result);
+            };
+            reader.onerror = reject;
+          });
+          reader.readAsDataURL(correctedFile);
+          imageData = await dataUrlPromise;
         }
       } else {
         console.log('🔧 File has valid MIME type:', file.type);
