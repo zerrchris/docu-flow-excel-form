@@ -385,6 +385,14 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
           </div>
           {!isEditingName && (
             <div className="flex items-center gap-1">
+              {/* Temporary debug indicator */}
+              {isSpreadsheetUpload && (
+                <span className="text-xs text-green-500">S</span>
+              )}
+              {uploadedFile && (
+                <span className="text-xs text-blue-500">F</span>
+              )}
+              
               {/* Show Analyze button only for spreadsheet uploads with stored file */}
               {isSpreadsheetUpload && uploadedFile && onAnalyzeDocument && (
                 <Button
@@ -392,7 +400,6 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                   size="sm"
                   onClick={(e) => {
                     e.stopPropagation();
-                    console.log('Analyzing document:', uploadedFile.name);
                     onAnalyzeDocument(uploadedFile, filename);
                   }}
                   className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700"
