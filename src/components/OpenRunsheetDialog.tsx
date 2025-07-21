@@ -36,6 +36,16 @@ const OpenRunsheetDialog: React.FC<OpenRunsheetDialogProps> = ({ open, onOpenCha
   const fetchRunsheets = async () => {
     setLoading(true);
     try {
+      // Check if user is authenticated
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError || !user) {
+        console.error('User not authenticated:', authError);
+        setRunsheets([]);
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('runsheets')
         .select('id, name, created_at, updated_at, data')
@@ -43,12 +53,14 @@ const OpenRunsheetDialog: React.FC<OpenRunsheetDialogProps> = ({ open, onOpenCha
 
       if (error) {
         console.error('Error fetching runsheets:', error);
+        setRunsheets([]);
         return;
       }
 
       setRunsheets(data || []);
     } catch (error) {
       console.error('Error fetching runsheets:', error);
+      setRunsheets([]);
     } finally {
       setLoading(false);
     }
