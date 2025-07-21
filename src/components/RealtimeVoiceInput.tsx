@@ -100,162 +100,56 @@ const RealtimeVoiceInput: React.FC<RealtimeVoiceInputProps> = ({
   onDataExtracted,
   onTextTranscribed
 }) => {
-  const [isConnected, setIsConnected] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
-  const [connectionError, setConnectionError] = useState<string | null>(null);
   
-  const wsRef = useRef<WebSocket | null>(null);
-  const audioRecorderRef = useRef<AudioRecorder | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
   const { toast } = useToast();
 
-  const projectId = 'xnpmrafjjqsissbtempj'; // Your project ID
-
-  useEffect(() => {
-    return () => {
-      disconnect();
-    };
-  }, []);
-
-  const connect = async () => {
-    try {
-      setConnectionError(null);
-      
-      // Create WebSocket connection to our edge function
-      const wsUrl = `wss://${projectId}.functions.supabase.co/functions/v1/realtime-voice`;
-      console.log('Connecting to:', wsUrl);
-      
-      wsRef.current = new WebSocket(wsUrl);
-      
-      wsRef.current.onopen = () => {
-        console.log('WebSocket connected');
-        setIsConnected(true);
-        toast({
-          title: "Connected",
-          description: "Real-time voice input is ready",
-        });
-      };
-
-      wsRef.current.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          console.log('Received message:', data.type, data);
-
-          switch (data.type) {
-            case 'session.updated':
-              console.log('Session updated successfully');
-              break;
-
-            case 'input_audio_buffer.speech_started':
-              console.log('Speech started');
-              setIsSpeaking(true);
-              break;
-
-            case 'input_audio_buffer.speech_stopped':
-              console.log('Speech stopped');
-              setIsSpeaking(false);
-              break;
-
-            case 'conversation.item.input_audio_transcription.delta':
-              console.log('Transcription delta:', data.delta);
-              if (data.delta) {
-                setTranscript(prev => prev + data.delta);
-                onTextTranscribed?.(transcript + data.delta);
-              }
-              break;
-
-            case 'conversation.item.input_audio_transcription.completed':
-              console.log('Transcription completed:', data.transcript);
-              if (data.transcript) {
-                setTranscript(data.transcript);
-                onTextTranscribed?.(data.transcript);
-              }
-              break;
-
-            case 'error':
-              console.error('WebSocket error:', data.error);
-              setConnectionError(data.error);
-              toast({
-                title: "Connection Error",
-                description: data.error,
-                variant: "destructive",
-              });
-              break;
-          }
-        } catch (error) {
-          console.error('Error parsing message:', error);
-        }
-      };
-
-      wsRef.current.onerror = (error) => {
-        console.error('WebSocket error:', error);
-        setConnectionError('Connection failed');
-        toast({
-          title: "Connection Error",
-          description: "Failed to connect to real-time voice service",
-          variant: "destructive",
-        });
-      };
-
-      wsRef.current.onclose = () => {
-        console.log('WebSocket closed');
-        setIsConnected(false);
-        setIsRecording(false);
-        setIsSpeaking(false);
-      };
-
-    } catch (error) {
-      console.error('Connection error:', error);
-      setConnectionError('Failed to establish connection');
-    }
-  };
-
-  const disconnect = () => {
-    if (audioRecorderRef.current) {
-      audioRecorderRef.current.stop();
-      audioRecorderRef.current = null;
-    }
-    
-    if (wsRef.current) {
-      wsRef.current.close();
-      wsRef.current = null;
-    }
-    
-    setIsConnected(false);
-    setIsRecording(false);
-    setIsSpeaking(false);
-  };
-
   const startRecording = async () => {
-    if (!isConnected) {
-      await connect();
-      // Wait a moment for connection to stabilize
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
-
     try {
-      // Start audio recording
-      audioRecorderRef.current = new AudioRecorder((audioData) => {
-        if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-          const encodedAudio = encodeAudioForAPI(audioData);
-          wsRef.current.send(JSON.stringify({
-            type: 'input_audio_buffer.append',
-            audio: encodedAudio
-          }));
-        }
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          sampleRate: 24000,
+          channelCount: 1,
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        } 
       });
-
-      await audioRecorderRef.current.start();
+      
+      // Clear any previous chunks
+      audioChunksRef.current = [];
+      
+      mediaRecorderRef.current = new MediaRecorder(stream, {
+        mimeType: 'audio/webm'
+      });
+      
+      mediaRecorderRef.current.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+      
+      // Process audio every 3 seconds
+      mediaRecorderRef.current.start(3000);
       setIsRecording(true);
-      setTranscript(''); // Clear previous transcript
+      setTranscript('');
       
       toast({
         title: "Recording Started",
-        description: "Speak naturally - you'll see live transcription",
+        description: "Speak naturally - audio will be transcribed every few seconds",
       });
+
+      // Handle chunks as they come in
+      mediaRecorderRef.current.ondataavailable = async (event) => {
+        if (event.data.size > 0) {
+          await transcribeChunk(event.data);
+        }
+      };
 
     } catch (error) {
       console.error('Error starting recording:', error);
@@ -267,13 +161,48 @@ const RealtimeVoiceInput: React.FC<RealtimeVoiceInputProps> = ({
     }
   };
 
+  const transcribeChunk = async (audioBlob: Blob) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('transcribe-audio', {
+        body: {
+          audio: await blobToBase64(audioBlob),
+          format: 'webm'
+        }
+      });
+
+      if (error) {
+        console.error('Transcription error:', error);
+        return;
+      }
+
+      if (data?.text) {
+        setTranscript(prev => prev + ' ' + data.text);
+        onTextTranscribed?.(transcript + ' ' + data.text);
+      }
+    } catch (error) {
+      console.error('Error transcribing chunk:', error);
+    }
+  };
+
+  const blobToBase64 = (blob: Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64 = reader.result as string;
+        resolve(base64.split(',')[1]); // Remove data:audio/webm;base64, prefix
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  };
+
   const stopRecording = () => {
-    if (audioRecorderRef.current) {
-      audioRecorderRef.current.stop();
-      audioRecorderRef.current = null;
+    if (mediaRecorderRef.current) {
+      mediaRecorderRef.current.stop();
+      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+      mediaRecorderRef.current = null;
     }
     setIsRecording(false);
-    setIsSpeaking(false);
   };
 
   const processTranscript = async () => {
@@ -346,17 +275,12 @@ const RealtimeVoiceInput: React.FC<RealtimeVoiceInputProps> = ({
         <Button variant="outline" size="sm" className="w-full justify-between">
           <div className="flex items-center gap-2">
             <Mic className="h-4 w-4" />
-            Real-time Voice Input
+                   Real-time Voice Input
             {isRecording && (
               <div className="flex items-center gap-1 text-red-500">
                 <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                <span className="text-xs">
-                  {isSpeaking ? 'Speaking' : 'Listening'}
-                </span>
+                <span className="text-xs">Recording</span>
               </div>
-            )}
-            {!isConnected && connectionError && (
-              <div className="text-xs text-red-500">Disconnected</div>
             )}
           </div>
           {isExpanded ? (
@@ -370,12 +294,6 @@ const RealtimeVoiceInput: React.FC<RealtimeVoiceInputProps> = ({
       <CollapsibleContent className="mt-2">
         <Card className="w-full">
           <CardContent className="p-4 space-y-4">
-            {/* Connection Status */}
-            {connectionError && (
-              <div className="text-sm text-red-600 bg-red-50 p-2 rounded-md">
-                Connection Error: {connectionError}
-              </div>
-            )}
 
             {/* Voice Controls */}
             <div className="flex items-center justify-center gap-2">
@@ -386,7 +304,7 @@ const RealtimeVoiceInput: React.FC<RealtimeVoiceInputProps> = ({
                   className="flex items-center gap-2"
                 >
                   <Mic className="h-4 w-4" />
-                  Start Real-time Recording
+                  Start Voice Recording
                 </Button>
               ) : (
                 <Button
@@ -400,7 +318,7 @@ const RealtimeVoiceInput: React.FC<RealtimeVoiceInputProps> = ({
               )}
             </div>
 
-            {/* Live status indicator */}
+            {/* Recording status indicator */}
             {isRecording && (
               <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
                 <div className="flex space-x-1">
@@ -408,9 +326,7 @@ const RealtimeVoiceInput: React.FC<RealtimeVoiceInputProps> = ({
                   <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
                   <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
                 </div>
-                <span>
-                  {isSpeaking ? 'Speaking - Live transcription...' : 'Listening for speech...'}
-                </span>
+                <span>Recording and transcribing...</span>
               </div>
             )}
 
@@ -418,7 +334,7 @@ const RealtimeVoiceInput: React.FC<RealtimeVoiceInputProps> = ({
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-sm font-medium">
-                  Live Transcript {transcript && `(${transcript.length} characters)`}
+                  Voice Transcript {transcript && `(${transcript.length} characters)`}
                 </label>
                 {transcript && (
                   <Button
@@ -437,16 +353,15 @@ const RealtimeVoiceInput: React.FC<RealtimeVoiceInputProps> = ({
                 <Textarea
                   value={transcript}
                   onChange={(e) => handleTranscriptChange(e.target.value)}
-                  placeholder="Start recording to see live transcription appear here as you speak..."
+                  placeholder="Start recording to see transcription appear here..."
                   className="min-h-[150px] w-full resize-y text-base leading-relaxed"
-                  disabled={isRecording || isProcessing}
+                  disabled={isProcessing}
                 />
                 
                 {/* Status indicator */}
                 <div className="absolute bottom-2 right-2 text-xs text-muted-foreground bg-background/80 px-2 py-1 rounded">
                   {transcript.length > 0 && `${transcript.length} chars`}
-                  {isRecording && isSpeaking && "🎙️ Live"}
-                  {isRecording && !isSpeaking && "🔊 Listening"}
+                  {isRecording && "🎙️ Recording"}
                 </div>
               </div>
 
@@ -456,10 +371,9 @@ const RealtimeVoiceInput: React.FC<RealtimeVoiceInputProps> = ({
                   <div className="flex items-start gap-2">
                     <AlertCircle className="h-4 w-4 mt-0.5 text-green-500" />
                     <div>
-                      <p className="font-medium text-foreground mb-1">Live Transcription Active</p>
+                      <p className="font-medium text-foreground mb-1">Voice Transcription Complete</p>
                       <p>
-                        Real-time transcription powered by OpenAI Whisper. The text updates as you speak. 
-                        Review and edit if needed, then process to extract structured data.
+                        Transcription powered by OpenAI Whisper. Review and edit if needed, then process to extract structured data.
                       </p>
                     </div>
                   </div>
@@ -490,7 +404,7 @@ const RealtimeVoiceInput: React.FC<RealtimeVoiceInputProps> = ({
 
             {/* Help Text */}
             <div className="text-xs text-muted-foreground text-center space-y-1">
-              <p>🎙️ <strong>Real-time Voice Recognition:</strong> See your words appear instantly as you speak</p>
+              <p>🎙️ <strong>Voice Recognition:</strong> Record your voice and get text transcription</p>
               <p className="italic">
                 Perfect for natural descriptions: "This warranty deed from June 2012 transfers property 
                 from John Smith to Mary Johnson in the northwest quarter of section 3..."
