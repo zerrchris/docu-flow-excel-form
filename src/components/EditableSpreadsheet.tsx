@@ -276,8 +276,15 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     // Create a state snapshot for comparison
     const currentState = JSON.stringify({ data, columns, runsheetName, columnInstructions });
     
+    // Initialize lastSavedState if it's empty
+    if (!lastSavedState) {
+      setLastSavedState(currentState);
+      return;
+    }
+    
     // Only mark as unsaved if the state actually changed from the last saved state
-    if (lastSavedState && currentState !== lastSavedState) {
+    if (currentState !== lastSavedState) {
+      console.log('Change detected, marking as unsaved');
       setHasUnsavedChanges(true);
       onUnsavedChanges?.(true);
       
