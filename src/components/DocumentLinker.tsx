@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { Upload, File, ExternalLink, Trash2, Download, Edit2, Check, X } from 'lucide-react';
+import { Upload, File, ExternalLink, Trash2, Download, Edit2, Check, X, RotateCcw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -207,6 +207,82 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
     }
   };
 
+  const handleRevertToOriginal = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Get current document info including original filename
+      const { data: document, error: fetchError } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('runsheet_id', runsheetId)
+        .eq('row_index', rowIndex)
+        .eq('user_id', user.id)
+        .single();
+
+      if (fetchError || !document) {
+        throw new Error('Document not found');
+      }
+
+      const originalFilename = document.original_filename;
+      
+      // Don't do anything if already using original name
+      if (document.stored_filename === originalFilename) {
+        toast({
+          title: "Already using original name",
+          description: "This document is already using its original filename.",
+        });
+        return;
+      }
+
+      // Create new file path with the original filename
+      const pathParts = document.file_path.split('/');
+      const newFilePath = `${pathParts[0]}/${pathParts[1]}/${originalFilename}`;
+
+      // Move file in storage
+      const { error: moveError } = await supabase.storage
+        .from('documents')
+        .move(document.file_path, newFilePath);
+
+      if (moveError) {
+        throw moveError;
+      }
+
+      // Update document record
+      const { error: updateError } = await supabase
+        .from('documents')
+        .update({
+          stored_filename: originalFilename,
+          file_path: newFilePath,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', document.id);
+
+      if (updateError) {
+        // Try to move file back on error
+        await supabase.storage.from('documents').move(newFilePath, document.file_path);
+        throw updateError;
+      }
+
+      // Update parent with original filename
+      onDocumentLinked(originalFilename);
+      
+      toast({
+        title: "Reverted to original name",
+        description: `File name reverted to "${originalFilename}".`,
+      });
+
+    } catch (error) {
+      console.error('Revert error:', error);
+      toast({
+        title: "Failed to revert filename",
+        description: "There was an error reverting to the original filename.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragActive(false);
@@ -284,6 +360,15 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
           </div>
           {!isEditingName && (
             <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleRevertToOriginal}
+                className="h-6 w-6 p-0"
+                title="Revert to original filename"
+              >
+                <RotateCcw className="w-3 h-3" />
+              </Button>
               <Button
                 variant="ghost"
                 size="sm"
