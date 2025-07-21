@@ -173,8 +173,11 @@ const DocumentProcessor: React.FC = () => {
 
   // Load user preferences on component mount
   
-  // Update form state when columns change - completely reset form data to match current columns only
+  // Update form state when columns change - but only if form is being actively used
   useEffect(() => {
+    // Only reset form data if we actually have meaningful columns to work with
+    if (columns.length === 0) return;
+    
     const newFormData: Record<string, string> = {};
     // Only include current columns, don't preserve old data
     columns.forEach(column => {
