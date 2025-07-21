@@ -379,7 +379,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
     const handleImportRunsheetFile = (event: CustomEvent) => {
       const { file } = event.detail;
-      console.log('Import runsheet file event received:', file.name);
+      console.log('🔧 EditableSpreadsheet: Import runsheet file event received:', file.name);
+      console.log('🔧 EditableSpreadsheet: Calling handleFileUpload with file:', file);
       handleFileUpload(file, file.name);
     };
 

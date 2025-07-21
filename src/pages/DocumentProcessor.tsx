@@ -224,10 +224,12 @@ const DocumentProcessor: React.FC = () => {
       
       // Trigger the spreadsheet import functionality directly
       // Create a custom event that the EditableSpreadsheet component can listen to
+      console.log('🔧 DocumentProcessor: Dispatching importRunsheetFile event with file:', selectedFile.name);
       const importEvent = new CustomEvent('importRunsheetFile', {
         detail: { file: selectedFile }
       });
       window.dispatchEvent(importEvent);
+      console.log('🔧 DocumentProcessor: importRunsheetFile event dispatched successfully');
       
       toast({
         title: "Importing runsheet",
