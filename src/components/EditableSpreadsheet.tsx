@@ -2237,6 +2237,92 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     setRowsToAdd(1);
   };
 
+  const downloadRunsheetWithDocuments = async () => {
+    try {
+      toast({
+        title: "Preparing download...",
+        description: "Creating archive with spreadsheet and documents",
+      });
+
+      const zip = new JSZip();
+      
+      // Create Excel file from current data
+      const ws = XLSX.utils.json_to_sheet(data.map(row => {
+        const cleanRow: Record<string, any> = {};
+        columns.forEach(col => {
+          cleanRow[col] = row[col] || '';
+        });
+        return cleanRow;
+      }));
+      
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, runsheetName || 'Runsheet');
+      
+      // Generate Excel file as array buffer
+      const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      zip.file(`${runsheetName || 'runsheet'}.xlsx`, excelBuffer);
+
+      // Get all documents for this runsheet
+      if (user && currentRunsheetId) {
+        const { data: documents, error } = await supabase
+          .from('documents')
+          .select('file_path, original_filename, row_index')
+          .eq('runsheet_id', currentRunsheetId)
+          .eq('user_id', user.id);
+
+        if (error) {
+          console.error('Error fetching documents:', error);
+        } else if (documents && documents.length > 0) {
+          // Create documents folder in ZIP
+          const documentsFolder = zip.folder('documents');
+          
+          // Download each document and add to ZIP
+          for (const doc of documents) {
+            try {
+              const { data: fileData, error: downloadError } = await supabase.storage
+                .from('documents')
+                .download(doc.file_path);
+
+              if (downloadError) {
+                console.error(`Error downloading ${doc.original_filename}:`, downloadError);
+                continue;
+              }
+
+              // Add file to documents folder with row prefix
+              const fileName = `row_${doc.row_index + 1}_${doc.original_filename}`;
+              documentsFolder?.file(fileName, fileData);
+            } catch (downloadError) {
+              console.error(`Failed to download ${doc.original_filename}:`, downloadError);
+            }
+          }
+        }
+      }
+
+      // Generate and download ZIP file
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(zipBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${runsheetName || 'runsheet'}_complete.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Download complete",
+        description: "Archive created with spreadsheet and all documents",
+      });
+    } catch (error) {
+      console.error('Error creating download archive:', error);
+      toast({
+        title: "Download failed",
+        description: "Failed to create archive. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const analyzeDocumentAndPopulateRow = async (file: File, targetRowIndex: number) => {
     try {
       console.log('🔍 Starting document analysis for:', file.name, 'type:', file.type, 'size:', file.size);
@@ -2943,6 +3029,7 @@ ${extractionFields}`
         </div>
 
         <div className="flex justify-between items-center text-sm text-muted-foreground pt-2">
+          <div className="flex gap-2">{/* Left side buttons */}
           <Dialog open={showAddRowsDialog} onOpenChange={setShowAddRowsDialog}>
             <DialogTrigger asChild>
               <Button variant="outline" size="sm" className="gap-2">
@@ -2981,6 +3068,12 @@ ${extractionFields}`
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          
+          <Button variant="outline" size="sm" className="gap-2" onClick={downloadRunsheetWithDocuments}>
+            <Download className="h-4 w-4" />
+            Download All
+          </Button>
+          </div>
         </div>
 
         {/* Open Runsheet Dialog */}
