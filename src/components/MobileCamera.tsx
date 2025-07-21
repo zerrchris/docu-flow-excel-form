@@ -9,6 +9,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Camera as CameraIcon, Upload, Image as ImageIcon, Plus, Search, ArrowLeft, ZoomIn } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { offlineStorage } from '@/utils/offlineStorage';
+import { syncService } from '@/utils/syncService';
 
 interface MobileCameraProps {
   onPhotoUploaded?: (url: string, fileName: string) => void;
@@ -235,16 +237,40 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
 
   const uploadPhoto = async (dataUrl: string) => {
     try {
-      // Convert data URL to blob
-      const response = await fetch(dataUrl);
-      const blob = await response.blob();
-
       // Generate filename with document metadata
       const timestamp = Date.now();
       const instNum = instrumentNumber ? `_${instrumentNumber.replace(/[^a-zA-Z0-9]/g, '')}` : '';
       const bookPg = bookPage ? `_${bookPage.replace(/[^a-zA-Z0-9]/g, '')}` : '';
       const docName = documentName ? `_${documentName.replace(/[^a-zA-Z0-9]/g, '')}` : '';
       const fileName = `mobile_document${instNum}${bookPg}${docName}_${timestamp}.jpg`;
+
+      // Check if online - if offline, store locally
+      if (!navigator.onLine) {
+        await offlineStorage.storeImage({
+          dataUrl,
+          fileName,
+          projectCode: currentProject?.replace(/[^a-zA-Z0-9]/g, '_'),
+          projectName: currentProject,
+          documentName
+        });
+
+        // Add to recent photos with offline indicator
+        const newPhoto = { url: dataUrl, name: `${fileName} (offline)` };
+        setRecentPhotos(prev => [newPhoto, ...prev.slice(0, 4)]);
+
+        toast({
+          title: "Photo Stored Offline",
+          description: "Photo saved locally. Will sync when online.",
+        });
+
+        // Notify parent component with placeholder
+        onPhotoUploaded?.(dataUrl, fileName);
+        return;
+      }
+
+      // Convert data URL to blob
+      const response = await fetch(dataUrl);
+      const blob = await response.blob();
 
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
@@ -293,11 +319,37 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
 
     } catch (error: any) {
       console.error('Error uploading photo:', error);
-      toast({
-        title: "Upload Failed",
-        description: error.message || "Failed to upload photo. Please try again.",
-        variant: "destructive",
-      });
+      
+      // If upload fails and we're online, try storing offline as fallback
+      if (navigator.onLine) {
+        try {
+          const timestamp = Date.now();
+          const instNum = instrumentNumber ? `_${instrumentNumber.replace(/[^a-zA-Z0-9]/g, '')}` : '';
+          const bookPg = bookPage ? `_${bookPage.replace(/[^a-zA-Z0-9]/g, '')}` : '';
+          const docName = documentName ? `_${documentName.replace(/[^a-zA-Z0-9]/g, '')}` : '';
+          const fileName = `mobile_document${instNum}${bookPg}${docName}_${timestamp}.jpg`;
+
+          await offlineStorage.storeImage({
+            dataUrl,
+            fileName,
+            projectCode: currentProject?.replace(/[^a-zA-Z0-9]/g, '_'),
+            projectName: currentProject,
+            documentName
+          });
+
+          toast({
+            title: "Upload Failed - Stored Offline",
+            description: "Photo saved locally and will sync when possible.",
+            variant: "destructive",
+          });
+        } catch (offlineError) {
+          toast({
+            title: "Upload Failed",
+            description: error.message || "Failed to upload photo. Please try again.",
+            variant: "destructive",
+          });
+        }
+      }
     }
   };
 
@@ -370,33 +422,56 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
         // Single page - upload directly
         await uploadPhoto(currentDocumentPages[0]);
       } else {
-        // Multiple pages - combine into PDF first
-        const { combineImages } = await import('@/utils/imageCombiner');
-        
-        // Convert data URLs to File objects
-        const files: File[] = [];
-        for (let i = 0; i < currentDocumentPages.length; i++) {
-          const response = await fetch(currentDocumentPages[i]);
-          const blob = await response.blob();
-          const file = new File([blob], `page_${i + 1}.jpg`, { type: 'image/jpeg' });
-          files.push(file);
+        // Multiple pages - handle based on online status
+        if (!navigator.onLine) {
+          // Offline: Store multi-page document locally
+          const timestamp = Date.now();
+          const instNum = instrumentNumber ? `_${instrumentNumber.replace(/[^a-zA-Z0-9]/g, '')}` : '';
+          const bookPg = bookPage ? `_${bookPage.replace(/[^a-zA-Z0-9]/g, '')}` : '';
+          const docName = documentName ? `_${documentName.replace(/[^a-zA-Z0-9]/g, '')}` : '';
+          const fileName = `mobile_document${instNum}${bookPg}${docName}_${timestamp}.pdf`;
+
+          await offlineStorage.storeDocument({
+            pages: currentDocumentPages,
+            fileName,
+            projectCode: currentProject?.replace(/[^a-zA-Z0-9]/g, '_'),
+            projectName: currentProject,
+            documentName
+          });
+
+          toast({
+            title: "Document Stored Offline",
+            description: `${currentDocumentPages.length} pages saved locally. Will sync when online.`,
+          });
+        } else {
+          // Online: Combine into PDF and upload
+          const { combineImages } = await import('@/utils/imageCombiner');
+          
+          // Convert data URLs to File objects
+          const files: File[] = [];
+          for (let i = 0; i < currentDocumentPages.length; i++) {
+            const response = await fetch(currentDocumentPages[i]);
+            const blob = await response.blob();
+            const file = new File([blob], `page_${i + 1}.jpg`, { type: 'image/jpeg' });
+            files.push(file);
+          }
+
+          // Combine into PDF
+          const { file: combinedFile } = await combineImages(files, {
+            type: 'pdf',
+            quality: 0.8,
+            maxWidth: 1200
+          });
+
+          // Upload the combined PDF
+          await uploadCombinedDocument(combinedFile);
+
+          toast({
+            title: "Document Completed",
+            description: `${currentDocumentPages.length} pages combined and uploaded successfully.`,
+          });
         }
-
-        // Combine into PDF
-        const { file: combinedFile } = await combineImages(files, {
-          type: 'pdf',
-          quality: 0.8,
-          maxWidth: 1200
-        });
-
-        // Upload the combined PDF
-        await uploadCombinedDocument(combinedFile);
       }
-
-      toast({
-        title: "Document Completed",
-        description: `${currentDocumentPages.length} pages ${currentDocumentPages.length > 1 ? 'combined and ' : ''}uploaded successfully.`,
-      });
 
       // Reset for next document
       setCurrentDocumentPages([]);

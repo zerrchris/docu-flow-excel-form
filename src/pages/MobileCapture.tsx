@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import extractorLogo from '@/assets/document-extractor-logo.png';
 import AuthButton from '@/components/AuthButton';
 import ActiveRunsheetButton from '@/components/ActiveRunsheetButton';
+import { SyncStatusBadge } from '@/components/SyncStatusBadge';
 
 interface CapturedDocument {
   id: string;
@@ -120,6 +121,7 @@ export const MobileCapture: React.FC = () => {
                 Dashboard
               </Button>
               <ActiveRunsheetButton />
+              <SyncStatusBadge />
               <AuthButton />
               {isMobile ? (
                 <Badge variant="default" className="gap-1">
@@ -154,19 +156,19 @@ export const MobileCapture: React.FC = () => {
         {/* Camera Component */}
         <MobileCamera onPhotoUploaded={handlePhotoUploaded} />
 
-        {/* Sync Status */}
+        {/* Document Count */}
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <CheckCircle className="h-5 w-5 text-green-500" />
-              <span className="font-medium">Synced with Web App</span>
+              <span className="font-medium">Documents in Storage</span>
             </div>
             <Badge variant="outline">
               {documents.length} documents
             </Badge>
           </div>
           <p className="text-sm text-muted-foreground mt-2">
-            Photos taken here will be available when you return to the web application for analysis.
+            Photos are automatically saved and synced. Check sync status in the header badge.
           </p>
         </Card>
 
