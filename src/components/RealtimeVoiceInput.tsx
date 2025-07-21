@@ -309,7 +309,7 @@ const RealtimeVoiceInput: React.FC<RealtimeVoiceInputProps> = ({
         <Button variant="outline" size="sm" className="w-full justify-between">
           <div className="flex items-center gap-2">
             <Mic className="h-4 w-4" />
-                   Real-time Voice Input
+                   Voice Input
             {isRecording && (
               <div className="flex items-center gap-1 text-red-500">
                 <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
