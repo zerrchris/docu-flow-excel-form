@@ -185,6 +185,12 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       return;
     }
     
+    // If we have columns but no column instructions at all, wait for them to load
+    if (columns.length > 0 && Object.keys(columnInstructions).length === 0) {
+      console.log('Skipping missing column check - column instructions not loaded yet');
+      return;
+    }
+    
     const missing = columns.filter(column => 
       column !== 'Document File Name' && // Skip Document File Name - it's user-specified, not extracted
       (!columnInstructions[column] || columnInstructions[column].trim() === '')
