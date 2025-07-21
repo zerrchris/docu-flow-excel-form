@@ -2435,7 +2435,12 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
               </DialogDescription>
             </DialogHeader>
             <div className="max-h-[400px] overflow-y-auto">
-              {savedRunsheets.length === 0 ? (
+              {isLoading ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <div className="animate-spin h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                  <p>Loading runsheets...</p>
+                </div>
+              ) : savedRunsheets.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <FolderOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>No saved runsheets found.</p>
