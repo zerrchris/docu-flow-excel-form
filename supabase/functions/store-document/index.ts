@@ -69,13 +69,16 @@ serve(async (req) => {
       );
     }
 
-    // Generate filename based on spreadsheet data
+    // Generate filename based on spreadsheet data with user preferences
     const { data: generatedFilename, error: filenameError } = await supabase
-      .rpc('generate_document_filename', {
+      .rpc('generate_document_filename_with_preferences', {
         runsheet_data: runsheet.data,
         row_index: rowIndex,
-        original_filename: originalFilename
+        original_filename: originalFilename,
+        user_id: user.id
       });
+
+    console.log('Filename generation result:', { generatedFilename, filenameError, runsheetData: runsheet.data });
 
     if (filenameError) {
       console.error('Error generating filename:', filenameError);

@@ -154,6 +154,48 @@ export type Database = {
         }
         Relationships: []
       }
+      user_document_naming_preferences: {
+        Row: {
+          created_at: string
+          fallback_pattern: string
+          id: string
+          include_extension: boolean
+          is_active: boolean
+          max_filename_parts: number
+          preference_name: string
+          priority_columns: string[]
+          separator: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          fallback_pattern?: string
+          id?: string
+          include_extension?: boolean
+          is_active?: boolean
+          max_filename_parts?: number
+          preference_name?: string
+          priority_columns?: string[]
+          separator?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          fallback_pattern?: string
+          id?: string
+          include_extension?: boolean
+          is_active?: boolean
+          max_filename_parts?: number
+          preference_name?: string
+          priority_columns?: string[]
+          separator?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_extraction_preferences: {
         Row: {
           column_instructions: Json
@@ -218,6 +260,15 @@ export type Database = {
           runsheet_data: Json
           row_index: number
           original_filename: string
+        }
+        Returns: string
+      }
+      generate_document_filename_with_preferences: {
+        Args: {
+          runsheet_data: Json
+          row_index: number
+          original_filename: string
+          user_id: string
         }
         Returns: string
       }
