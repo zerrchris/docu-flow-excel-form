@@ -133,6 +133,8 @@ const DataForm: React.FC<DataFormProps> = ({
     setVisibleFields(initialVisibility);
     console.log('DataForm: Completely resetting visible fields for new fields:', fields);
     console.log('DataForm: Old visible fields cleared, new visible fields:', Object.keys(initialVisibility));
+    console.log('DEBUG: DataForm fields prop received:', fields);
+    console.log('DEBUG: DataForm formData keys:', Object.keys(formData));
   }, [fields]);
 
   const toggleFieldVisibility = (field: string) => {

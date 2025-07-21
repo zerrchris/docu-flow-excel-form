@@ -122,6 +122,8 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
         // When expanding, completely reset form fields to only current spreadsheet columns
         if (open) {
           console.log('Document processing expanded - resetting form to current spreadsheet columns only:', fields);
+          console.log('DEBUG: Current fields passed to DocumentFrame:', fields);
+          console.log('DEBUG: Current formData keys before reset:', Object.keys(formData));
           
           // Create completely new form data with only current fields
           const newFormData: Record<string, string> = {};
@@ -141,6 +143,7 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
           });
           
           console.log('Form reset complete - only current columns should be visible');
+          console.log('DEBUG: New formData keys after reset:', Object.keys(newFormData));
         }
       }}>
         <CollapsibleTrigger asChild>
