@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { toast } from '@/components/ui/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
@@ -58,6 +58,8 @@ const DocumentProcessor: React.FC = () => {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   
+  // Ref to track if we've already loaded a runsheet to prevent infinite loops
+  const loadedRunsheetRef = useRef<string | null>(null);
   
   // Preferences loading state
   const [isLoadingPreferences, setIsLoadingPreferences] = useState(true);
@@ -108,8 +110,11 @@ const DocumentProcessor: React.FC = () => {
   // Handle selected runsheet from navigation state
   useEffect(() => {
     const selectedRunsheet = location.state?.runsheet;
-    if (selectedRunsheet) {
+    
+    // Use ref to prevent infinite loops - only load each runsheet once
+    if (selectedRunsheet && loadedRunsheetRef.current !== selectedRunsheet.id) {
       console.log('Loading selected runsheet:', selectedRunsheet);
+      loadedRunsheetRef.current = selectedRunsheet.id;
       
       // Load runsheet data
       if (selectedRunsheet.data && Array.isArray(selectedRunsheet.data)) {
@@ -131,17 +136,8 @@ const DocumentProcessor: React.FC = () => {
         title: "Runsheet loaded",
         description: `Loaded "${selectedRunsheet.name}" with ${selectedRunsheet.data?.length || 0} rows.`,
       });
-      
-      // Clear the navigation state to prevent reloading on subsequent renders
-      navigate(location.pathname, { 
-        replace: true, 
-        state: { 
-          ...location.state, 
-          runsheetId: selectedRunsheet.id // Pass the runsheet ID
-        } 
-      });
     }
-  }, [location.state, navigate, location.pathname]);
+  }, [location.state]);
 
   // Handle URL parameters for actions (upload, google-drive, etc.)
   useEffect(() => {
