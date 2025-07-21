@@ -124,6 +124,9 @@ export const useMultipleRunsheets = () => {
   const clearAllRunsheets = () => {
     globalActiveRunsheets = [];
     globalCurrentTabId = null;
+    // Also clear localStorage
+    localStorage.removeItem(ACTIVE_RUNSHEETS_KEY);
+    localStorage.removeItem(CURRENT_TAB_KEY);
     saveToLocalStorage();
     notifyListeners();
   };
