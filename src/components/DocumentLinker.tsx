@@ -306,9 +306,11 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
       }
 
       // Update parent with original filename
+      console.log('🔧 DocumentLinker: Calling onDocumentLinked with original filename:', originalFilename);
       onDocumentLinked(originalFilename);
       
       // Close edit mode and reset the edited filename
+      console.log('🔧 DocumentLinker: Setting isEditingName to false and clearing editedFilename');
       setIsEditingName(false);
       setEditedFilename('');
       
@@ -324,6 +326,9 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
         description: "There was an error reverting to the original filename.",
         variant: "destructive",
       });
+      // Make sure to exit edit mode even on error
+      setIsEditingName(false);
+      setEditedFilename('');
     }
   };
 
@@ -375,7 +380,10 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                   className="h-6 text-xs flex-1"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') handleRenameDocument();
-                    if (e.key === 'Escape') setIsEditingName(false);
+                    if (e.key === 'Escape') {
+                      setIsEditingName(false);
+                      setEditedFilename('');
+                    }
                   }}
                   autoFocus
                 />
@@ -390,7 +398,10 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setIsEditingName(false)}
+                  onClick={() => {
+                    setIsEditingName(false);
+                    setEditedFilename('');
+                  }}
                   className="h-6 w-6 p-0 text-red-600"
                 >
                   <X className="w-3 h-3" />
