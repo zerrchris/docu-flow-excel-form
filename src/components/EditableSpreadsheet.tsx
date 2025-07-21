@@ -1000,25 +1000,44 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
   // Download spreadsheet only as Excel
   const downloadSpreadsheetOnly = () => {
-    // Use all data as displayed (including empty rows)
-    const displayData = data.map(row => {
+    // Use all data as displayed (including empty rows) and add document URLs
+    const displayData = data.map((row, index) => {
       const orderedRow: Record<string, string> = {};
       // Ensure columns are in the same order as displayed
       columns.forEach(column => {
         orderedRow[column] = row[column] || '';
       });
+      
+      // Add document URL column if document exists for this row
+      const document = documentMap.get(index);
+      if (document) {
+        const publicUrl = DocumentService.getDocumentUrl(document.file_path);
+        orderedRow['Document Link'] = publicUrl;
+      } else {
+        orderedRow['Document Link'] = '';
+      }
+      
       return orderedRow;
     });
 
+    // Create columns array with Document Link added after Document File Name
+    const downloadColumns = [...columns];
+    const docFileNameIndex = downloadColumns.indexOf('Document File Name');
+    if (docFileNameIndex !== -1) {
+      downloadColumns.splice(docFileNameIndex + 1, 0, 'Document Link');
+    } else {
+      downloadColumns.push('Document Link');
+    }
+
     const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(displayData, { header: columns });
+    const ws = XLSX.utils.json_to_sheet(displayData, { header: downloadColumns });
     XLSX.utils.book_append_sheet(wb, ws, 'Runsheet');
     
     XLSX.writeFile(wb, `${runsheetName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.xlsx`);
     
     toast({
       title: "Spreadsheet downloaded",
-      description: `"${runsheetName}" has been downloaded as an Excel file.`,
+      description: `"${runsheetName}" has been downloaded as an Excel file with document links.`,
     });
   };
 
@@ -1036,19 +1055,38 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     try {
       const zip = new JSZip();
       
-      // Create CSV content with exact display format
-      const displayData = data.map(row => {
+      // Create CSV content with exact display format and document links
+      const displayData = data.map((row, index) => {
         const orderedRow: Record<string, string> = {};
         // Ensure columns are in the same order as displayed
         columns.forEach(column => {
           orderedRow[column] = row[column] || '';
         });
+        
+        // Add document URL column if document exists for this row
+        const document = documentMap.get(index);
+        if (document) {
+          const publicUrl = DocumentService.getDocumentUrl(document.file_path);
+          orderedRow['Document Link'] = publicUrl;
+        } else {
+          orderedRow['Document Link'] = '';
+        }
+        
         return orderedRow;
       });
 
-      const csvHeaders = columns.join(',');
+      // Create columns array with Document Link added after Document File Name
+      const downloadColumns = [...columns];
+      const docFileNameIndex = downloadColumns.indexOf('Document File Name');
+      if (docFileNameIndex !== -1) {
+        downloadColumns.splice(docFileNameIndex + 1, 0, 'Document Link');
+      } else {
+        downloadColumns.push('Document Link');
+      }
+
+      const csvHeaders = downloadColumns.join(',');
       const csvRows = displayData.map(row => 
-        columns.map(column => {
+        downloadColumns.map(column => {
           const value = row[column] || '';
           const escapedValue = value.includes(',') || value.includes('"') || value.includes('\n')
             ? `"${value.replace(/"/g, '""')}"`
