@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { Upload, File, ExternalLink, Trash2, Download, Edit2, Check, X } from 'lucide-react';
+import { Upload, File, ExternalLink, Trash2, Download, Edit2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -349,44 +349,19 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
           <div className="flex items-center gap-2 flex-1">
             <File className="w-4 h-4 text-muted-foreground flex-shrink-0" />
             {isEditingName ? (
-              <div className="flex items-center gap-1 flex-1">
-                <Input
-                  value={editedFilename}
-                  onChange={(e) => setEditedFilename(e.target.value)}
-                  className="h-6 text-xs flex-1"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleRenameDocument();
-                    if (e.key === 'Escape') {
-                      setIsEditingName(false);
-                      setEditedFilename('');
-                    }
-                  }}
-                  autoFocus
-                />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation(); // Prevent cell edit mode
-                    handleRenameDocument();
-                  }}
-                  className="h-6 w-6 p-0 text-green-600"
-                >
-                  <Check className="w-3 h-3" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation(); // Prevent cell edit mode
+              <Input
+                value={editedFilename}
+                onChange={(e) => setEditedFilename(e.target.value)}
+                className="h-6 text-xs flex-1"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleRenameDocument();
+                  if (e.key === 'Escape') {
                     setIsEditingName(false);
                     setEditedFilename('');
-                  }}
-                  className="h-6 w-6 p-0 text-red-600"
-                >
-                  <X className="w-3 h-3" />
-                </Button>
-              </div>
+                  }
+                }}
+                autoFocus
+              />
             ) : (
               <span 
                 className="text-sm font-medium truncate flex-1 cursor-pointer hover:text-primary" 
