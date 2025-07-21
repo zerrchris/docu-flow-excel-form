@@ -32,6 +32,16 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
+  // Function to sanitize filename for storage
+  const sanitizeFilenameForStorage = (filename: string): string => {
+    // Replace spaces with underscores and remove/replace problematic characters
+    return filename
+      .replace(/\s+/g, '_')           // Replace spaces with underscores
+      .replace(/[^\w\-_.]/g, '')      // Remove special characters except word chars, hyphens, underscores, dots
+      .replace(/_{2,}/g, '_')         // Replace multiple underscores with single
+      .replace(/^_+|_+$/g, '');       // Remove leading/trailing underscores
+  };
+
   const handleFileSelect = async (file: File) => {
     console.log('🔧 DocumentLinker: handleFileSelect called with file:', file.name, file.size);
     if (!file) return;
@@ -184,9 +194,10 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
         throw new Error('Document not found');
       }
 
-      // Create new file path with the edited filename
+      // Create new file path with the sanitized edited filename for storage
       const pathParts = document.file_path.split('/');
-      const newFilePath = `${pathParts[0]}/${pathParts[1]}/${editedFilename}`;
+      const sanitizedEditedFilename = sanitizeFilenameForStorage(editedFilename);
+      const newFilePath = `${pathParts[0]}/${pathParts[1]}/${sanitizedEditedFilename}`;
 
       // Move file in storage
       const { error: moveError } = await supabase.storage
@@ -264,9 +275,10 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
         return;
       }
 
-      // Create new file path with the original filename
+      // Create new file path with the sanitized original filename for storage
       const pathParts = document.file_path.split('/');
-      const newFilePath = `${pathParts[0]}/${pathParts[1]}/${originalFilename}`;
+      const sanitizedOriginalFilename = sanitizeFilenameForStorage(originalFilename);
+      const newFilePath = `${pathParts[0]}/${pathParts[1]}/${sanitizedOriginalFilename}`;
 
       // Move file in storage
       const { error: moveError } = await supabase.storage
