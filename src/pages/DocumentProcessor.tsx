@@ -668,6 +668,11 @@ Image: [base64 image data]`;
           console.error('Error creating document record:', error);
         } else {
           console.log('Document record created successfully for row', rowIndex);
+          
+          // Dispatch a custom event to notify the spreadsheet to refresh documents
+          window.dispatchEvent(new CustomEvent('documentRecordCreated', {
+            detail: { runsheetId, rowIndex }
+          }));
         }
       }
     } catch (error) {

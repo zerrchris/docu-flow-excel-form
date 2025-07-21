@@ -264,6 +264,33 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     loadDocuments();
   }, [user, currentRunsheetId]);
 
+  // Listen for document record creation events to refresh the document map
+  useEffect(() => {
+    const handleDocumentRecordCreated = async (event: CustomEvent) => {
+      const { runsheetId, rowIndex } = event.detail;
+      
+      if (runsheetId === currentRunsheetId) {
+        console.log('Document record created event received, refreshing document map');
+        
+        // Refresh the entire document map
+        if (user && currentRunsheetId) {
+          try {
+            const documents = await DocumentService.getDocumentMapForRunsheet(currentRunsheetId);
+            setDocumentMap(documents);
+          } catch (error) {
+            console.error('Error refreshing documents:', error);
+          }
+        }
+      }
+    };
+
+    window.addEventListener('documentRecordCreated', handleDocumentRecordCreated as EventListener);
+    
+    return () => {
+      window.removeEventListener('documentRecordCreated', handleDocumentRecordCreated as EventListener);
+    };
+  }, [user, currentRunsheetId]);
+
   // Update active runsheet when name changes
   useEffect(() => {
     if (runsheetName && runsheetName !== 'Untitled Runsheet') {
