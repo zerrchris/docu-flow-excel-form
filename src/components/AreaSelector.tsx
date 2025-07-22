@@ -163,8 +163,7 @@ export const AreaSelector: React.FC<AreaSelectorProps> = ({
       {/* Overlay for selection */}
       <div
         ref={overlayRef}
-        className="absolute inset-0"
-        style={{ cursor: 'crosshair' }}
+        className="absolute inset-0 cursor-crosshair"
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}

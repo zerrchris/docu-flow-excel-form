@@ -211,14 +211,7 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
                 <ResizablePanel defaultSize={67}>
                   <div className="h-full">
                     {file ? (
-                      <DocumentViewer 
-                        file={file} 
-                        previewUrl={previewUrl} 
-                        onResetDocument={() => {
-                          setHasAddedToSpreadsheet(false);
-                          onResetDocument();
-                        }}
-                      />
+                      <DocumentViewer file={file} previewUrl={previewUrl} />
                     ) : (
                       <div className="h-full p-6 space-y-4">
                         <MobileCapturedDocuments />

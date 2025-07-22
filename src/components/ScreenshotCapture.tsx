@@ -29,7 +29,7 @@ export const ScreenshotCapture: React.FC<ScreenshotCaptureProps> = ({
     const popup = window.open(
       '/capture-popup',
       'DocumentCapture',
-      'fullscreen=yes,resizable=yes,scrollbars=no,toolbar=no,menubar=no,location=no,status=no'
+      'width=350,height=500,left=50,top=50,resizable=yes,scrollbars=no,toolbar=no,menubar=no,location=no,status=no'
     );
 
     if (!popup) {
