@@ -79,6 +79,7 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
   };
 
   const handleFileSelect = async (file: File) => {
+    console.log('🔧 DocumentLinker: handleFileSelect called with file:', file.name, file.type, file.size);
     if (!file) return;
 
     // Check if runsheet is saved first
@@ -135,9 +136,11 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
       }
 
       const result = await response.json();
+      console.log('🔧 DocumentLinker: Edge function response:', result);
       
       // Use the stored filename returned by the edge function, not the original filename
       const actualStoredFilename = result.storedFilename || file.name;
+      console.log('🔧 DocumentLinker: Calling onDocumentLinked with filename:', actualStoredFilename);
       onDocumentLinked(actualStoredFilename);
       
       // Store file for potential analysis if this is a spreadsheet upload
