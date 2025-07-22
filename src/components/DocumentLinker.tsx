@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Upload, File, ExternalLink, Trash2, Download, Edit2, Brain } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { ScreenshotCapture } from './ScreenshotCapture';
 
 interface DocumentLinkerProps {
   runsheetId: string;
@@ -537,7 +538,7 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
           e.preventDefault(); // Prevent default behavior
         }}
       >
-      <div className="flex items-center justify-center">
+      <div className="flex items-center justify-center gap-2">
         <Button
           variant="ghost"
           size="sm"
@@ -546,8 +547,12 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
           className="h-8 text-xs"
         >
           <Upload className="w-3 h-3 mr-1" />
-          {isUploading ? 'Uploading...' : 'Add Document'}
+          {isUploading ? 'Uploading...' : 'Add File'}
         </Button>
+        <ScreenshotCapture 
+          onFileSelect={handleFileSelect}
+          className="h-8 text-xs"
+        />
         <input
           ref={fileInputRef}
           type="file"
