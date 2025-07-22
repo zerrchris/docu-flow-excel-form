@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { convertPDFToImages, isPDF, createFileFromBlob } from '@/utils/pdfToImage';
+import { ScreenshotCapture } from './ScreenshotCapture';
 
 interface DocumentUploadProps {
   onFileSelect: (file: File) => void;
@@ -124,11 +125,18 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
                       <p className="text-xl text-foreground">
                         Drag and drop your document{allowMultiple ? 's' : ''} here, or
                       </p>
-                      <Button variant="outline" size="lg" asChild className="font-semibold">
-                        <label htmlFor="document-upload-input" className="cursor-pointer">
-                          Browse Files
-                        </label>
-                      </Button>
+                      <div className="flex gap-3">
+                        <Button variant="outline" size="lg" asChild className="font-semibold">
+                          <label htmlFor="document-upload-input" className="cursor-pointer">
+                            Browse Files
+                          </label>
+                        </Button>
+                        
+                        <ScreenshotCapture 
+                          onFileSelect={onFileSelect}
+                          className="font-semibold"
+                        />
+                      </div>
                       <input
                         id="document-upload-input"
                         type="file"
