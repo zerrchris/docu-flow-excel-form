@@ -137,8 +137,8 @@ export const CapturePopup: React.FC = () => {
 
   return (
     <>
-      <div className="min-h-screen bg-background p-4">
-        <Card className="w-full max-w-sm mx-auto">
+      <div className="fixed inset-0 bg-background z-50">
+        <Card className="w-full max-w-sm mx-auto mt-4">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b">
             <div className="flex items-center gap-2">
