@@ -90,6 +90,10 @@ export const AreaSelector: React.FC<AreaSelectorProps> = ({
 
   const handleMouseUp = () => {
     setIsSelecting(false);
+    // Auto-confirm selection when mouse is released
+    if (selection) {
+      handleConfirmSelection();
+    }
   };
 
   const handleConfirmSelection = async () => {
@@ -187,18 +191,8 @@ export const AreaSelector: React.FC<AreaSelectorProps> = ({
       <div className="absolute top-4 left-1/2 transform -translate-x-1/2 flex gap-2 z-[10001]">
         <div className="bg-background/90 backdrop-blur rounded-lg p-2 flex gap-2">
           <div className="text-sm text-foreground px-2 py-1">
-            {selection ? 'Click and drag to select area, then confirm' : 'Click and drag to select the document area'}
+            Click and drag to select the document area
           </div>
-          {selection && (
-            <Button
-              onClick={handleConfirmSelection}
-              size="sm"
-              variant="gradient"
-            >
-              <Check className="h-4 w-4" />
-              Confirm
-            </Button>
-          )}
           <Button
             onClick={onCancel}
             size="sm"
