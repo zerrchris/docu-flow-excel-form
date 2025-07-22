@@ -48,31 +48,7 @@ export const CapturePopup: React.FC = () => {
       setShowAreaSelector(false);
       setIsCapturing(false);
 
-      // Auto-send only if this is the first capture (single capture mode)
-      if (captures.length === 0) {
-        try {
-          const arrayBuffer = await file.arrayBuffer();
-          const fileData = {
-            name: file.name,
-            type: file.type,
-            data: Array.from(new Uint8Array(arrayBuffer))
-          };
-
-          if (window.opener) {
-            window.opener.postMessage({
-              type: 'DOCUMENT_CAPTURED',
-              file: fileData
-            }, window.location.origin);
-          }
-          
-          showMessage(`Captured and linked document successfully.`);
-        } catch (error) {
-          console.error('Failed to send captured document:', error);
-          showMessage(`Captured area 1. Continue capturing or combine when ready.`);
-        }
-      } else {
-        showMessage(`Captured area ${captures.length + 1}. Continue capturing or combine when ready.`);
-      }
+      showMessage(`Captured area ${captures.length + 1}. Continue capturing or combine when ready.`);
     } catch (error) {
       console.error('Failed to process captured area:', error);
       showMessage('Failed to process the captured area. Please try again.', 'error');
