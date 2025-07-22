@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Target } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { FloatingCaptureWindow } from './FloatingCaptureWindow';
 import { isScreenCaptureSupported } from '@/utils/screenCapture';
 
 interface ScreenshotCaptureProps {
@@ -14,7 +13,6 @@ export const ScreenshotCapture: React.FC<ScreenshotCaptureProps> = ({
   onFileSelect,
   className = ""
 }) => {
-  const [isFloatingOpen, setIsFloatingOpen] = useState(false);
   const { toast } = useToast();
 
   const handleStartDocumentCapture = () => {
@@ -27,30 +25,67 @@ export const ScreenshotCapture: React.FC<ScreenshotCaptureProps> = ({
       return;
     }
 
-    setIsFloatingOpen(true);
-  };
+    // Open popup window
+    const popup = window.open(
+      '/capture-popup',
+      'DocumentCapture',
+      'width=350,height=500,left=50,top=50,resizable=yes,scrollbars=no,toolbar=no,menubar=no,location=no,status=no'
+    );
 
-  const handleFloatingComplete = (file: File) => {
-    onFileSelect(file);
-    setIsFloatingOpen(false);
+    if (!popup) {
+      toast({
+        title: "Popup Blocked",
+        description: "Please allow popups for this site to use document capture.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Listen for messages from the popup
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      
+      if (event.data.type === 'DOCUMENT_CAPTURED' && event.data.file) {
+        // Convert the file data back to a File object
+        const { name, type, data } = event.data.file;
+        const byteArray = new Uint8Array(data);
+        const file = new File([byteArray], name, { type });
+        
+        onFileSelect(file);
+        popup.close();
+        window.removeEventListener('message', handleMessage);
+        
+        toast({
+          title: "Document Captured",
+          description: "Successfully captured and processed the document.",
+        });
+      }
+      
+      if (event.data.type === 'CAPTURE_CANCELLED') {
+        popup.close();
+        window.removeEventListener('message', handleMessage);
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+
+    // Clean up if popup is closed manually
+    const checkClosed = setInterval(() => {
+      if (popup.closed) {
+        window.removeEventListener('message', handleMessage);
+        clearInterval(checkClosed);
+      }
+    }, 1000);
   };
 
   return (
-    <>
-      <Button
-        onClick={handleStartDocumentCapture}
-        variant="gradient"
-        className={`gap-2 ${className}`}
-      >
-        <Target className="h-4 w-4" />
-        Document Capture
-      </Button>
-
-      <FloatingCaptureWindow
-        isOpen={isFloatingOpen}
-        onClose={() => setIsFloatingOpen(false)}
-        onComplete={handleFloatingComplete}
-      />
-    </>
+    <Button
+      onClick={handleStartDocumentCapture}
+      variant="gradient"
+      className={`gap-2 ${className}`}
+    >
+      <Target className="h-4 w-4" />
+      Document Capture
+    </Button>
   );
 };

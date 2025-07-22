@@ -13,6 +13,7 @@ import { MobileCapture } from "./pages/MobileCapture";
 import { FileManager } from "./pages/FileManager";
 import NotFound from "./pages/NotFound";
 import GoogleAuthCallback from "./components/GoogleAuthCallback";
+import CapturePopupPage from "./pages/CapturePopup";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +33,7 @@ const App = () => (
           <Route path="/mobile-capture" element={<MobileCapture />} />
           <Route path="/file-manager" element={<FileManager />} />
           <Route path="/google-auth-callback" element={<GoogleAuthCallback />} />
+          <Route path="/capture-popup" element={<CapturePopupPage />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
