@@ -103,12 +103,13 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
   };
 
   const handleMouseDown = (e: React.MouseEvent, column: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
     const startX = e.clientX;
     const startWidth = getColumnWidth(column);
-    setResizing({ column, startX, startWidth });
     
     const handleMouseMove = (e: MouseEvent) => {
-      if (!resizing) return;
       const diff = e.clientX - startX;
       const newWidth = Math.max(100, startWidth + diff);
       
@@ -123,13 +124,40 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
     };
 
     const handleMouseUp = () => {
-      setResizing(null);
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
+      setResizing(null);
     };
 
+    setResizing({ column, startX, startWidth });
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent, column: string) => {
+    const currentIndex = editableFields.indexOf(column);
+    
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const nextIndex = e.shiftKey 
+        ? (currentIndex - 1 + editableFields.length) % editableFields.length
+        : (currentIndex + 1) % editableFields.length;
+      const nextColumn = editableFields[nextIndex];
+      startEditing(nextColumn);
+    } else if (e.key === 'ArrowLeft' && !editingColumn) {
+      e.preventDefault();
+      const prevIndex = (currentIndex - 1 + editableFields.length) % editableFields.length;
+      const prevColumn = editableFields[prevIndex];
+      startEditing(prevColumn);
+    } else if (e.key === 'ArrowRight' && !editingColumn) {
+      e.preventDefault();
+      const nextIndex = (currentIndex + 1) % editableFields.length;
+      const nextColumn = editableFields[nextIndex];
+      startEditing(nextColumn);
+    } else if (e.key === 'Enter' && !editingColumn) {
+      e.preventDefault();
+      startEditing(column);
+    }
   };
 
   const handleZoomIn = () => {
@@ -278,6 +306,15 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                               } else if (e.key === 'Escape') {
                                 e.preventDefault();
                                 cancelEditing();
+                              } else if (e.key === 'Tab') {
+                                e.preventDefault();
+                                finishEditing();
+                                const currentIndex = editableFields.indexOf(column);
+                                const nextIndex = e.shiftKey 
+                                  ? (currentIndex - 1 + editableFields.length) % editableFields.length
+                                  : (currentIndex + 1) % editableFields.length;
+                                const nextColumn = editableFields[nextIndex];
+                                setTimeout(() => startEditing(nextColumn), 0);
                               }
                             }}
                             onBlur={finishEditing}
@@ -294,10 +331,12 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                           />
                         ) : (
                           <div
-                            className={`min-h-[2rem] py-2 px-3 cursor-cell flex items-start transition-colors whitespace-pre-wrap hover:bg-muted/50 border-2 border-transparent
+                            className={`min-h-[2rem] py-2 px-3 cursor-cell flex items-start transition-colors whitespace-pre-wrap hover:bg-muted/50 border-2 border-transparent focus:bg-muted/50 focus:outline-none
                               ${alignment === 'center' ? 'text-center justify-center' : 
                                 alignment === 'right' ? 'text-right justify-end' : 'text-left justify-start'}`}
                             onClick={() => startEditing(column)}
+                            onKeyDown={(e) => handleKeyDown(e, column)}
+                            tabIndex={0}
                           >
                             {localRowData[column] || ''}
                           </div>
