@@ -23,6 +23,7 @@ const AuthButton: React.FC = () => {
           if (!mounted) return;
           
           setUser(session?.user ?? null);
+          setLoading(false); // Clear loading when auth state changes
           
           // Defer admin check to avoid deadlock
           if (session?.user) {
@@ -40,12 +41,11 @@ const AuthButton: React.FC = () => {
         if (!mounted) return;
         
         setUser(session?.user ?? null);
+        setLoading(false); // Clear loading after getting session
         
         if (session?.user) {
           checkAdminStatus(session.user.id);
         }
-        
-        setLoading(false);
         
         return () => {
           mounted = false;
@@ -54,7 +54,7 @@ const AuthButton: React.FC = () => {
       } catch (error) {
         console.warn('Auth initialization failed:', error);
         if (mounted) {
-          setLoading(false);
+          setLoading(false); // Always clear loading on error
         }
       }
     };
