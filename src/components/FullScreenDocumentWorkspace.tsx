@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { X, ZoomIn, ZoomOut, RotateCcw, ExternalLink } from 'lucide-react';
 import { DocumentService } from '@/services/documentService';
@@ -189,9 +189,25 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
         <div className="p-4 border-b bg-muted/20">
           <h4 className="font-semibold">Working Row {rowIndex + 1}</h4>
         </div>
-        <ScrollArea className="h-40">
+        <ScrollArea className="h-48">
           <div className="min-w-max">
             <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50">
+                  {fields.map((column) => (
+                    <TableHead 
+                      key={column}
+                      className="border-r border-border font-semibold text-foreground"
+                      style={{ 
+                        width: `${getColumnWidth(column)}px`, 
+                        minWidth: `${getColumnWidth(column)}px`
+                      }}
+                    >
+                      {column}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
               <TableBody>
                 <TableRow className="hover:bg-muted/30">
                   {fields.map((column) => {
