@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
+import { Textarea } from '@/components/ui/textarea';
 import { X, ZoomIn, ZoomOut, RotateCcw, ExternalLink } from 'lucide-react';
 import { DocumentService } from '@/services/documentService';
 import PDFViewer from './PDFViewer';
@@ -13,6 +15,8 @@ interface FullScreenDocumentWorkspaceProps {
   fields: string[];
   onClose: () => void;
   onUpdateRow: (rowIndex: number, data: Record<string, string>) => void;
+  columnWidths?: Record<string, number>;
+  columnAlignments?: Record<string, 'left' | 'center' | 'right'>;
 }
 
 const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = ({
@@ -21,7 +25,9 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
   rowData,
   fields,
   onClose,
-  onUpdateRow
+  onUpdateRow,
+  columnWidths = {},
+  columnAlignments = {}
 }) => {
   const [documentUrl, setDocumentUrl] = useState<string | null>(null);
   const [documentName, setDocumentName] = useState<string>('');
@@ -31,6 +37,8 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
   const [rotation, setRotation] = useState(0);
   const [isPdf, setIsPdf] = useState(false);
   const [localRowData, setLocalRowData] = useState(rowData);
+  const [editingColumn, setEditingColumn] = useState<string | null>(null);
+  const [editingValue, setEditingValue] = useState<string>('');
 
   useEffect(() => {
     const loadDocument = async () => {
@@ -62,6 +70,28 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
     const updatedData = { ...localRowData, [field]: value };
     setLocalRowData(updatedData);
     onUpdateRow(rowIndex, updatedData);
+  };
+
+  const startEditing = (column: string) => {
+    setEditingColumn(column);
+    setEditingValue(localRowData[column] || '');
+  };
+
+  const finishEditing = () => {
+    if (editingColumn) {
+      handleFieldChange(editingColumn, editingValue);
+    }
+    setEditingColumn(null);
+    setEditingValue('');
+  };
+
+  const cancelEditing = () => {
+    setEditingColumn(null);
+    setEditingValue('');
+  };
+
+  const getColumnWidth = (column: string): number => {
+    return columnWidths[column] || 200;
   };
 
   const handleZoomIn = () => {
@@ -155,28 +185,69 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
       </div>
 
       {/* Working Row Area - Fixed at bottom */}
-      <Card className="border-t-2 border-primary shrink-0 max-h-48">
+      <Card className="border-t-2 border-primary shrink-0">
         <div className="p-4 border-b bg-muted/20">
           <h4 className="font-semibold">Working Row {rowIndex + 1}</h4>
         </div>
         <ScrollArea className="h-40">
-          <div className="p-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {fields.map((field) => (
-                <div key={field} className="space-y-1">
-                  <label className="text-sm font-medium text-muted-foreground">
-                    {field}
-                  </label>
-                  <input
-                    type="text"
-                    value={localRowData[field] || ''}
-                    onChange={(e) => handleFieldChange(field, e.target.value)}
-                    className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
-                    placeholder={`Enter ${field}`}
-                  />
-                </div>
-              ))}
-            </div>
+          <div className="min-w-max">
+            <Table>
+              <TableBody>
+                <TableRow className="hover:bg-muted/30">
+                  {fields.map((column) => {
+                    const isEditing = editingColumn === column;
+                    const alignment = columnAlignments[column] || 'left';
+                    
+                    return (
+                      <TableCell 
+                        key={column}
+                        className="border-r border-border p-0 relative"
+                        style={{ 
+                          width: `${getColumnWidth(column)}px`, 
+                          minWidth: `${getColumnWidth(column)}px`
+                        }}
+                      >
+                        {isEditing ? (
+                          <Textarea
+                            value={editingValue}
+                            onChange={(e) => setEditingValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                finishEditing();
+                              } else if (e.key === 'Escape') {
+                                e.preventDefault();
+                                cancelEditing();
+                              }
+                            }}
+                            onBlur={finishEditing}
+                            className={`w-full border-2 border-primary rounded-none bg-background focus:ring-0 focus:outline-none resize-none p-2 ${
+                              alignment === 'center' ? 'text-center' : 
+                              alignment === 'right' ? 'text-right' : 'text-left'
+                            }`}
+                            style={{ 
+                              minHeight: '60px',
+                              width: '100%'
+                            }}
+                            autoFocus
+                            rows={Math.max(3, Math.ceil(editingValue.length / 50))}
+                          />
+                        ) : (
+                          <div
+                            className={`min-h-[2rem] py-2 px-3 cursor-cell flex items-start transition-colors whitespace-pre-wrap hover:bg-muted/50 border-2 border-transparent
+                              ${alignment === 'center' ? 'text-center justify-center' : 
+                                alignment === 'right' ? 'text-right justify-end' : 'text-left justify-start'}`}
+                            onClick={() => startEditing(column)}
+                          >
+                            {localRowData[column] || ''}
+                          </div>
+                        )}
+                      </TableCell>
+                    );
+                  })}
+                </TableRow>
+              </TableBody>
+            </Table>
           </div>
         </ScrollArea>
       </Card>

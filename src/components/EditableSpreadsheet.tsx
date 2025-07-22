@@ -3038,9 +3038,6 @@ ${extractionFields}`
                                        await analyzeDocumentAndPopulateRow(file, rowIndex);
                                      }
                                    }}
-                                    onViewDocument={() => {
-                                      setInlineViewerRow(inlineViewerRow === rowIndex ? null : rowIndex);
-                                    }}
                                     onOpenWorkspace={() => {
                                       setFullScreenWorkspace({ runsheetId: currentRunsheetId || '', rowIndex });
                                     }}
@@ -3390,6 +3387,8 @@ ${extractionFields}`
               setData(newData);
               onDataChange?.(newData);
             }}
+            columnWidths={columnWidths}
+            columnAlignments={columnAlignments}
           />
         )}
       </div>
