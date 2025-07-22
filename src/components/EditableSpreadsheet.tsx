@@ -46,6 +46,7 @@ import DocumentLinker from './DocumentLinker';
 import { DocumentService, type DocumentRecord } from '@/services/documentService';
 import { ExtractionPreferencesService } from '@/services/extractionPreferences';
 import DocumentNamingSettings from './DocumentNamingSettings';
+import InlineDocumentViewer from './InlineDocumentViewer';
 import type { User } from '@supabase/supabase-js';
 
 interface SpreadsheetProps {
@@ -144,6 +145,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [documentMap, setDocumentMap] = useState<Map<number, DocumentRecord>>(new Map());
   const [currentRunsheetId, setCurrentRunsheetId] = useState<string | null>(null);
   const [showNamingSettings, setShowNamingSettings] = useState(false);
+  const [inlineViewerRow, setInlineViewerRow] = useState<number | null>(null);
   
   // Ref for container width measurement
   const containerRef = useRef<HTMLDivElement>(null);
@@ -2891,10 +2893,24 @@ ${extractionFields}`
                </TableRow>
              </TableHeader>
 
-            {/* Table Body */}
-            <TableBody>
-              {data.map((row, rowIndex) => (
-                <TableRow key={rowIndex} className="hover:bg-muted/30">
+             {/* Table Body */}
+             <TableBody>
+               {data.map((row, rowIndex) => (
+                 <React.Fragment key={rowIndex}>
+                   {/* Show inline document viewer above this row if it's selected */}
+                   {inlineViewerRow === rowIndex && (
+                     <TableRow>
+                       <TableCell colSpan={columns.length} className="p-0 border-0">
+                         <InlineDocumentViewer
+                           runsheetId={currentRunsheetId || ''}
+                           rowIndex={rowIndex}
+                           onClose={() => setInlineViewerRow(null)}
+                         />
+                       </TableCell>
+                     </TableRow>
+                   )}
+                   
+                   <TableRow className="hover:bg-muted/30">
                    {columns.map((column) => {
                     const isSelected = selectedCell?.rowIndex === rowIndex && selectedCell?.column === column;
                     const isEditing = editingCell?.rowIndex === rowIndex && editingCell?.column === column;
@@ -3000,28 +3016,31 @@ ${extractionFields}`
                                       return newMap;
                                     });
                                    }}
-                                    onAnalyzeDocument={async (file, filename) => {
-                                      console.log('🔧 EditableSpreadsheet: onAnalyzeDocument called for row:', rowIndex);
-                                      
-                                      // Check if row has existing data (excluding Document File Name column)
-                                      const rowData = data[rowIndex];
-                                      const hasExistingData = columns.some(col => 
-                                        col !== 'Document File Name' && 
-                                        rowData[col] && 
-                                        rowData[col].trim() !== ''
-                                      );
+                                   onAnalyzeDocument={async (file, filename) => {
+                                     console.log('🔧 EditableSpreadsheet: onAnalyzeDocument called for row:', rowIndex);
+                                     
+                                     // Check if row has existing data (excluding Document File Name column)
+                                     const rowData = data[rowIndex];
+                                     const hasExistingData = columns.some(col => 
+                                       col !== 'Document File Name' && 
+                                       rowData[col] && 
+                                       rowData[col].trim() !== ''
+                                     );
 
-                                      if (hasExistingData) {
-                                        // Show warning dialog
-                                        setPendingAnalysis({ file, filename, rowIndex });
-                                        setShowAnalyzeWarningDialog(true);
-                                      } else {
-                                        // Proceed with analysis
-                                        await analyzeDocumentAndPopulateRow(file, rowIndex);
-                                      }
-                                    }}
-                                   isSpreadsheetUpload={true}
-                                   autoAnalyze={false}
+                                     if (hasExistingData) {
+                                       // Show warning dialog
+                                       setPendingAnalysis({ file, filename, rowIndex });
+                                       setShowAnalyzeWarningDialog(true);
+                                     } else {
+                                       // Proceed with analysis
+                                       await analyzeDocumentAndPopulateRow(file, rowIndex);
+                                     }
+                                   }}
+                                   onViewDocument={() => {
+                                     setInlineViewerRow(inlineViewerRow === rowIndex ? null : rowIndex);
+                                   }}
+                                  isSpreadsheetUpload={true}
+                                  autoAnalyze={false}
                                 />
                                ) : (
                                 row[column] || ''
@@ -3031,9 +3050,10 @@ ${extractionFields}`
                      </TableCell>
                    );
                   })}
-               </TableRow>
-               ))}
-            </TableBody>
+                </TableRow>
+                 </React.Fragment>
+                ))}
+             </TableBody>
           </Table>
           </div>
 
