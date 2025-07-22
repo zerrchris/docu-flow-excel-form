@@ -47,6 +47,7 @@ import { DocumentService, type DocumentRecord } from '@/services/documentService
 import { ExtractionPreferencesService } from '@/services/extractionPreferences';
 import DocumentNamingSettings from './DocumentNamingSettings';
 import InlineDocumentViewer from './InlineDocumentViewer';
+import FullScreenDocumentWorkspace from './FullScreenDocumentWorkspace';
 import type { User } from '@supabase/supabase-js';
 
 interface SpreadsheetProps {
@@ -146,6 +147,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [currentRunsheetId, setCurrentRunsheetId] = useState<string | null>(null);
   const [showNamingSettings, setShowNamingSettings] = useState(false);
   const [inlineViewerRow, setInlineViewerRow] = useState<number | null>(null);
+  const [fullScreenWorkspace, setFullScreenWorkspace] = useState<{ runsheetId: string; rowIndex: number } | null>(null);
   
   // Ref for container width measurement
   const containerRef = useRef<HTMLDivElement>(null);
@@ -3036,9 +3038,12 @@ ${extractionFields}`
                                        await analyzeDocumentAndPopulateRow(file, rowIndex);
                                      }
                                    }}
-                                   onViewDocument={() => {
-                                     setInlineViewerRow(inlineViewerRow === rowIndex ? null : rowIndex);
-                                   }}
+                                    onViewDocument={() => {
+                                      setInlineViewerRow(inlineViewerRow === rowIndex ? null : rowIndex);
+                                    }}
+                                    onOpenWorkspace={() => {
+                                      setFullScreenWorkspace({ runsheetId: currentRunsheetId || '', rowIndex });
+                                    }}
                                   isSpreadsheetUpload={true}
                                   autoAnalyze={false}
                                 />
@@ -3370,9 +3375,25 @@ ${extractionFields}`
           onClose={() => setShowGoogleDrivePicker(false)}
           onFileSelect={performUpload}
         />
+        </div>
+        
+        {fullScreenWorkspace && (
+          <FullScreenDocumentWorkspace
+            runsheetId={fullScreenWorkspace.runsheetId}
+            rowIndex={fullScreenWorkspace.rowIndex}
+            rowData={data[fullScreenWorkspace.rowIndex] || {}}
+            fields={columns}
+            onClose={() => setFullScreenWorkspace(null)}
+            onUpdateRow={(rowIndex, rowData) => {
+              const newData = [...data];
+              newData[rowIndex] = rowData;
+              setData(newData);
+              onDataChange?.(newData);
+            }}
+          />
+        )}
       </div>
-    </div>
-  );
+    );
 };
 
 export default EditableSpreadsheet;

@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { Upload, File, ExternalLink, Trash2, Download, Edit2, Brain, Eye } from 'lucide-react';
+import { Upload, File, ExternalLink, Trash2, Download, Edit2, Brain, Eye, Maximize2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { ScreenshotCapture } from './ScreenshotCapture';
@@ -18,6 +18,7 @@ interface DocumentLinkerProps {
   onDocumentRemoved: () => void;
   onAnalyzeDocument?: (file: File, filename: string) => void;
   onViewDocument?: () => void;
+  onOpenWorkspace?: () => void;
   isSpreadsheetUpload?: boolean; // Flag to distinguish spreadsheet uploads from processor uploads
   autoAnalyze?: boolean; // Setting to control auto-analysis
 }
@@ -32,6 +33,7 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
   onDocumentRemoved,
   onAnalyzeDocument,
   onViewDocument,
+  onOpenWorkspace,
   isSpreadsheetUpload = false,
   autoAnalyze = false
 }) => {
@@ -476,20 +478,34 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                   <Brain className="w-3 h-3" />
                 </Button>
               )}
-               <Button
-                 variant="ghost"
-                 size="sm"
-                 onClick={(e) => {
-                   e.stopPropagation(); // Prevent cell edit mode
-                   if (onViewDocument) {
-                     onViewDocument();
-                   }
-                 }}
-                 className="h-6 w-6 p-0"
-                 title="View document inline"
-               >
-                 <Eye className="w-3 h-3" />
-               </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation(); // Prevent cell edit mode
+                    if (onViewDocument) {
+                      onViewDocument();
+                    }
+                  }}
+                  className="h-6 w-6 p-0"
+                  title="View document inline"
+                >
+                  <Eye className="w-3 h-3" />
+                </Button>
+                {onOpenWorkspace && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation(); // Prevent cell edit mode
+                      onOpenWorkspace();
+                    }}
+                    className="h-6 w-6 p-0"
+                    title="Open full-screen workspace"
+                  >
+                    <Maximize2 className="w-3 h-3" />
+                  </Button>
+                )}
                <Button
                  variant="ghost"
                  size="sm"
