@@ -6,6 +6,7 @@ import { Upload, File, ExternalLink, Trash2, Download, Edit2, Brain } from 'luci
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { ScreenshotCapture } from './ScreenshotCapture';
+import ImageCombiner from './ImageCombiner';
 
 interface DocumentLinkerProps {
   runsheetId: string;
@@ -40,6 +41,8 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
   const [hasLocalChanges, setHasLocalChanges] = useState(false);
   const [documentId, setDocumentId] = useState<string | null>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null); // Store file for analysis
+  const [showImageCombiner, setShowImageCombiner] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -76,6 +79,43 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
     
     // Return sanitized name + original extension
     return sanitizedName + extension;
+  };
+
+  const handleMultipleFiles = async (files: File[]) => {
+    if (!files || files.length === 0) return;
+
+    // Check if runsheet is saved first
+    if (!runsheetId || runsheetId.trim() === '') {
+      toast({
+        title: "Save runsheet first",
+        description: "Please save your runsheet before uploading documents.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // If multiple image files, show combination options
+    const imageFiles = files.filter(file => file.type.startsWith('image/'));
+    if (imageFiles.length > 1) {
+      setSelectedFiles(imageFiles);
+      setShowImageCombiner(true);
+      return;
+    }
+
+    // Single file or non-image files - process normally
+    const file = files[0];
+    await handleFileSelect(file);
+  };
+
+  const handleImageCombined = (combinedFile: File, previewUrl: string) => {
+    setShowImageCombiner(false);
+    setSelectedFiles([]);
+    handleFileSelect(combinedFile);
+  };
+
+  const handleCancelCombiner = () => {
+    setShowImageCombiner(false);
+    setSelectedFiles([]);
   };
 
   const handleFileSelect = async (file: File) => {
@@ -355,7 +395,7 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
     
     const files = Array.from(e.dataTransfer.files);
     if (files.length > 0) {
-      handleFileSelect(files[0]);
+      handleMultipleFiles(files);
     }
   };
 
@@ -526,48 +566,62 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
   }
 
     return (
-      <Card 
-        className={`p-3 border-dashed transition-colors ${
-          dragActive ? 'border-primary bg-primary/5' : 'border-muted-foreground/25'
-        }`}
-        onDrop={handleDrop}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onClick={(e) => {
-          e.stopPropagation(); // Prevent cell selection
-          e.preventDefault(); // Prevent default behavior
-        }}
-      >
-      <div className="flex items-center justify-center gap-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={openFileSelector}
-          disabled={isUploading}
-          className="h-8 text-xs"
-        >
-          <Upload className="w-3 h-3 mr-1" />
-          {isUploading ? 'Uploading...' : 'Add File'}
-        </Button>
-        <ScreenshotCapture 
-          onFileSelect={handleFileSelect}
-          className="h-8 text-xs"
-        />
-        <input
-          ref={fileInputRef}
-          type="file"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) {
-              handleFileSelect(file);
-            }
+      <>
+        {showImageCombiner && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-background rounded-lg p-6 max-w-md w-full mx-4">
+              <ImageCombiner
+                files={selectedFiles}
+                onCombined={handleImageCombined}
+                onCancel={handleCancelCombiner}
+              />
+            </div>
+          </div>
+        )}
+        <Card 
+          className={`p-3 border-dashed transition-colors ${
+            dragActive ? 'border-primary bg-primary/5' : 'border-muted-foreground/25'
+          }`}
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onClick={(e) => {
+            e.stopPropagation(); // Prevent cell selection
+            e.preventDefault(); // Prevent default behavior
           }}
-          accept="image/*,.pdf,.doc,.docx,.txt"
-        />
-      </div>
-    </Card>
-  );
+        >
+        <div className="flex items-center justify-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={openFileSelector}
+            disabled={isUploading}
+            className="h-8 text-xs"
+          >
+            <Upload className="w-3 h-3 mr-1" />
+            {isUploading ? 'Uploading...' : 'Add File'}
+          </Button>
+          <ScreenshotCapture 
+            onFileSelect={handleFileSelect}
+            className="h-8 text-xs"
+          />
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={(e) => {
+              const files = Array.from(e.target.files || []);
+              if (files.length > 0) {
+                handleMultipleFiles(files);
+              }
+            }}
+            accept="image/*,.pdf,.doc,.docx,.txt"
+          />
+        </div>
+      </Card>
+      </>
+    );
 };
 
 export default DocumentLinker;
