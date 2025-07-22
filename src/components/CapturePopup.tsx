@@ -1,16 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Camera, X, FileImage, FileText, RefreshCw } from 'lucide-react';
-import { CaptureResult } from '@/utils/screenCapture';
+import { Camera, X, FileImage, FileText, RefreshCw, Plus } from 'lucide-react';
+import { captureScreen, CaptureResult } from '@/utils/screenCapture';
 import { combineImages } from '@/utils/imageCombiner';
-import { AreaSelector } from './AreaSelector';
 
 export const CapturePopup: React.FC = () => {
   const [captures, setCaptures] = useState<CaptureResult[]>([]);
   const [isCapturing, setIsCapturing] = useState(false);
   const [isCombining, setIsCombining] = useState(false);
-  const [showAreaSelector, setShowAreaSelector] = useState(false);
   const [message, setMessage] = useState('');
 
   useEffect(() => {
@@ -22,44 +20,28 @@ export const CapturePopup: React.FC = () => {
     setTimeout(() => setMessage(''), 3000);
   };
 
-  const handleStartCapture = async () => {
+  const handleCaptureImage = async () => {
     setIsCapturing(true);
-    setShowAreaSelector(true);
-  };
-
-  const handleAreaSelected = async (croppedBlob: Blob) => {
     try {
-      const timestamp = Date.now();
-      const file = new File([croppedBlob], `capture-${timestamp}.png`, {
-        type: 'image/png',
-        lastModified: timestamp
-      });
-
-      const previewUrl = URL.createObjectURL(croppedBlob);
-
-      const newCapture: CaptureResult = {
-        blob: croppedBlob,
-        file,
-        timestamp,
-        previewUrl
-      };
-
-      setCaptures(prev => [...prev, newCapture]);
-      setShowAreaSelector(false);
-      setIsCapturing(false);
-
-      showMessage(`Captured area ${captures.length + 1}. Continue capturing or combine when ready.`);
+      const result = await captureScreen();
+      
+      setCaptures(prev => [...prev, result]);
+      
+      const isFirstCapture = captures.length === 0;
+      showMessage(
+        isFirstCapture 
+          ? 'First page captured! Scroll to next page and capture again, or finish when done.'
+          : `Page ${captures.length + 1} captured! Continue capturing or finish when done.`
+      );
     } catch (error) {
-      console.error('Failed to process captured area:', error);
-      showMessage('Failed to process the captured area. Please try again.', 'error');
+      console.error('Failed to capture screen:', error);
+      showMessage(
+        error instanceof Error ? error.message : 'Failed to capture screen. Please try again.',
+        'error'
+      );
+    } finally {
       setIsCapturing(false);
-      setShowAreaSelector(false);
     }
-  };
-
-  const handleCancelCapture = () => {
-    setShowAreaSelector(false);
-    setIsCapturing(false);
   };
 
   const handleRemoveCapture = (index: number) => {
@@ -71,9 +53,9 @@ export const CapturePopup: React.FC = () => {
     });
   };
 
-  const handleCombineDocuments = async (type: 'pdf' | 'vertical') => {
+  const handleFinishDocument = async (type: 'pdf' | 'vertical') => {
     if (captures.length === 0) {
-      showMessage('Please capture at least one area before combining.', 'error');
+      showMessage('Please capture at least one page before finishing.', 'error');
       return;
     }
 
@@ -106,10 +88,10 @@ export const CapturePopup: React.FC = () => {
       captures.forEach(capture => URL.revokeObjectURL(capture.previewUrl));
       setCaptures([]);
       
-      showMessage(`Successfully combined ${files.length} captures into a ${type === 'pdf' ? 'PDF' : 'single image'}.`);
+      showMessage(`Document successfully created with ${files.length} page${files.length > 1 ? 's' : ''}.`);
     } catch (error) {
       console.error('Failed to combine documents:', error);
-      showMessage('Failed to combine the captured areas. Please try again.', 'error');
+      showMessage('Failed to combine the captured pages. Please try again.', 'error');
     } finally {
       setIsCombining(false);
     }
@@ -120,6 +102,13 @@ export const CapturePopup: React.FC = () => {
       window.opener.postMessage({ type: 'CAPTURE_CANCELLED' }, window.location.origin);
     }
     window.close();
+  };
+
+  const getButtonText = () => {
+    if (captures.length === 0) {
+      return 'Capture First Page';
+    }
+    return `Capture Page ${captures.length + 1}`;
   };
 
   return (
@@ -146,17 +135,18 @@ export const CapturePopup: React.FC = () => {
           <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded">
             <div className="font-medium mb-1">Instructions:</div>
             <ol className="text-xs space-y-1 list-decimal list-inside">
-              <li>Navigate to your document in another tab/window</li>
-              <li>Click "Capture Area" below</li>
-              <li>Use crosshairs to select document portion</li>
-              <li>Repeat for multiple pages/sections</li>
-              <li>Combine when finished</li>
+              <li>Make sure your document is full-screen in another tab</li>
+              <li>Click "Capture First Page" to take a screenshot</li>
+              <li>Scroll to the next page in your document</li>
+              <li>Click "Capture Page 2" to capture the next page</li>
+              <li>Repeat until all pages are captured</li>
+              <li>Click "Finish Document" to combine all pages</li>
             </ol>
           </div>
 
           {/* Message */}
           {message && (
-            <div className={`text-sm p-2 rounded ${message.includes('Failed') ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'}`}>
+            <div className={`text-sm p-2 rounded ${message.includes('Failed') || message.includes('try again') ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'}`}>
               {message}
             </div>
           )}
@@ -164,54 +154,63 @@ export const CapturePopup: React.FC = () => {
           {/* Capture Controls */}
           <div className="space-y-2">
             <Button
-              onClick={handleStartCapture}
+              onClick={handleCaptureImage}
               disabled={isCapturing}
               size="lg"
               className="w-full"
               variant="gradient"
             >
-              <Camera className="h-4 w-4" />
-              {isCapturing ? 'Ready to Select...' : 'Capture Area'}
+              {isCapturing ? (
+                <>
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  Capturing...
+                </>
+              ) : (
+                <>
+                  <Camera className="h-4 w-4" />
+                  {getButtonText()}
+                </>
+              )}
             </Button>
 
             {captures.length > 0 && (
               <div className="grid grid-cols-2 gap-2">
                 <Button
-                  onClick={() => handleCombineDocuments('pdf')}
+                  onClick={() => handleFinishDocument('pdf')}
                   disabled={isCombining}
                   size="sm"
                   variant="secondary"
                 >
                   {isCombining ? <RefreshCw className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
-                  PDF ({captures.length})
+                  Finish as PDF
                 </Button>
                 <Button
-                  onClick={() => handleCombineDocuments('vertical')}
+                  onClick={() => handleFinishDocument('vertical')}
                   disabled={isCombining}
                   size="sm"
                   variant="secondary"
                 >
                   {isCombining ? <RefreshCw className="h-4 w-4 animate-spin" /> : <FileImage className="h-4 w-4" />}
-                  Image ({captures.length})
+                  Finish as Image
                 </Button>
               </div>
             )}
           </div>
 
-          {/* Captured Areas Preview */}
+          {/* Captured Pages Preview */}
           {captures.length > 0 && (
             <div className="space-y-2">
-              <div className="text-sm font-medium">Captured Areas ({captures.length})</div>
+              <div className="text-sm font-medium">Captured Pages ({captures.length})</div>
               <div className="max-h-48 overflow-y-auto space-y-2">
                 {captures.map((capture, index) => (
                   <div key={capture.timestamp} className="flex items-center gap-2 p-2 border rounded">
                     <img 
                       src={capture.previewUrl} 
-                      alt={`Capture ${index + 1}`}
+                      alt={`Page ${index + 1}`}
                       className="w-12 h-12 object-cover rounded"
                     />
                     <div className="flex-1">
-                      <div className="text-sm font-medium">Area {index + 1}</div>
+                      <div className="text-sm font-medium">Page {index + 1}</div>
                       <div className="text-xs text-muted-foreground">
                         {new Date(capture.timestamp).toLocaleTimeString()}
                       </div>
@@ -231,14 +230,6 @@ export const CapturePopup: React.FC = () => {
           )}
         </div>
       </Card>
-
-      {/* Area Selector Overlay */}
-      {showAreaSelector && (
-        <AreaSelector
-          onAreaSelected={handleAreaSelected}
-          onCancel={handleCancelCapture}
-        />
-      )}
     </div>
   );
 };
