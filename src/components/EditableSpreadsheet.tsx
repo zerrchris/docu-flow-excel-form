@@ -3389,6 +3389,13 @@ ${extractionFields}`
             }}
             columnWidths={columnWidths}
             columnAlignments={columnAlignments}
+            onColumnWidthChange={(column, width) => {
+              setColumnWidths(prev => ({
+                ...prev,
+                [column]: width
+              }));
+              setHasManuallyResizedColumns(true);
+            }}
           />
         )}
       </div>

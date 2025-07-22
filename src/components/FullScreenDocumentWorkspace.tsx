@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -17,6 +17,7 @@ interface FullScreenDocumentWorkspaceProps {
   onUpdateRow: (rowIndex: number, data: Record<string, string>) => void;
   columnWidths?: Record<string, number>;
   columnAlignments?: Record<string, 'left' | 'center' | 'right'>;
+  onColumnWidthChange?: (column: string, width: number) => void;
 }
 
 const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = ({
@@ -27,7 +28,8 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
   onClose,
   onUpdateRow,
   columnWidths = {},
-  columnAlignments = {}
+  columnAlignments = {},
+  onColumnWidthChange
 }) => {
   const [documentUrl, setDocumentUrl] = useState<string | null>(null);
   const [documentName, setDocumentName] = useState<string>('');
@@ -39,6 +41,12 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
   const [localRowData, setLocalRowData] = useState(rowData);
   const [editingColumn, setEditingColumn] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState<string>('');
+  const [localColumnWidths, setLocalColumnWidths] = useState(columnWidths);
+  const [resizing, setResizing] = useState<{column: string, startX: number, startWidth: number} | null>(null);
+  const tableRef = useRef<HTMLDivElement>(null);
+  
+  // Filter out Document File Name column for editing
+  const editableFields = fields.filter(field => field !== 'Document File Name');
 
   useEffect(() => {
     const loadDocument = async () => {
@@ -91,7 +99,37 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
   };
 
   const getColumnWidth = (column: string): number => {
-    return columnWidths[column] || 200;
+    return localColumnWidths[column] || columnWidths[column] || 200;
+  };
+
+  const handleMouseDown = (e: React.MouseEvent, column: string) => {
+    const startX = e.clientX;
+    const startWidth = getColumnWidth(column);
+    setResizing({ column, startX, startWidth });
+    
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!resizing) return;
+      const diff = e.clientX - startX;
+      const newWidth = Math.max(100, startWidth + diff);
+      
+      setLocalColumnWidths(prev => ({
+        ...prev,
+        [column]: newWidth
+      }));
+      
+      if (onColumnWidthChange) {
+        onColumnWidthChange(column, newWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setResizing(null);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
   };
 
   const handleZoomIn = () => {
@@ -189,28 +227,34 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
         <div className="p-4 border-b bg-muted/20">
           <h4 className="font-semibold">Working Row {rowIndex + 1}</h4>
         </div>
-        <ScrollArea className="h-48">
+        <div className="h-48 overflow-auto" ref={tableRef}>
           <div className="min-w-max">
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50">
-                  {fields.map((column) => (
+                  {editableFields.map((column) => (
                     <TableHead 
                       key={column}
-                      className="border-r border-border font-semibold text-foreground"
+                      className="border-r border-border font-semibold text-foreground relative group"
                       style={{ 
                         width: `${getColumnWidth(column)}px`, 
                         minWidth: `${getColumnWidth(column)}px`
                       }}
                     >
                       {column}
+                      {/* Column resize handle */}
+                      <div
+                        className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/50 group-hover:bg-primary/30"
+                        onMouseDown={(e) => handleMouseDown(e, column)}
+                        style={{ right: '-2px' }}
+                      />
                     </TableHead>
                   ))}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 <TableRow className="hover:bg-muted/30">
-                  {fields.map((column) => {
+                  {editableFields.map((column) => {
                     const isEditing = editingColumn === column;
                     const alignment = columnAlignments[column] || 'left';
                     
@@ -265,7 +309,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
               </TableBody>
             </Table>
           </div>
-        </ScrollArea>
+        </div>
       </Card>
     </div>
   );
