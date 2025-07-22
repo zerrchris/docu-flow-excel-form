@@ -2,15 +2,16 @@ import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
-import { AlertCircle, RotateCcw, ExternalLink } from 'lucide-react';
+import { AlertCircle, RotateCcw, ExternalLink, Trash2 } from 'lucide-react';
 import PDFViewer from './PDFViewer';
 
 interface DocumentViewerProps {
   file: File | null;
   previewUrl: string | null;
+  onResetDocument?: () => void;
 }
 
-const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => {
+const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl, onResetDocument }) => {
   const [zoom, setZoom] = useState(1);
   const [panX, setPanX] = useState(0);
   const [panY, setPanY] = useState(0);
@@ -162,6 +163,12 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 sm:p-6 pb-4 border-b shrink-0 gap-2 sm:gap-0">
         <h3 className="text-lg sm:text-xl font-semibold text-foreground">Document Preview</h3>
         <div className="flex items-center gap-1 sm:gap-2 w-full sm:w-auto justify-end">
+          {file && onResetDocument && (
+            <Button variant="outline" size="sm" onClick={onResetDocument} className="px-3">
+              <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="text-xs sm:text-sm ml-2">Discard</span>
+            </Button>
+          )}
           {file && (
             <Button variant="outline" size="sm" onClick={openInNewWindow} className="px-3">
               <span className="text-xs sm:text-sm">Open in new window</span>
