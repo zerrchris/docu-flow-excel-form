@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DocuFlow Runsheet</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      width: 350px;
+      min-height: 500px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .header {
+      padding: 20px;
+      text-align: center;
+      border-bottom: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .logo {
+      width: 32px;
+      height: 32px;
+      margin: 0 auto 10px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    h1 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 5px;
+    }
+
+    .subtitle {
+      font-size: 12px;
+      opacity: 0.8;
+    }
+
+    .status-section {
+      padding: 15px 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .status-item {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    .status-value {
+      font-weight: 600;
+    }
+
+    .auth-section {
+      padding: 15px 20px;
+      background: rgba(255,255,255,0.1);
+      margin: 10px;
+      border-radius: 8px;
+      text-align: center;
+      font-size: 12px;
+    }
+
+    .auth-section.authenticated {
+      background: rgba(76, 175, 80, 0.3);
+    }
+
+    .auth-section.not-authenticated {
+      background: rgba(244, 67, 54, 0.3);
+    }
+
+    .quick-stats {
+      padding: 15px 20px;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+    }
+
+    .stat-item {
+      text-align: center;
+      padding: 10px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 6px;
+    }
+
+    .stat-number {
+      display: block;
+      font-size: 20px;
+      font-weight: bold;
+      color: #FFD700;
+    }
+
+    .stat-label {
+      font-size: 10px;
+      opacity: 0.8;
+      margin-top: 2px;
+    }
+
+    .actions {
+      padding: 20px;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 10px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: rgba(255,255,255,0.2);
+      color: white;
+    }
+
+    .btn-secondary {
+      background: rgba(255,255,255,0.1);
+      color: white;
+    }
+
+    .btn-success {
+      background: rgba(76, 175, 80, 0.8);
+      color: white;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .sync-status {
+      font-size: 12px;
+      text-align: center;
+      margin-top: 10px;
+      opacity: 0.8;
+    }
+
+    /* Safari-specific adjustments */
+    @supports (-webkit-appearance: none) {
+      body {
+        -webkit-font-smoothing: antialiased;
+      }
+      
+      .btn {
+        -webkit-appearance: none;
+        -webkit-user-select: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">📋</div>
+    <h1>DocuFlow</h1>
+    <div class="subtitle">Runsheet Assistant</div>
+  </div>
+
+  <div id="auth-section" class="auth-section not-authenticated">
+    <div>⚠️ Please authenticate with your DocuFlow account to sync data</div>
+  </div>
+
+  <div class="status-section">
+    <div class="status-item">
+      <span>Current Runsheet:</span>
+      <span id="current-runsheet" class="status-value">None</span>
+    </div>
+  </div>
+
+  <div class="quick-stats">
+    <div class="stat-item">
+      <span id="capture-count" class="stat-number">0</span>
+      <div class="stat-label">Captures</div>
+    </div>
+    <div class="stat-item">
+      <span id="text-count" class="stat-number">0</span>
+      <div class="stat-label">Text Entries</div>
+    </div>
+    <div class="stat-item">
+      <span id="saved-count" class="stat-number">0</span>
+      <div class="stat-label">Saved Rows</div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button id="toggle-panel" class="btn btn-primary">Toggle Panel</button>
+    <button id="open-webapp" class="btn btn-secondary">Open DocuFlow</button>
+    <button id="sync-data" class="btn btn-success">Sync Data</button>
+    <button id="clear-session" class="btn btn-secondary">Clear Session</button>
+    
+    <div id="sync-status" class="sync-status"></div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
