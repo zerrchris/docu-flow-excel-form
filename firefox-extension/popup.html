@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {
+      width: 350px;
+      padding: 16px;
+      margin: 0;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #f9fafb;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .logo {
+      font-size: 24px;
+      margin-bottom: 4px;
+    }
+    
+    .title {
+      font-size: 18px;
+      font-weight: bold;
+      color: #1f2937;
+      margin: 0;
+    }
+    
+    .status-section {
+      background: white;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      border: 1px solid #e5e7eb;
+    }
+    
+    .status-label {
+      font-size: 14px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 8px;
+    }
+    
+    .status-value {
+      font-size: 13px;
+      color: #6b7280;
+    }
+    
+    .button {
+      width: 100%;
+      padding: 10px;
+      margin: 6px 0;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: background-color 0.2s;
+    }
+    
+    .button-primary {
+      background: #3b82f6;
+      color: white;
+    }
+    
+    .button-primary:hover {
+      background: #2563eb;
+    }
+    
+    .button-secondary {
+      background: #e5e7eb;
+      color: #374151;
+    }
+    
+    .button-secondary:hover {
+      background: #d1d5db;
+    }
+    
+    .button-success {
+      background: #10b981;
+      color: white;
+    }
+    
+    .button-success:hover {
+      background: #059669;
+    }
+    
+    .actions-section {
+      margin-top: 16px;
+    }
+    
+    .quick-stats {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    
+    .stat {
+      text-align: center;
+      flex: 1;
+    }
+    
+    .stat-number {
+      font-size: 18px;
+      font-weight: bold;
+      color: #1f2937;
+    }
+    
+    .stat-label {
+      font-size: 11px;
+      color: #6b7280;
+      text-transform: uppercase;
+    }
+    
+    .auth-section {
+      background: #fef3c7;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      border: 1px solid #f59e0b;
+    }
+    
+    .auth-message {
+      font-size: 13px;
+      color: #92400e;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">📋</div>
+    <h1 class="title">DocuFlow Runsheet</h1>
+  </div>
+
+  <div id="auth-section" class="auth-section" style="display: none;">
+    <div class="auth-message">
+      Please authenticate with your DocuFlow account to sync data.
+    </div>
+  </div>
+
+  <div class="status-section">
+    <div class="status-label">Current Runsheet</div>
+    <div id="current-runsheet" class="status-value">No runsheet selected</div>
+  </div>
+
+  <div class="status-section">
+    <div class="status-label">Session Data</div>
+    <div class="quick-stats">
+      <div class="stat">
+        <div id="captures-count" class="stat-number">0</div>
+        <div class="stat-label">Captures</div>
+      </div>
+      <div class="stat">
+        <div id="text-count" class="stat-number">0</div>
+        <div class="stat-label">Text Entries</div>
+      </div>
+      <div class="stat">
+        <div id="saved-rows" class="stat-number">0</div>
+        <div class="stat-label">Saved Rows</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="actions-section">
+    <button id="toggle-panel-btn" class="button button-primary">Show/Hide Panel</button>
+    <button id="open-webapp-btn" class="button button-secondary">Open Web App</button>
+    <button id="sync-data-btn" class="button button-success">Sync All Data</button>
+    <button id="clear-session-btn" class="button button-secondary">Clear Session</button>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
