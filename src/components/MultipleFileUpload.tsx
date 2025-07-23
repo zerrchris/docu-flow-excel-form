@@ -120,18 +120,30 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
 
     // Find the first empty row to start uploading to
     const runsheetData = currentRunsheet.data || [];
-    const startRowIndex = runsheetData.findIndex(row => 
+    let startRowIndex = runsheetData.findIndex(row => 
       !Object.values(row).some(value => value && typeof value === 'string' && value.trim() !== '')
     );
 
+    // If no empty row found, start at the end of existing data
     if (startRowIndex === -1) {
-      toast({
-        title: "No empty rows available",
-        description: "Please add more rows to your runsheet or clear some existing rows.",
-        variant: "destructive"
-      });
-      setIsUploading(false);
-      return;
+      startRowIndex = runsheetData.length;
+    }
+
+    // Check if we have enough available spots (considering we may need to extend the array)
+    const availableSpots = Math.max(0, runsheetData.length - startRowIndex) + 100; // Allow extending
+    if (pendingFiles.length > availableSpots && startRowIndex < runsheetData.length) {
+      // Only show error if we're not at the end and there really aren't enough spots
+      const emptyRowsFromStart = runsheetData.slice(startRowIndex).filter(row => 
+        !Object.values(row).some(value => value && typeof value === 'string' && value.trim() !== '')
+      ).length;
+      
+      if (emptyRowsFromStart < pendingFiles.length && startRowIndex + pendingFiles.length > runsheetData.length) {
+        toast({
+          title: "Not enough rows available",
+          description: `You need ${pendingFiles.length} consecutive rows but only ${emptyRowsFromStart} empty rows are available. The upload will add files to available rows and extend the runsheet as needed.`,
+          variant: "default"
+        });
+      }
     }
 
     let currentRowIndex = startRowIndex;
