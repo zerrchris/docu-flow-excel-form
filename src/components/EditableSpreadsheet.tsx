@@ -11,8 +11,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Plus, Trash2, Check, X, ArrowUp, ArrowDown, Save, FolderOpen, Download, Upload, AlignLeft, AlignCenter, AlignRight, Cloud, ChevronDown, FileText, Archive, ExternalLink, AlertTriangle, FileStack } from 'lucide-react';
-import { WebSnippingButton } from './WebSnippingButton';
-import { WebSnippingExtension } from './WebSnippingExtension';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -152,7 +150,6 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [showNamingSettings, setShowNamingSettings] = useState(false);
   const [inlineViewerRow, setInlineViewerRow] = useState<number | null>(null);
   const [fullScreenWorkspace, setFullScreenWorkspace] = useState<{ runsheetId: string; rowIndex: number } | null>(null);
-  const [showWebSnipping, setShowWebSnipping] = useState(false);
   
   // Ref for container width measurement
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1500,18 +1497,6 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     });
   };
 
-  // Handle snipped images from web snipping extension
-  const handleImagesSnipped = useCallback((files: File[]) => {
-    toast({
-      title: "Images snipped!",
-      description: `${files.length} images captured and saved to your documents.`,
-    });
-    
-    // Optionally, you could add logic here to automatically link these files to runsheet rows
-    // For now, they're just saved to storage
-    setShowWebSnipping(false);
-  }, [toast]);
-
   // Auto-focus input when editing starts
   useEffect(() => {
     if (editingCell && textareaRef.current) {
@@ -2717,11 +2702,6 @@ ${extractionFields}`
               </Button>
             )}
             
-            {/* Web Snipping Button */}
-            <WebSnippingButton 
-              onOpenSnipping={() => setShowWebSnipping(true)}
-            />
-            
               {/* New Runsheet Button */}
               <Dialog open={showNewRunsheetDialog} onOpenChange={setShowNewRunsheetDialog}>
                 <DialogTrigger asChild>
@@ -3433,13 +3413,6 @@ ${extractionFields}`
             }}
           />
         )}
-        
-        {/* Web Snipping Extension */}
-        <WebSnippingExtension
-          isOpen={showWebSnipping}
-          onClose={() => setShowWebSnipping(false)}
-          onImagesSnipped={handleImagesSnipped}
-        />
       </div>
     );
 };
