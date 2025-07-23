@@ -51,7 +51,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Open main application
   openAppBtn.addEventListener('click', () => {
     chrome.tabs.create({ 
-      url: 'https://xnpmrafjjqsissbtempj.supabase.co' 
+      url: 'https://lovableproject.com' 
     });
   });
 
