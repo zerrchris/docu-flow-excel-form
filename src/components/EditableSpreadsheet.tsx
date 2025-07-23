@@ -826,7 +826,10 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       setLastSaveTime(new Date());
       onUnsavedChanges?.(false);
 
-      // Clear the active runsheet status
+      // Clear the active runsheet status and navigate
+      if (currentRunsheet) {
+        removeRunsheet(currentRunsheet.id);
+      }
       clearActiveRunsheet();
 
       toast({
