@@ -43,10 +43,17 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
   const [editingValue, setEditingValue] = useState<string>('');
   const [localColumnWidths, setLocalColumnWidths] = useState(columnWidths);
   const [resizing, setResizing] = useState<{column: string, startX: number, startWidth: number} | null>(null);
+  const [focusedColumn, setFocusedColumn] = useState<string | null>(null);
   const tableRef = useRef<HTMLDivElement>(null);
   
   // Filter out Document File Name column for editing
   const editableFields = fields.filter(field => field !== 'Document File Name');
+  // Set initial focus to first column when component mounts
+  useEffect(() => {
+    if (editableFields.length > 0 && !focusedColumn && !editingColumn) {
+      setFocusedColumn(editableFields[0]);
+    }
+  }, [editableFields, focusedColumn, editingColumn]);
 
   useEffect(() => {
     const loadDocument = async () => {
@@ -83,6 +90,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
   const startEditing = (column: string) => {
     setEditingColumn(column);
     setEditingValue(localRowData[column] || '');
+    setFocusedColumn(null);
   };
 
   const finishEditing = () => {
@@ -96,6 +104,10 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
   const cancelEditing = () => {
     setEditingColumn(null);
     setEditingValue('');
+    // Restore focus to the previously focused column
+    if (editingColumn) {
+      setFocusedColumn(editingColumn);
+    }
   };
 
   const getColumnWidth = (column: string): number => {
@@ -135,6 +147,9 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
   };
 
   const handleKeyDown = (e: React.KeyboardEvent, column: string) => {
+    // Only handle navigation if we're not currently editing
+    if (editingColumn) return;
+    
     const currentIndex = editableFields.indexOf(column);
     
     if (e.key === 'Tab') {
@@ -143,21 +158,30 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
         ? (currentIndex - 1 + editableFields.length) % editableFields.length
         : (currentIndex + 1) % editableFields.length;
       const nextColumn = editableFields[nextIndex];
-      startEditing(nextColumn);
-    } else if (e.key === 'ArrowLeft' && !editingColumn) {
+      setFocusedColumn(nextColumn);
+    } else if (e.key === 'ArrowLeft') {
       e.preventDefault();
       const prevIndex = (currentIndex - 1 + editableFields.length) % editableFields.length;
       const prevColumn = editableFields[prevIndex];
-      startEditing(prevColumn);
-    } else if (e.key === 'ArrowRight' && !editingColumn) {
+      setFocusedColumn(prevColumn);
+    } else if (e.key === 'ArrowRight') {
       e.preventDefault();
       const nextIndex = (currentIndex + 1) % editableFields.length;
       const nextColumn = editableFields[nextIndex];
-      startEditing(nextColumn);
-    } else if (e.key === 'Enter' && !editingColumn) {
+      setFocusedColumn(nextColumn);
+    } else if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       startEditing(column);
     }
+  };
+
+  const handleCellClick = (column: string) => {
+    if (editingColumn) return;
+    setFocusedColumn(column);
+  };
+
+  const handleCellDoubleClick = (column: string) => {
+    startEditing(column);
   };
 
   const handleZoomIn = () => {
@@ -284,6 +308,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                 <TableRow className="hover:bg-muted/30">
                   {editableFields.map((column) => {
                     const isEditing = editingColumn === column;
+                    const isFocused = focusedColumn === column;
                     const alignment = columnAlignments[column] || 'left';
                     
                     return (
@@ -331,12 +356,15 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                           />
                         ) : (
                           <div
-                            className={`min-h-[2rem] py-2 px-3 cursor-cell flex items-start transition-colors whitespace-pre-wrap hover:bg-muted/50 border-2 border-transparent focus:bg-muted/50 focus:outline-none
+                            className={`min-h-[2rem] py-2 px-3 cursor-cell flex items-start transition-colors whitespace-pre-wrap focus:outline-none
+                              ${isFocused ? 'bg-primary/20 border-2 border-primary ring-2 ring-primary/20' : 'hover:bg-muted/50 border-2 border-transparent'}
                               ${alignment === 'center' ? 'text-center justify-center' : 
                                 alignment === 'right' ? 'text-right justify-end' : 'text-left justify-start'}`}
-                            onClick={() => startEditing(column)}
+                            onClick={() => handleCellClick(column)}
+                            onDoubleClick={() => handleCellDoubleClick(column)}
                             onKeyDown={(e) => handleKeyDown(e, column)}
                             tabIndex={0}
+                            ref={isFocused ? (el) => el?.focus() : undefined}
                           >
                             {localRowData[column] || ''}
                           </div>
