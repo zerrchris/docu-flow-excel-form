@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useActiveRunsheet } from '@/hooks/useActiveRunsheet';
+import { useMultipleRunsheets } from '@/hooks/useMultipleRunsheets';
 import * as XLSX from 'xlsx';
 import JSZip from 'jszip';
 import { Card } from '@/components/ui/card';
@@ -78,6 +79,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const { toast } = useToast();
   const navigate = useNavigate();
   const { setActiveRunsheet, clearActiveRunsheet, currentRunsheet, updateRunsheet } = useActiveRunsheet();
+  const { removeRunsheet, addRunsheet, switchToTab } = useMultipleRunsheets();
   const [user, setUser] = useState<User | null>(null);
   
   // Track locally which columns need configuration
@@ -662,17 +664,22 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         // Set the current runsheet ID for document linking
         setCurrentRunsheetId(updateResult.id);
         
-        // Update the runsheet in the global state
+        // Update the runsheet in the global state - need to add a new entry with the database ID
         if (currentRunsheet) {
-          updateRunsheet(currentRunsheet.id, {
-            id: updateResult.id,
+          const updatedRunsheet = {
+            id: updateResult.id, // Use the database ID
             name: finalName,
             data,
             columns,
             columnInstructions,
             hasUnsavedChanges: false,
             lastSaveTime: new Date()
-          });
+          };
+          
+          // Remove the old legacy runsheet and add the new one with database ID
+          removeRunsheet(currentRunsheet.id); // Remove legacy ID runsheet
+          addRunsheet(updatedRunsheet); // Add new runsheet with database ID
+          switchToTab(updateResult.id); // Switch to the new tab
         }
       } else {
         // Create new runsheet - check for name conflicts
@@ -705,15 +712,20 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         
         // Update the runsheet in the global state with the new ID
         if (currentRunsheet) {
-          updateRunsheet(currentRunsheet.id, {
-            id: savedRunsheet.id,
+          const updatedRunsheet = {
+            id: savedRunsheet.id, // Use the database ID
             name: finalName,
             data,
             columns,
             columnInstructions,
             hasUnsavedChanges: false,
             lastSaveTime: new Date()
-          });
+          };
+          
+          // Remove the old legacy runsheet and add the new one with database ID
+          removeRunsheet(currentRunsheet.id); // Remove legacy ID runsheet
+          addRunsheet(updatedRunsheet); // Add new runsheet with database ID
+          switchToTab(savedRunsheet.id); // Switch to the new tab
         }
       }
 
