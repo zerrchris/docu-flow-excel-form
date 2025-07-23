@@ -4,10 +4,13 @@ import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
-import { X, ZoomIn, ZoomOut, RotateCcw, ExternalLink, ArrowLeft } from 'lucide-react';
+import { X, ZoomIn, ZoomOut, RotateCcw, ExternalLink, ArrowLeft, Brain } from 'lucide-react';
 import { DocumentService } from '@/services/documentService';
+import { ExtractionPreferencesService } from '@/services/extractionPreferences';
 import { useMultipleRunsheets } from '@/hooks/useMultipleRunsheets';
 import PDFViewer from './PDFViewer';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface FullScreenDocumentWorkspaceProps {
   runsheetId: string;
@@ -45,10 +48,12 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
   const [localColumnWidths, setLocalColumnWidths] = useState(columnWidths);
   const [resizing, setResizing] = useState<{column: string, startX: number, startWidth: number} | null>(null);
   const [focusedColumn, setFocusedColumn] = useState<string | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const tableRef = useRef<HTMLDivElement>(null);
   
   // Get runsheet management hook for auto-saving changes
   const { updateRunsheet, currentRunsheet } = useMultipleRunsheets();
+  const { toast } = useToast();
   
   // Filter out Document File Name column for editing
   const editableFields = fields.filter(field => field !== 'Document File Name');
@@ -235,6 +240,113 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
     }
   };
 
+  const analyzeDocumentAndPopulateRow = async () => {
+    if (!documentUrl || isAnalyzing) return;
+    
+    try {
+      setIsAnalyzing(true);
+      console.log('🔍 Starting document analysis for row:', rowIndex);
+      
+      // Get extraction preferences
+      const extractionPrefs = await ExtractionPreferencesService.getDefaultPreferences();
+      const extractionFields = extractionPrefs?.columns?.map(col => `${col}: ${extractionPrefs.column_instructions?.[col] || 'Extract this field'}`).join('\n') || 
+        editableFields.map(col => `${col}: Extract this field`).join('\n');
+
+      // Convert the document URL to base64 for analysis
+      const response = await fetch(documentUrl);
+      const blob = await response.blob();
+      
+      let imageData: string;
+      if (isPdf) {
+        // For PDFs, we'll need to convert to image first
+        toast({
+          title: "PDF Analysis",
+          description: "PDF analysis is currently limited. Consider converting to image first.",
+          variant: "default"
+        });
+        return;
+      } else {
+        // For images, convert to base64
+        const reader = new FileReader();
+        imageData = await new Promise((resolve) => {
+          reader.onloadend = () => {
+            const base64 = reader.result as string;
+            resolve(base64.split(',')[1]); // Remove data:image/jpeg;base64, prefix
+          };
+          reader.readAsDataURL(blob);
+        });
+      }
+
+      // Call the analyze-document function
+      const { data, error } = await supabase.functions.invoke('analyze-document', {
+        body: {
+          imageData,
+          extractionFields,
+          analysisType: 'spreadsheet'
+        },
+      });
+
+      if (error) {
+        console.error('Analysis error:', error);
+        toast({
+          title: "Analysis failed",
+          description: error.message || "Could not analyze the document",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (data?.extractedData) {
+        console.log('✅ Analysis successful, extracted data:', data.extractedData);
+        
+        // Update the row data with extracted information
+        const updatedData = { ...localRowData };
+        
+        // Parse and populate the extracted data
+        Object.entries(data.extractedData).forEach(([field, value]) => {
+          if (editableFields.includes(field) && value && typeof value === 'string') {
+            updatedData[field] = value;
+          }
+        });
+        
+        setLocalRowData(updatedData);
+        onUpdateRow(rowIndex, updatedData);
+        
+        // Auto-save to runsheet state
+        if (currentRunsheet) {
+          const updatedRunsheetData = [...currentRunsheet.data];
+          updatedRunsheetData[rowIndex] = updatedData;
+          
+          updateRunsheet(currentRunsheet.id, {
+            data: updatedRunsheetData,
+            hasUnsavedChanges: true
+          });
+        }
+
+        toast({
+          title: "Analysis complete",
+          description: "Data has been extracted and populated in the row",
+          variant: "default"
+        });
+      } else {
+        toast({
+          title: "No data extracted",
+          description: "The AI could not extract meaningful data from this document",
+          variant: "default"
+        });
+      }
+    } catch (error) {
+      console.error('Analysis failed:', error);
+      toast({
+        title: "Analysis failed",
+        description: "An error occurred during document analysis",
+        variant: "destructive"
+      });
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
       {/* Document Area */}
@@ -305,7 +417,22 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
       {/* Working Row Area - Fixed at bottom */}
       <Card className="border-t-2 border-primary shrink-0">
         <div className="p-4 border-b bg-muted/20 flex items-center justify-between">
-          <h4 className="font-semibold">Working Row {rowIndex + 1}</h4>
+          <div className="flex items-center space-x-3">
+            <h4 className="font-semibold">Working Row {rowIndex + 1}</h4>
+            {documentUrl && !isLoading && !error && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={analyzeDocumentAndPopulateRow}
+                disabled={isAnalyzing}
+                className="gap-2 text-blue-600 hover:text-blue-700 border-blue-200 hover:border-blue-300"
+                title="Analyze document and extract data to populate row fields"
+              >
+                <Brain className="h-4 w-4" />
+                {isAnalyzing ? 'Analyzing...' : 'Analyze'}
+              </Button>
+            )}
+          </div>
           <Button
             variant="outline"
             size="sm"
