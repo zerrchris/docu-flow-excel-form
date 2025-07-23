@@ -48,7 +48,6 @@ import { ExtractionPreferencesService } from '@/services/extractionPreferences';
 import DocumentNamingSettings from './DocumentNamingSettings';
 import InlineDocumentViewer from './InlineDocumentViewer';
 import FullScreenDocumentWorkspace from './FullScreenDocumentWorkspace';
-import MultipleFileUpload from './MultipleFileUpload';
 import type { User } from '@supabase/supabase-js';
 
 interface SpreadsheetProps {
@@ -2832,35 +2831,6 @@ ${extractionFields}`
           <p className="text-sm text-muted-foreground">
             Click on column headers to configure extraction instructions for each field
           </p>
-        </div>
-
-        {/* Multiple File Upload Button - positioned above Document File Name column */}
-        <div className="relative mb-2 mx-6">
-          <div 
-            className="absolute z-10"
-            style={{
-              left: `${columns.reduce((acc, col, index) => {
-                if (index < columns.indexOf('Document File Name')) {
-                  return acc + getColumnWidth(col);
-                }
-                return acc;
-              }, 0)}px`,
-              width: `${getColumnWidth('Document File Name')}px`
-            }}
-          >
-            <div className="flex justify-start">
-              <MultipleFileUpload
-                onUploadComplete={(uploadedCount) => {
-                  console.log(`${uploadedCount} files uploaded successfully`);
-                  toast({
-                    title: "Files uploaded",
-                    description: `${uploadedCount} file${uploadedCount === 1 ? '' : 's'} uploaded successfully to runsheet.`,
-                    variant: "default"
-                  });
-                }}
-              />
-            </div>
-          </div>
         </div>
 
         {/* Single scrollable table container */}
