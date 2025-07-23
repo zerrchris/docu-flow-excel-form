@@ -3150,13 +3150,16 @@ ${extractionFields}`
                     return (
                       <TableCell 
                         key={`${rowIndex}-${column}`}
-                        className={`border-r border-border last:border-r-0 relative ${isEditing ? 'p-0' : 'p-0'}`}
+                        className={`border-r border-border last:border-r-0 relative ${isEditing ? 'p-0' : 'p-0'} ${column !== 'Document File Name' ? 'cursor-text' : 'cursor-default'}`}
                         style={{ 
                           width: `${getColumnWidth(column)}px`, 
                           minWidth: `${getColumnWidth(column)}px`,
                           height: isEditing ? 'fit-content' : 'auto',
                           minHeight: isEditing ? '60px' : 'auto'
                         }}
+                        onClick={() => column !== 'Document File Name' && selectCell(rowIndex, column)}
+                        onDoubleClick={() => column !== 'Document File Name' && handleCellDoubleClick(rowIndex, column)}
+                        tabIndex={column === 'Document File Name' ? -1 : 0}
                       >
                         {isEditing ? (
                           <Textarea
@@ -3184,7 +3187,7 @@ ${extractionFields}`
                         ) : (
                           <div
                             data-cell={`${rowIndex}-${column}`}
-                             className={`min-h-[2rem] py-2 px-3 ${column === 'Document File Name' ? 'cursor-default' : 'cursor-text'} flex items-start transition-colors whitespace-pre-wrap select-none
+                             className={`w-full h-full min-h-[2rem] py-2 px-3 flex items-start transition-colors whitespace-pre-wrap select-none
                                ${isSelected 
                                  ? 'bg-primary/20 border-2 border-primary ring-2 ring-primary/20' 
                                  : isInRange
@@ -3193,13 +3196,10 @@ ${extractionFields}`
                                }
                                ${columnAlignments[column] === 'center' ? 'text-center justify-center' : 
                                  columnAlignments[column] === 'right' ? 'text-right justify-end' : 'text-left justify-start'}`}
-                              onClick={() => column !== 'Document File Name' && selectCell(rowIndex, column)}
-                              onDoubleClick={() => column !== 'Document File Name' && handleCellDoubleClick(rowIndex, column)}
                               onMouseDown={(e) => column !== 'Document File Name' && handleCellMouseDown(e, rowIndex, column)}
                               onMouseEnter={() => handleMouseEnter(rowIndex, column)}
                               onMouseUp={handleMouseUp}
                               onKeyDown={(e) => column !== 'Document File Name' && handleKeyDown(e, rowIndex, column)}
-                             tabIndex={column === 'Document File Name' ? -1 : 0}
                             >
                               {column === 'Document File Name' ? (
                                 <DocumentLinker
