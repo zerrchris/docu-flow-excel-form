@@ -296,9 +296,9 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                       {column}
                       {/* Column resize handle */}
                       <div
-                        className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/50 group-hover:bg-primary/30"
+                        className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-primary/70 group-hover:bg-primary/40 transition-colors"
                         onMouseDown={(e) => handleMouseDown(e, column)}
-                        style={{ right: '-2px' }}
+                        style={{ right: '-4px' }}
                       />
                     </TableHead>
                   ))}
