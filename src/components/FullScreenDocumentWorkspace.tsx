@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { X, ZoomIn, ZoomOut, RotateCcw, ExternalLink, ArrowLeft } from 'lucide-react';
 import { DocumentService } from '@/services/documentService';
+import { useMultipleRunsheets } from '@/hooks/useMultipleRunsheets';
 import PDFViewer from './PDFViewer';
 
 interface FullScreenDocumentWorkspaceProps {
@@ -46,6 +47,9 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
   const [focusedColumn, setFocusedColumn] = useState<string | null>(null);
   const tableRef = useRef<HTMLDivElement>(null);
   
+  // Get runsheet management hook for auto-saving changes
+  const { updateRunsheet, currentRunsheet } = useMultipleRunsheets();
+  
   // Filter out Document File Name column for editing
   const editableFields = fields.filter(field => field !== 'Document File Name');
   // Set initial focus to first column when component mounts
@@ -85,6 +89,17 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
     const updatedData = { ...localRowData, [field]: value };
     setLocalRowData(updatedData);
     onUpdateRow(rowIndex, updatedData);
+    
+    // Auto-save to runsheet state to prevent data loss on navigation
+    if (currentRunsheet) {
+      const updatedRunsheetData = [...currentRunsheet.data];
+      updatedRunsheetData[rowIndex] = updatedData;
+      
+      updateRunsheet(currentRunsheet.id, {
+        data: updatedRunsheetData,
+        hasUnsavedChanges: true
+      });
+    }
   };
 
   const handleBackToRunsheet = () => {
