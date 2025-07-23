@@ -188,9 +188,12 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
   const handleCellClick = (column: string) => {
     if (editingColumn) return;
     setFocusedColumn(column);
+    // Start editing immediately on single click
+    startEditing(column);
   };
 
   const handleCellDoubleClick = (column: string) => {
+    // Double click also starts editing (redundant but ensures it works)
     startEditing(column);
   };
 
@@ -383,7 +386,6 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                             onDoubleClick={() => handleCellDoubleClick(column)}
                             onKeyDown={(e) => handleKeyDown(e, column)}
                             tabIndex={0}
-                            ref={isFocused ? (el) => el?.focus() : undefined}
                           >
                             {localRowData[column] || ''}
                           </div>
