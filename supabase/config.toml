@@ -3,6 +3,9 @@ project_id = "xnpmrafjjqsissbtempj"
 [functions.analyze-document]
 verify_jwt = false
 
+[functions.extension-sync]
+verify_jwt = false
+
 [functions.google-drive-auth]
 verify_jwt = false
 
