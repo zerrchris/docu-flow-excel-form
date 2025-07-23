@@ -8,6 +8,7 @@ import { Upload, X, FileText, Image, FileIcon, CheckCircle, AlertCircle } from '
 import { toast } from '@/components/ui/use-toast';
 import { DocumentService } from '@/services/documentService';
 import { useMultipleRunsheets } from '@/hooks/useMultipleRunsheets';
+import { supabase } from '@/integrations/supabase/client';
 
 interface FileUploadStatus {
   file: File;
@@ -108,12 +109,39 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
       return;
     }
 
-    // Check if runsheet is saved to database (not a legacy local-only runsheet)
+    // Check if runsheet exists in database by trying to fetch it
     if (currentRunsheet.id.startsWith('legacy-')) {
       console.log('Runsheet has legacy ID, needs to be saved first:', currentRunsheet.id);
       toast({
         title: "Save runsheet first",
         description: "Please save your runsheet to the database before uploading documents.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Verify runsheet exists in database
+    try {
+      const { data: runsheetExists, error: checkError } = await supabase
+        .from('runsheets')
+        .select('id')
+        .eq('id', currentRunsheet.id)
+        .single();
+
+      if (checkError || !runsheetExists) {
+        console.log('Runsheet not found in database:', currentRunsheet.id);
+        toast({
+          title: "Save runsheet first",
+          description: "Please save your runsheet to the database before uploading documents.",
+          variant: "destructive"
+        });
+        return;
+      }
+    } catch (error) {
+      console.error('Error checking runsheet:', error);
+      toast({
+        title: "Error",
+        description: "Could not verify runsheet. Please try saving it again.",
         variant: "destructive"
       });
       return;
