@@ -7,7 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Upload, X, FileText, Image, FileIcon, CheckCircle, AlertCircle } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import { DocumentService } from '@/services/documentService';
-import { useActiveRunsheet } from '@/hooks/useActiveRunsheet';
+import { useMultipleRunsheets } from '@/hooks/useMultipleRunsheets';
 
 interface FileUploadStatus {
   file: File;
@@ -31,7 +31,7 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  const { activeRunsheet } = useActiveRunsheet();
+  const { currentRunsheet } = useMultipleRunsheets();
 
   const getFileIcon = (file: File) => {
     const type = file.type;
@@ -52,7 +52,7 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
   };
 
   const handleFileSelect = useCallback((selectedFiles: FileList) => {
-    if (!activeRunsheet) {
+    if (!currentRunsheet) {
       toast({
         title: "No active runsheet",
         description: "Please select or create a runsheet first.",
@@ -61,13 +61,16 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
       return;
     }
 
-    // For now, show a message that this feature is temporarily disabled
-    toast({
-      title: "Feature temporarily disabled",
-      description: "Multiple file upload will be available in a future update.",
-      variant: "default"
-    });
-  }, [activeRunsheet]);
+    // Add selected files to the upload queue
+    const fileArray = Array.from(selectedFiles);
+    const newFiles = fileArray.map(file => ({
+      file,
+      status: 'pending' as const,
+      progress: 0
+    }));
+
+    setFiles(prev => [...prev, ...newFiles]);
+  }, [currentRunsheet]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -94,11 +97,129 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
   };
 
   const uploadFiles = async () => {
-    toast({
-      title: "Feature temporarily disabled",
-      description: "Multiple file upload will be available in a future update.",
-      variant: "default"
-    });
+    if (!currentRunsheet?.id) {
+      toast({
+        title: "No active runsheet",
+        description: "Please select or create a runsheet first.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const pendingFiles = files.filter(f => f.status === 'pending');
+    if (pendingFiles.length === 0) {
+      toast({
+        title: "No files to upload",
+        description: "Please add some files first.",
+        variant: "default"
+      });
+      return;
+    }
+
+    setIsUploading(true);
+
+    // Find the first empty row to start uploading to
+    const runsheetData = currentRunsheet.data || [];
+    const startRowIndex = runsheetData.findIndex(row => 
+      !Object.values(row).some(value => value && typeof value === 'string' && value.trim() !== '')
+    );
+
+    if (startRowIndex === -1) {
+      toast({
+        title: "No empty rows available",
+        description: "Please add more rows to your runsheet or clear some existing rows.",
+        variant: "destructive"
+      });
+      setIsUploading(false);
+      return;
+    }
+
+    let currentRowIndex = startRowIndex;
+
+    for (let i = 0; i < pendingFiles.length; i++) {
+      const fileUpload = pendingFiles[i];
+      const fileIndex = files.findIndex(f => f.file === fileUpload.file);
+
+      // Update status to uploading
+      setFiles(prev => prev.map((f, index) => 
+        index === fileIndex 
+          ? { ...f, status: 'uploading', rowIndex: currentRowIndex }
+          : f
+      ));
+
+      try {
+        const result = await DocumentService.uploadDocument(
+          fileUpload.file,
+          currentRunsheet.id,
+          currentRowIndex,
+          (progress) => {
+            setFiles(prev => prev.map((f, index) => 
+              index === fileIndex ? { ...f, progress } : f
+            ));
+          }
+        );
+
+        if (result.success) {
+          // Update status to success
+          setFiles(prev => prev.map((f, index) => 
+            index === fileIndex 
+              ? { ...f, status: 'success', progress: 100 }
+              : f
+          ));
+
+          // Update the runsheet data to show the linked document
+          if (result.document) {
+            const updatedData = [...runsheetData];
+            if (!updatedData[currentRowIndex]) {
+              updatedData[currentRowIndex] = {};
+            }
+            updatedData[currentRowIndex]['Document File Name'] = result.document.stored_filename;
+            
+            // Trigger a custom event to notify the parent component
+            window.dispatchEvent(new CustomEvent('documentRecordCreated', {
+              detail: {
+                runsheetId: currentRunsheet.id,
+                rowIndex: currentRowIndex,
+                document: result.document
+              }
+            }));
+          }
+        } else {
+          // Update status to error
+          setFiles(prev => prev.map((f, index) => 
+            index === fileIndex 
+              ? { ...f, status: 'error', error: result.error }
+              : f
+          ));
+        }
+      } catch (error) {
+        console.error('Upload error:', error);
+        setFiles(prev => prev.map((f, index) => 
+          index === fileIndex 
+            ? { ...f, status: 'error', error: 'Upload failed' }
+            : f
+        ));
+      }
+
+      currentRowIndex++;
+    }
+
+    setIsUploading(false);
+
+    const successCount = files.filter(f => f.status === 'success').length;
+    const errorCount = files.filter(f => f.status === 'error').length;
+
+    if (successCount > 0) {
+      toast({
+        title: "Upload complete",
+        description: `${successCount} file${successCount === 1 ? '' : 's'} uploaded successfully${errorCount > 0 ? `, ${errorCount} failed` : ''}.`,
+        variant: "default"
+      });
+
+      if (onUploadComplete) {
+        onUploadComplete(successCount);
+      }
+    }
   };
 
   const totalProgress = files.length > 0 
