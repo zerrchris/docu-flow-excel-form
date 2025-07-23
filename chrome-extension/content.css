@@ -7,14 +7,14 @@
   right: 0 !important;
   width: 100% !important;
   height: 120px !important;
-  background: #ffffff !important;
-  border-top: 2px solid #3b82f6 !important;
+  background: hsl(var(--background, 0 0% 100%)) !important;
+  border-top: 1px solid hsl(var(--border, 0 0% 89%)) !important;
   box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15) !important;
-  z-index: 2147483647 !important; /* Maximum z-index */
+  z-index: 2147483647 !important;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
   font-size: 14px !important;
   line-height: 1.4 !important;
-  color: #1f2937 !important;
+  color: hsl(var(--foreground, 0 0% 9%)) !important;
   box-sizing: border-box !important;
 }
 
@@ -28,14 +28,14 @@
   justify-content: space-between !important;
   align-items: center !important;
   padding: 8px 16px !important;
-  background: #f8fafc !important;
-  border-bottom: 1px solid #e2e8f0 !important;
+  background: hsl(var(--muted, 0 0% 96%)) !important;
+  border-bottom: 1px solid hsl(var(--border, 0 0% 89%)) !important;
   height: 40px !important;
 }
 
 .frame-title {
   font-weight: 600 !important;
-  color: #3b82f6 !important;
+  color: hsl(var(--foreground, 0 0% 9%)) !important;
   font-size: 14px !important;
 }
 
@@ -47,10 +47,10 @@
 
 .control-btn {
   padding: 4px 8px !important;
-  border: 1px solid #d1d5db !important;
-  border-radius: 4px !important;
-  background: #ffffff !important;
-  color: #374151 !important;
+  border: 1px solid hsl(var(--border, 0 0% 89%)) !important;
+  border-radius: 6px !important;
+  background: hsl(var(--background, 0 0% 100%)) !important;
+  color: hsl(var(--foreground, 0 0% 9%)) !important;
   font-size: 12px !important;
   cursor: pointer !important;
   transition: all 0.2s ease !important;
@@ -58,85 +58,128 @@
 }
 
 .control-btn:hover {
-  background: #f3f4f6 !important;
-  border-color: #9ca3af !important;
+  background: hsl(var(--muted, 0 0% 96%)) !important;
+  border-color: hsl(var(--border, 0 0% 89%)) !important;
 }
 
 .control-btn.capturing {
-  background: #ef4444 !important;
-  color: #ffffff !important;
-  border-color: #dc2626 !important;
+  background: hsl(var(--destructive, 0 84% 60%)) !important;
+  color: hsl(var(--destructive-foreground, 0 0% 98%)) !important;
+  border-color: hsl(var(--destructive, 0 84% 60%)) !important;
 }
 
 /* Frame Content */
 .frame-content {
-  padding: 12px 16px !important;
+  padding: 0 !important;
   height: calc(100% - 40px) !important;
   overflow-x: auto !important;
   overflow-y: hidden !important;
+  background: hsl(var(--background, 0 0% 100%)) !important;
 }
 
-/* Runsheet Table */
+/* Runsheet Table - Matching EditableSpreadsheet styling */
 .runsheet-table {
   width: 100% !important;
   min-width: 1200px !important;
   border-collapse: separate !important;
   border-spacing: 0 !important;
+  height: 100% !important;
 }
 
 .table-row {
   display: flex !important;
   width: 100% !important;
-  border-bottom: 1px solid #e5e7eb !important;
 }
 
 .header-row {
-  background: #f9fafb !important;
+  background: hsl(var(--muted, 0 0% 96%)) !important;
   font-weight: 600 !important;
+  border-bottom: 1px solid hsl(var(--border, 0 0% 89%)) !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 10 !important;
 }
 
 .header-row .table-cell {
-  color: #374151 !important;
+  color: hsl(var(--foreground, 0 0% 9%)) !important;
   font-size: 12px !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.5px !important;
+  font-weight: 600 !important;
+  text-align: center !important;
+  padding: 8px 12px !important;
+  background: hsl(var(--muted, 0 0% 96%)) !important;
 }
 
 .table-cell {
   flex: 1 !important;
-  padding: 6px 8px !important;
-  border-right: 1px solid #e5e7eb !important;
+  padding: 0 !important;
+  border-right: 1px solid hsl(var(--border, 0 0% 89%)) !important;
   display: flex !important;
   align-items: center !important;
   min-height: 40px !important;
   font-size: 12px !important;
+  position: relative !important;
 }
 
 .table-cell:last-child {
   border-right: none !important;
 }
 
-/* Input Styles */
+/* Cell content styling to match EditableSpreadsheet */
+.cell-content {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 2rem !important;
+  padding: 8px 12px !important;
+  display: flex !important;
+  align-items: flex-start !important;
+  transition: all 0.2s ease !important;
+  white-space: pre-wrap !important;
+  border: 2px solid transparent !important;
+  background: hsl(var(--background, 0 0% 100%)) !important;
+}
+
+.cell-content:hover {
+  background: hsl(var(--muted, 0 0% 96%) / 0.5) !important;
+}
+
+.cell-content.focused {
+  background: hsl(var(--primary, 221 83% 53%) / 0.1) !important;
+  border: 2px solid hsl(var(--primary, 221 83% 53%)) !important;
+  box-shadow: 0 0 0 2px hsl(var(--primary, 221 83% 53%) / 0.2) !important;
+}
+
+/* Input Styles - Matching EditableSpreadsheet textarea styling */
 .table-cell input {
   width: 100% !important;
   border: none !important;
   outline: none !important;
   background: transparent !important;
-  color: #1f2937 !important;
-  font-size: 13px !important;
+  color: hsl(var(--foreground, 0 0% 9%)) !important;
+  font-size: 12px !important;
   font-family: inherit !important;
-  padding: 4px 0 !important;
+  padding: 8px 12px !important;
+  min-height: 2rem !important;
+  resize: none !important;
+  border: 2px solid transparent !important;
+  transition: all 0.2s ease !important;
 }
 
 .table-cell input:focus {
-  background: #f0f9ff !important;
+  background: hsl(var(--background, 0 0% 100%)) !important;
+  border: 2px solid hsl(var(--primary, 221 83% 53%)) !important;
+  box-shadow: 0 0 0 2px hsl(var(--primary, 221 83% 53%) / 0.2) !important;
   border-radius: 2px !important;
-  padding: 4px 6px !important;
 }
 
 .table-cell input::placeholder {
-  color: #9ca3af !important;
+  color: hsl(var(--muted-foreground, 0 0% 45%)) !important;
   font-style: italic !important;
+}
+
+.table-cell input[readonly] {
+  background: hsl(var(--muted, 0 0% 96%)) !important;
+  color: hsl(var(--muted-foreground, 0 0% 45%)) !important;
+  cursor: default !important;
 }
 
 /* Notifications */
@@ -155,15 +198,15 @@
 }
 
 .docuflow-notification.success {
-  background: #10b981 !important;
+  background: hsl(var(--success, 142 76% 36%)) !important;
 }
 
 .docuflow-notification.error {
-  background: #ef4444 !important;
+  background: hsl(var(--destructive, 0 84% 60%)) !important;
 }
 
 .docuflow-notification.info {
-  background: #3b82f6 !important;
+  background: hsl(var(--primary, 221 83% 53%)) !important;
 }
 
 @keyframes slideIn {
@@ -188,12 +231,13 @@
   }
   
   .table-cell {
-    padding: 6px 8px !important;
-    font-size: 12px !important;
+    padding: 0 !important;
+    font-size: 11px !important;
   }
   
   .table-cell input {
-    font-size: 12px !important;
+    font-size: 11px !important;
+    padding: 6px 8px !important;
   }
 }
 
@@ -202,28 +246,26 @@ body {
   padding-bottom: 120px !important;
 }
 
-/* Override any conflicting styles */
-#docuflow-runsheet-frame,
-#docuflow-runsheet-frame * {
-  all: unset !important;
+/* CSS Variables for theming */
+:root {
+  --background: 0 0% 100%;
+  --foreground: 0 0% 9%;
+  --muted: 0 0% 96%;
+  --muted-foreground: 0 0% 45%;
+  --border: 0 0% 89%;
+  --primary: 221 83% 53%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 98%;
+  --success: 142 76% 36%;
 }
 
-/* Then reapply our styles */
-#docuflow-runsheet-frame {
-  display: block !important;
-  position: fixed !important;
-  bottom: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  width: 100% !important;
-  height: 120px !important;
-  background: #ffffff !important;
-  border-top: 2px solid #3b82f6 !important;
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15) !important;
-  z-index: 2147483647 !important;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-  font-size: 14px !important;
-  line-height: 1.4 !important;
-  color: #1f2937 !important;
-  box-sizing: border-box !important;
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: 0 0% 9%;
+    --foreground: 0 0% 98%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 65%;
+    --border: 0 0% 20%;
+  }
 }
