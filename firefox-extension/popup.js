@@ -57,6 +57,13 @@ function setupEventListeners() {
     });
   });
 
+  // Login button
+  document.getElementById('login-btn').addEventListener('click', () => {
+    browser.tabs.create({ 
+      url: 'https://9e913707-5b2b-41be-9c86-3541992b5349.lovableproject.com/signin' 
+    });
+  });
+
   // Sync data button
   document.getElementById('sync-data-btn').addEventListener('click', async () => {
     const button = document.getElementById('sync-data-btn');
