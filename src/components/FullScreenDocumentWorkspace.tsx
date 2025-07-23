@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
-import { X, ZoomIn, ZoomOut, RotateCcw, ExternalLink } from 'lucide-react';
+import { X, ZoomIn, ZoomOut, RotateCcw, ExternalLink, ArrowLeft } from 'lucide-react';
 import { DocumentService } from '@/services/documentService';
 import PDFViewer from './PDFViewer';
 
@@ -85,6 +85,16 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
     const updatedData = { ...localRowData, [field]: value };
     setLocalRowData(updatedData);
     onUpdateRow(rowIndex, updatedData);
+  };
+
+  const handleBackToRunsheet = () => {
+    // Ensure any pending edits are saved
+    if (editingColumn && editingValue !== (localRowData[editingColumn] || '')) {
+      const updatedData = { ...localRowData, [editingColumn]: editingValue };
+      setLocalRowData(updatedData);
+      onUpdateRow(rowIndex, updatedData);
+    }
+    onClose();
   };
 
   const startEditing = (column: string) => {
@@ -276,8 +286,17 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
 
       {/* Working Row Area - Fixed at bottom */}
       <Card className="border-t-2 border-primary shrink-0">
-        <div className="p-4 border-b bg-muted/20">
+        <div className="p-4 border-b bg-muted/20 flex items-center justify-between">
           <h4 className="font-semibold">Working Row {rowIndex + 1}</h4>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleBackToRunsheet}
+            className="gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Runsheet
+          </Button>
         </div>
         <div className="h-48 overflow-auto" ref={tableRef}>
           <div className="min-w-max">
