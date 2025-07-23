@@ -1,5 +1,8 @@
-// Popup script
+// Popup script for Firefox
+console.log('DocuFlow popup script loading...');
+
 document.addEventListener('DOMContentLoaded', async function() {
+  console.log('DOM loaded, initializing popup...');
   await loadPopupData();
   setupEventListeners();
 });
