@@ -95,6 +95,9 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [tempRunsheetName, setTempRunsheetName] = useState<string>('');
   const [lastSaveTime, setLastSaveTime] = useState<Date | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [showNameConflictDialog, setShowNameConflictDialog] = useState(false);
+  const [nameConflictData, setNameConflictData] = useState<{ originalName: string; suggestedName: string } | null>(null);
+  const [pendingSaveData, setPendingSaveData] = useState<{ isUpdate: boolean; runsheetId?: string } | null>(null);
   
   // Helper function to ensure document columns exist
   const ensureDocumentColumns = (columnsList: string[]): string[] => {
@@ -583,32 +586,45 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     };
   }, [hasUnsavedChanges, user, runsheetName, columns, data, columnInstructions, forceSave]);
 
-  // Generate unique runsheet name if there's a conflict
-  const generateUniqueRunsheetName = async (baseName: string, userId: string): Promise<string> => {
-    let uniqueName = baseName;
-    let counter = 1;
+  // Check if runsheet name exists and handle conflicts
+  const checkRunsheetNameConflict = async (baseName: string, userId: string): Promise<{ hasConflict: boolean; suggestedName?: string }> => {
+    // Check if runsheet with this name already exists
+    const { data: existingRunsheet, error } = await supabase
+      .from('runsheets')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('name', baseName)
+      .single();
     
-    while (true) {
-      // Check if runsheet with this name already exists
-      const { data: existingRunsheet, error } = await supabase
-        .from('runsheets')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('name', uniqueName)
-        .single();
+    if (error && error.code === 'PGRST116') {
+      // No existing runsheet found - this name is available
+      return { hasConflict: false };
+    } else if (existingRunsheet) {
+      // Name exists, generate suggested alternative
+      let suggestedName = baseName;
+      let counter = 1;
       
-      if (error && error.code === 'PGRST116') {
-        // No existing runsheet found - this name is available
-        return uniqueName;
-      } else if (existingRunsheet) {
-        // Name exists, try with number suffix
-        uniqueName = `${baseName} (${counter})`;
+      while (true) {
+        suggestedName = `${baseName} (${counter})`;
+        const { data: conflictCheck, error: conflictError } = await supabase
+          .from('runsheets')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('name', suggestedName)
+          .single();
+        
+        if (conflictError && conflictError.code === 'PGRST116') {
+          // This suggested name is available
+          break;
+        }
         counter++;
-      } else {
-        // Some other error occurred
-        console.error('Error checking for existing runsheet:', error);
-        return uniqueName;
       }
+      
+      return { hasConflict: true, suggestedName };
+    } else {
+      // Some other error occurred
+      console.error('Error checking for existing runsheet:', error);
+      return { hasConflict: false };
     }
   };
 
@@ -683,13 +699,18 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         }
       } else {
         // Create new runsheet - check for name conflicts
-        finalName = await generateUniqueRunsheetName(runsheetName, user.id);
+        const conflictCheck = await checkRunsheetNameConflict(runsheetName, user.id);
         
-        // Update runsheet name if it was changed to avoid conflict
-        if (finalName !== runsheetName) {
-          setRunsheetName(finalName);
-          console.log(`Runsheet name changed to avoid conflict: ${runsheetName} -> ${finalName}`);
+        if (conflictCheck.hasConflict) {
+          // Show conflict dialog and return early
+          setNameConflictData({ originalName: runsheetName, suggestedName: conflictCheck.suggestedName! });
+          setPendingSaveData({ isUpdate: false });
+          setShowNameConflictDialog(true);
+          setIsSaving(false);
+          return;
         }
+        
+        finalName = runsheetName;
         
         const { data: insertResult, error } = await supabase
           .from('runsheets')
@@ -769,14 +790,19 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     
     try {
       // First save the runsheet
-      // Generate unique name if there's a conflict
-      const finalName = await generateUniqueRunsheetName(runsheetName, user.id);
+      // Check for name conflicts
+      const conflictCheck = await checkRunsheetNameConflict(runsheetName, user.id);
       
-      // Update runsheet name if it was changed to avoid conflict
-      if (finalName !== runsheetName) {
-        setRunsheetName(finalName);
-        console.log(`Runsheet name changed to avoid conflict: ${runsheetName} -> ${finalName}`);
+      if (conflictCheck.hasConflict) {
+        // Show conflict dialog and return early
+        setNameConflictData({ originalName: runsheetName, suggestedName: conflictCheck.suggestedName! });
+        setPendingSaveData({ isUpdate: false });
+        setShowNameConflictDialog(true);
+        setIsSaving(false);
+        return;
       }
+      
+      const finalName = runsheetName;
       
       const { error } = await supabase
         .from('runsheets')
@@ -823,6 +849,125 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     }
   };
 
+  // Handle name conflict resolution
+  const handleOverwriteRunsheet = async () => {
+    if (!nameConflictData || !pendingSaveData || !user) return;
+    
+    setShowNameConflictDialog(false);
+    setIsSaving(true);
+    
+    try {
+      let finalName = nameConflictData.originalName;
+      let savedRunsheet;
+      
+      if (pendingSaveData.isUpdate && pendingSaveData.runsheetId) {
+        // Update existing runsheet
+        const { data: updateResult, error } = await supabase
+          .from('runsheets')
+          .update({
+            name: finalName,
+            columns: columns,
+            data: data,
+            column_instructions: columnInstructions,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', pendingSaveData.runsheetId)
+          .eq('user_id', user.id)
+          .select('id')
+          .single();
+        
+        if (error) throw error;
+        savedRunsheet = updateResult;
+      } else {
+        // Overwrite/create new runsheet - delete existing one first
+        await supabase
+          .from('runsheets')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('name', finalName);
+        
+        // Create new runsheet
+        const { data: insertResult, error } = await supabase
+          .from('runsheets')
+          .insert({
+            name: finalName,
+            columns: columns,
+            data: data,
+            column_instructions: columnInstructions,
+            user_id: user.id,
+            updated_at: new Date().toISOString(),
+          })
+          .select('id')
+          .single();
+
+        if (error) throw error;
+        savedRunsheet = insertResult;
+        setCurrentRunsheetId(savedRunsheet.id);
+      }
+      
+      // Update global state
+      if (currentRunsheet) {
+        const updatedRunsheet = {
+          id: savedRunsheet.id,
+          name: finalName,
+          data,
+          columns,
+          columnInstructions,
+          hasUnsavedChanges: false,
+          lastSaveTime: new Date()
+        };
+        
+        removeRunsheet(currentRunsheet.id);
+        addRunsheet(updatedRunsheet);
+        switchToTab(savedRunsheet.id);
+      }
+      
+      const savedState = JSON.stringify({ data, columns, runsheetName: finalName, columnInstructions });
+      setLastSavedState(savedState);
+      setHasUnsavedChanges(false);
+      setLastSaveTime(new Date());
+      onUnsavedChanges?.(false);
+      
+      toast({
+        title: "Runsheet saved",
+        description: `"${finalName}" has been overwritten successfully.`,
+      });
+    } catch (error: any) {
+      console.error('Save failed:', error);
+      toast({
+        title: "Failed to save runsheet",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+      setNameConflictData(null);
+      setPendingSaveData(null);
+    }
+  };
+
+  const handleUseSuggestedName = async () => {
+    if (!nameConflictData || !pendingSaveData || !user) return;
+    
+    setShowNameConflictDialog(false);
+    setRunsheetName(nameConflictData.suggestedName);
+    
+    // Trigger save with the suggested name
+    setTimeout(() => {
+      if (pendingSaveData.isUpdate) {
+        saveAndCloseRunsheet();
+      } else {
+        saveRunsheet();
+      }
+    }, 100);
+  };
+
+  const handleCancelSave = () => {
+    setShowNameConflictDialog(false);
+    setNameConflictData(null);
+    setPendingSaveData(null);
+    setIsSaving(false);
+  };
 
   // Save current configuration as default
   const saveAsDefault = async () => {
@@ -3428,6 +3573,38 @@ ${extractionFields}`
           onClose={() => setShowGoogleDrivePicker(false)}
           onFileSelect={performUpload}
         />
+
+        {/* Name Conflict Dialog */}
+        <AlertDialog open={showNameConflictDialog} onOpenChange={setShowNameConflictDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Runsheet Name Already Exists</AlertDialogTitle>
+              <AlertDialogDescription>
+                A runsheet with the name "{nameConflictData?.originalName}" already exists. 
+                What would you like to do?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="py-4">
+              <p className="text-sm text-muted-foreground mb-2">
+                <strong>Option 1:</strong> Overwrite the existing runsheet (this will permanently replace its data)
+              </p>
+              <p className="text-sm text-muted-foreground">
+                <strong>Option 2:</strong> Save with the suggested name: "{nameConflictData?.suggestedName}"
+              </p>
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={handleCancelSave}>
+                Cancel
+              </AlertDialogCancel>
+              <Button variant="outline" onClick={handleUseSuggestedName}>
+                Use "{nameConflictData?.suggestedName}"
+              </Button>
+              <AlertDialogAction onClick={handleOverwriteRunsheet} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                Overwrite Existing
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
         </div>
         
         {fullScreenWorkspace && (
