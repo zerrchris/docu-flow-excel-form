@@ -881,16 +881,6 @@ Image: [base64 image data]`;
             </Link>
             <div className="flex items-center gap-4">
               <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowMultipleFileUpload(true)}
-                className="gap-2"
-                disabled={!activeRunsheet}
-              >
-                <FileStack className="h-4 w-4" />
-                Upload Multiple Files
-              </Button>
-              <Button
                 variant="default"
                 size="sm"
                 onClick={() => {
@@ -925,6 +915,7 @@ Image: [base64 image data]`;
           onMultipleFilesSelect={handleMultipleFilesSelect}
           onResetDocument={resetDocument}
           isAnalyzing={isAnalyzing}
+          onShowMultipleUpload={() => setShowMultipleFileUpload(true)}
         />
         
         <BatchProcessing 

@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { Upload, File, Trash2, ChevronDown, ChevronUp, FileImage, AlertCircle } from 'lucide-react';
+import { Upload, File, Trash2, ChevronDown, ChevronUp, FileImage, AlertCircle, FileStack } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -12,6 +12,7 @@ interface DocumentUploadProps {
   selectedFile?: File | null;
   selectedFiles?: File[];
   allowMultiple?: boolean;
+  onShowMultipleUpload?: () => void;
 }
 
 const DocumentUpload: React.FC<DocumentUploadProps> = ({ 
@@ -19,7 +20,8 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
   onMultipleFilesSelect,
   selectedFile, 
   selectedFiles,
-  allowMultiple = false 
+  allowMultiple = false,
+  onShowMultipleUpload
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -125,7 +127,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
                       <p className="text-xl text-foreground">
                         Drag and drop your document{allowMultiple ? 's' : ''} here, or
                       </p>
-                      <div className="flex gap-3">
+                      <div className="flex gap-3 flex-wrap">
                         <Button variant="outline" size="lg" asChild className="font-semibold">
                           <label htmlFor="document-upload-input" className="cursor-pointer">
                             Browse Files
@@ -136,6 +138,18 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
                           onFileSelect={onFileSelect}
                           className="font-semibold"
                         />
+                        
+                        {onShowMultipleUpload && (
+                          <Button 
+                            variant="outline" 
+                            size="lg" 
+                            onClick={onShowMultipleUpload}
+                            className="font-semibold gap-2"
+                          >
+                            <FileStack className="h-4 w-4" />
+                            Multiple Files
+                          </Button>
+                        )}
                       </div>
                       <input
                         id="document-upload-input"
