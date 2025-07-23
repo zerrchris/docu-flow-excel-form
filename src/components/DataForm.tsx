@@ -38,20 +38,27 @@ const DataForm: React.FC<DataFormProps> = ({
   // Generate smart filename using user's naming preferences
   const generateSmartFilename = async () => {
     try {
+      console.log('Starting smart filename generation...');
       setIsGeneratingName(true);
       
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        console.log('No user found');
+        return;
+      }
 
+      console.log('User found, fetching naming preferences...');
       // Get user's naming preferences
-      const { data: preferences } = await supabase
+      const { data: preferences, error } = await supabase
         .from('user_document_naming_preferences')
         .select('*')
         .eq('user_id', user.id)
         .eq('is_active', true)
         .order('created_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
+
+      console.log('Preferences query result:', { preferences, error });
 
       // Use default preferences if none found
       const namingPrefs = preferences || {
@@ -61,6 +68,9 @@ const DataForm: React.FC<DataFormProps> = ({
         include_extension: true,
         fallback_pattern: 'document_{row_index}_{timestamp}'
       };
+
+      console.log('Using naming preferences:', namingPrefs);
+      console.log('Current form data:', formData);
 
       // Build filename from available form data using priority columns
       const filenameParts: string[] = [];
@@ -100,6 +110,8 @@ const DataForm: React.FC<DataFormProps> = ({
       if (namingPrefs.include_extension) {
         filename += '.pdf';
       }
+
+      console.log('Generated filename:', filename);
 
       // Update the form field
       onChange('Document File Name', filename);
