@@ -97,6 +97,8 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
   };
 
   const uploadFiles = async () => {
+    console.log('uploadFiles called with currentRunsheet:', currentRunsheet);
+    
     if (!currentRunsheet?.id) {
       toast({
         title: "No active runsheet",
@@ -108,6 +110,7 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
 
     // Check if runsheet is saved to database (not a legacy local-only runsheet)
     if (currentRunsheet.id.startsWith('legacy-')) {
+      console.log('Runsheet has legacy ID, needs to be saved first:', currentRunsheet.id);
       toast({
         title: "Save runsheet first",
         description: "Please save your runsheet to the database before uploading documents.",
@@ -115,6 +118,8 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
       });
       return;
     }
+
+    console.log('Proceeding with upload for runsheet ID:', currentRunsheet.id);
 
     const pendingFiles = files.filter(f => f.status === 'pending');
     if (pendingFiles.length === 0) {
