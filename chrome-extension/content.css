@@ -79,7 +79,7 @@
 /* Runsheet Table */
 .runsheet-table {
   width: 100% !important;
-  min-width: 800px !important;
+  min-width: 1200px !important;
   border-collapse: separate !important;
   border-spacing: 0 !important;
 }
@@ -104,11 +104,12 @@
 
 .table-cell {
   flex: 1 !important;
-  padding: 8px 12px !important;
+  padding: 6px 8px !important;
   border-right: 1px solid #e5e7eb !important;
   display: flex !important;
   align-items: center !important;
   min-height: 40px !important;
+  font-size: 12px !important;
 }
 
 .table-cell:last-child {
@@ -183,7 +184,7 @@
   }
   
   .runsheet-table {
-    min-width: 600px !important;
+    min-width: 1000px !important;
   }
   
   .table-cell {

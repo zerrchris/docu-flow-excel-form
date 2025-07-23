@@ -291,18 +291,28 @@ function createRunsheetFrame() {
     <div class="frame-content">
       <div class="runsheet-table">
         <div class="table-row header-row">
+          <div class="table-cell">Inst Number</div>
+          <div class="table-cell">Book/Page</div>
+          <div class="table-cell">Inst Type</div>
+          <div class="table-cell">Recording Date</div>
+          <div class="table-cell">Document Date</div>
           <div class="table-cell">Grantor</div>
           <div class="table-cell">Grantee</div>
-          <div class="table-cell">Address</div>
-          <div class="table-cell">Price</div>
+          <div class="table-cell">Legal Description</div>
           <div class="table-cell">Notes</div>
+          <div class="table-cell">Document File Name</div>
         </div>
         <div class="table-row editable-row">
+          <div class="table-cell"><input type="text" placeholder="Enter inst number" data-field="inst_number"></div>
+          <div class="table-cell"><input type="text" placeholder="Enter book/page" data-field="book_page"></div>
+          <div class="table-cell"><input type="text" placeholder="Enter inst type" data-field="inst_type"></div>
+          <div class="table-cell"><input type="date" placeholder="Recording date" data-field="recording_date"></div>
+          <div class="table-cell"><input type="date" placeholder="Document date" data-field="document_date"></div>
           <div class="table-cell"><input type="text" placeholder="Enter grantor" data-field="grantor"></div>
           <div class="table-cell"><input type="text" placeholder="Enter grantee" data-field="grantee"></div>
-          <div class="table-cell"><input type="text" placeholder="Enter address" data-field="address"></div>
-          <div class="table-cell"><input type="text" placeholder="Enter price" data-field="price"></div>
+          <div class="table-cell"><input type="text" placeholder="Enter legal description" data-field="legal_description"></div>
           <div class="table-cell"><input type="text" placeholder="Enter notes" data-field="notes"></div>
+          <div class="table-cell"><input type="text" placeholder="File name" data-field="document_file_name" readonly></div>
         </div>
       </div>
     </div>
