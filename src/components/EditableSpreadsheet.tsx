@@ -2035,7 +2035,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   };
 
   // Cell editing functions
-  const selectCell = (rowIndex: number, column: string) => {
+  const selectCell = (rowIndex: number, column: string, shouldStartEditing: boolean = true) => {
     // Save any current editing before switching cells
     if (editingCell) {
       const newData = [...data];
@@ -2065,14 +2065,38 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       }
     }, 100); // Increased delay to allow for layout updates
     
-    // Automatically start editing when selecting a cell
+    // Start editing immediately like Excel
+    if (shouldStartEditing) {
+      startEditing(rowIndex, column, data[rowIndex]?.[column] || '');
+    }
+  };
+
+  const handleCellDoubleClick = (rowIndex: number, column: string) => {
+    // Double click should select all text in the cell
     startEditing(rowIndex, column, data[rowIndex]?.[column] || '');
+    // Focus and select all text after the textarea is rendered
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+        textareaRef.current.select();
+      }
+    }, 10);
   };
 
   const startEditing = useCallback((rowIndex: number, column: string, value: string) => {
     setEditingCell({ rowIndex, column });
     setCellValue(value);
     setSelectedCell({ rowIndex, column });
+    
+    // Focus the textarea after it's rendered
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+        // Position cursor at the end of the text
+        const length = textareaRef.current.value.length;
+        textareaRef.current.setSelectionRange(length, length);
+      }
+    }, 10);
   }, []);
 
   const saveEdit = useCallback(async () => {
@@ -3160,7 +3184,7 @@ ${extractionFields}`
                         ) : (
                           <div
                             data-cell={`${rowIndex}-${column}`}
-                             className={`min-h-[2rem] py-2 px-3 ${column === 'Document File Name' ? 'cursor-default' : 'cursor-cell'} flex items-start transition-colors whitespace-pre-wrap select-none
+                             className={`min-h-[2rem] py-2 px-3 ${column === 'Document File Name' ? 'cursor-default' : 'cursor-text'} flex items-start transition-colors whitespace-pre-wrap select-none
                                ${isSelected 
                                  ? 'bg-primary/20 border-2 border-primary ring-2 ring-primary/20' 
                                  : isInRange
@@ -3170,6 +3194,7 @@ ${extractionFields}`
                                ${columnAlignments[column] === 'center' ? 'text-center justify-center' : 
                                  columnAlignments[column] === 'right' ? 'text-right justify-end' : 'text-left justify-start'}`}
                               onClick={() => column !== 'Document File Name' && selectCell(rowIndex, column)}
+                              onDoubleClick={() => column !== 'Document File Name' && handleCellDoubleClick(rowIndex, column)}
                               onMouseDown={(e) => column !== 'Document File Name' && handleCellMouseDown(e, rowIndex, column)}
                               onMouseEnter={() => handleMouseEnter(rowIndex, column)}
                               onMouseUp={handleMouseUp}
