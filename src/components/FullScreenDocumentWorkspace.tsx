@@ -266,12 +266,11 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
         });
         return;
       } else {
-        // For images, convert to base64
+        // For images, convert to base64 data URL
         const reader = new FileReader();
         imageData = await new Promise((resolve) => {
           reader.onloadend = () => {
-            const base64 = reader.result as string;
-            resolve(base64.split(',')[1]); // Remove data:image/jpeg;base64, prefix
+            resolve(reader.result as string); // Keep full data URL format
           };
           reader.readAsDataURL(blob);
         });
