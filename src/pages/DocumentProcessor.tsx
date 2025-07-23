@@ -915,7 +915,6 @@ Image: [base64 image data]`;
           onMultipleFilesSelect={handleMultipleFilesSelect}
           onResetDocument={resetDocument}
           isAnalyzing={isAnalyzing}
-          onShowMultipleUpload={() => setShowMultipleFileUpload(true)}
         />
         
         <BatchProcessing 
@@ -926,17 +925,18 @@ Image: [base64 image data]`;
         />
         
         <div className="mt-6">
-          <EditableSpreadsheet 
-            initialColumns={columns}
-            initialData={spreadsheetData}
-            onColumnChange={handleColumnsChange}
-            onDataChange={handleSpreadsheetDataChange}
-            onColumnInstructionsChange={setColumnInstructions}
-            onUnsavedChanges={setHasUnsavedChanges}
-            missingColumns={highlightMissingColumns ? missingColumns : []}
-            initialRunsheetName={location.state?.runsheet?.name}
-            initialRunsheetId={location.state?.runsheetId}
-          />
+        <EditableSpreadsheet
+          initialColumns={columns}
+          initialData={spreadsheetData}
+          onColumnChange={handleColumnsChange}
+          onDataChange={handleSpreadsheetDataChange}
+          onColumnInstructionsChange={setColumnInstructions}
+          onUnsavedChanges={setHasUnsavedChanges}
+          missingColumns={highlightMissingColumns ? missingColumns : []}
+          initialRunsheetName={location.state?.runsheet?.name}
+          initialRunsheetId={location.state?.runsheetId}
+          onShowMultipleUpload={() => setShowMultipleFileUpload(true)}
+        />
         </div>
       </div>
       {/* Combine Images Confirmation Dialog */}

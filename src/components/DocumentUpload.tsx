@@ -12,7 +12,7 @@ interface DocumentUploadProps {
   selectedFile?: File | null;
   selectedFiles?: File[];
   allowMultiple?: boolean;
-  onShowMultipleUpload?: () => void;
+  
 }
 
 const DocumentUpload: React.FC<DocumentUploadProps> = ({ 
@@ -20,8 +20,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
   onMultipleFilesSelect,
   selectedFile, 
   selectedFiles,
-  allowMultiple = false,
-  onShowMultipleUpload
+  allowMultiple = false
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -138,18 +137,6 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
                           onFileSelect={onFileSelect}
                           className="font-semibold"
                         />
-                        
-                        {onShowMultipleUpload && (
-                          <Button 
-                            variant="outline" 
-                            size="lg" 
-                            onClick={onShowMultipleUpload}
-                            className="font-semibold gap-2"
-                          >
-                            <FileStack className="h-4 w-4" />
-                            Multiple Files
-                          </Button>
-                        )}
                       </div>
                       <input
                         id="document-upload-input"

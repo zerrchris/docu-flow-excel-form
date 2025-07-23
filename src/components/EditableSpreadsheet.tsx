@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Plus, Trash2, Check, X, ArrowUp, ArrowDown, Save, FolderOpen, Download, Upload, AlignLeft, AlignCenter, AlignRight, Cloud, ChevronDown, FileText, Archive, ExternalLink, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, Check, X, ArrowUp, ArrowDown, Save, FolderOpen, Download, Upload, AlignLeft, AlignCenter, AlignRight, Cloud, ChevronDown, FileText, Archive, ExternalLink, AlertTriangle, FileStack } from 'lucide-react';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -60,6 +60,7 @@ interface SpreadsheetProps {
   missingColumns?: string[];
   initialRunsheetName?: string;
   initialRunsheetId?: string;
+  onShowMultipleUpload?: () => void;
 }
 
 const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({ 
@@ -71,7 +72,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   onUnsavedChanges,
   missingColumns = [],
   initialRunsheetName,
-  initialRunsheetId
+  initialRunsheetId,
+  onShowMultipleUpload
 }) => {
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -2686,6 +2688,19 @@ ${extractionFields}`
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            
+            {/* Upload Multiple Files Button */}
+            {onShowMultipleUpload && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onShowMultipleUpload}
+                className="gap-2"
+              >
+                <FileStack className="h-4 w-4" />
+                Multiple Files
+              </Button>
+            )}
             
               {/* New Runsheet Button */}
               <Dialog open={showNewRunsheetDialog} onOpenChange={setShowNewRunsheetDialog}>

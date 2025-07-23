@@ -26,7 +26,7 @@ interface DocumentFrameProps {
   onMultipleFilesSelect?: (files: File[]) => void;
   onResetDocument: () => void;
   isAnalyzing: boolean;
-  onShowMultipleUpload?: () => void;
+  
 }
 
 const DocumentFrame: React.FC<DocumentFrameProps> = ({
@@ -41,8 +41,7 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
   onFileSelect,
   onMultipleFilesSelect,
   onResetDocument,
-  isAnalyzing,
-  onShowMultipleUpload
+  isAnalyzing
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -222,7 +221,6 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
                           onMultipleFilesSelect={onMultipleFilesSelect}
                           selectedFile={file}
                           allowMultiple={true}
-                          onShowMultipleUpload={onShowMultipleUpload}
                         />
                       </div>
                     )}
