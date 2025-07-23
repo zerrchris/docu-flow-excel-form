@@ -8,7 +8,7 @@ interface LegacyActiveRunsheet {
 
 // Legacy hook for backward compatibility
 export const useActiveRunsheet = () => {
-  const { currentRunsheet, addRunsheet, clearAllRunsheets, hasActiveRunsheets } = useMultipleRunsheets();
+  const { currentRunsheet, addRunsheet, updateRunsheet, clearAllRunsheets, hasActiveRunsheets } = useMultipleRunsheets();
 
   const setActiveRunsheet = (runsheet: LegacyActiveRunsheet) => {
     const newRunsheet: ActiveRunsheet = {
@@ -36,6 +36,8 @@ export const useActiveRunsheet = () => {
     activeRunsheet,
     setActiveRunsheet,
     clearActiveRunsheet,
-    hasActiveRunsheet: hasActiveRunsheets
+    updateRunsheet,
+    hasActiveRunsheet: hasActiveRunsheets,
+    currentRunsheet
   };
 };

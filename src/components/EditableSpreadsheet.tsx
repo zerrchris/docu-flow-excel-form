@@ -77,7 +77,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 }) => {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { setActiveRunsheet, clearActiveRunsheet } = useActiveRunsheet();
+  const { setActiveRunsheet, clearActiveRunsheet, currentRunsheet, updateRunsheet } = useActiveRunsheet();
   const [user, setUser] = useState<User | null>(null);
   
   // Track locally which columns need configuration
@@ -658,6 +658,22 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         
         if (error) throw error;
         savedRunsheet = updateResult;
+        
+        // Set the current runsheet ID for document linking
+        setCurrentRunsheetId(updateResult.id);
+        
+        // Update the runsheet in the global state
+        if (currentRunsheet) {
+          updateRunsheet(currentRunsheet.id, {
+            id: updateResult.id,
+            name: finalName,
+            data,
+            columns,
+            columnInstructions,
+            hasUnsavedChanges: false,
+            lastSaveTime: new Date()
+          });
+        }
       } else {
         // Create new runsheet - check for name conflicts
         finalName = await generateUniqueRunsheetName(runsheetName, user.id);
@@ -686,6 +702,19 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         
         // Set the current runsheet ID for document linking
         setCurrentRunsheetId(savedRunsheet.id);
+        
+        // Update the runsheet in the global state with the new ID
+        if (currentRunsheet) {
+          updateRunsheet(currentRunsheet.id, {
+            id: savedRunsheet.id,
+            name: finalName,
+            data,
+            columns,
+            columnInstructions,
+            hasUnsavedChanges: false,
+            lastSaveTime: new Date()
+          });
+        }
       }
 
       console.log('Save successful!');
