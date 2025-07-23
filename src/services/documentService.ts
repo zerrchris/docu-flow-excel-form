@@ -172,6 +172,57 @@ export class DocumentService {
   }
 
   /**
+   * Upload a document file and link it to a runsheet row
+   */
+  static async uploadDocument(
+    file: File, 
+    runsheetId: string, 
+    rowIndex: number, 
+    onProgress?: (progress: number) => void
+  ): Promise<{ success: boolean; document?: DocumentRecord; error?: string }> {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('runsheetId', runsheetId);
+      formData.append('rowIndex', rowIndex.toString());
+      formData.append('originalFilename', file.name);
+
+      // Get auth token for the request
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        return { success: false, error: 'Not authenticated' };
+      }
+
+      const response = await supabase.functions.invoke('store-document', {
+        body: formData,
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        }
+      });
+
+      if (response.error) {
+        console.error('Upload error:', response.error);
+        return { success: false, error: response.error.message };
+      }
+
+      if (!response.data.success) {
+        return { success: false, error: response.data.error || 'Upload failed' };
+      }
+
+      return { 
+        success: true, 
+        document: response.data.document 
+      };
+    } catch (error) {
+      console.error('Error uploading document:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Upload failed' 
+      };
+    }
+  }
+
+  /**
    * Get documents mapped by row index for easy lookup
    */
   static async getDocumentMapForRunsheet(runsheetId: string): Promise<Map<number, DocumentRecord>> {
