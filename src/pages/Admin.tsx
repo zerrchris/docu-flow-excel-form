@@ -171,12 +171,20 @@ const Admin: React.FC = () => {
 
   const updateUserRole = async (userId: string, newRole: 'admin' | 'user') => {
     try {
-      const { error } = await supabase
+      // First, delete any existing roles for this user
+      const { error: deleteError } = await supabase
         .from('user_roles')
-        .upsert({ user_id: userId, role: newRole })
+        .delete()
         .eq('user_id', userId);
 
-      if (error) throw error;
+      if (deleteError) throw deleteError;
+
+      // Then insert the new role
+      const { error: insertError } = await supabase
+        .from('user_roles')
+        .insert({ user_id: userId, role: newRole });
+
+      if (insertError) throw insertError;
 
       // Update local state
       setUsers(users.map(user => 
