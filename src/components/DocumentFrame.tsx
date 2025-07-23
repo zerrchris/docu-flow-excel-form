@@ -134,7 +134,7 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
   };
 
   return (
-    <div className="overflow-hidden">
+    <Card className="overflow-hidden">
       <Collapsible open={isExpanded} onOpenChange={(open) => {
         setIsExpanded(open);
         // When expanding, just ensure the DataForm component refreshes to show current fields
@@ -231,7 +231,7 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
           </div>
         </CollapsibleContent>
       </Collapsible>
-    </div>
+    </Card>
   );
 };
 
