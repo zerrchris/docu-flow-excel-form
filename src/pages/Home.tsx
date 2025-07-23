@@ -49,11 +49,6 @@ const Home: React.FC = () => {
                   <Button>Open App</Button>
                 </Link>
               )}
-              {!user && (
-                <Link to="/app">
-                  <Button>Try Now</Button>
-                </Link>
-              )}
             </div>
           </div>
         </div>
@@ -78,20 +73,12 @@ const Home: React.FC = () => {
                 </Button>
               </Link>
             ) : (
-              <>
-                <Link to="/app">
-                  <Button size="lg" className="gap-2">
-                    <FileText className="h-5 w-5" />
-                    Try for Free
-                  </Button>
-                </Link>
-                <Link to="/signin">
-                  <Button size="lg" variant="outline" className="gap-2">
-                    <LogIn className="h-5 w-5" />
-                    Sign In
-                  </Button>
-                </Link>
-              </>
+              <Link to="/signin">
+                <Button size="lg" className="gap-2">
+                  <LogIn className="h-5 w-5" />
+                  Get Started
+                </Button>
+              </Link>
             )}
           </div>
         </div>
@@ -185,18 +172,11 @@ const Home: React.FC = () => {
                       </Button>
                     </Link>
                   ) : (
-                    <>
-                      <Link to="/signin?mode=signup" className="block">
-                        <Button size="lg" className="w-full">
-                          Create Account
-                        </Button>
-                      </Link>
-                      <Link to="/app" className="block">
-                        <Button size="lg" variant="outline" className="w-full">
-                          Try Without Account
-                        </Button>
-                      </Link>
-                    </>
+                    <Link to="/signin?mode=signup" className="block">
+                      <Button size="lg" className="w-full">
+                        Create Account
+                      </Button>
+                    </Link>
                   )}
                 </div>
               </CardContent>
