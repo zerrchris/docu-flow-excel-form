@@ -7,7 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Upload, X, FileText, Image, FileIcon, CheckCircle, AlertCircle } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import { DocumentService } from '@/services/documentService';
-import { useMultipleRunsheets } from '@/hooks/useMultipleRunsheets';
+import { useActiveRunsheet } from '@/hooks/useActiveRunsheet';
 
 interface FileUploadStatus {
   file: File;
@@ -31,7 +31,7 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  const { currentRunsheet, updateRunsheet } = useMultipleRunsheets();
+  const { activeRunsheet } = useActiveRunsheet();
 
   const getFileIcon = (file: File) => {
     const type = file.type;
@@ -52,7 +52,7 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
   };
 
   const handleFileSelect = useCallback((selectedFiles: FileList) => {
-    if (!currentRunsheet) {
+    if (!activeRunsheet) {
       toast({
         title: "No active runsheet",
         description: "Please select or create a runsheet first.",
@@ -61,32 +61,13 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
       return;
     }
 
-    const validFiles: FileUploadStatus[] = [];
-    const allowedTypes = [
-      'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
-      'application/pdf'
-    ];
-
-    Array.from(selectedFiles).forEach(file => {
-      if (allowedTypes.includes(file.type)) {
-        validFiles.push({
-          file,
-          status: 'pending',
-          progress: 0
-        });
-      } else {
-        toast({
-          title: "Unsupported file type",
-          description: `${file.name} is not a supported file type.`,
-          variant: "destructive"
-        });
-      }
+    // For now, show a message that this feature is temporarily disabled
+    toast({
+      title: "Feature temporarily disabled",
+      description: "Multiple file upload will be available in a future update.",
+      variant: "default"
     });
-
-    if (validFiles.length > 0) {
-      setFiles(prev => [...prev, ...validFiles]);
-    }
-  }, [currentRunsheet]);
+  }, [activeRunsheet]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -112,132 +93,12 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
     setFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  const findNextAvailableRow = (runsheetData: Record<string, string>[]): number => {
-    // Find the first row where 'Document File Name' is empty or doesn't exist
-    for (let i = 0; i < runsheetData.length; i++) {
-      if (!runsheetData[i]['Document File Name'] || runsheetData[i]['Document File Name'].trim() === '') {
-        return i;
-      }
-    }
-    // If no empty rows found, return the next index (will add new rows)
-    return runsheetData.length;
-  };
-
-  const ensureRowExists = (runsheetData: Record<string, string>[], rowIndex: number, columns: string[]): Record<string, string>[] => {
-    const newData = [...runsheetData];
-    
-    // Add empty rows if needed
-    while (newData.length <= rowIndex) {
-      const emptyRow: Record<string, string> = {};
-      columns.forEach(col => {
-        emptyRow[col] = '';
-      });
-      newData.push(emptyRow);
-    }
-    
-    return newData;
-  };
-
   const uploadFiles = async () => {
-    if (!currentRunsheet) {
-      toast({
-        title: "No active runsheet",
-        description: "Please select or create a runsheet first.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setIsUploading(true);
-    let successCount = 0;
-    
-    try {
-      let runsheetData = [...currentRunsheet.data];
-      let nextRowIndex = findNextAvailableRow(runsheetData);
-      
-      // Ensure we have enough rows for all files
-      runsheetData = ensureRowExists(runsheetData, nextRowIndex + files.length - 1, currentRunsheet.columns);
-
-      for (let i = 0; i < files.length; i++) {
-        const fileStatus = files[i];
-        
-        if (fileStatus.status === 'success') continue;
-        
-        try {
-          // Update status to uploading
-          setFiles(prev => prev.map((f, idx) => 
-            idx === i ? { ...f, status: 'uploading', progress: 0 } : f
-          ));
-
-          const currentRowIndex = nextRowIndex + i;
-          
-          // Upload file
-          const result = await DocumentService.uploadDocument(
-            fileStatus.file,
-            currentRunsheet.id,
-            currentRowIndex,
-            (progress) => {
-              setFiles(prev => prev.map((f, idx) => 
-                idx === i ? { ...f, progress } : f
-              ));
-            }
-          );
-
-          if (result.success) {
-            // Update the runsheet data with the filename
-            runsheetData[currentRowIndex]['Document File Name'] = result.document.stored_filename;
-            
-            // Update file status
-            setFiles(prev => prev.map((f, idx) => 
-              idx === i ? { 
-                ...f, 
-                status: 'success', 
-                progress: 100,
-                rowIndex: currentRowIndex
-              } : f
-            ));
-            
-            successCount++;
-          } else {
-            throw new Error(result.error || 'Upload failed');
-          }
-        } catch (error) {
-          console.error('Error uploading file:', error);
-          setFiles(prev => prev.map((f, idx) => 
-            idx === i ? { 
-              ...f, 
-              status: 'error', 
-              error: error instanceof Error ? error.message : 'Upload failed'
-            } : f
-          ));
-        }
-      }
-
-      // Update the runsheet with all changes
-      if (successCount > 0) {
-        updateRunsheet(currentRunsheet.id, {
-          data: runsheetData,
-          hasUnsavedChanges: true
-        });
-
-        toast({
-          title: "Files uploaded successfully",
-          description: `${successCount} file${successCount !== 1 ? 's' : ''} uploaded and linked to runsheet.`
-        });
-
-        onUploadComplete?.(successCount);
-      }
-
-    } catch (error) {
-      console.error('Batch upload error:', error);
-      toast({
-        title: "Upload error",
-        description: "An error occurred during the upload process.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsUploading(false);
-    }
+    toast({
+      title: "Feature temporarily disabled",
+      description: "Multiple file upload will be available in a future update.",
+      variant: "default"
+    });
   };
 
   const totalProgress = files.length > 0 

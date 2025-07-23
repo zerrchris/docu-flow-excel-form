@@ -13,7 +13,7 @@ import MultipleFileUpload from '@/components/MultipleFileUpload';
 import { GoogleDrivePicker } from '@/components/GoogleDrivePicker';
 import { ExtractionPreferencesService } from '@/services/extractionPreferences';
 import { AdminSettingsService } from '@/services/adminSettings';
-import { useMultipleRunsheets } from '@/hooks/useMultipleRunsheets';
+import { useActiveRunsheet } from '@/hooks/useActiveRunsheet';
 import { supabase } from '@/integrations/supabase/client';
 
 import extractorLogo from '@/assets/document-extractor-logo.png';
@@ -37,7 +37,7 @@ const DEFAULT_EXTRACTION_INSTRUCTIONS: Record<string, string> = {
 
 const DocumentProcessor: React.FC = () => {
   // Hook to get active runsheet data  
-  const { currentRunsheet } = useMultipleRunsheets();
+  const { activeRunsheet } = useActiveRunsheet();
   
   // Document state
   const [file, setFile] = useState<File | null>(null);
@@ -70,27 +70,7 @@ const DocumentProcessor: React.FC = () => {
   // Preferences loading state
   const [isLoadingPreferences, setIsLoadingPreferences] = useState(true);
 
-  // Sync columns with active runsheet data when currentRunsheet changes
-  useEffect(() => {
-    if (currentRunsheet && currentRunsheet.columns && Array.isArray(currentRunsheet.columns)) {
-      console.log('DocumentProcessor: Syncing with active runsheet columns:', currentRunsheet.columns);
-      setColumns(currentRunsheet.columns);
-      
-      // Also sync column instructions if available
-      if (currentRunsheet.columnInstructions) {
-        setColumnInstructions(currentRunsheet.columnInstructions);
-      }
-      
-      // Sync spreadsheet data if available
-      if (currentRunsheet.data && Array.isArray(currentRunsheet.data)) {
-        setSpreadsheetData(currentRunsheet.data);
-      }
-      
-      console.log('DocumentProcessor: Successfully synced with active runsheet');
-    } else {
-      console.log('DocumentProcessor: No active runsheet or invalid runsheet data');
-    }
-  }, [currentRunsheet]);
+  // Note: Removed activeRunsheet syncing since we're removing tab functionality
   
   // Load user preferences and handle selected runsheet on component mount
   useEffect(() => {
@@ -905,7 +885,7 @@ Image: [base64 image data]`;
                 size="sm"
                 onClick={() => setShowMultipleFileUpload(true)}
                 className="gap-2"
-                disabled={!currentRunsheet}
+                disabled={!activeRunsheet}
               >
                 <FileStack className="h-4 w-4" />
                 Upload Multiple Files

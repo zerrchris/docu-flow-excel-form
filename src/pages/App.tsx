@@ -1,12 +1,7 @@
 import DocumentProcessor from './DocumentProcessor';
-import RunsheetTabs from '@/components/RunsheetTabs';
 
 const Index = () => {
-  return (
-    <RunsheetTabs>
-      <DocumentProcessor />
-    </RunsheetTabs>
-  );
+  return <DocumentProcessor />;
 };
 
 export default Index;
