@@ -1,5 +1,5 @@
 {
-  "manifest_version": 3,
+  "manifest_version": 2,
   "name": "DocuFlow Runsheet Assistant",
   "version": "1.0.0",
   "description": "Add runsheet functionality to any webpage for document processing",
@@ -8,16 +8,13 @@
     "activeTab",
     "storage",
     "tabs",
-    "scripting"
-  ],
-
-  "host_permissions": [
     "https://*.lovableproject.com/*",
     "https://xnpmrafjjqsissbtempj.supabase.co/*"
   ],
 
   "background": {
-    "service_worker": "background.js"
+    "scripts": ["background.js"],
+    "persistent": false
   },
 
   "content_scripts": [
@@ -29,30 +26,13 @@
     }
   ],
 
-  "action": {
+  "browser_action": {
     "default_popup": "popup.html",
-    "default_title": "DocuFlow Runsheet",
-    "default_icon": {
-      "16": "icons/icon16.png",
-      "48": "icons/icon48.png",
-      "128": "icons/icon128.png"
-    }
+    "default_title": "DocuFlow Runsheet"
   },
 
   "web_accessible_resources": [
-    {
-      "resources": [
-        "panel.html",
-        "panel.js",
-        "icons/*.png"
-      ],
-      "matches": ["<all_urls>"]
-    }
-  ],
-
-  "icons": {
-    "16": "icons/icon16.png",
-    "48": "icons/icon48.png",
-    "128": "icons/icon128.png"
-  }
+    "panel.html",
+    "panel.js"
+  ]
 }

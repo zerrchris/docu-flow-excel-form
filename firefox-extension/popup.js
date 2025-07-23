@@ -3,8 +3,13 @@ console.log('DocuFlow popup script loading...');
 
 document.addEventListener('DOMContentLoaded', async function() {
   console.log('DOM loaded, initializing popup...');
-  await loadPopupData();
-  setupEventListeners();
+  try {
+    await loadPopupData();
+    setupEventListeners();
+    console.log('Popup initialization complete');
+  } catch (error) {
+    console.error('Error initializing popup:', error);
+  }
 });
 
 async function loadPopupData() {
@@ -12,14 +17,17 @@ async function loadPopupData() {
     // First check if user is authenticated with the web app
     await checkAuthenticationStatus();
     
-    // Load current status
+    // Load current status - Firefox WebExtensions API
     const result = await browser.storage.local.get([
       'currentRunsheet', 
       'captures', 
       'textEntries', 
       'savedRows',
       'authToken'
-    ]);
+    ]).catch(error => {
+      console.error('Storage access error:', error);
+      return {};
+    });
     
     // Update runsheet display
     const runsheetEl = document.getElementById('current-runsheet');
