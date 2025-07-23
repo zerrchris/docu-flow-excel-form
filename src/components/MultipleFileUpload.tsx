@@ -106,6 +106,16 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
       return;
     }
 
+    // Check if runsheet is saved to database (not a legacy local-only runsheet)
+    if (currentRunsheet.id.startsWith('legacy-')) {
+      toast({
+        title: "Save runsheet first",
+        description: "Please save your runsheet to the database before uploading documents.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     const pendingFiles = files.filter(f => f.status === 'pending');
     if (pendingFiles.length === 0) {
       toast({
