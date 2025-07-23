@@ -6,6 +6,9 @@ document.addEventListener('DOMContentLoaded', async function() {
 
 async function loadPopupData() {
   try {
+    // First check if user is authenticated with the web app
+    await checkAuthenticationStatus();
+    
     // Load current status
     const result = await browser.storage.local.get([
       'currentRunsheet', 
@@ -38,6 +41,33 @@ async function loadPopupData() {
     
   } catch (error) {
     console.error('Error loading popup data:', error);
+  }
+}
+
+async function checkAuthenticationStatus() {
+  try {
+    // Check if any tabs have the web app open and get auth status from there
+    const tabs = await browser.tabs.query({
+      url: 'https://9e913707-5b2b-41be-9c86-3541992b5349.lovableproject.com/*'
+    });
+    
+    if (tabs.length > 0) {
+      // Try to get auth status from the web app tab
+      try {
+        const response = await browser.tabs.sendMessage(tabs[0].id, { 
+          action: 'getAuthStatus' 
+        });
+        
+        if (response && response.authenticated && response.token) {
+          await browser.storage.local.set({ authToken: response.token });
+          console.log('Authentication status synced with web app');
+        }
+      } catch (error) {
+        console.log('Could not get auth status from web app tab:', error);
+      }
+    }
+  } catch (error) {
+    console.log('Could not check authentication status:', error);
   }
 }
 

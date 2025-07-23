@@ -183,8 +183,53 @@
       case 'hidePanel':
         hidePanel();
         break;
+      case 'getAuthStatus':
+        // Check if we're on the web app domain and can access auth status
+        if (window.location.hostname.includes('lovableproject.com')) {
+          getWebAppAuthStatus().then(authData => {
+            sendResponse(authData);
+          });
+          return true; // Keep the message channel open for async response
+        } else {
+          sendResponse({ authenticated: false });
+        }
+        break;
+      case 'togglePanel':
+        togglePanel();
+        break;
     }
   });
+
+  // Function to get auth status from the web app
+  async function getWebAppAuthStatus() {
+    try {
+      // Try to access the Supabase client from the web app
+      if (window.supabase || (window as any).supabase) {
+        const supabase = window.supabase || (window as any).supabase;
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        return {
+          authenticated: !!session,
+          token: session?.access_token || null
+        };
+      }
+      
+      // Fallback: try to access localStorage directly
+      const supabaseSession = localStorage.getItem('sb-xnpmrafjjqsissbtempj-auth-token');
+      if (supabaseSession) {
+        const sessionData = JSON.parse(supabaseSession);
+        return {
+          authenticated: !!sessionData.access_token,
+          token: sessionData.access_token
+        };
+      }
+      
+      return { authenticated: false };
+    } catch (error) {
+      console.log('Error getting auth status:', error);
+      return { authenticated: false };
+    }
+  }
 
   // Initialize panel
   if (document.readyState === 'loading') {
