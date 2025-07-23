@@ -41,33 +41,36 @@ const DataForm: React.FC<DataFormProps> = ({
       console.log('Starting smart filename generation...');
       setIsGeneratingName(true);
       
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        console.log('No user found');
-        return;
-      }
-
-      console.log('User found, fetching naming preferences...');
-      // Get user's naming preferences
-      const { data: preferences, error } = await supabase
-        .from('user_document_naming_preferences')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('is_active', true)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      console.log('Preferences query result:', { preferences, error });
-
-      // Use default preferences if none found
-      const namingPrefs = preferences || {
+      let namingPrefs = {
         priority_columns: ['name', 'title', 'invoice_number', 'document_number', 'reference', 'id'],
         max_filename_parts: 3,
         separator: '_',
         include_extension: true,
         fallback_pattern: 'document_{row_index}_{timestamp}'
       };
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        console.log('User found, fetching naming preferences...');
+        // Get user's naming preferences if logged in
+        const { data: preferences, error } = await supabase
+          .from('user_document_naming_preferences')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        console.log('Preferences query result:', { preferences, error });
+
+        // Use user preferences if found, otherwise stick with defaults
+        if (preferences) {
+          namingPrefs = preferences;
+        }
+      } else {
+        console.log('No user found, using default naming preferences');
+      }
 
       console.log('Using naming preferences:', namingPrefs);
       console.log('Current form data:', formData);
