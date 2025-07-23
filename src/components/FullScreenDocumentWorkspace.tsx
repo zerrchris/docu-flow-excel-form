@@ -241,6 +241,12 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
   };
 
   const analyzeDocumentAndPopulateRow = async () => {
+    console.log('🧠 Brain button clicked in FullScreenDocumentWorkspace');
+    console.log('🧠 Document URL:', documentUrl);
+    console.log('🧠 Is analyzing:', isAnalyzing);
+    console.log('🧠 Current runsheet ID:', runsheetId);
+    console.log('🧠 Row index:', rowIndex);
+    
     if (!documentUrl || isAnalyzing) return;
     
     try {
@@ -423,7 +429,11 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
               <Button
                 variant="outline"
                 size="sm"
-                onClick={analyzeDocumentAndPopulateRow}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  analyzeDocumentAndPopulateRow();
+                }}
                 disabled={isAnalyzing}
                 className="gap-2 text-blue-600 hover:text-blue-700 border-blue-200 hover:border-blue-300"
                 title="Analyze document and extract data to populate row fields"
