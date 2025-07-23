@@ -98,9 +98,13 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
   };
 
   const uploadFiles = async () => {
-    console.log('uploadFiles called with currentRunsheet:', currentRunsheet);
+    console.log('=== UPLOAD FILES DEBUG ===');
+    console.log('currentRunsheet from MultipleFileUpload:', currentRunsheet);
+    console.log('currentRunsheet.id:', currentRunsheet?.id);
+    console.log('currentRunsheet full object:', JSON.stringify(currentRunsheet, null, 2));
     
     if (!currentRunsheet?.id) {
+      console.log('No currentRunsheet.id found');
       toast({
         title: "No active runsheet",
         description: "Please select or create a runsheet first.",
@@ -122,14 +126,17 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
 
     // Verify runsheet exists in database
     try {
+      console.log('Checking if runsheet exists in database with ID:', currentRunsheet.id);
       const { data: runsheetExists, error: checkError } = await supabase
         .from('runsheets')
         .select('id')
         .eq('id', currentRunsheet.id)
         .single();
 
+      console.log('Database check result:', { runsheetExists, checkError });
+
       if (checkError || !runsheetExists) {
-        console.log('Runsheet not found in database:', currentRunsheet.id);
+        console.log('Runsheet not found in database:', currentRunsheet.id, 'Error:', checkError);
         toast({
           title: "Save runsheet first",
           description: "Please save your runsheet to the database before uploading documents.",
@@ -137,6 +144,8 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
         });
         return;
       }
+      
+      console.log('Runsheet verified in database, proceeding with upload');
     } catch (error) {
       console.error('Error checking runsheet:', error);
       toast({
