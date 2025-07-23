@@ -279,9 +279,8 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
       // Call the analyze-document function
       const { data, error } = await supabase.functions.invoke('analyze-document', {
         body: {
-          imageData,
-          extractionFields,
-          analysisType: 'spreadsheet'
+          prompt: `Extract information from this document for the following fields:\n${extractionFields}`,
+          imageData
         },
       });
 
