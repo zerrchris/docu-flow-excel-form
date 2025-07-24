@@ -635,6 +635,63 @@ async function addRowToSheet() {
   }
 }
 
+// Show brain button for document analysis
+function showBrainButton(file, filename) {
+  const brainBtn = document.querySelector('.brain-btn');
+  if (brainBtn) {
+    window.currentAnalysisFile = file;
+    window.currentAnalysisFileName = filename;
+    brainBtn.style.display = 'block';
+  }
+}
+
+// Analyze document function
+async function analyzeDocument(file, filename) {
+  if (!userSession) {
+    showNotification('Authentication required', 'error');
+    return;
+  }
+
+  try {
+    showNotification('Analyzing document...', 'info');
+    
+    // Create FormData for file upload
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('filename', filename);
+    
+    const response = await fetch('https://xnpmrafjjqsissbtempj.supabase.co/functions/v1/analyze-document', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${userSession.access_token}`,
+        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhucG1yYWZqanFzaXNzYnRlbXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4NzMyNjcsImV4cCI6MjA2ODQ0OTI2N30.aQG15Ed8IOLJfM5p7XF_kEM5FUz8zJug1pxAi9rTTsg'
+      },
+      body: formData
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok && result.success) {
+      // Fill in the extracted data to the form fields
+      const extractedData = result.extractedData || {};
+      
+      for (const [field, value] of Object.entries(extractedData)) {
+        const input = document.querySelector(`input[data-column="${field}"], textarea[data-column="${field}"]`);
+        if (input && value) {
+          input.value = value;
+        }
+      }
+      
+      showNotification('Document analyzed and data extracted!', 'success');
+    } else {
+      throw new Error(result.error || 'Analysis failed');
+    }
+  } catch (error) {
+    console.error('Document analysis error:', error);
+    showNotification('Failed to analyze document', 'error');
+  }
+}
+
 // Load a specific runsheet
 function loadRunsheet(runsheet) {
   console.log('🔧 DocuFlow Extension: Loading runsheet:', runsheet.name);
@@ -813,62 +870,65 @@ function createSingleEntryView(content) {
     
     // Special handling for Document File Name column
     if (column === 'Document File Name') {
-      // Create header with file upload functionality
+      // Create header with DocumentLinker-style functionality (no title text)
       const headerContent = document.createElement('div');
       headerContent.style.cssText = `
         display: flex !important;
         flex-direction: column !important;
         align-items: center !important;
-        gap: 4px !important;
-        padding: 4px !important;
+        gap: 6px !important;
+        padding: 8px !important;
         height: 100% !important;
-        min-height: 60px !important;
+        min-height: 80px !important;
+        background: hsl(var(--card, 0 0% 100%)) !important;
+        border: 1px dashed hsl(var(--border, 214 32% 91%)) !important;
+        border-radius: 6px !important;
       `;
       
-      const titleText = document.createElement('div');
-      titleText.textContent = 'Document File Name';
-      titleText.style.cssText = `
-        font-weight: 600 !important;
-        font-size: 10px !important;
-        text-align: center !important;
-        margin-bottom: 4px !important;
-      `;
-      
-      // Create file upload area
+      // Create upload area with Add File and Screenshot buttons
       const uploadArea = document.createElement('div');
       uploadArea.style.cssText = `
-        border: 1px dashed hsl(var(--border, 214 32% 91%)) !important;
-        border-radius: 4px !important;
-        padding: 6px !important;
-        text-align: center !important;
-        cursor: pointer !important;
-        background: hsl(var(--background, 0 0% 100%)) !important;
-        width: 100% !important;
-        transition: all 0.2s ease !important;
-        min-height: 40px !important;
         display: flex !important;
         flex-direction: column !important;
         align-items: center !important;
-        justify-content: center !important;
+        gap: 4px !important;
+        width: 100% !important;
+        cursor: pointer !important;
+        transition: all 0.2s ease !important;
       `;
       
-      const uploadIcon = document.createElement('div');
-      uploadIcon.innerHTML = '📎';
-      uploadIcon.style.cssText = `
-        font-size: 12px !important;
-        margin-bottom: 2px !important;
+      // Add File button
+      const addFileBtn = document.createElement('button');
+      addFileBtn.innerHTML = '📁 Add File';
+      addFileBtn.style.cssText = `
+        background: hsl(var(--primary, 215 80% 40%)) !important;
+        color: hsl(var(--primary-foreground, 210 40% 98%)) !important;
+        border: none !important;
+        border-radius: 4px !important;
+        padding: 4px 8px !important;
+        font-size: 10px !important;
+        cursor: pointer !important;
+        width: 100% !important;
+        transition: all 0.2s ease !important;
       `;
       
-      const uploadText = document.createElement('div');
-      uploadText.textContent = 'Drop file or click';
-      uploadText.style.cssText = `
-        font-size: 8px !important;
-        color: hsl(var(--muted-foreground, 215 16% 47%)) !important;
-        line-height: 1.2 !important;
+      // Screenshot button
+      const screenshotBtn = document.createElement('button');
+      screenshotBtn.innerHTML = '📷 Screenshot';
+      screenshotBtn.style.cssText = `
+        background: hsl(var(--secondary, 210 40% 96%)) !important;
+        color: hsl(var(--secondary-foreground, 222 47% 11%)) !important;
+        border: 1px solid hsl(var(--border, 214 32% 91%)) !important;
+        border-radius: 4px !important;
+        padding: 4px 8px !important;
+        font-size: 10px !important;
+        cursor: pointer !important;
+        width: 100% !important;
+        transition: all 0.2s ease !important;
       `;
       
-      uploadArea.appendChild(uploadIcon);
-      uploadArea.appendChild(uploadText);
+      uploadArea.appendChild(addFileBtn);
+      uploadArea.appendChild(screenshotBtn);
       
       // Create hidden file input
       const fileInput = document.createElement('input');
@@ -891,6 +951,9 @@ function createSingleEntryView(content) {
             window.extensionFileStorage.set(file.name, file);
             
             showNotification(`File "${file.name}" ready to link`, 'success');
+            
+            // Show brain button for analysis if supported
+            showBrainButton(file, file.name);
           }
         }
       };
@@ -903,28 +966,35 @@ function createSingleEntryView(content) {
         }
       });
       
-      // Click handler for upload area
-      uploadArea.addEventListener('click', () => {
+      // Add File button click handler
+      addFileBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
         fileInput.click();
       });
       
-      // Drag and drop handlers
-      uploadArea.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        uploadArea.style.border = '1px dashed hsl(var(--primary, 215 80% 40%))';
-        uploadArea.style.background = 'hsl(var(--primary, 215 80% 40%) / 0.1)';
+      // Screenshot button click handler
+      screenshotBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        startSnipMode();
       });
       
-      uploadArea.addEventListener('dragleave', (e) => {
+      // Drag and drop handlers for the entire header area
+      headerContent.addEventListener('dragover', (e) => {
         e.preventDefault();
-        uploadArea.style.border = '1px dashed hsl(var(--border, 214 32% 91%))';
-        uploadArea.style.background = 'hsl(var(--background, 0 0% 100%))';
+        headerContent.style.border = '1px dashed hsl(var(--primary, 215 80% 40%))';
+        headerContent.style.background = 'hsl(var(--primary, 215 80% 40%) / 0.1)';
       });
       
-      uploadArea.addEventListener('drop', (e) => {
+      headerContent.addEventListener('dragleave', (e) => {
         e.preventDefault();
-        uploadArea.style.border = '1px dashed hsl(var(--border, 214 32% 91%))';
-        uploadArea.style.background = 'hsl(var(--background, 0 0% 100%))';
+        headerContent.style.border = '1px dashed hsl(var(--border, 214 32% 91%))';
+        headerContent.style.background = 'hsl(var(--card, 0 0% 100%))';
+      });
+      
+      headerContent.addEventListener('drop', (e) => {
+        e.preventDefault();
+        headerContent.style.border = '1px dashed hsl(var(--border, 214 32% 91%))';
+        headerContent.style.background = 'hsl(var(--card, 0 0% 100%))';
         
         const files = e.dataTransfer.files;
         if (files.length > 0) {
@@ -932,7 +1002,6 @@ function createSingleEntryView(content) {
         }
       });
       
-      headerContent.appendChild(titleText);
       headerContent.appendChild(uploadArea);
       headerContent.appendChild(fileInput);
       cell.appendChild(headerContent);
@@ -1193,46 +1262,61 @@ function createSingleEntryView(content) {
       cell.appendChild(textarea);
     }
     
-    // Document File Name special handling
+    // Document File Name special handling - Create full-width Add Row button
     if (column === 'Document File Name') {
+      // Create main button container that spans full cell width
       const buttonContainer = document.createElement('div');
-      buttonContainer.style.position = 'absolute';
-      buttonContainer.style.right = '8px';
-      buttonContainer.style.top = '50%';
-      buttonContainer.style.transform = 'translateY(-50%)';
-      buttonContainer.style.display = 'flex';
-      buttonContainer.style.gap = '4px';
-      buttonContainer.style.zIndex = '10';
+      buttonContainer.style.cssText = `
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 4px !important;
+        width: 100% !important;
+        padding: 4px !important;
+        box-sizing: border-box !important;
+      `;
       
-      const toSheetBtn = document.createElement('button');
-      toSheetBtn.className = 'to-sheet-btn';
-      toSheetBtn.textContent = 'To Sheet';
-      toSheetBtn.style.fontSize = '9px';
-      toSheetBtn.style.padding = '2px 4px';
-      toSheetBtn.style.border = '1px solid hsl(var(--border, 214 32% 91%))';
-      toSheetBtn.style.borderRadius = '3px';
-      toSheetBtn.style.background = 'hsl(var(--background, 0 0% 100%))';
-      toSheetBtn.style.color = 'hsl(var(--foreground, 222 47% 11%))';
-      toSheetBtn.style.cursor = 'pointer';
-      toSheetBtn.style.display = 'none';
-      toSheetBtn.tabIndex = -1; // Not in tab order
+      // Brain button for document analysis (initially hidden)
+      const brainBtn = document.createElement('button');
+      brainBtn.className = 'brain-btn';
+      brainBtn.innerHTML = '🧠 Analyze';
+      brainBtn.style.cssText = `
+        background: hsl(var(--secondary, 210 40% 96%)) !important;
+        color: hsl(var(--secondary-foreground, 222 47% 11%)) !important;
+        border: 1px solid hsl(var(--border, 214 32% 91%)) !important;
+        border-radius: 4px !important;
+        padding: 4px 8px !important;
+        font-size: 10px !important;
+        cursor: pointer !important;
+        width: 100% !important;
+        display: none !important;
+        transition: all 0.2s ease !important;
+      `;
+      brainBtn.title = 'Analyze document and extract data';
       
+      // Full-width Add Row button
       const addRowBtn = document.createElement('button');
       addRowBtn.className = 'add-row-btn';
       addRowBtn.textContent = 'Add Row';
-      addRowBtn.style.fontSize = '9px';
-      addRowBtn.style.padding = '2px 6px';
-      addRowBtn.style.border = '1px solid hsl(var(--primary, 215 80% 40%))';
-      addRowBtn.style.borderRadius = '3px';
-      addRowBtn.style.background = 'hsl(var(--primary, 215 80% 40%))';
-      addRowBtn.style.color = 'hsl(var(--primary-foreground, 210 40% 98%))';
-      addRowBtn.style.cursor = 'pointer';
-      addRowBtn.style.fontWeight = '500';
+      addRowBtn.style.cssText = `
+        background: hsl(var(--primary, 215 80% 40%)) !important;
+        color: hsl(var(--primary-foreground, 210 40% 98%)) !important;
+        border: 1px solid hsl(var(--primary, 215 80% 40%)) !important;
+        border-radius: 4px !important;
+        padding: 6px 12px !important;
+        font-size: 12px !important;
+        cursor: pointer !important;
+        width: 100% !important;
+        font-weight: 500 !important;
+        transition: all 0.2s ease !important;
+      `;
       addRowBtn.tabIndex = 0; // Can be tabbed to
-      addRowBtn.title = 'Add this row data to the sheet (Tab here and press Enter)';
+      addRowBtn.title = 'Add this row data to the sheet';
       
-      toSheetBtn.addEventListener('click', () => {
-        linkCapturedImageToRow(0);
+      // Event handlers
+      brainBtn.addEventListener('click', () => {
+        if (window.currentAnalysisFile && window.currentAnalysisFileName) {
+          analyzeDocument(window.currentAnalysisFile, window.currentAnalysisFileName);
+        }
       });
       
       addRowBtn.addEventListener('click', () => {
@@ -1264,17 +1348,8 @@ function createSingleEntryView(content) {
         }
       });
       
-      buttonContainer.appendChild(toSheetBtn);
+      buttonContainer.appendChild(brainBtn);
       buttonContainer.appendChild(addRowBtn);
-      
-      cell.addEventListener('mouseenter', () => {
-        if (captures.length > 0) {
-          toSheetBtn.style.display = 'block';
-        }
-      });
-      cell.addEventListener('mouseleave', () => {
-        toSheetBtn.style.display = 'none';
-      });
       
       cell.appendChild(buttonContainer);
     }
@@ -2412,6 +2487,17 @@ async function linkSnipToRunsheet(snipUrl) {
     
     // Update local activeRunsheet
     activeRunsheet.data = runsheetData;
+    
+    // Update the Document File Name field in the UI
+    const filename = `captured_snip_${Date.now()}.png`;
+    const input = document.querySelector(`input[data-column="Document File Name"]`);
+    if (input) {
+      input.value = filename;
+      
+      // Create a file object for the brain button functionality
+      const file = new File([new Blob()], filename, { type: 'image/png' });
+      showBrainButton(file, filename);
+    }
     
     // Refresh the UI if visible
     if (runsheetFrame && runsheetFrame.style.display !== 'none') {
