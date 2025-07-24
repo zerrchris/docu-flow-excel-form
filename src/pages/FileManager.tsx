@@ -511,11 +511,13 @@ export const FileManager: React.FC = () => {
   };
 
   const handleViewChoice = (item: StoredFile | Runsheet, type: 'file' | 'runsheet') => {
+    console.log('handleViewChoice called:', { item, type });
     if (type === 'file') {
       setPendingViewItem({ type: 'file', item: item as StoredFile });
     } else {
       setPendingViewItem({ type: 'runsheet', item: item as Runsheet });
     }
+    console.log('Setting showViewChoiceDialog to true');
     setShowViewChoiceDialog(true);
   };
 
@@ -1116,7 +1118,7 @@ export const FileManager: React.FC = () => {
 
       {/* View Choice Dialog */}
       <AlertDialog open={showViewChoiceDialog} onOpenChange={setShowViewChoiceDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className="z-[9999]">
           <AlertDialogHeader>
             <AlertDialogTitle>How would you like to open this {pendingViewItem?.type === 'file' ? 'file' : 'runsheet'}?</AlertDialogTitle>
             <AlertDialogDescription>
