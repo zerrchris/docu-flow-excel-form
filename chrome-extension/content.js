@@ -691,14 +691,27 @@ function createRunsheetFrame() {
   const resizeHandle = document.createElement('div');
   resizeHandle.className = 'frame-resize-handle';
   resizeHandle.style.cssText = `
-    height: 4px !important;
+    height: 6px !important;
     background: hsl(var(--border)) !important;
     cursor: ns-resize !important;
     position: relative !important;
-    opacity: 0.7 !important;
+    opacity: 0.8 !important;
     transition: all 0.2s ease !important;
     z-index: 1 !important;
+    border-top: 2px solid hsl(var(--primary)) !important;
+    border-bottom: 1px solid hsl(var(--border)) !important;
   `;
+  
+  // Add hover effect
+  resizeHandle.addEventListener('mouseenter', () => {
+    resizeHandle.style.background = 'hsl(var(--primary))';
+    resizeHandle.style.opacity = '1';
+  });
+  
+  resizeHandle.addEventListener('mouseleave', () => {
+    resizeHandle.style.background = 'hsl(var(--border))';
+    resizeHandle.style.opacity = '0.8';
+  });
   
   // Add resize functionality
   let isResizing = false;
@@ -706,19 +719,20 @@ function createRunsheetFrame() {
   let startHeight = 0;
   
   resizeHandle.addEventListener('mousedown', (e) => {
-    console.log('Resize handle mousedown');
+    console.log('🔧 DocuFlow Extension: Resize handle mousedown');
     isResizing = true;
     startY = e.clientY;
     startHeight = parseInt(window.getComputedStyle(runsheetFrame).height);
     document.body.style.cursor = 'ns-resize';
     document.body.style.userSelect = 'none';
     e.preventDefault();
+    e.stopPropagation();
   });
   
   const handleMouseMove = (e) => {
     if (!isResizing) return;
     
-    console.log('Resizing frame');
+    console.log('🔧 DocuFlow Extension: Resizing frame');
     const deltaY = startY - e.clientY;
     const newHeight = Math.max(150, Math.min(600, startHeight + deltaY));
     
@@ -727,19 +741,27 @@ function createRunsheetFrame() {
     
     // Save preferred height
     localStorage.setItem('docuflow-frame-height', newHeight.toString());
+    e.preventDefault();
   };
   
   const handleMouseUp = () => {
     if (isResizing) {
-      console.log('Resize complete');
+      console.log('🔧 DocuFlow Extension: Resize complete');
       isResizing = false;
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
     }
   };
   
+  // Attach global event listeners
   document.addEventListener('mousemove', handleMouseMove);
   document.addEventListener('mouseup', handleMouseUp);
+  
+  // Clean up event listeners when frame is destroyed
+  runsheetFrame.addEventListener('beforeunload', () => {
+    document.removeEventListener('mousemove', handleMouseMove);
+    document.removeEventListener('mouseup', handleMouseUp);
+  });
   
   // Create header
   const header = document.createElement('div');
