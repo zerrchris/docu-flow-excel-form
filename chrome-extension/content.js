@@ -1028,11 +1028,25 @@ function createSingleEntryView(content) {
             addRowToSheet();
           }
         } else if (e.key === 'Tab' && !e.shiftKey) {
-          // Tab moves to Add Row button
+          // Tab moves to next field or Add Row button if last field
           e.preventDefault();
-          const addButton = cell.querySelector('.add-row-btn');
-          if (addButton) {
-            addButton.focus();
+          const currentIndex = Array.from(dataRow.children).indexOf(cell);
+          if (currentIndex < dataRow.children.length - 1) {
+            // Move to next cell
+            const nextCell = dataRow.children[currentIndex + 1];
+            const nextTextarea = nextCell.querySelector('textarea');
+            const nextInput = nextCell.querySelector('input');
+            if (nextTextarea) {
+              nextTextarea.focus();
+            } else if (nextInput) {
+              nextInput.focus();
+            }
+          } else {
+            // If this is the last field, focus the Add Row button
+            const addButton = cell.querySelector('.add-row-btn');
+            if (addButton) {
+              addButton.focus();
+            }
           }
         } else if (e.key === 'Tab' && e.shiftKey) {
           // Shift+Tab moves to previous field
