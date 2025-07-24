@@ -319,3 +319,70 @@ body {
   border-color: hsl(var(--primary)) !important;
   color: hsl(var(--primary)) !important;
 }
+
+/* Full runsheet view styles */
+.full-runsheet-view {
+  width: 100% !important;
+  height: 100% !important;
+  overflow: auto !important;
+  background: hsl(var(--background, 0 0% 100%)) !important;
+}
+
+.full-runsheet-view table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  font-size: 11px !important;
+  font-family: inherit !important;
+  background: hsl(var(--background, 0 0% 100%)) !important;
+}
+
+.full-runsheet-view th {
+  padding: 8px 4px !important;
+  text-align: left !important;
+  font-weight: 600 !important;
+  background: hsl(var(--muted, 210 40% 96%)) !important;
+  border-right: 1px solid hsl(var(--border, 214 32% 91%)) !important;
+  border-bottom: 1px solid hsl(var(--border, 214 32% 91%)) !important;
+  min-width: 100px !important;
+  max-width: 200px !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  color: hsl(var(--foreground, 222 47% 11%)) !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 10 !important;
+}
+
+.full-runsheet-view td {
+  padding: 6px 4px !important;
+  border-right: 1px solid hsl(var(--border, 214 32% 91%)) !important;
+  border-bottom: 1px solid hsl(var(--border, 214 32% 91%)) !important;
+  max-width: 200px !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  word-wrap: break-word !important;
+  vertical-align: top !important;
+  color: hsl(var(--foreground, 222 47% 11%)) !important;
+  background: hsl(var(--background, 0 0% 100%)) !important;
+}
+
+.full-runsheet-view tr:hover td {
+  background: hsl(var(--muted, 210 40% 96%) / 0.5) !important;
+}
+
+.full-runsheet-view th:last-child,
+.full-runsheet-view td:last-child {
+  border-right: none !important;
+}
+
+/* View mode button highlighting */
+.control-btn[id="view-mode-btn"] {
+  background: hsl(var(--accent, 230 60% 60%)) !important;
+  color: hsl(var(--accent-foreground, 210 40% 98%)) !important;
+  border-color: hsl(var(--accent, 230 60% 60%)) !important;
+}
+
+.control-btn[id="view-mode-btn"]:hover {
+  background: hsl(var(--accent, 230 60% 60%) / 0.8) !important;
+}

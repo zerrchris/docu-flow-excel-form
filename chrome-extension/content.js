@@ -9,6 +9,7 @@ let activeRunsheet = null;
 let captures = [];
 let isCapturing = false;
 let userSession = null;
+let currentViewMode = 'single'; // 'single' or 'full'
 
 // Check authentication status
 async function checkAuth() {
@@ -635,7 +636,8 @@ function loadRunsheet(runsheet) {
   
   // Store runsheet data for persistence across page navigation
   chrome.storage.local.set({ 
-    'active_runsheet': runsheet 
+    'active_runsheet': runsheet,
+    'activeRunsheet': runsheet // Store for popup
   });
   
   // Destroy existing frame and recreate with new data
@@ -747,6 +749,7 @@ function createRunsheetFrame() {
   header.innerHTML = `
     <span class="frame-title">DocuFlow Runsheet - ${activeRunsheet?.name || 'Default'}</span>
     <div class="frame-controls">
+      <button id="view-mode-btn" class="control-btn">${currentViewMode === 'single' ? '📋 Full View' : '📝 Single Entry'}</button>
       <button id="snip-btn" class="control-btn">✂️ Snip</button>
       <button id="capture-btn" class="control-btn">📷 Capture</button>
       <button id="sync-btn" class="control-btn">🔄 Sync</button>
@@ -758,6 +761,28 @@ function createRunsheetFrame() {
   const content = document.createElement('div');
   content.className = 'frame-content';
   
+  // Load current view mode from storage
+  chrome.storage.local.get(['viewMode']).then(result => {
+    currentViewMode = result.viewMode || 'single';
+    updateViewModeButton();
+  });
+  
+  // Create content based on view mode
+  if (currentViewMode === 'full') {
+    createFullRunsheetView(content);
+  } else {
+    createSingleEntryView(content);
+  }
+  
+  runsheetFrame.appendChild(resizeHandle);
+  runsheetFrame.appendChild(header);
+  runsheetFrame.appendChild(content);
+  
+  setupFrameEventListeners();
+}
+
+// Create single entry view (original functionality)
+function createSingleEntryView(content) {
   // Create dynamic table based on runsheet data
   const table = document.createElement('div');
   table.className = 'runsheet-table';
@@ -1058,12 +1083,160 @@ function createRunsheetFrame() {
   
   table.appendChild(dataRow);
   content.appendChild(table);
+}
+
+// Create full runsheet view (shows all data)
+function createFullRunsheetView(content) {
+  const fullViewContainer = document.createElement('div');
+  fullViewContainer.className = 'full-runsheet-view';
+  fullViewContainer.style.cssText = `
+    height: 100% !important;
+    overflow: auto !important;
+    padding: 8px !important;
+  `;
+
+  // Get runsheet data or use defaults
+  const runsheetData = activeRunsheet || {
+    columns: ['Inst Number', 'Book/Page', 'Inst Type', 'Recording Date', 'Document Date', 'Grantor', 'Grantee', 'Legal Description', 'Notes', 'Document File Name'],
+    data: [{}]
+  };
+
+  // Create table for full view
+  const table = document.createElement('table');
+  table.style.cssText = `
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 11px !important;
+    font-family: inherit !important;
+  `;
+
+  // Create header
+  const thead = document.createElement('thead');
+  const headerRow = document.createElement('tr');
+  headerRow.style.cssText = `
+    background: hsl(var(--muted, 210 40% 96%)) !important;
+    border-bottom: 1px solid hsl(var(--border, 214 32% 91%)) !important;
+  `;
+
+  runsheetData.columns.forEach(column => {
+    const th = document.createElement('th');
+    th.textContent = column;
+    th.style.cssText = `
+      padding: 8px 4px !important;
+      text-align: left !important;
+      font-weight: 600 !important;
+      border-right: 1px solid hsl(var(--border, 214 32% 91%)) !important;
+      min-width: 100px !important;
+      max-width: 200px !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      white-space: nowrap !important;
+    `;
+    headerRow.appendChild(th);
+  });
+
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
+
+  // Create body with data
+  const tbody = document.createElement('tbody');
   
-  runsheetFrame.appendChild(resizeHandle);
-  runsheetFrame.appendChild(header);
-  runsheetFrame.appendChild(content);
+  // If no data exists, show placeholder
+  const dataRows = runsheetData.data && runsheetData.data.length > 0 ? runsheetData.data : [{}];
   
-  setupFrameEventListeners();
+  dataRows.forEach((rowData, rowIndex) => {
+    const row = document.createElement('tr');
+    row.style.cssText = `
+      border-bottom: 1px solid hsl(var(--border, 214 32% 91%)) !important;
+      hover:background: hsl(var(--muted, 210 40% 96%) / 0.5) !important;
+    `;
+
+    runsheetData.columns.forEach(column => {
+      const td = document.createElement('td');
+      td.style.cssText = `
+        padding: 6px 4px !important;
+        border-right: 1px solid hsl(var(--border, 214 32% 91%)) !important;
+        max-width: 200px !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        word-wrap: break-word !important;
+        vertical-align: top !important;
+      `;
+      
+      const cellValue = rowData[column] || '';
+      td.textContent = cellValue;
+      td.title = cellValue; // Show full text on hover
+      
+      row.appendChild(td);
+    });
+
+    tbody.appendChild(row);
+  });
+
+  table.appendChild(tbody);
+
+  // Add controls for full view
+  const controls = document.createElement('div');
+  controls.style.cssText = `
+    margin-top: 8px !important;
+    display: flex !important;
+    gap: 8px !important;
+    justify-content: center !important;
+  `;
+
+  const addRowBtn = document.createElement('button');
+  addRowBtn.textContent = '+ Add New Row';
+  addRowBtn.style.cssText = `
+    padding: 6px 12px !important;
+    background: hsl(var(--primary, 215 80% 40%)) !important;
+    color: hsl(var(--primary-foreground, 210 40% 98%)) !important;
+    border: none !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    font-size: 11px !important;
+    font-weight: 500 !important;
+  `;
+  
+  addRowBtn.addEventListener('click', () => {
+    // Switch to single entry mode for adding new row
+    switchViewMode('single');
+  });
+
+  controls.appendChild(addRowBtn);
+
+  fullViewContainer.appendChild(table);
+  fullViewContainer.appendChild(controls);
+  content.appendChild(fullViewContainer);
+}
+
+// Switch between view modes
+function switchViewMode(newMode) {
+  if (newMode === currentViewMode) return;
+  
+  currentViewMode = newMode;
+  chrome.storage.local.set({ viewMode: newMode });
+  
+  // Recreate the frame content
+  if (runsheetFrame) {
+    const content = runsheetFrame.querySelector('.frame-content');
+    if (content) {
+      content.innerHTML = '';
+      if (currentViewMode === 'full') {
+        createFullRunsheetView(content);
+      } else {
+        createSingleEntryView(content);
+      }
+    }
+    updateViewModeButton();
+  }
+}
+
+// Update the view mode button text
+function updateViewModeButton() {
+  const viewModeBtn = document.getElementById('view-mode-btn');
+  if (viewModeBtn) {
+    viewModeBtn.textContent = currentViewMode === 'single' ? '📋 Full View' : '📝 Single Entry';
+  }
 }
 
 // Function to link captured image to a specific row
@@ -1091,6 +1264,15 @@ function linkCapturedImageToRow(rowIndex) {
 // Setup event listeners for the frame
 function setupFrameEventListeners() {
   if (!runsheetFrame) return;
+  
+  // View mode button
+  const viewModeBtn = document.getElementById('view-mode-btn');
+  if (viewModeBtn) {
+    viewModeBtn.addEventListener('click', () => {
+      const newMode = currentViewMode === 'single' ? 'full' : 'single';
+      switchViewMode(newMode);
+    });
+  }
   
   // Snip button
   const snipBtn = document.getElementById('snip-btn');
@@ -1453,13 +1635,25 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (runsheetButton) {
       runsheetButton.style.display = runsheetButton.style.display === 'none' ? 'block' : 'none';
     }
+  } else if (request.action === 'toggleExtension') {
+    // Handle extension enable/disable from popup
+    if (request.enabled) {
+      if (runsheetButton) runsheetButton.style.display = 'block';
+    } else {
+      if (runsheetButton) runsheetButton.style.display = 'none';
+      if (runsheetFrame) runsheetFrame.style.display = 'none';
+    }
+  } else if (request.action === 'switchViewMode') {
+    // Handle view mode switching from popup
+    switchViewMode(request.viewMode);
+    showNotification(`Switched to ${request.viewMode === 'single' ? 'single entry' : 'full view'} mode`, 'info');
   } else if (request.action === 'updateAuth') {
     // Refresh auth status
     checkAuth();
   } else if (request.action === 'deactivate') {
     // Clear active runsheet and hide frame
     activeRunsheet = null;
-    chrome.storage.local.remove(['active_runsheet']);
+    chrome.storage.local.remove(['active_runsheet', 'activeRunsheet']);
     if (runsheetFrame) {
       runsheetFrame.remove();
       runsheetFrame = null;
