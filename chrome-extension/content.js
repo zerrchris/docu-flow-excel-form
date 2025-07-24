@@ -677,6 +677,59 @@ function createRunsheetFrame() {
   runsheetFrame = document.createElement('div');
   runsheetFrame.id = 'docuflow-runsheet-frame';
   
+  // Restore saved height or use default
+  const savedHeight = localStorage.getItem('docuflow-frame-height') || '200';
+  runsheetFrame.style.height = `${savedHeight}px`;
+  document.body.style.paddingBottom = `${savedHeight}px`;
+  
+  // Create resize handle at the top
+  const resizeHandle = document.createElement('div');
+  resizeHandle.className = 'frame-resize-handle';
+  resizeHandle.style.cssText = `
+    height: 4px !important;
+    background: hsl(var(--border)) !important;
+    cursor: ns-resize !important;
+    position: relative !important;
+    opacity: 0.7 !important;
+    transition: all 0.2s ease !important;
+    z-index: 1 !important;
+  `;
+  
+  // Add resize functionality
+  let isResizing = false;
+  let startY = 0;
+  let startHeight = 0;
+  
+  resizeHandle.addEventListener('mousedown', (e) => {
+    isResizing = true;
+    startY = e.clientY;
+    startHeight = parseInt(window.getComputedStyle(runsheetFrame).height);
+    document.body.style.cursor = 'ns-resize';
+    document.body.style.userSelect = 'none';
+    e.preventDefault();
+  });
+  
+  document.addEventListener('mousemove', (e) => {
+    if (!isResizing) return;
+    
+    const deltaY = startY - e.clientY;
+    const newHeight = Math.max(150, Math.min(600, startHeight + deltaY));
+    
+    runsheetFrame.style.height = `${newHeight}px`;
+    document.body.style.paddingBottom = `${newHeight}px`;
+    
+    // Save preferred height
+    localStorage.setItem('docuflow-frame-height', newHeight.toString());
+  });
+  
+  document.addEventListener('mouseup', () => {
+    if (isResizing) {
+      isResizing = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    }
+  });
+  
   // Create header
   const header = document.createElement('div');
   header.className = 'frame-header';
@@ -881,6 +934,7 @@ function createRunsheetFrame() {
   table.appendChild(dataRow);
   content.appendChild(table);
   
+  runsheetFrame.appendChild(resizeHandle);
   runsheetFrame.appendChild(header);
   runsheetFrame.appendChild(content);
   

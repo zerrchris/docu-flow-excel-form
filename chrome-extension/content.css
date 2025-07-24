@@ -71,7 +71,7 @@
 /* Frame Content */
 .frame-content {
   padding: 0 !important;
-  height: calc(100% - 32px) !important;
+  height: calc(100% - 36px) !important; /* Account for 4px resize handle + 32px header */
   overflow-x: auto !important;
   overflow-y: hidden !important;
   background: hsl(var(--background, 0 0% 100%)) !important;
@@ -295,6 +295,12 @@ body {
 
 /* Resize handle styling */
 .resize-handle:hover {
+  background: hsl(var(--primary)) !important;
+  opacity: 1 !important;
+}
+
+/* Frame resize handle styling */
+.frame-resize-handle:hover {
   background: hsl(var(--primary)) !important;
   opacity: 1 !important;
 }
