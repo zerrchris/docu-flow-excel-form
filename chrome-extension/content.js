@@ -78,8 +78,146 @@ function createRunsheetButton() {
       if (isAuthenticated) {
         showRunsheetSelector();
       } else {
-        showNotification('Please sign in to the main app first', 'error');
+        showSignInPopup();
+}
+
+// Show sign-in popup
+function showSignInPopup() {
+  console.log('🔧 DocuFlow Extension: Showing sign-in popup');
+  
+  // Create dialog
+  const dialog = document.createElement('div');
+  dialog.id = 'docuflow-signin-popup';
+  dialog.style.cssText = `
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    background: hsl(var(--background, 0 0% 100%)) !important;
+    border: 1px solid hsl(var(--border, 214 32% 91%)) !important;
+    border-radius: 8px !important;
+    padding: 24px !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
+    z-index: 2147483647 !important;
+    width: 350px !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    color: hsl(var(--foreground, 222 47% 11%)) !important;
+  `;
+
+  // Create overlay
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    background: rgba(0, 0, 0, 0.5) !important;
+    z-index: 2147483646 !important;
+  `;
+
+  dialog.innerHTML = `
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <h3 style="margin: 0; font-size: 18px; font-weight: 600;">Sign In to DocuFlow</h3>
+      <button id="close-signin" style="background: none; border: none; font-size: 20px; cursor: pointer; color: hsl(var(--muted-foreground, 215 16% 47%));">×</button>
+    </div>
+    <form id="signin-form" style="display: flex; flex-direction: column; gap: 16px;">
+      <div>
+        <label style="display: block; margin-bottom: 4px; font-size: 14px; font-weight: 500;">Email</label>
+        <input type="email" id="signin-email" required style="width: 100%; padding: 8px 12px; border: 1px solid hsl(var(--border, 214 32% 91%)); border-radius: 6px; font-size: 14px;">
+      </div>
+      <div>
+        <label style="display: block; margin-bottom: 4px; font-size: 14px; font-weight: 500;">Password</label>
+        <input type="password" id="signin-password" required style="width: 100%; padding: 8px 12px; border: 1px solid hsl(var(--border, 214 32% 91%)); border-radius: 6px; font-size: 14px;">
+      </div>
+      <button type="submit" id="signin-submit" style="padding: 10px; background: hsl(var(--primary, 215 80% 40%)); color: hsl(var(--primary-foreground, 210 40% 98%)); border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">
+        Sign In
+      </button>
+      <div id="signin-error" style="display: none; color: hsl(var(--destructive, 0 84% 60%)); font-size: 12px; text-align: center;"></div>
+    </form>
+    <div style="text-align: center; margin-top: 16px; font-size: 12px; color: hsl(var(--muted-foreground, 215 16% 47%));">
+      Don't have an account? <a href="#" id="open-main-app" style="color: hsl(var(--primary, 215 80% 40%)); text-decoration: none;">Open main app to sign up</a>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+  document.body.appendChild(dialog);
+
+  function closeSignIn() {
+    document.body.removeChild(overlay);
+    document.body.removeChild(dialog);
+  }
+
+  // Event listeners
+  document.getElementById('close-signin').addEventListener('click', closeSignIn);
+  overlay.addEventListener('click', closeSignIn);
+  
+  document.getElementById('open-main-app').addEventListener('click', (e) => {
+    e.preventDefault();
+    window.open(window.location.origin, '_blank');
+    closeSignIn();
+  });
+
+  // Handle form submission
+  document.getElementById('signin-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const email = document.getElementById('signin-email').value;
+    const password = document.getElementById('signin-password').value;
+    const submitBtn = document.getElementById('signin-submit');
+    const errorDiv = document.getElementById('signin-error');
+    
+    submitBtn.textContent = 'Signing in...';
+    submitBtn.disabled = true;
+    errorDiv.style.display = 'none';
+    
+    try {
+      const response = await fetch('https://xnpmrafjjqsissbtempj.supabase.co/auth/v1/token?grant_type=password', {
+        method: 'POST',
+        headers: {
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhucG1yYWZqanFzaXNzYnRlbXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4NzMyNjcsImV4cCI6MjA2ODQ0OTI2N30.aQG15Ed8IOLJfM5p7XF_kEM5FUz8zJug1pxAi9rTTsg',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, password })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok && data.access_token) {
+        // Store session
+        await chrome.storage.local.set({
+          'supabase_session': {
+            access_token: data.access_token,
+            refresh_token: data.refresh_token,
+            user: data.user
+          }
+        });
+        
+        userSession = {
+          access_token: data.access_token,
+          refresh_token: data.refresh_token,
+          user: data.user
+        };
+        
+        closeSignIn();
+        showNotification('Signed in successfully!', 'success');
+        
+        // Show runsheet selector
+        setTimeout(() => showRunsheetSelector(), 500);
+        
+      } else {
+        throw new Error(data.error_description || data.message || 'Sign in failed');
       }
+    } catch (error) {
+      console.error('Sign in error:', error);
+      errorDiv.textContent = error.message || 'Sign in failed. Please try again.';
+      errorDiv.style.display = 'block';
+    } finally {
+      submitBtn.textContent = 'Sign In';
+      submitBtn.disabled = false;
+    }
+  });
+}
     }
   });
   
