@@ -2,12 +2,12 @@
 
 console.log('🔧 DocuFlow Extension: Content script loaded');
 
-// Global variables (with fallback to prevent redeclaration errors)
-let runsheetButton = window.runsheetButton || null;
-let runsheetFrame = window.runsheetFrame || null;
-let activeRunsheet = window.activeRunsheet || null;
-let captures = window.captures || [];
-let isCapturing = window.isCapturing || false;
+// Global variables
+var runsheetButton = null;
+var runsheetFrame = null;
+var activeRunsheet = null;
+var captures = [];
+var isCapturing = false;
 let userSession = null;
 
 // Check authentication status
