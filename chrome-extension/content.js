@@ -278,48 +278,204 @@ function createRunsheetFrame() {
   // Create main frame container
   runsheetFrame = document.createElement('div');
   runsheetFrame.id = 'docuflow-runsheet-frame';
-  runsheetFrame.innerHTML = `
-    <div class="frame-header">
-      <span class="frame-title">DocuFlow Runsheet - ${activeRunsheet?.name || 'Default'}</span>
-      <div class="frame-controls">
-        <button id="snip-btn" class="control-btn">✂️ Snip</button>
-        <button id="capture-btn" class="control-btn">📷 Capture</button>
-        <button id="sync-btn" class="control-btn">🔄 Sync</button>
-        <button id="minimize-btn" class="control-btn">−</button>
-      </div>
-    </div>
-    <div class="frame-content">
-      <div class="runsheet-table">
-        <div class="table-row header-row">
-          <div class="table-cell">Inst Number</div>
-          <div class="table-cell">Book/Page</div>
-          <div class="table-cell">Inst Type</div>
-          <div class="table-cell">Recording Date</div>
-          <div class="table-cell">Document Date</div>
-          <div class="table-cell">Grantor</div>
-          <div class="table-cell">Grantee</div>
-          <div class="table-cell">Legal Description</div>
-          <div class="table-cell">Notes</div>
-          <div class="table-cell">Document File Name</div>
-        </div>
-        <div class="table-row editable-row">
-          <div class="table-cell"><input type="text" placeholder="Enter inst number" data-field="inst_number"></div>
-          <div class="table-cell"><input type="text" placeholder="Enter book/page" data-field="book_page"></div>
-          <div class="table-cell"><input type="text" placeholder="Enter inst type" data-field="inst_type"></div>
-          <div class="table-cell"><input type="date" placeholder="Recording date" data-field="recording_date"></div>
-          <div class="table-cell"><input type="date" placeholder="Document date" data-field="document_date"></div>
-          <div class="table-cell"><input type="text" placeholder="Enter grantor" data-field="grantor"></div>
-          <div class="table-cell"><input type="text" placeholder="Enter grantee" data-field="grantee"></div>
-          <div class="table-cell"><input type="text" placeholder="Enter legal description" data-field="legal_description"></div>
-          <div class="table-cell"><input type="text" placeholder="Enter notes" data-field="notes"></div>
-          <div class="table-cell"><input type="text" placeholder="File name" data-field="document_file_name" readonly></div>
-        </div>
-      </div>
+  
+  // Create header
+  const header = document.createElement('div');
+  header.className = 'frame-header';
+  header.innerHTML = `
+    <span class="frame-title">DocuFlow Runsheet - ${activeRunsheet?.name || 'Default'}</span>
+    <div class="frame-controls">
+      <button id="snip-btn" class="control-btn">✂️ Snip</button>
+      <button id="capture-btn" class="control-btn">📷 Capture</button>
+      <button id="sync-btn" class="control-btn">🔄 Sync</button>
+      <button id="minimize-btn" class="control-btn">−</button>
     </div>
   `;
   
+  // Create content area
+  const content = document.createElement('div');
+  content.className = 'frame-content';
+  
+  // Create dynamic table based on runsheet data
+  const table = document.createElement('div');
+  table.className = 'runsheet-table';
+  
+  // Get runsheet data or use defaults
+  const runsheetData = activeRunsheet || {
+    columns: ['Inst Number', 'Book/Page', 'Inst Type', 'Recording Date', 'Document Date', 'Grantor', 'Grantee', 'Legal Description', 'Notes', 'Document File Name'],
+    data: [{}]
+  };
+  
+  // Create header row with resizable columns
+  const headerRow = document.createElement('div');
+  headerRow.className = 'table-row header-row';
+  
+  runsheetData.columns.forEach((column, index) => {
+    const cell = document.createElement('div');
+    cell.className = 'table-cell';
+    cell.style.width = `${120}px`; // Default width
+    cell.style.minWidth = `${120}px`;
+    cell.style.position = 'relative';
+    
+    const cellContent = document.createElement('div');
+    cellContent.className = 'cell-content';
+    cellContent.textContent = column;
+    cell.appendChild(cellContent);
+    
+    // Add resize handle
+    const resizeHandle = document.createElement('div');
+    resizeHandle.className = 'resize-handle';
+    resizeHandle.style.position = 'absolute';
+    resizeHandle.style.right = '0';
+    resizeHandle.style.top = '0';
+    resizeHandle.style.bottom = '0';
+    resizeHandle.style.width = '4px';
+    resizeHandle.style.cursor = 'col-resize';
+    resizeHandle.style.background = 'hsl(var(--border))';
+    resizeHandle.style.opacity = '0';
+    resizeHandle.style.transition = 'opacity 0.2s ease';
+    
+    // Add hover effect
+    cell.addEventListener('mouseenter', () => {
+      resizeHandle.style.opacity = '1';
+    });
+    cell.addEventListener('mouseleave', () => {
+      resizeHandle.style.opacity = '0';
+    });
+    
+    // Add resize functionality
+    let isResizing = false;
+    let startX = 0;
+    let startWidth = 0;
+    
+    resizeHandle.addEventListener('mousedown', (e) => {
+      isResizing = true;
+      startX = e.clientX;
+      startWidth = parseInt(document.defaultView.getComputedStyle(cell).width, 10);
+      document.body.style.cursor = 'col-resize';
+      e.preventDefault();
+    });
+    
+    document.addEventListener('mousemove', (e) => {
+      if (!isResizing) return;
+      const width = Math.max(80, startWidth + e.clientX - startX);
+      
+      // Update all cells in this column
+      const allCells = document.querySelectorAll(`#docuflow-runsheet-frame .table-cell:nth-child(${index + 1})`);
+      allCells.forEach(c => {
+        c.style.width = `${width}px`;
+        c.style.minWidth = `${width}px`;
+      });
+    });
+    
+    document.addEventListener('mouseup', () => {
+      if (isResizing) {
+        isResizing = false;
+        document.body.style.cursor = '';
+      }
+    });
+    
+    cell.appendChild(resizeHandle);
+    headerRow.appendChild(cell);
+  });
+  
+  table.appendChild(headerRow);
+  
+  // Create editable data row
+  const dataRow = document.createElement('div');
+  dataRow.className = 'table-row editable-row';
+  dataRow.dataset.rowIndex = 0;
+  
+  runsheetData.columns.forEach((column, colIndex) => {
+    const cell = document.createElement('div');
+    cell.className = 'table-cell';
+    cell.style.width = `${120}px`; // Match header width
+    cell.style.minWidth = `${120}px`;
+    cell.style.position = 'relative';
+    
+    const input = document.createElement('input');
+    input.type = column.includes('Date') ? 'date' : 'text';
+    input.value = runsheetData.data[0]?.[column] || '';
+    input.placeholder = `Enter ${column.toLowerCase()}`;
+    input.dataset.field = column.toLowerCase().replace(/\s+/g, '_').replace(/[^\w]/g, '');
+    
+    // Make Document File Name readonly initially
+    if (column === 'Document File Name') {
+      input.readOnly = true;
+    }
+    
+    // Auto-sync on change
+    input.addEventListener('input', debounce(syncData, 1000));
+    
+    // Add "To Sheet" functionality for Document File Name column
+    if (column === 'Document File Name') {
+      const toSheetBtn = document.createElement('button');
+      toSheetBtn.className = 'to-sheet-btn';
+      toSheetBtn.textContent = 'To Sheet';
+      toSheetBtn.style.position = 'absolute';
+      toSheetBtn.style.right = '8px';
+      toSheetBtn.style.top = '50%';
+      toSheetBtn.style.transform = 'translateY(-50%)';
+      toSheetBtn.style.fontSize = '10px';
+      toSheetBtn.style.padding = '2px 6px';
+      toSheetBtn.style.border = '1px solid hsl(var(--border))';
+      toSheetBtn.style.borderRadius = '4px';
+      toSheetBtn.style.background = 'hsl(var(--background))';
+      toSheetBtn.style.color = 'hsl(var(--foreground))';
+      toSheetBtn.style.cursor = 'pointer';
+      toSheetBtn.style.display = 'none';
+      toSheetBtn.style.zIndex = '10';
+      
+      toSheetBtn.addEventListener('click', () => {
+        linkCapturedImageToRow(0);
+      });
+      
+      cell.addEventListener('mouseenter', () => {
+        if (captures.length > 0) {
+          toSheetBtn.style.display = 'block';
+        }
+      });
+      cell.addEventListener('mouseleave', () => {
+        toSheetBtn.style.display = 'none';
+      });
+      
+      cell.appendChild(toSheetBtn);
+    }
+    
+    cell.appendChild(input);
+    dataRow.appendChild(cell);
+  });
+  
+  table.appendChild(dataRow);
+  content.appendChild(table);
+  
+  runsheetFrame.appendChild(header);
+  runsheetFrame.appendChild(content);
+  
   document.body.appendChild(runsheetFrame);
   setupFrameEventListeners();
+}
+
+// Function to link captured image to a specific row
+function linkCapturedImageToRow(rowIndex) {
+  if (captures.length === 0) {
+    showNotification('No captured images available', 'error');
+    return;
+  }
+  
+  const lastImage = captures[captures.length - 1];
+  
+  // Update the Document File Name field
+  const input = document.querySelector(`input[data-field="document_file_name"]`);
+  if (input) {
+    input.value = `captured_document_row_${rowIndex}.png`;
+    input.readOnly = false;
+    
+    // Trigger sync
+    syncData();
+    
+    showNotification(`Image linked to row ${rowIndex + 1}`, 'success');
+  }
 }
 
 // Setup event listeners for the frame

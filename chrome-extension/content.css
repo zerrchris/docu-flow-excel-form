@@ -246,26 +246,63 @@ body {
   padding-bottom: 120px !important;
 }
 
-/* CSS Variables for theming */
+/* CSS Variables for theming - matching main app */
 :root {
-  --background: 0 0% 100%;
-  --foreground: 0 0% 9%;
-  --muted: 0 0% 96%;
-  --muted-foreground: 0 0% 45%;
-  --border: 0 0% 89%;
-  --primary: 221 83% 53%;
+  --background: 210 40% 98%;
+  --foreground: 222 47% 11%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --primary: 215 80% 40%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 220 20% 92%;
+  --secondary-foreground: 222 47% 11%;
+  --muted: 210 40% 96%;
+  --muted-foreground: 215 16% 47%;
+  --accent: 230 60% 60%;
+  --accent-foreground: 210 40% 98%;
   --destructive: 0 84% 60%;
-  --destructive-foreground: 0 0% 98%;
-  --success: 142 76% 36%;
+  --destructive-foreground: 210 40% 98%;
+  --success: 145 70% 40%;
+  --success-foreground: 145 80% 98%;
+  --border: 214 32% 91%;
+  --input: 214 32% 91%;
+  --ring: 215 80% 40%;
 }
 
 /* Dark mode support */
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: 0 0% 9%;
-    --foreground: 0 0% 98%;
-    --muted: 0 0% 15%;
-    --muted-foreground: 0 0% 65%;
-    --border: 0 0% 20%;
+    --background: 215 30% 12%;
+    --foreground: 210 40% 98%;
+    --card: 215 25% 15%;
+    --card-foreground: 210 40% 98%;
+    --primary: 215 70% 50%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 215 25% 25%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 215 25% 20%;
+    --muted-foreground: 210 20% 70%;
+    --accent: 230 50% 50%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 210 40% 98%;
+    --success: 145 60% 40%;
+    --success-foreground: 145 70% 98%;
+    --border: 215 25% 25%;
+    --input: 215 25% 25%;
+    --ring: 215 70% 50%;
   }
+}
+
+/* Resize handle styling */
+.resize-handle:hover {
+  background: hsl(var(--primary)) !important;
+  opacity: 1 !important;
+}
+
+/* To Sheet button styling */
+.to-sheet-btn:hover {
+  background: hsl(var(--muted)) !important;
+  border-color: hsl(var(--primary)) !important;
+  color: hsl(var(--primary)) !important;
 }
