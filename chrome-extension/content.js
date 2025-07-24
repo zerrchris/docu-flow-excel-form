@@ -117,9 +117,15 @@ function showSignInPopup() {
   `;
 
   dialog.innerHTML = `
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
       <h3 style="margin: 0; font-size: 18px; font-weight: 600;">Sign In to DocuFlow</h3>
       <button id="close-signin" style="background: none; border: none; font-size: 20px; cursor: pointer; color: hsl(var(--muted-foreground, 215 16% 47%));">×</button>
+    </div>
+    <div style="background: hsl(var(--muted, 210 40% 96%)); padding: 12px; border-radius: 6px; margin-bottom: 16px; border-left: 3px solid hsl(var(--primary, 215 80% 40%));">
+      <p style="margin: 0; font-size: 13px; color: hsl(var(--foreground, 222 47% 11%));">
+        📝 <strong>First time using the extension?</strong><br>
+        Refresh this page after signing in to begin working with your runsheets.
+      </p>
     </div>
     <form id="signin-form" style="display: flex; flex-direction: column; gap: 16px;">
       <div>
