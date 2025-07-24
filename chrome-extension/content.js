@@ -1018,7 +1018,7 @@ function createSingleEntryView(content) {
       input.dataset.column = column;
       input.readOnly = true;
       
-      // Add Enter key handler to trigger Add Row button
+      // Add Enter key handler to trigger Add Row button and Tab navigation
       input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
           e.preventDefault();
@@ -1026,6 +1026,27 @@ function createSingleEntryView(content) {
           const addButton = cell.querySelector('.add-row-btn');
           if (addButton) {
             addRowToSheet();
+          }
+        } else if (e.key === 'Tab' && !e.shiftKey) {
+          // Tab moves to Add Row button
+          e.preventDefault();
+          const addButton = cell.querySelector('.add-row-btn');
+          if (addButton) {
+            addButton.focus();
+          }
+        } else if (e.key === 'Tab' && e.shiftKey) {
+          // Shift+Tab moves to previous field
+          e.preventDefault();
+          const currentIndex = Array.from(dataRow.children).indexOf(cell);
+          if (currentIndex > 0) {
+            const prevCell = dataRow.children[currentIndex - 1];
+            const prevTextarea = prevCell.querySelector('textarea');
+            const prevInput = prevCell.querySelector('input');
+            if (prevTextarea) {
+              prevTextarea.focus();
+            } else if (prevInput) {
+              prevInput.focus();
+            }
           }
         }
       });
@@ -1201,6 +1222,24 @@ function createSingleEntryView(content) {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
           addRowToSheet();
+        } else if (e.key === 'Tab' && e.shiftKey) {
+          // Shift+Tab moves back to Document File Name input
+          e.preventDefault();
+          const documentInput = cell.querySelector('input[data-column="Document File Name"]');
+          if (documentInput) {
+            documentInput.focus();
+          }
+        } else if (e.key === 'Tab' && !e.shiftKey) {
+          // Tab moves to first field in next row or wraps to first field
+          e.preventDefault();
+          const firstCell = dataRow.children[0];
+          const firstTextarea = firstCell.querySelector('textarea');
+          const firstInput = firstCell.querySelector('input');
+          if (firstTextarea) {
+            firstTextarea.focus();
+          } else if (firstInput) {
+            firstInput.focus();
+          }
         }
       });
       
