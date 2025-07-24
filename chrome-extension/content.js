@@ -224,6 +224,146 @@ function showSignInPopup() {
   document.body.appendChild(runsheetButton);
 }
 
+// Show quick create dialog
+function showQuickCreateDialog() {
+  console.log('🔧 DocuFlow Extension: Showing quick create dialog');
+  
+  // Create dialog
+  const dialog = document.createElement('div');
+  dialog.id = 'docuflow-quick-create';
+  dialog.style.cssText = `
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    background: hsl(var(--background, 0 0% 100%)) !important;
+    border: 1px solid hsl(var(--border, 214 32% 91%)) !important;
+    border-radius: 8px !important;
+    padding: 24px !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
+    z-index: 2147483647 !important;
+    width: 400px !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    color: hsl(var(--foreground, 222 47% 11%)) !important;
+  `;
+
+  // Create overlay
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    background: rgba(0, 0, 0, 0.5) !important;
+    z-index: 2147483646 !important;
+  `;
+
+  dialog.innerHTML = `
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <h3 style="margin: 0; font-size: 18px; font-weight: 600;">Quick Create Runsheet</h3>
+      <button id="close-quick-create" style="background: none; border: none; font-size: 20px; cursor: pointer; color: hsl(var(--muted-foreground, 215 16% 47%));">×</button>
+    </div>
+    <div style="background: hsl(var(--muted, 210 40% 96%)); padding: 12px; border-radius: 6px; margin-bottom: 16px; border-left: 3px solid hsl(var(--primary, 215 80% 40%));">
+      <p style="margin: 0; font-size: 13px; color: hsl(var(--foreground, 222 47% 11%));">
+        ⚡ <strong>Quick Create</strong> sets up a runsheet with standard real estate columns.<br>
+        For custom columns and advanced settings, create a new runsheet in the main app.
+      </p>
+    </div>
+    <form id="quick-create-form" style="display: flex; flex-direction: column; gap: 16px;">
+      <div>
+        <label style="display: block; margin-bottom: 4px; font-size: 14px; font-weight: 500;">Runsheet Name</label>
+        <input type="text" id="runsheet-name" required placeholder="e.g., Property Research - January 2025" style="width: 100%; padding: 8px 12px; border: 1px solid hsl(var(--border, 214 32% 91%)); border-radius: 6px; font-size: 14px;">
+      </div>
+      <div style="font-size: 12px; color: hsl(var(--muted-foreground, 215 16% 47%));">
+        <strong>Default columns included:</strong><br>
+        Inst Number, Book/Page, Inst Type, Recording Date, Document Date, Grantor, Grantee, Legal Description, Notes, Document File Name
+      </div>
+      <button type="submit" id="create-submit" style="padding: 10px; background: hsl(var(--primary, 215 80% 40%)); color: hsl(var(--primary-foreground, 210 40% 98%)); border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">
+        Create Runsheet
+      </button>
+      <div id="create-error" style="display: none; color: hsl(var(--destructive, 0 84% 60%)); font-size: 12px; text-align: center;"></div>
+    </form>
+    <div style="text-align: center; margin-top: 16px; font-size: 12px; color: hsl(var(--muted-foreground, 215 16% 47%));">
+      Need custom setup? <a href="#" id="open-main-app-create" style="color: hsl(var(--primary, 215 80% 40%)); text-decoration: none;">Open main app</a>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+  document.body.appendChild(dialog);
+
+  function closeQuickCreate() {
+    document.body.removeChild(overlay);
+    document.body.removeChild(dialog);
+  }
+
+  // Event listeners
+  document.getElementById('close-quick-create').addEventListener('click', closeQuickCreate);
+  overlay.addEventListener('click', closeQuickCreate);
+  
+  document.getElementById('open-main-app-create').addEventListener('click', (e) => {
+    e.preventDefault();
+    window.open(window.location.origin, '_blank');
+    closeQuickCreate();
+  });
+
+  // Handle form submission
+  document.getElementById('quick-create-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const name = document.getElementById('runsheet-name').value.trim();
+    const submitBtn = document.getElementById('create-submit');
+    const errorDiv = document.getElementById('create-error');
+    
+    if (!name) {
+      errorDiv.textContent = 'Please enter a runsheet name';
+      errorDiv.style.display = 'block';
+      return;
+    }
+    
+    submitBtn.textContent = 'Creating...';
+    submitBtn.disabled = true;
+    errorDiv.style.display = 'none';
+    
+    try {
+      const response = await fetch('https://xnpmrafjjqsissbtempj.supabase.co/functions/v1/create-quick-runsheet', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${userSession.access_token}`,
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhucG1yYWZqanFzaXNzYnRlbXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4NzMyNjcsImV4cCI6MjA2ODQ0OTI2N30.aQG15Ed8IOLJfM5p7XF_kEM5FUz8zJug1pxAi9rTTsg',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ name })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        closeQuickCreate();
+        showNotification(`Created runsheet: ${name}`, 'success');
+        
+        // Load the new runsheet immediately
+        setTimeout(() => loadRunsheet(data.runsheet), 500);
+        
+      } else {
+        throw new Error(data.error || 'Failed to create runsheet');
+      }
+    } catch (error) {
+      console.error('Create runsheet error:', error);
+      errorDiv.textContent = error.message || 'Failed to create runsheet. Please try again.';
+      errorDiv.style.display = 'block';
+    } finally {
+      submitBtn.textContent = 'Create Runsheet';
+      submitBtn.disabled = false;
+    }
+  });
+
+  // Auto-focus the name input
+  setTimeout(() => {
+    document.getElementById('runsheet-name').focus();
+  }, 100);
+}
+
 // Show runsheet selector with real data from Supabase
 async function showRunsheetSelector() {
   console.log('🔧 DocuFlow Extension: Showing runsheet selector');
@@ -381,7 +521,7 @@ async function showRunsheetSelector() {
   
   document.getElementById('create-new-runsheet').addEventListener('click', () => {
     closeSelector();
-    showNotification('Create new runsheets in the main app', 'info');
+    showQuickCreateDialog();
   });
 }
 
