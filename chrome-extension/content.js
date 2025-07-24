@@ -1018,7 +1018,7 @@ function createSingleEntryView(content) {
       input.dataset.column = column;
       input.readOnly = true;
       
-      // Add Enter key handler to trigger Add Row button
+      // Add Enter key handler to trigger Add Row button and Shift+Tab navigation
       input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
           e.preventDefault();
@@ -1026,6 +1026,20 @@ function createSingleEntryView(content) {
           const addButton = cell.querySelector('.add-row-btn');
           if (addButton) {
             addRowToSheet();
+          }
+        } else if (e.key === 'Tab' && e.shiftKey) {
+          // Shift+Tab moves to previous field
+          e.preventDefault();
+          const currentIndex = Array.from(dataRow.children).indexOf(cell);
+          if (currentIndex > 0) {
+            const prevCell = dataRow.children[currentIndex - 1];
+            const prevTextarea = prevCell.querySelector('textarea');
+            const prevInput = prevCell.querySelector('input');
+            if (prevTextarea) {
+              prevTextarea.focus();
+            } else if (prevInput) {
+              prevInput.focus();
+            }
           }
         }
       });
