@@ -2010,20 +2010,24 @@ function debounce(func, wait) {
 
 // Initialize the extension
 async function init() {
-  // Check if extension is disabled
-  const settings = await chrome.storage.local.get(['extension_disabled']);
-  if (settings.extension_disabled) {
+  // Check if extension is enabled (default to true if not set)
+  const settings = await chrome.storage.local.get(['extensionEnabled']);
+  const isEnabled = settings.extensionEnabled !== false; // Default to enabled
+  
+  if (!isEnabled) {
     console.log('🔧 DocuFlow Extension: Extension is disabled');
     return;
   }
   
-  console.log('🔧 DocuFlow Extension: Initializing');
+  console.log('🔧 DocuFlow Extension: Initializing, enabled:', isEnabled);
   
   // Check authentication
   const isAuthenticated = await checkAuth();
+  console.log('🔧 DocuFlow Extension: Authentication status:', isAuthenticated);
   
   // Create the runsheet button
   createRunsheetButton();
+  console.log('🔧 DocuFlow Extension: Runsheet button created');
   
   // Check if there's an active runsheet to restore
   const storedData = await chrome.storage.local.get(['active_runsheet']);
@@ -2683,8 +2687,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
   } else if (request.action === 'toggleExtension') {
     // Handle extension enable/disable from popup
+    console.log('🔧 DocuFlow Extension: Toggle extension:', request.enabled);
     if (request.enabled) {
-      if (runsheetButton) runsheetButton.style.display = 'block';
+      if (!runsheetButton) {
+        console.log('🔧 DocuFlow Extension: Button not found, creating it');
+        createRunsheetButton();
+      }
+      if (runsheetButton) {
+        runsheetButton.style.display = 'block';
+        console.log('🔧 DocuFlow Extension: Button shown');
+      }
     } else {
       if (runsheetButton) runsheetButton.style.display = 'none';
       if (runsheetFrame) runsheetFrame.style.display = 'none';
