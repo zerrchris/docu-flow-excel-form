@@ -525,6 +525,103 @@ async function showRunsheetSelector() {
   });
 }
 
+// Function to add current row data to the sheet
+async function addRowToSheet() {
+  if (!activeRunsheet || !userSession) {
+    showNotification('No active runsheet or authentication', 'error');
+    return;
+  }
+  
+  console.log('🔧 DocuFlow Extension: Adding row to sheet');
+  
+  // Gather data from input fields
+  const inputs = document.querySelectorAll('#docuflow-runsheet-frame input');
+  const rowData = {};
+  let hasData = false;
+  
+  inputs.forEach(input => {
+    if (input.dataset.column && input.value.trim()) {
+      rowData[input.dataset.column] = input.value.trim();
+      hasData = true;
+    }
+  });
+  
+  if (!hasData) {
+    showNotification('Please enter some data first', 'error');
+    return;
+  }
+  
+  try {
+    // Get the current runsheet data from Supabase to find the next empty row
+    const response = await fetch(`https://xnpmrafjjqsissbtempj.supabase.co/functions/v1/extension-sync?runsheet_id=${activeRunsheet.id}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${userSession.access_token}`,
+        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhucG1yYWZqanFzaXNzYnRlbXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4NzMyNjcsImV4cCI6MjA2ODQ0OTI2N30.aQG15Ed8IOLJfM5p7XF_kEM5FUz8zJug1pxAi9rTTsg',
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch current runsheet data');
+    }
+    
+    const { runsheet } = await response.json();
+    
+    // Find the next empty row index
+    let nextRowIndex = 0;
+    if (runsheet.data && Array.isArray(runsheet.data)) {
+      // Find first empty row or add to end
+      nextRowIndex = runsheet.data.findIndex(row => {
+        return runsheet.columns.every(col => !row[col] || row[col].trim() === '');
+      });
+      
+      if (nextRowIndex === -1) {
+        nextRowIndex = runsheet.data.length; // Add to end
+      }
+    }
+    
+    // Add the row data using extension-sync endpoint
+    const syncResponse = await fetch('https://xnpmrafjjqsissbtempj.supabase.co/functions/v1/add-row-to-runsheet', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${userSession.access_token}`,
+        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhucG1yYWZqanFzaXNzYnRlbXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4NzMyNjcsImV4cCI6MjA2ODQ0OTI2N30.aQG15Ed8IOLJfM5p7XF_kEM5FUz8zJug1pxAi9rTTsg',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        runsheet_id: activeRunsheet.id,
+        row_data: rowData,
+        row_index: nextRowIndex
+      })
+    });
+    
+    const result = await syncResponse.json();
+    
+    if (result.success) {
+      showNotification(`Row ${nextRowIndex + 1} added successfully!`, 'success');
+      
+      // Clear all input fields for next entry
+      inputs.forEach(input => {
+        input.value = '';
+      });
+      
+      // Focus back to first input for quick data entry
+      const firstInput = document.querySelector('#docuflow-runsheet-frame input');
+      if (firstInput) {
+        firstInput.focus();
+      }
+      
+      console.log('🔧 DocuFlow Extension: Row added successfully to index:', nextRowIndex);
+    } else {
+      throw new Error(result.error || 'Failed to add row');
+    }
+  } catch (error) {
+    console.error('Add row error:', error);
+    showNotification('Failed to add row to sheet', 'error');
+  }
+}
+
 // Load a specific runsheet
 function loadRunsheet(runsheet) {
   console.log('🔧 DocuFlow Extension: Loading runsheet:', runsheet.name);
@@ -711,26 +808,59 @@ function createRunsheetFrame() {
     
     // Add "To Sheet" functionality for Document File Name column
     if (column === 'Document File Name') {
+      const buttonContainer = document.createElement('div');
+      buttonContainer.style.position = 'absolute';
+      buttonContainer.style.right = '8px';
+      buttonContainer.style.top = '50%';
+      buttonContainer.style.transform = 'translateY(-50%)';
+      buttonContainer.style.display = 'flex';
+      buttonContainer.style.gap = '4px';
+      buttonContainer.style.zIndex = '10';
+      
       const toSheetBtn = document.createElement('button');
       toSheetBtn.className = 'to-sheet-btn';
       toSheetBtn.textContent = 'To Sheet';
-      toSheetBtn.style.position = 'absolute';
-      toSheetBtn.style.right = '8px';
-      toSheetBtn.style.top = '50%';
-      toSheetBtn.style.transform = 'translateY(-50%)';
-      toSheetBtn.style.fontSize = '10px';
-      toSheetBtn.style.padding = '2px 6px';
+      toSheetBtn.style.fontSize = '9px';
+      toSheetBtn.style.padding = '2px 4px';
       toSheetBtn.style.border = '1px solid hsl(var(--border, 214 32% 91%))';
-      toSheetBtn.style.borderRadius = '4px';
+      toSheetBtn.style.borderRadius = '3px';
       toSheetBtn.style.background = 'hsl(var(--background, 0 0% 100%))';
       toSheetBtn.style.color = 'hsl(var(--foreground, 222 47% 11%))';
       toSheetBtn.style.cursor = 'pointer';
       toSheetBtn.style.display = 'none';
-      toSheetBtn.style.zIndex = '10';
+      toSheetBtn.tabIndex = -1; // Not in tab order
+      
+      const addRowBtn = document.createElement('button');
+      addRowBtn.className = 'add-row-btn';
+      addRowBtn.textContent = 'Add Row';
+      addRowBtn.style.fontSize = '9px';
+      addRowBtn.style.padding = '2px 6px';
+      addRowBtn.style.border = '1px solid hsl(var(--primary, 215 80% 40%))';
+      addRowBtn.style.borderRadius = '3px';
+      addRowBtn.style.background = 'hsl(var(--primary, 215 80% 40%))';
+      addRowBtn.style.color = 'hsl(var(--primary-foreground, 210 40% 98%))';
+      addRowBtn.style.cursor = 'pointer';
+      addRowBtn.style.fontWeight = '500';
+      addRowBtn.tabIndex = 0; // Can be tabbed to
+      addRowBtn.title = 'Add this row data to the sheet (Tab here and press Enter)';
       
       toSheetBtn.addEventListener('click', () => {
         linkCapturedImageToRow(0);
       });
+      
+      addRowBtn.addEventListener('click', () => {
+        addRowToSheet();
+      });
+      
+      addRowBtn.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          addRowToSheet();
+        }
+      });
+      
+      buttonContainer.appendChild(toSheetBtn);
+      buttonContainer.appendChild(addRowBtn);
       
       cell.addEventListener('mouseenter', () => {
         if (captures.length > 0) {
@@ -741,7 +871,7 @@ function createRunsheetFrame() {
         toSheetBtn.style.display = 'none';
       });
       
-      cell.appendChild(toSheetBtn);
+      cell.appendChild(buttonContainer);
     }
     
     cell.appendChild(input);
