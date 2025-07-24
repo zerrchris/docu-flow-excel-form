@@ -155,7 +155,7 @@
   outline: none !important;
   background: transparent !important;
   color: hsl(var(--foreground, 0 0% 9%)) !important;
-  font-size: 12px !important;
+  font-size: 11px !important;
   font-family: inherit !important;
   padding: 8px 12px !important;
   min-height: 2rem !important;
@@ -166,19 +166,18 @@
 
 .table-cell input:focus {
   background: hsl(var(--background, 0 0% 100%)) !important;
-  border: 2px solid hsl(var(--primary, 221 83% 53%)) !important;
-  box-shadow: 0 0 0 2px hsl(var(--primary, 221 83% 53%) / 0.2) !important;
+  border: 2px solid hsl(var(--primary, 215 80% 40%)) !important;
+  box-shadow: 0 0 0 2px hsl(var(--primary, 215 80% 40%) / 0.2) !important;
   border-radius: 2px !important;
 }
 
-.table-cell input::placeholder {
-  color: hsl(var(--muted-foreground, 0 0% 45%)) !important;
-  font-style: italic !important;
+.table-cell input:hover:not(:focus) {
+  background: hsl(var(--muted, 210 40% 96%) / 0.5) !important;
 }
 
 .table-cell input[readonly] {
-  background: hsl(var(--muted, 0 0% 96%)) !important;
-  color: hsl(var(--muted-foreground, 0 0% 45%)) !important;
+  background: hsl(var(--muted, 210 40% 96%)) !important;
+  color: hsl(var(--muted-foreground, 215 16% 47%)) !important;
   cursor: default !important;
 }
 

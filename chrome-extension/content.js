@@ -792,12 +792,12 @@ function createRunsheetFrame() {
     cell.style.position = 'relative';
     
     const input = document.createElement('input');
-    input.type = column.includes('Date') ? 'date' : 'text';
+    input.type = 'text'; // Always text type, no special date inputs
     input.value = runsheetData.data[0]?.[column] || '';
-    input.placeholder = `Enter ${column.toLowerCase()}`;
     input.dataset.field = column.toLowerCase().replace(/\s+/g, '_').replace(/[^\w]/g, '');
     input.dataset.column = column;
     
+    // Remove placeholder text - just blank cells like main app
     // Make Document File Name readonly initially
     if (column === 'Document File Name') {
       input.readOnly = true;
