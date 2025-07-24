@@ -2,6 +2,13 @@
 
 console.log('🔧 DocuFlow Extension: Content script loaded');
 
+// Prevent multiple script loading
+if (window.docuflowExtensionLoaded) {
+  console.log('🔧 DocuFlow Extension: Already loaded, skipping');
+  return;
+}
+window.docuflowExtensionLoaded = true;
+
 // Global variables
 let runsheetButton = null;
 let runsheetFrame = null;
@@ -883,6 +890,7 @@ function createRunsheetFrame() {
   dataRow.dataset.rowIndex = 0;
   
   runsheetData.columns.forEach((column, colIndex) => {
+    console.log('🔧 Processing column:', column, 'at index:', colIndex);
     const cell = document.createElement('div');
     cell.className = 'table-cell';
     cell.style.width = `${120}px`; // Match header width
