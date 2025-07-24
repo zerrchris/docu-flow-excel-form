@@ -697,29 +697,37 @@ function createRunsheetFrame() {
     position: relative !important;
     opacity: 0.8 !important;
     transition: all 0.2s ease !important;
-    z-index: 1 !important;
+    z-index: 10000 !important;
     border-top: 2px solid hsl(var(--primary)) !important;
     border-bottom: 1px solid hsl(var(--border)) !important;
+    pointer-events: auto !important;
   `;
+  
+  // Add test click handler to see if events work at all
+  resizeHandle.addEventListener('click', () => {
+    console.log('🔧 DocuFlow Extension: Resize handle clicked - events are working!');
+  });
   
   // Add hover effect
   resizeHandle.addEventListener('mouseenter', () => {
+    console.log('🔧 DocuFlow Extension: Mouse entered resize handle');
     resizeHandle.style.background = 'hsl(var(--primary))';
     resizeHandle.style.opacity = '1';
   });
   
   resizeHandle.addEventListener('mouseleave', () => {
+    console.log('🔧 DocuFlow Extension: Mouse left resize handle');
     resizeHandle.style.background = 'hsl(var(--border))';
     resizeHandle.style.opacity = '0.8';
   });
   
-  // Add resize functionality
+  // Add resize functionality with properly scoped variables
   let isResizing = false;
   let startY = 0;
   let startHeight = 0;
   
   resizeHandle.addEventListener('mousedown', (e) => {
-    console.log('🔧 DocuFlow Extension: Resize handle mousedown');
+    console.log('🔧 DocuFlow Extension: Resize handle mousedown - starting resize');
     isResizing = true;
     startY = e.clientY;
     startHeight = parseInt(window.getComputedStyle(runsheetFrame).height);
@@ -732,10 +740,11 @@ function createRunsheetFrame() {
   const handleMouseMove = (e) => {
     if (!isResizing) return;
     
-    console.log('🔧 DocuFlow Extension: Resizing frame');
+    console.log('🔧 DocuFlow Extension: Resizing frame', e.clientY, startY);
     const deltaY = startY - e.clientY;
     const newHeight = Math.max(150, Math.min(600, startHeight + deltaY));
     
+    console.log('🔧 DocuFlow Extension: New height:', newHeight);
     runsheetFrame.style.height = `${newHeight}px`;
     document.body.style.paddingBottom = `${newHeight}px`;
     
@@ -744,7 +753,7 @@ function createRunsheetFrame() {
     e.preventDefault();
   };
   
-  const handleMouseUp = () => {
+  const handleMouseUp = (e) => {
     if (isResizing) {
       console.log('🔧 DocuFlow Extension: Resize complete');
       isResizing = false;
@@ -757,11 +766,14 @@ function createRunsheetFrame() {
   document.addEventListener('mousemove', handleMouseMove);
   document.addEventListener('mouseup', handleMouseUp);
   
-  // Clean up event listeners when frame is destroyed
-  runsheetFrame.addEventListener('beforeunload', () => {
+  // Clean up event listeners when frame is destroyed  
+  const cleanup = () => {
     document.removeEventListener('mousemove', handleMouseMove);
     document.removeEventListener('mouseup', handleMouseUp);
-  });
+  };
+  
+  // Store cleanup function on the frame for later use
+  runsheetFrame.resizeCleanup = cleanup;
   
   // Create header
   const header = document.createElement('div');
