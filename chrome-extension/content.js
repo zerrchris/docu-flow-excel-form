@@ -889,6 +889,19 @@ function createSingleEntryView(content) {
       input.dataset.field = column.toLowerCase().replace(/\s+/g, '_').replace(/[^\w]/g, '');
       input.dataset.column = column;
       input.readOnly = true;
+      
+      // Add Enter key handler to trigger Add Row button
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          // Find and click the Add Row button
+          const addButton = cell.querySelector('.add-row-btn');
+          if (addButton) {
+            addRowToSheet();
+          }
+        }
+      });
+      
       cell.appendChild(input);
     } else {
       // Other columns use textarea for multi-line support
