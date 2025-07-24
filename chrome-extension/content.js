@@ -3,11 +3,11 @@
 console.log('🔧 DocuFlow Extension: Content script loaded');
 
 // Global variables
-var runsheetButton = null;
-var runsheetFrame = null;
-var activeRunsheet = null;
-var captures = [];
-var isCapturing = false;
+let runsheetButton = null;
+let runsheetFrame = null;
+let activeRunsheet = null;
+let captures = [];
+let isCapturing = false;
 let userSession = null;
 
 // Check authentication status
@@ -691,89 +691,55 @@ function createRunsheetFrame() {
   const resizeHandle = document.createElement('div');
   resizeHandle.className = 'frame-resize-handle';
   resizeHandle.style.cssText = `
-    height: 6px !important;
+    height: 4px !important;
     background: hsl(var(--border)) !important;
     cursor: ns-resize !important;
     position: relative !important;
-    opacity: 0.8 !important;
+    opacity: 0.7 !important;
     transition: all 0.2s ease !important;
-    z-index: 10000 !important;
-    border-top: 2px solid hsl(var(--primary)) !important;
-    border-bottom: 1px solid hsl(var(--border)) !important;
-    pointer-events: auto !important;
+    z-index: 1 !important;
   `;
   
-  // Add test click handler to see if events work at all
-  resizeHandle.addEventListener('click', () => {
-    console.log('🔧 DocuFlow Extension: Resize handle clicked - events are working!');
-  });
-  
-  // Add hover effect
-  resizeHandle.addEventListener('mouseenter', () => {
-    console.log('🔧 DocuFlow Extension: Mouse entered resize handle');
-    resizeHandle.style.background = 'hsl(var(--primary))';
-    resizeHandle.style.opacity = '1';
-  });
-  
-  resizeHandle.addEventListener('mouseleave', () => {
-    console.log('🔧 DocuFlow Extension: Mouse left resize handle');
-    resizeHandle.style.background = 'hsl(var(--border))';
-    resizeHandle.style.opacity = '0.8';
-  });
-  
-  // Add resize functionality with properly scoped variables
+  // Add resize functionality
   let isResizing = false;
   let startY = 0;
   let startHeight = 0;
   
   resizeHandle.addEventListener('mousedown', (e) => {
-    console.log('🔧 DocuFlow Extension: Resize handle mousedown - starting resize');
+    console.log('Resize handle mousedown');
     isResizing = true;
     startY = e.clientY;
     startHeight = parseInt(window.getComputedStyle(runsheetFrame).height);
     document.body.style.cursor = 'ns-resize';
     document.body.style.userSelect = 'none';
     e.preventDefault();
-    e.stopPropagation();
   });
   
   const handleMouseMove = (e) => {
     if (!isResizing) return;
     
-    console.log('🔧 DocuFlow Extension: Resizing frame', e.clientY, startY);
+    console.log('Resizing frame');
     const deltaY = startY - e.clientY;
     const newHeight = Math.max(150, Math.min(600, startHeight + deltaY));
     
-    console.log('🔧 DocuFlow Extension: New height:', newHeight);
     runsheetFrame.style.height = `${newHeight}px`;
     document.body.style.paddingBottom = `${newHeight}px`;
     
     // Save preferred height
     localStorage.setItem('docuflow-frame-height', newHeight.toString());
-    e.preventDefault();
   };
   
-  const handleMouseUp = (e) => {
+  const handleMouseUp = () => {
     if (isResizing) {
-      console.log('🔧 DocuFlow Extension: Resize complete');
+      console.log('Resize complete');
       isResizing = false;
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
     }
   };
   
-  // Attach global event listeners
   document.addEventListener('mousemove', handleMouseMove);
   document.addEventListener('mouseup', handleMouseUp);
-  
-  // Clean up event listeners when frame is destroyed  
-  const cleanup = () => {
-    document.removeEventListener('mousemove', handleMouseMove);
-    document.removeEventListener('mouseup', handleMouseUp);
-  };
-  
-  // Store cleanup function on the frame for later use
-  runsheetFrame.resizeCleanup = cleanup;
   
   // Create header
   const header = document.createElement('div');
@@ -883,7 +849,6 @@ function createRunsheetFrame() {
   dataRow.dataset.rowIndex = 0;
   
   runsheetData.columns.forEach((column, colIndex) => {
-    console.log('🔧 Processing column:', column, 'at index:', colIndex);
     const cell = document.createElement('div');
     cell.className = 'table-cell';
     cell.style.width = `${120}px`; // Match header width
@@ -1479,8 +1444,6 @@ async function init() {
   
   console.log('🔧 DocuFlow Extension: Initialized successfully');
 }
-
-} // End of extension loading check
 
 // Listen for messages from other extension parts
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
