@@ -877,13 +877,14 @@ function createSingleEntryView(content) {
         display: flex !important;
         flex-direction: column !important;
         align-items: center !important;
-        gap: 6px !important;
-        padding: 8px !important;
-        height: 100% !important;
-        min-height: 80px !important;
+        gap: 4px !important;
+        padding: 6px !important;
+        width: 100% !important;
+        min-height: 32px !important;
         background: hsl(var(--card, 0 0% 100%)) !important;
         border: 1px dashed hsl(var(--border, 214 32% 91%)) !important;
         border-radius: 6px !important;
+        box-sizing: border-box !important;
       `;
       
       // Create upload interface (shown when no document)
@@ -952,7 +953,11 @@ function createSingleEntryView(content) {
         align-items: center !important;
         gap: 4px !important;
         width: 100% !important;
-        padding: 2px !important;
+        padding: 4px !important;
+        background: hsl(var(--background, 0 0% 100%)) !important;
+        border: 1px solid hsl(var(--border, 214 32% 91%)) !important;
+        border-radius: 4px !important;
+        min-height: 24px !important;
       `;
       
       const fileIcon = document.createElement('span');
@@ -965,22 +970,23 @@ function createSingleEntryView(content) {
       const filenameText = document.createElement('span');
       filenameText.className = 'filename-text';
       filenameText.style.cssText = `
-        font-size: 10px !important;
+        font-size: 11px !important;
         font-weight: 500 !important;
         color: hsl(var(--foreground, 222 47% 11%)) !important;
-        text-align: center !important;
         flex: 1 !important;
-        word-break: break-word !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
         line-height: 1.2 !important;
+        min-width: 0 !important;
       `;
       
-      // Document controls
+      // Document controls (horizontal layout next to filename)
       const documentControls = document.createElement('div');
       documentControls.style.cssText = `
         display: flex !important;
         gap: 2px !important;
-        width: 100% !important;
-        justify-content: center !important;
+        flex-shrink: 0 !important;
       `;
       
       // Brain button
@@ -995,8 +1001,12 @@ function createSingleEntryView(content) {
         padding: 2px 4px !important;
         font-size: 8px !important;
         cursor: pointer !important;
-        flex: 1 !important;
+        width: 20px !important;
+        height: 20px !important;
         transition: all 0.2s ease !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
       `;
       docBrainBtn.title = 'Analyze document';
       
@@ -1012,8 +1022,12 @@ function createSingleEntryView(content) {
         padding: 2px 4px !important;
         font-size: 8px !important;
         cursor: pointer !important;
-        flex: 1 !important;
+        width: 20px !important;
+        height: 20px !important;
         transition: all 0.2s ease !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
       `;
       editBtn.title = 'Rename document';
       
@@ -1029,8 +1043,12 @@ function createSingleEntryView(content) {
         padding: 2px 4px !important;
         font-size: 8px !important;
         cursor: pointer !important;
-        flex: 1 !important;
+        width: 20px !important;
+        height: 20px !important;
         transition: all 0.2s ease !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
       `;
       deleteBtn.title = 'Remove document';
       
@@ -1038,14 +1056,14 @@ function createSingleEntryView(content) {
       uploadInterface.appendChild(addFileBtn);
       uploadInterface.appendChild(screenshotBtn);
       
-      // Build document interface
+      // Build document interface with horizontal layout
       filenameDisplay.appendChild(fileIcon);
       filenameDisplay.appendChild(filenameText);
+      filenameDisplay.appendChild(documentControls);
       documentControls.appendChild(docBrainBtn);
       documentControls.appendChild(editBtn);
       documentControls.appendChild(deleteBtn);
       documentInterface.appendChild(filenameDisplay);
-      documentInterface.appendChild(documentControls);
       
       // Create hidden file input
       const fileInput = document.createElement('input');
@@ -1069,35 +1087,38 @@ function createSingleEntryView(content) {
       
       // Check if there's already a document linked on page load
       const checkExistingDocument = () => {
-        const documentInput = document.querySelector('.editable-row input[data-column="Document File Name"]');
-        if (documentInput && documentInput.value && documentInput.value.trim() !== '') {
-          switchToDocumentMode(documentInput.value);
+        // Check if there's a stored filename in the current runsheet data
+        if (activeRunsheet && activeRunsheet.data && activeRunsheet.data[0] && activeRunsheet.data[0]['Document File Name']) {
+          const filename = activeRunsheet.data[0]['Document File Name'];
+          if (filename && filename.trim() !== '') {
+            switchToDocumentMode(filename);
+          }
         }
       };
       
       // Handle file upload
       const handleFileUpload = (file) => {
         if (file) {
-          // Update the current row's Document File Name field
-          const documentInput = document.querySelector('.editable-row input[data-column="Document File Name"]');
-          if (documentInput) {
-            documentInput.value = file.name;
-            
-            // Store file for potential processing
-            if (!window.extensionFileStorage) {
-              window.extensionFileStorage = new Map();
-            }
-            window.extensionFileStorage.set(file.name, file);
-            
-            showNotification(`File "${file.name}" ready to link`, 'success');
-            
-            // Switch to document mode
-            switchToDocumentMode(file.name);
-            
-            // Store current file for brain button
-            window.currentAnalysisFile = file;
-            window.currentAnalysisFileName = file.name;
+          // Store the filename directly in the runsheet data
+          if (activeRunsheet && activeRunsheet.data) {
+            if (!activeRunsheet.data[0]) activeRunsheet.data[0] = {};
+            activeRunsheet.data[0]['Document File Name'] = file.name;
           }
+          
+          // Store file for potential processing
+          if (!window.extensionFileStorage) {
+            window.extensionFileStorage = new Map();
+          }
+          window.extensionFileStorage.set(file.name, file);
+          
+          showNotification(`File "${file.name}" ready to link`, 'success');
+          
+          // Switch to document mode
+          switchToDocumentMode(file.name);
+          
+          // Store current file for brain button
+          window.currentAnalysisFile = file;
+          window.currentAnalysisFileName = file.name;
         }
       };
       
@@ -1132,32 +1153,33 @@ function createSingleEntryView(content) {
         // Enable editing of filename
         const newName = prompt('Enter new filename:', filenameText.textContent);
         if (newName && newName.trim() !== '') {
-          const documentInput = document.querySelector('.editable-row input[data-column="Document File Name"]');
-          if (documentInput) {
-            documentInput.value = newName.trim();
-            switchToDocumentMode(newName.trim());
-            showNotification('Filename updated', 'success');
+          // Update the runsheet data directly
+          if (activeRunsheet && activeRunsheet.data) {
+            if (!activeRunsheet.data[0]) activeRunsheet.data[0] = {};
+            activeRunsheet.data[0]['Document File Name'] = newName.trim();
           }
+          switchToDocumentMode(newName.trim());
+          showNotification('Filename updated', 'success');
         }
       });
       
       deleteBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         if (confirm('Remove this document?')) {
-          const documentInput = document.querySelector('.editable-row input[data-column="Document File Name"]');
-          if (documentInput) {
-            documentInput.value = '';
-            switchToUploadMode();
-            
-            // Clear stored file data
-            if (window.currentAnalysisFileName && window.extensionFileStorage) {
-              window.extensionFileStorage.delete(window.currentAnalysisFileName);
-            }
-            window.currentAnalysisFile = null;
-            window.currentAnalysisFileName = null;
-            
-            showNotification('Document removed', 'success');
+          // Clear the runsheet data directly
+          if (activeRunsheet && activeRunsheet.data && activeRunsheet.data[0]) {
+            activeRunsheet.data[0]['Document File Name'] = '';
           }
+          switchToUploadMode();
+          
+          // Clear stored file data
+          if (window.currentAnalysisFileName && window.extensionFileStorage) {
+            window.extensionFileStorage.delete(window.currentAnalysisFileName);
+          }
+          window.currentAnalysisFile = null;
+          window.currentAnalysisFileName = null;
+          
+          showNotification('Document removed', 'success');
         }
       });
       
@@ -1282,62 +1304,8 @@ function createSingleEntryView(content) {
     
     // Create textarea instead of input for multi-line support (except for Document File Name)
     if (column === 'Document File Name') {
-      // Document File Name uses regular input
-      const input = document.createElement('input');
-      input.type = 'text';
-      input.value = runsheetData.data[0]?.[column] || '';
-      input.dataset.field = column.toLowerCase().replace(/\s+/g, '_').replace(/[^\w]/g, '');
-      input.dataset.column = column;
-      input.readOnly = true;
-      
-      // Add Enter key handler to trigger Add Row button and Tab navigation
-      input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          // Find and click the Add Row button
-          const addButton = cell.querySelector('.add-row-btn');
-          if (addButton) {
-            addRowToSheet();
-          }
-        } else if (e.key === 'Tab' && !e.shiftKey) {
-          // Tab moves to next field or Add Row button if last field
-          e.preventDefault();
-          const currentIndex = Array.from(dataRow.children).indexOf(cell);
-          if (currentIndex < dataRow.children.length - 1) {
-            // Move to next cell
-            const nextCell = dataRow.children[currentIndex + 1];
-            const nextTextarea = nextCell.querySelector('textarea');
-            const nextInput = nextCell.querySelector('input');
-            if (nextTextarea) {
-              nextTextarea.focus();
-            } else if (nextInput) {
-              nextInput.focus();
-            }
-          } else {
-            // If this is the last field, focus the Add Row button
-            const addButton = cell.querySelector('.add-row-btn');
-            if (addButton) {
-              addButton.focus();
-            }
-          }
-        } else if (e.key === 'Tab' && e.shiftKey) {
-          // Shift+Tab moves to previous field
-          e.preventDefault();
-          const currentIndex = Array.from(dataRow.children).indexOf(cell);
-          if (currentIndex > 0) {
-            const prevCell = dataRow.children[currentIndex - 1];
-            const prevTextarea = prevCell.querySelector('textarea');
-            const prevInput = prevCell.querySelector('input');
-            if (prevTextarea) {
-              prevTextarea.focus();
-            } else if (prevInput) {
-              prevInput.focus();
-            }
-          }
-        }
-      });
-      
-      cell.appendChild(input);
+      // Document File Name column gets no input field - just the Add Row button container
+      // The data is managed entirely through the header interface
     } else {
       // Other columns use textarea for multi-line support
       const textarea = document.createElement('textarea');
@@ -1498,11 +1466,18 @@ function createSingleEntryView(content) {
           e.preventDefault();
           addRowToSheet();
         } else if (e.key === 'Tab' && e.shiftKey) {
-          // Shift+Tab moves back to Document File Name input
+          // Shift+Tab moves back to previous column
           e.preventDefault();
-          const documentInput = cell.querySelector('input[data-column="Document File Name"]');
-          if (documentInput) {
-            documentInput.focus();
+          const currentIndex = Array.from(dataRow.children).indexOf(cell);
+          if (currentIndex > 0) {
+            const prevCell = dataRow.children[currentIndex - 1];
+            const prevTextarea = prevCell.querySelector('textarea');
+            const prevInput = prevCell.querySelector('input');
+            if (prevTextarea) {
+              prevTextarea.focus();
+            } else if (prevInput) {
+              prevInput.focus();
+            }
           }
         } else if (e.key === 'Tab' && !e.shiftKey) {
           // Tab moves to first field in next row or wraps to first field
@@ -2657,11 +2632,14 @@ async function linkSnipToRunsheet(snipUrl) {
     // Update local activeRunsheet
     activeRunsheet.data = runsheetData;
     
-    // Update the Document File Name field in the UI
+    // Update the Document File Name in the runsheet data and UI
     const filename = `captured_snip_${Date.now()}.png`;
-    const input = document.querySelector(`input[data-column="Document File Name"]`);
-    if (input) {
-      input.value = filename;
+    
+    // Update runsheet data directly
+    if (activeRunsheet && activeRunsheet.data) {
+      if (!activeRunsheet.data[0]) activeRunsheet.data[0] = {};
+      activeRunsheet.data[0]['Document File Name'] = filename;
+    }
       
       // Trigger the header switch to document mode
       const headerContainer = document.querySelector('.document-header-container');
