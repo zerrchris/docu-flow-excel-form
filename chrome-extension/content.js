@@ -2055,8 +2055,9 @@ async function captureSelectedArea(left, top, width, height) {
             height: height
           });
           
-          updateSnipCounter();
-          showNotification(`Snip ${capturedSnips.length} captured!`, 'success');
+          // Hide snip mode temporarily to allow navigation
+          hideSnipModeForNavigation();
+          showNotification(`Snip ${capturedSnips.length} captured! Navigate to next section if needed.`, 'success');
         } else {
           showNotification('Failed to capture snip', 'error');
         }
@@ -2110,14 +2111,140 @@ async function finishSnipping() {
 
 // Cancel snipping
 function cancelSnipping() {
-  capturedSnips = [];
   cleanupSnipMode();
   showNotification('Snipping cancelled', 'info');
+}
+
+// Hide snip mode temporarily for navigation
+function hideSnipModeForNavigation() {
+  if (snipOverlay) {
+    snipOverlay.style.display = 'none';
+  }
+  
+  if (snipControlPanel) {
+    snipControlPanel.remove();
+    snipControlPanel = null;
+  }
+  
+  // Create navigation control panel
+  createNavigationControlPanel();
+}
+
+// Create navigation control panel with snip again option
+function createNavigationControlPanel() {
+  const navPanel = document.createElement('div');
+  navPanel.id = 'docuflow-nav-controls';
+  navPanel.style.cssText = `
+    position: fixed !important;
+    top: 20px !important;
+    right: 20px !important;
+    background: white !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 8px !important;
+    padding: 12px 16px !important;
+    z-index: 2147483647 !important;
+    display: flex !important;
+    gap: 12px !important;
+    align-items: center !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+    backdrop-filter: blur(8px) !important;
+  `;
+  
+  // Snip counter
+  const counter = document.createElement('span');
+  counter.style.cssText = `
+    font-size: 14px !important;
+    color: #374151 !important;
+    font-weight: 500 !important;
+    background: #f3f4f6 !important;
+    padding: 6px 12px !important;
+    border-radius: 4px !important;
+    border: 1px solid #e5e7eb !important;
+  `;
+  counter.textContent = `Snips captured: ${capturedSnips.length}`;
+  
+  // Snip Again button
+  const snipAgainButton = document.createElement('button');
+  snipAgainButton.textContent = 'Snip Again';
+  snipAgainButton.style.cssText = `
+    background: #3b82f6 !important;
+    color: white !important;
+    border: none !important;
+    padding: 8px 16px !important;
+    border-radius: 6px !important;
+    cursor: pointer !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+  `;
+  
+  snipAgainButton.addEventListener('click', () => {
+    navPanel.remove();
+    resumeSnipMode();
+  });
+  
+  // Done button
+  const doneButton = document.createElement('button');
+  doneButton.textContent = 'Done Snipping';
+  doneButton.style.cssText = `
+    background: #10b981 !important;
+    color: white !important;
+    border: none !important;
+    padding: 8px 16px !important;
+    border-radius: 6px !important;
+    cursor: pointer !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+  `;
+  
+  doneButton.addEventListener('click', () => {
+    navPanel.remove();
+    finishSnipping();
+  });
+  
+  // Cancel button
+  const cancelButton = document.createElement('button');
+  cancelButton.textContent = 'Cancel';
+  cancelButton.style.cssText = `
+    background: #ef4444 !important;
+    color: white !important;
+    border: none !important;
+    padding: 8px 16px !important;
+    border-radius: 6px !important;
+    cursor: pointer !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+  `;
+  
+  cancelButton.addEventListener('click', () => {
+    navPanel.remove();
+    cancelSnipping();
+  });
+  
+  navPanel.appendChild(counter);
+  navPanel.appendChild(snipAgainButton);
+  navPanel.appendChild(doneButton);
+  navPanel.appendChild(cancelButton);
+  
+  document.body.appendChild(navPanel);
+}
+
+// Resume snip mode after navigation
+function resumeSnipMode() {
+  if (snipOverlay) {
+    snipOverlay.style.display = 'block';
+  } else {
+    createSnipOverlay();
+  }
+  
+  createSnipControlPanel();
+  showNotification('Snip mode resumed! Drag to select another area.', 'info');
 }
 
 // Cleanup snip mode
 function cleanupSnipMode() {
   isSnipMode = false;
+  capturedSnips = [];
   
   if (snipOverlay) {
     snipOverlay.remove();
@@ -2127,6 +2254,12 @@ function cleanupSnipMode() {
   if (snipControlPanel) {
     snipControlPanel.remove();
     snipControlPanel = null;
+  }
+  
+  // Also remove navigation panel if it exists
+  const navPanel = document.getElementById('docuflow-nav-controls');
+  if (navPanel) {
+    navPanel.remove();
   }
 }
 
