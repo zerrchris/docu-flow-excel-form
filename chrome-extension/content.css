@@ -148,8 +148,9 @@
   box-shadow: 0 0 0 2px hsl(var(--primary, 221 83% 53%) / 0.2) !important;
 }
 
-/* Input Styles - Matching EditableSpreadsheet textarea styling */
-.table-cell input {
+/* Input and Textarea Styles - Matching EditableSpreadsheet styling */
+.table-cell input,
+.table-cell textarea {
   width: 100% !important;
   border: none !important;
   outline: none !important;
@@ -164,14 +165,21 @@
   transition: all 0.2s ease !important;
 }
 
-.table-cell input:focus {
+.table-cell textarea {
+  overflow: hidden !important;
+  line-height: 1.4 !important;
+}
+
+.table-cell input:focus,
+.table-cell textarea:focus {
   background: hsl(var(--background, 0 0% 100%)) !important;
   border: 2px solid hsl(var(--primary, 215 80% 40%)) !important;
   box-shadow: 0 0 0 2px hsl(var(--primary, 215 80% 40%) / 0.2) !important;
   border-radius: 2px !important;
 }
 
-.table-cell input:hover:not(:focus) {
+.table-cell input:hover:not(:focus),
+.table-cell textarea:hover:not(:focus) {
   background: hsl(var(--muted, 210 40% 96%) / 0.5) !important;
 }
 

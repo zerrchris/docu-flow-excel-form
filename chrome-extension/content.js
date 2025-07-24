@@ -534,8 +534,8 @@ async function addRowToSheet() {
   
   console.log('🔧 DocuFlow Extension: Adding row to sheet');
   
-  // Gather data from input fields
-  const inputs = document.querySelectorAll('#docuflow-runsheet-frame input');
+  // Gather data from input fields and textareas
+  const inputs = document.querySelectorAll('#docuflow-runsheet-frame input, #docuflow-runsheet-frame textarea');
   const rowData = {};
   let hasData = false;
   
@@ -601,13 +601,18 @@ async function addRowToSheet() {
     if (result.success) {
       showNotification(`Row ${nextRowIndex + 1} added successfully!`, 'success');
       
-      // Clear all input fields for next entry
+      // Clear all input fields and textareas for next entry
       inputs.forEach(input => {
         input.value = '';
+        // Auto-resize textareas after clearing
+        if (input.tagName === 'TEXTAREA') {
+          input.style.height = 'auto';
+          input.style.height = Math.max(32, input.scrollHeight) + 'px';
+        }
       });
       
-      // Focus back to first input for quick data entry
-      const firstInput = document.querySelector('#docuflow-runsheet-frame input');
+      // Focus back to first input or textarea for quick data entry
+      const firstInput = document.querySelector('#docuflow-runsheet-frame input, #docuflow-runsheet-frame textarea');
       if (firstInput) {
         firstInput.focus();
       }
@@ -701,6 +706,7 @@ function createRunsheetFrame() {
   let startHeight = 0;
   
   resizeHandle.addEventListener('mousedown', (e) => {
+    console.log('Resize handle mousedown');
     isResizing = true;
     startY = e.clientY;
     startHeight = parseInt(window.getComputedStyle(runsheetFrame).height);
@@ -709,9 +715,10 @@ function createRunsheetFrame() {
     e.preventDefault();
   });
   
-  document.addEventListener('mousemove', (e) => {
+  const handleMouseMove = (e) => {
     if (!isResizing) return;
     
+    console.log('Resizing frame');
     const deltaY = startY - e.clientY;
     const newHeight = Math.max(150, Math.min(600, startHeight + deltaY));
     
@@ -720,15 +727,19 @@ function createRunsheetFrame() {
     
     // Save preferred height
     localStorage.setItem('docuflow-frame-height', newHeight.toString());
-  });
+  };
   
-  document.addEventListener('mouseup', () => {
+  const handleMouseUp = () => {
     if (isResizing) {
+      console.log('Resize complete');
       isResizing = false;
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
     }
-  });
+  };
+  
+  document.addEventListener('mousemove', handleMouseMove);
+  document.addEventListener('mouseup', handleMouseUp);
   
   // Create header
   const header = document.createElement('div');
@@ -844,16 +855,134 @@ function createRunsheetFrame() {
     cell.style.minWidth = `${120}px`;
     cell.style.position = 'relative';
     
-    const input = document.createElement('input');
-    input.type = 'text'; // Always text type, no special date inputs
-    input.value = runsheetData.data[0]?.[column] || '';
-    input.dataset.field = column.toLowerCase().replace(/\s+/g, '_').replace(/[^\w]/g, '');
-    input.dataset.column = column;
-    
-    // Remove placeholder text - just blank cells like main app
-    // Make Document File Name readonly initially
+    // Create textarea instead of input for multi-line support (except for Document File Name)
     if (column === 'Document File Name') {
+      // Document File Name uses regular input
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.value = runsheetData.data[0]?.[column] || '';
+      input.dataset.field = column.toLowerCase().replace(/\s+/g, '_').replace(/[^\w]/g, '');
+      input.dataset.column = column;
       input.readOnly = true;
+      cell.appendChild(input);
+    } else {
+      // Other columns use textarea for multi-line support
+      const textarea = document.createElement('textarea');
+      textarea.value = runsheetData.data[0]?.[column] || '';
+      textarea.dataset.field = column.toLowerCase().replace(/\s+/g, '_').replace(/[^\w]/g, '');
+      textarea.dataset.column = column;
+      
+      textarea.style.cssText = `
+        width: 100% !important;
+        border: none !important;
+        outline: none !important;
+        background: transparent !important;
+        color: hsl(var(--foreground, 0 0% 9%)) !important;
+        font-size: 11px !important;
+        font-family: inherit !important;
+        padding: 8px 12px !important;
+        min-height: 2rem !important;
+        resize: none !important;
+        border: 2px solid transparent !important;
+        transition: all 0.2s ease !important;
+        overflow: hidden !important;
+        line-height: 1.4 !important;
+      `;
+      
+      // Auto-resize textarea height
+      const autoResize = () => {
+        textarea.style.height = 'auto';
+        textarea.style.height = Math.max(32, textarea.scrollHeight) + 'px';
+      };
+      
+      textarea.addEventListener('input', () => {
+        autoResize();
+      });
+      
+      textarea.addEventListener('focus', () => {
+        textarea.style.background = 'hsl(var(--background, 0 0% 100%))';
+        textarea.style.border = '2px solid hsl(var(--primary, 215 80% 40%))';
+        textarea.style.boxShadow = '0 0 0 2px hsl(var(--primary, 215 80% 40%) / 0.2)';
+        textarea.style.borderRadius = '2px';
+        autoResize();
+      });
+      
+      textarea.addEventListener('blur', () => {
+        textarea.style.background = 'transparent';
+        textarea.style.border = '2px solid transparent';
+        textarea.style.boxShadow = 'none';
+        textarea.style.borderRadius = '0';
+      });
+      
+      textarea.addEventListener('mouseenter', () => {
+        if (document.activeElement !== textarea) {
+          textarea.style.background = 'hsl(var(--muted, 210 40% 96%) / 0.5)';
+        }
+      });
+      
+      textarea.addEventListener('mouseleave', () => {
+        if (document.activeElement !== textarea) {
+          textarea.style.background = 'transparent';
+        }
+      });
+      
+      // Handle keyboard navigation like EditableSpreadsheet
+      textarea.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.altKey && !e.shiftKey) {
+          // Enter moves to next cell or add button if last field
+          e.preventDefault();
+          const currentIndex = Array.from(dataRow.children).indexOf(cell);
+          if (currentIndex < dataRow.children.length - 1) {
+            // Move to next cell
+            const nextCell = dataRow.children[currentIndex + 1];
+            const nextTextarea = nextCell.querySelector('textarea');
+            const nextInput = nextCell.querySelector('input');
+            if (nextTextarea) {
+              nextTextarea.focus();
+            } else if (nextInput) {
+              // If it's the Document File Name cell, focus the Add Row button
+              const addButton = nextCell.querySelector('.add-row-btn');
+              if (addButton) addButton.focus();
+            }
+          }
+        } else if (e.key === 'Enter' && e.altKey) {
+          // Alt+Enter creates line break - allow default behavior and resize
+          setTimeout(autoResize, 0);
+        } else if (e.key === 'Tab') {
+          // Tab moves to next field
+          e.preventDefault();
+          const currentIndex = Array.from(dataRow.children).indexOf(cell);
+          if (currentIndex < dataRow.children.length - 1) {
+            const nextCell = dataRow.children[currentIndex + 1];
+            const nextTextarea = nextCell.querySelector('textarea');
+            const nextInput = nextCell.querySelector('input');
+            const nextButton = nextCell.querySelector('.add-row-btn');
+            if (nextTextarea) {
+              nextTextarea.focus();
+            } else if (nextInput) {
+              nextInput.focus();
+            } else if (nextButton) {
+              nextButton.focus();
+            }
+          }
+        } else if (e.key === 'Tab' && e.shiftKey) {
+          // Shift+Tab moves to previous field
+          e.preventDefault();
+          const currentIndex = Array.from(dataRow.children).indexOf(cell);
+          if (currentIndex > 0) {
+            const prevCell = dataRow.children[currentIndex - 1];
+            const prevTextarea = prevCell.querySelector('textarea');
+            const prevInput = prevCell.querySelector('input');
+            if (prevTextarea) {
+              prevTextarea.focus();
+            } else if (prevInput) {
+              prevInput.focus();
+            }
+          }
+        }
+      });
+      
+      cell.appendChild(textarea);
     }
     
     // Auto-sync on change
