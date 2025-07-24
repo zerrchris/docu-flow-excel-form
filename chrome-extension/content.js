@@ -1053,7 +1053,6 @@ function createRunsheetFrame() {
       cell.appendChild(buttonContainer);
     }
     
-    cell.appendChild(input);
     dataRow.appendChild(cell);
   });
   
@@ -1310,8 +1309,8 @@ async function syncData() {
   
   console.log('🔧 DocuFlow Extension: Syncing data');
   
-  // Gather data from input fields
-  const inputs = document.querySelectorAll('#docuflow-runsheet-frame input');
+  // Gather data from input fields and textareas
+  const inputs = document.querySelectorAll('#docuflow-runsheet-frame input, #docuflow-runsheet-frame textarea');
   const rowData = {};
   
   inputs.forEach(input => {
