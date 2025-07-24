@@ -8,7 +8,6 @@ interface ExtensionData {
   runsheet_id: string
   row_data: Record<string, any>
   screenshot_url?: string
-  user_id: string
 }
 
 Deno.serve(async (req) => {
@@ -22,42 +21,58 @@ Deno.serve(async (req) => {
 
     if (req.method === 'POST') {
       // Sync data from extension to runsheet
-      const { runsheet_id, row_data, screenshot_url, user_id }: ExtensionData = await req.json()
+      const { runsheet_id, row_data, screenshot_url }: ExtensionData = await req.json()
+
+      // Get the authorization header
+      const authHeader = req.headers.get('Authorization')
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return new Response(
+          JSON.stringify({ error: 'Authorization required', success: false }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      // Extract the JWT token and get user
+      const token = authHeader.replace('Bearer ', '')
+      const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+      
+      if (authError || !user) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid authentication', success: false }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
 
       // Get current runsheet
       const { data: runsheet, error: fetchError } = await supabase
         .from('runsheets')
         .select('*')
         .eq('id', runsheet_id)
-        .eq('user_id', user_id)
+        .eq('user_id', user.id)
         .single()
 
       if (fetchError) {
         throw new Error(`Failed to fetch runsheet: ${fetchError.message}`)
       }
 
-      // Update runsheet data
+      // Update runsheet data - always update the first row for simplicity
       const currentData = runsheet.data as any[]
       const updatedData = [...currentData]
       
-      // Find or create row for this data
-      let rowIndex = updatedData.findIndex(row => 
-        Object.keys(row_data).some(key => row[key] === row_data[key])
-      )
-      
-      if (rowIndex === -1) {
-        // Add new row
-        updatedData.push(row_data)
-        rowIndex = updatedData.length - 1
-      } else {
-        // Update existing row
-        updatedData[rowIndex] = { ...updatedData[rowIndex], ...row_data }
+      // Ensure we have at least one row
+      if (updatedData.length === 0) {
+        const emptyRow: Record<string, string> = {}
+        runsheet.columns.forEach((col: string) => emptyRow[col] = '')
+        updatedData.push(emptyRow)
       }
+
+      // Update the first row with the provided data
+      updatedData[0] = { ...updatedData[0], ...row_data }
 
       // Add screenshot URL if provided
       if (screenshot_url) {
-        updatedData[rowIndex] = { 
-          ...updatedData[rowIndex], 
+        updatedData[0] = { 
+          ...updatedData[0], 
           screenshot_url 
         }
       }
@@ -70,7 +85,7 @@ Deno.serve(async (req) => {
           updated_at: new Date().toISOString()
         })
         .eq('id', runsheet_id)
-        .eq('user_id', user_id)
+        .eq('user_id', user.id)
 
       if (updateError) {
         throw new Error(`Failed to update runsheet: ${updateError.message}`)
@@ -79,7 +94,7 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           success: true, 
-          row_index: rowIndex,
+          row_index: 0,
           message: 'Data synced successfully' 
         }),
         { 
@@ -93,17 +108,36 @@ Deno.serve(async (req) => {
       // Get runsheet data for extension
       const url = new URL(req.url)
       const runsheet_id = url.searchParams.get('runsheet_id')
-      const user_id = url.searchParams.get('user_id')
 
-      if (!runsheet_id || !user_id) {
-        throw new Error('Missing runsheet_id or user_id')
+      if (!runsheet_id) {
+        throw new Error('Missing runsheet_id')
+      }
+
+      // Get the authorization header
+      const authHeader = req.headers.get('Authorization')
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return new Response(
+          JSON.stringify({ error: 'Authorization required', success: false }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      // Extract the JWT token and get user
+      const token = authHeader.replace('Bearer ', '')
+      const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+      
+      if (authError || !user) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid authentication', success: false }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
       }
 
       const { data: runsheet, error } = await supabase
         .from('runsheets')
         .select('*')
         .eq('id', runsheet_id)
-        .eq('user_id', user_id)
+        .eq('user_id', user.id)
         .single()
 
       if (error) {

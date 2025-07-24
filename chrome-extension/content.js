@@ -1,271 +1,294 @@
-// Content script for DocuFlow Runsheet Assistant
-console.log('DocuFlow content script loaded on:', window.location.href);
+// DocuFlow Runsheet Assistant - Content Script
 
-// Configuration
-const SUPABASE_URL = 'https://xnpmrafjjqsissbtempj.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhucG1yYWZqanFzaXNzYnRlbXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4NzMyNjcsImV4cCI6MjA2ODQ0OTI2N30.aQG15Ed8IOLJfM5p7XF_kEM5FUz8zJug1pxAi9rTTsg';
+console.log('🔧 DocuFlow Extension: Content script loaded');
 
 // Global variables
-let isAuthenticated = false;
-let currentUser = null;
-let activeRunsheet = null;
+let runsheetButton = null;
 let runsheetFrame = null;
+let activeRunsheet = null;
 let captures = [];
 let isCapturing = false;
+let userSession = null;
 
-// Check if user is authenticated
+// Check authentication status
 async function checkAuth() {
   try {
-    const result = await chrome.storage.local.get(['supabase_session']);
-    if (result.supabase_session) {
-      isAuthenticated = true;
-      currentUser = result.supabase_session.user;
-      console.log('User authenticated:', currentUser.email);
+    const authData = await chrome.storage.local.get(['supabase_session']);
+    if (authData.supabase_session && authData.supabase_session.access_token) {
+      userSession = authData.supabase_session;
+      console.log('🔧 DocuFlow Extension: User authenticated');
       return true;
     }
+    console.log('🔧 DocuFlow Extension: No authentication found');
+    return false;
   } catch (error) {
-    console.error('Auth check error:', error);
+    console.error('Auth check failed:', error);
+    return false;
   }
-  return false;
 }
 
-// Create a floating runsheet button
+// Create the floating runsheet button
 function createRunsheetButton() {
-  if (document.getElementById('docuflow-runsheet-button')) return;
+  if (runsheetButton) return; // Already exists
   
-  const button = document.createElement('div');
-  button.id = 'docuflow-runsheet-button';
-  button.innerHTML = `
-    <div class="runsheet-btn-content">
-      <span>📋</span>
-      <span class="btn-text">Runsheet</span>
-    </div>
+  console.log('🔧 DocuFlow Extension: Creating runsheet button');
+  
+  runsheetButton = document.createElement('div');
+  runsheetButton.id = 'docuflow-runsheet-button';
+  runsheetButton.style.cssText = `
+    position: fixed !important;
+    bottom: 20px !important;
+    right: 20px !important;
+    width: 60px !important;
+    height: 60px !important;
+    background: linear-gradient(135deg, hsl(215 80% 40%), hsl(230 60% 60%)) !important;
+    border-radius: 50% !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+    cursor: pointer !important;
+    z-index: 2147483646 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 24px !important;
+    color: white !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    transition: all 0.3s ease !important;
+    user-select: none !important;
   `;
+  runsheetButton.innerHTML = '📋';
+  runsheetButton.title = 'DocuFlow Runsheet Assistant';
   
-  // Add styles directly to avoid conflicts
-  Object.assign(button.style, {
-    position: 'fixed',
-    bottom: '20px',
-    right: '20px',
-    width: '80px',
-    height: '80px',
-    borderRadius: '50%',
-    backgroundColor: '#3b82f6',
-    color: 'white',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    cursor: 'pointer',
-    zIndex: '2147483647',
-    boxShadow: '0 4px 12px rgba(59, 130, 246, 0.4)',
-    transition: 'all 0.3s ease',
-    fontFamily: 'system-ui, -apple-system, sans-serif',
-    fontSize: '12px',
-    fontWeight: '600'
+  // Hover effects
+  runsheetButton.addEventListener('mouseenter', () => {
+    runsheetButton.style.transform = 'scale(1.1)';
+    runsheetButton.style.boxShadow = '0 6px 25px rgba(0, 0, 0, 0.4)';
   });
   
-  const content = button.querySelector('.runsheet-btn-content');
-  Object.assign(content.style, {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: '4px'
+  runsheetButton.addEventListener('mouseleave', () => {
+    runsheetButton.style.transform = 'scale(1)';
+    runsheetButton.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.3)';
   });
   
-  button.addEventListener('click', () => {
-    if (!activeRunsheet) {
-      showRunsheetSelector();
-    } else {
+  // Click handler
+  runsheetButton.addEventListener('click', async () => {
+    if (runsheetFrame && runsheetFrame.style.display !== 'none') {
       toggleRunsheetFrame();
+    } else {
+      const isAuthenticated = await checkAuth();
+      if (isAuthenticated) {
+        showRunsheetSelector();
+      } else {
+        showNotification('Please sign in to the main app first', 'error');
+      }
     }
   });
   
-  button.addEventListener('mouseenter', () => {
-    button.style.transform = 'scale(1.1)';
-    button.style.backgroundColor = '#2563eb';
-  });
-  
-  button.addEventListener('mouseleave', () => {
-    button.style.transform = 'scale(1)';
-    button.style.backgroundColor = '#3b82f6';
-  });
-  
-  document.body.appendChild(button);
+  document.body.appendChild(runsheetButton);
 }
 
-// Show runsheet selector dialog
-function showRunsheetSelector() {
+// Show runsheet selector with real data from Supabase
+async function showRunsheetSelector() {
+  console.log('🔧 DocuFlow Extension: Showing runsheet selector');
+  
+  // Create dialog
   const dialog = document.createElement('div');
   dialog.id = 'docuflow-runsheet-selector';
+  dialog.style.cssText = `
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    background: hsl(var(--background, 0 0% 100%)) !important;
+    border: 1px solid hsl(var(--border, 214 32% 91%)) !important;
+    border-radius: 8px !important;
+    padding: 24px !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
+    z-index: 2147483647 !important;
+    width: 400px !important;
+    max-height: 500px !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    color: hsl(var(--foreground, 222 47% 11%)) !important;
+  `;
+
+  // Create overlay
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    background: rgba(0, 0, 0, 0.5) !important;
+    z-index: 2147483646 !important;
+  `;
+
   dialog.innerHTML = `
-    <div class="selector-backdrop">
-      <div class="selector-modal">
-        <div class="selector-header">
-          <h3>Select a Runsheet</h3>
-          <button class="close-btn">&times;</button>
-        </div>
-        <div class="selector-content">
-          <p>Choose a runsheet to start working with:</p>
-          <div class="runsheet-options">
-            <button class="runsheet-option" data-runsheet="default">
-              <span class="option-icon">📄</span>
-              <span class="option-name">Default Runsheet</span>
-            </button>
-            <button class="runsheet-option" data-runsheet="property">
-              <span class="option-icon">🏠</span>
-              <span class="option-name">Property Records</span>
-            </button>
-            <button class="runsheet-option" data-runsheet="legal">
-              <span class="option-icon">⚖️</span>
-              <span class="option-name">Legal Documents</span>
-            </button>
-          </div>
-          <div class="selector-actions">
-            <button id="load-runsheet-btn" class="primary-btn" disabled>Load Runsheet</button>
-            <button id="create-new-btn" class="secondary-btn">Create New</button>
-          </div>
-        </div>
-      </div>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <h3 style="margin: 0; font-size: 18px; font-weight: 600;">Select Runsheet</h3>
+      <button id="close-selector" style="background: none; border: none; font-size: 20px; cursor: pointer; color: hsl(var(--muted-foreground, 215 16% 47%));">×</button>
+    </div>
+    <div id="runsheet-loading" style="text-align: center; padding: 20px;">
+      <div style="display: inline-block; width: 20px; height: 20px; border: 2px solid hsl(var(--border, 214 32% 91%)); border-radius: 50%; border-top-color: hsl(var(--primary, 215 80% 40%)); animation: spin 1s linear infinite;"></div>
+      <p style="margin-top: 10px; color: hsl(var(--muted-foreground, 215 16% 47%));">Loading your runsheets...</p>
+    </div>
+    <div id="runsheet-list" style="display: none; max-height: 300px; overflow-y: auto;">
+      <!-- Runsheets will be populated here -->
+    </div>
+    <div style="margin-top: 16px; display: flex; gap: 8px;">
+      <button id="create-new-runsheet" style="flex: 1; padding: 8px 16px; background: hsl(var(--primary, 215 80% 40%)); color: hsl(var(--primary-foreground, 210 40% 98%)); border: none; border-radius: 6px; cursor: pointer; font-size: 14px;">
+        Create New Runsheet
+      </button>
     </div>
   `;
-  
-  // Add styles
-  const backdrop = dialog.querySelector('.selector-backdrop');
-  Object.assign(backdrop.style, {
-    position: 'fixed',
-    top: '0',
-    left: '0',
-    right: '0',
-    bottom: '0',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: '2147483648',
-    fontFamily: 'system-ui, -apple-system, sans-serif'
-  });
-  
-  const modal = dialog.querySelector('.selector-modal');
-  Object.assign(modal.style, {
-    backgroundColor: 'white',
-    borderRadius: '12px',
-    padding: '24px',
-    maxWidth: '400px',
-    width: '90%',
-    boxShadow: '0 20px 40px rgba(0, 0, 0, 0.3)'
-  });
-  
-  // Style all the dialog elements
-  const header = dialog.querySelector('.selector-header');
-  Object.assign(header.style, {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '20px',
-    borderBottom: '1px solid #e5e7eb',
-    paddingBottom: '12px'
-  });
-  
-  const title = dialog.querySelector('h3');
-  Object.assign(title.style, {
-    margin: '0',
-    fontSize: '18px',
-    fontWeight: '600',
-    color: '#1f2937'
-  });
-  
+
+  // Add CSS for spinner animation
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  `;
+  document.head.appendChild(style);
+
+  document.body.appendChild(overlay);
   document.body.appendChild(dialog);
-  setupRunsheetSelectorEvents(dialog);
+
+  // Load runsheets from Supabase
+  try {
+    const response = await fetch('https://xnpmrafjjqsissbtempj.supabase.co/functions/v1/get-user-runsheets', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${userSession.access_token}`,
+        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhucG1yYWZqanFzaXNzYnRlbXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4NzMyNjcsImV4cCI6MjA2ODQ0OTI2N30.aQG15Ed8IOLJfM5p7XF_kEM5FUz8zJug1pxAi9rTTsg',
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch runsheets');
+    }
+
+    const { runsheets } = await response.json();
+    
+    const loadingDiv = document.getElementById('runsheet-loading');
+    const listDiv = document.getElementById('runsheet-list');
+    
+    loadingDiv.style.display = 'none';
+    listDiv.style.display = 'block';
+
+    if (runsheets.length === 0) {
+      listDiv.innerHTML = `
+        <div style="text-align: center; padding: 20px; color: hsl(var(--muted-foreground, 215 16% 47%));">
+          <p>No runsheets found. Create your first runsheet!</p>
+        </div>
+      `;
+    } else {
+      runsheets.forEach(runsheet => {
+        const runsheetItem = document.createElement('div');
+        runsheetItem.style.cssText = `
+          padding: 12px !important;
+          border: 1px solid hsl(var(--border, 214 32% 91%)) !important;
+          border-radius: 6px !important;
+          margin-bottom: 8px !important;
+          cursor: pointer !important;
+          transition: all 0.2s ease !important;
+          background: hsl(var(--card, 0 0% 100%)) !important;
+        `;
+        
+        runsheetItem.innerHTML = `
+          <div style="font-weight: 500; margin-bottom: 4px;">${runsheet.name}</div>
+          <div style="font-size: 12px; color: hsl(var(--muted-foreground, 215 16% 47%));">
+            ${runsheet.columns.length} columns • ${runsheet.data.length} rows • Updated ${new Date(runsheet.updated_at).toLocaleDateString()}
+          </div>
+        `;
+        
+        runsheetItem.addEventListener('mouseenter', () => {
+          runsheetItem.style.background = 'hsl(var(--muted, 210 40% 96%))';
+        });
+        
+        runsheetItem.addEventListener('mouseleave', () => {
+          runsheetItem.style.background = 'hsl(var(--card, 0 0% 100%))';
+        });
+        
+        runsheetItem.addEventListener('click', () => {
+          loadRunsheet(runsheet);
+          closeSelector();
+        });
+        
+        listDiv.appendChild(runsheetItem);
+      });
+    }
+
+  } catch (error) {
+    console.error('Error loading runsheets:', error);
+    const loadingDiv = document.getElementById('runsheet-loading');
+    loadingDiv.innerHTML = `
+      <div style="text-align: center; color: hsl(var(--destructive, 0 84% 60%));">
+        <p>Failed to load runsheets</p>
+        <p style="font-size: 12px; margin-top: 8px;">Make sure you're signed in to the main app</p>
+      </div>
+    `;
+  }
+
+  function closeSelector() {
+    document.body.removeChild(overlay);
+    document.body.removeChild(dialog);
+    document.head.removeChild(style);
+  }
+
+  // Event listeners
+  document.getElementById('close-selector').addEventListener('click', closeSelector);
+  overlay.addEventListener('click', closeSelector);
+  
+  document.getElementById('create-new-runsheet').addEventListener('click', () => {
+    closeSelector();
+    showNotification('Create new runsheets in the main app', 'info');
+  });
 }
 
-// Setup runsheet selector events
-function setupRunsheetSelectorEvents(dialog) {
-  let selectedRunsheet = null;
+// Load a specific runsheet
+function loadRunsheet(runsheet) {
+  console.log('🔧 DocuFlow Extension: Loading runsheet:', runsheet.name);
   
-  // Close button
-  dialog.querySelector('.close-btn').addEventListener('click', () => {
-    dialog.remove();
+  activeRunsheet = runsheet;
+  
+  // Store runsheet data for the session
+  chrome.storage.local.set({ 
+    'active_runsheet': runsheet 
   });
   
-  // Runsheet options
-  dialog.querySelectorAll('.runsheet-option').forEach(option => {
-    Object.assign(option.style, {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '12px',
-      padding: '12px',
-      border: '2px solid #e5e7eb',
-      borderRadius: '8px',
-      backgroundColor: 'white',
-      cursor: 'pointer',
-      transition: 'all 0.2s ease',
-      marginBottom: '8px',
-      width: '100%'
-    });
-    
-    option.addEventListener('click', () => {
-      // Remove selection from others
-      dialog.querySelectorAll('.runsheet-option').forEach(opt => {
-        opt.style.borderColor = '#e5e7eb';
-        opt.style.backgroundColor = 'white';
-      });
-      
-      // Select this one
-      option.style.borderColor = '#3b82f6';
-      option.style.backgroundColor = '#f0f9ff';
-      
-      selectedRunsheet = option.getAttribute('data-runsheet');
-      dialog.querySelector('#load-runsheet-btn').disabled = false;
-      dialog.querySelector('#load-runsheet-btn').style.opacity = '1';
-    });
-  });
+  // Destroy existing frame and recreate with new data
+  if (runsheetFrame) {
+    runsheetFrame.remove();
+    runsheetFrame = null;
+  }
   
-  // Load runsheet button
-  const loadBtn = dialog.querySelector('#load-runsheet-btn');
-  Object.assign(loadBtn.style, {
-    backgroundColor: '#3b82f6',
-    color: 'white',
-    border: 'none',
-    borderRadius: '6px',
-    padding: '10px 20px',
-    cursor: 'pointer',
-    fontWeight: '600',
-    opacity: '0.5'
-  });
+  // Create the frame with the loaded runsheet
+  createRunsheetFrame();
   
-  loadBtn.addEventListener('click', () => {
-    if (selectedRunsheet) {
-      activeRunsheet = { id: selectedRunsheet, name: selectedRunsheet };
-      dialog.remove();
-      createRunsheetFrame();
-      showNotification('Runsheet loaded successfully!', 'success');
-    }
-  });
+  // Show the frame
+  if (runsheetFrame) {
+    runsheetFrame.style.display = 'block';
+    document.body.appendChild(runsheetFrame);
+    setupFrameEventListeners();
+  }
   
-  // Create new button
-  const createBtn = dialog.querySelector('#create-new-btn');
-  Object.assign(createBtn.style, {
-    backgroundColor: 'white',
-    color: '#374151',
-    border: '1px solid #d1d5db',
-    borderRadius: '6px',
-    padding: '10px 20px',
-    cursor: 'pointer',
-    fontWeight: '600',
-    marginLeft: '8px'
-  });
+  showNotification(`Loaded runsheet: ${runsheet.name}`, 'success');
 }
 
 // Toggle runsheet frame visibility
 function toggleRunsheetFrame() {
-  if (runsheetFrame) {
-    if (runsheetFrame.style.display === 'none') {
-      runsheetFrame.style.display = 'block';
-    } else {
-      runsheetFrame.style.display = 'none';
-    }
+  if (!runsheetFrame) {
+    // No active runsheet, show selector
+    showRunsheetSelector();
+    return;
+  }
+  
+  if (runsheetFrame.style.display === 'none') {
+    runsheetFrame.style.display = 'block';
   } else {
-    createRunsheetFrame();
+    runsheetFrame.style.display = 'none';
   }
 }
 
@@ -273,7 +296,7 @@ function toggleRunsheetFrame() {
 function createRunsheetFrame() {
   if (runsheetFrame) return; // Already exists
   
-  console.log('Creating runsheet frame');
+  console.log('🔧 DocuFlow Extension: Creating runsheet frame');
   
   // Create main frame container
   runsheetFrame = document.createElement('div');
@@ -331,7 +354,7 @@ function createRunsheetFrame() {
     resizeHandle.style.bottom = '0';
     resizeHandle.style.width = '4px';
     resizeHandle.style.cursor = 'col-resize';
-    resizeHandle.style.background = 'hsl(var(--border))';
+    resizeHandle.style.background = 'hsl(var(--border, 214 32% 91%))';
     resizeHandle.style.opacity = '0';
     resizeHandle.style.transition = 'opacity 0.2s ease';
     
@@ -381,7 +404,7 @@ function createRunsheetFrame() {
   
   table.appendChild(headerRow);
   
-  // Create editable data row
+  // Create editable data row (show first row of data)
   const dataRow = document.createElement('div');
   dataRow.className = 'table-row editable-row';
   dataRow.dataset.rowIndex = 0;
@@ -398,6 +421,7 @@ function createRunsheetFrame() {
     input.value = runsheetData.data[0]?.[column] || '';
     input.placeholder = `Enter ${column.toLowerCase()}`;
     input.dataset.field = column.toLowerCase().replace(/\s+/g, '_').replace(/[^\w]/g, '');
+    input.dataset.column = column;
     
     // Make Document File Name readonly initially
     if (column === 'Document File Name') {
@@ -418,10 +442,10 @@ function createRunsheetFrame() {
       toSheetBtn.style.transform = 'translateY(-50%)';
       toSheetBtn.style.fontSize = '10px';
       toSheetBtn.style.padding = '2px 6px';
-      toSheetBtn.style.border = '1px solid hsl(var(--border))';
+      toSheetBtn.style.border = '1px solid hsl(var(--border, 214 32% 91%))';
       toSheetBtn.style.borderRadius = '4px';
-      toSheetBtn.style.background = 'hsl(var(--background))';
-      toSheetBtn.style.color = 'hsl(var(--foreground))';
+      toSheetBtn.style.background = 'hsl(var(--background, 0 0% 100%))';
+      toSheetBtn.style.color = 'hsl(var(--foreground, 222 47% 11%))';
       toSheetBtn.style.cursor = 'pointer';
       toSheetBtn.style.display = 'none';
       toSheetBtn.style.zIndex = '10';
@@ -452,7 +476,6 @@ function createRunsheetFrame() {
   runsheetFrame.appendChild(header);
   runsheetFrame.appendChild(content);
   
-  document.body.appendChild(runsheetFrame);
   setupFrameEventListeners();
 }
 
@@ -466,7 +489,7 @@ function linkCapturedImageToRow(rowIndex) {
   const lastImage = captures[captures.length - 1];
   
   // Update the Document File Name field
-  const input = document.querySelector(`input[data-field="document_file_name"]`);
+  const input = document.querySelector(`input[data-column="Document File Name"]`);
   if (input) {
     input.value = `captured_document_row_${rowIndex}.png`;
     input.readOnly = false;
@@ -480,50 +503,52 @@ function linkCapturedImageToRow(rowIndex) {
 
 // Setup event listeners for the frame
 function setupFrameEventListeners() {
+  if (!runsheetFrame) return;
+  
   // Snip button
   const snipBtn = document.getElementById('snip-btn');
-  if (snipBtn) snipBtn.addEventListener('click', startSnipMode);
+  if (snipBtn) {
+    snipBtn.addEventListener('click', startSnipMode);
+  }
   
   // Capture button
   const captureBtn = document.getElementById('capture-btn');
-  if (captureBtn) captureBtn.addEventListener('click', toggleCapture);
+  if (captureBtn) {
+    captureBtn.addEventListener('click', toggleCapture);
+  }
   
   // Sync button
   const syncBtn = document.getElementById('sync-btn');
-  if (syncBtn) syncBtn.addEventListener('click', syncData);
+  if (syncBtn) {
+    syncBtn.addEventListener('click', syncData);
+  }
   
   // Minimize button
   const minimizeBtn = document.getElementById('minimize-btn');
-  if (minimizeBtn) minimizeBtn.addEventListener('click', toggleMinimize);
-  
-  // Input field listeners for auto-save
-  const inputs = runsheetFrame.querySelectorAll('input');
-  inputs.forEach(input => {
-    input.addEventListener('change', debounce(syncData, 1000));
-  });
+  if (minimizeBtn) {
+    minimizeBtn.addEventListener('click', toggleMinimize);
+  }
 }
 
-// Start snip mode for capturing specific areas
+// Start snip mode (select area to capture)
 function startSnipMode() {
-  showNotification('Click and drag to select an area to snip', 'info');
+  console.log('🔧 DocuFlow Extension: Starting snip mode');
   
-  // Create overlay for selection
+  // Create overlay for area selection
   const overlay = document.createElement('div');
-  overlay.id = 'snip-overlay';
-  Object.assign(overlay.style, {
-    position: 'fixed',
-    top: '0',
-    left: '0',
-    width: '100%',
-    height: '100%',
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    cursor: 'crosshair',
-    zIndex: '2147483646'
-  });
+  overlay.style.cssText = `
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    background: rgba(0, 0, 0, 0.3) !important;
+    cursor: crosshair !important;
+    z-index: 2147483647 !important;
+  `;
   
+  let startX, startY, endX, endY;
   let isSelecting = false;
-  let startX = 0;
-  let startY = 0;
   let selectionBox = null;
   
   overlay.addEventListener('mousedown', (e) => {
@@ -531,84 +556,89 @@ function startSnipMode() {
     startX = e.clientX;
     startY = e.clientY;
     
+    // Create selection box
     selectionBox = document.createElement('div');
-    Object.assign(selectionBox.style, {
-      position: 'fixed',
-      border: '2px dashed #3b82f6',
-      backgroundColor: 'rgba(59, 130, 246, 0.1)',
-      pointerEvents: 'none',
-      zIndex: '2147483647'
-    });
+    selectionBox.style.cssText = `
+      position: fixed !important;
+      border: 2px dashed #fff !important;
+      background: rgba(255, 255, 255, 0.1) !important;
+      z-index: 2147483648 !important;
+      pointer-events: none !important;
+    `;
     document.body.appendChild(selectionBox);
   });
   
   overlay.addEventListener('mousemove', (e) => {
     if (!isSelecting || !selectionBox) return;
     
-    const currentX = e.clientX;
-    const currentY = e.clientY;
+    endX = e.clientX;
+    endY = e.clientY;
     
-    const left = Math.min(startX, currentX);
-    const top = Math.min(startY, currentY);
-    const width = Math.abs(currentX - startX);
-    const height = Math.abs(currentY - startY);
-    
-    Object.assign(selectionBox.style, {
-      left: left + 'px',
-      top: top + 'px',
-      width: width + 'px',
-      height: height + 'px'
-    });
-  });
-  
-  overlay.addEventListener('mouseup', (e) => {
-    if (!isSelecting) return;
-    
-    const endX = e.clientX;
-    const endY = e.clientY;
-    
-    // Calculate selection area
     const left = Math.min(startX, endX);
     const top = Math.min(startY, endY);
     const width = Math.abs(endX - startX);
     const height = Math.abs(endY - startY);
     
+    selectionBox.style.left = left + 'px';
+    selectionBox.style.top = top + 'px';
+    selectionBox.style.width = width + 'px';
+    selectionBox.style.height = height + 'px';
+  });
+  
+  overlay.addEventListener('mouseup', (e) => {
+    if (!isSelecting) return;
+    
+    endX = e.clientX;
+    endY = e.clientY;
+    
+    const left = Math.min(startX, endX);
+    const top = Math.min(startY, endY);
+    const width = Math.abs(endX - startX);
+    const height = Math.abs(endY - startY);
+    
+    // Clean up
+    document.body.removeChild(overlay);
+    if (selectionBox) {
+      document.body.removeChild(selectionBox);
+    }
+    
+    // Capture the selected area
     if (width > 10 && height > 10) {
       captureSelectedArea(left, top, width, height);
     }
-    
-    // Cleanup
-    overlay.remove();
-    if (selectionBox) selectionBox.remove();
-    isSelecting = false;
   });
   
-  // ESC to cancel
+  // Add escape key to cancel
   const cancelSnip = (e) => {
     if (e.key === 'Escape') {
-      overlay.remove();
-      if (selectionBox) selectionBox.remove();
+      document.body.removeChild(overlay);
+      if (selectionBox) {
+        document.body.removeChild(selectionBox);
+      }
       document.removeEventListener('keydown', cancelSnip);
-      showNotification('Snip cancelled', 'info');
     }
   };
-  
   document.addEventListener('keydown', cancelSnip);
+  
   document.body.appendChild(overlay);
+  showNotification('Select an area to capture', 'info');
 }
 
 // Capture selected area
 async function captureSelectedArea(left, top, width, height) {
+  console.log('🔧 DocuFlow Extension: Capturing area:', { left, top, width, height });
+  
   try {
+    // Request screenshot from background script
     const response = await chrome.runtime.sendMessage({ action: 'captureTab' });
     
     if (response && response.dataUrl) {
-      // Create a canvas to crop the image
+      // Create canvas to crop the image
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
       const img = new Image();
+      
       img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        
         // Set canvas size to selection
         canvas.width = width;
         canvas.height = height;
@@ -623,7 +653,7 @@ async function captureSelectedArea(left, top, width, height) {
         captures.push(croppedDataUrl);
         showNotification('Area captured successfully!', 'success');
         
-        console.log('Snipped area captured:', croppedDataUrl.substring(0, 50) + '...');
+        console.log('🔧 DocuFlow Extension: Snipped area captured');
       };
       img.src = response.dataUrl;
     }
@@ -640,7 +670,7 @@ function toggleCapture() {
   if (isCapturing) {
     // Stop capturing
     isCapturing = false;
-    captureBtn.textContent = '📷 Start Capture';
+    captureBtn.textContent = '📷 Capture';
     captureBtn.classList.remove('capturing');
     
     if (captures.length > 0) {
@@ -650,7 +680,7 @@ function toggleCapture() {
     // Start capturing
     isCapturing = true;
     captures = [];
-    captureBtn.textContent = '🛑 Stop Capture';
+    captureBtn.textContent = '🛑 Stop';
     captureBtn.classList.add('capturing');
     startCaptureLoop();
   }
@@ -663,7 +693,7 @@ function startCaptureLoop() {
   chrome.runtime.sendMessage({ action: 'captureTab' }, (response) => {
     if (response && response.dataUrl) {
       captures.push(response.dataUrl);
-      console.log(`Captured image ${captures.length}`);
+      console.log(`🔧 DocuFlow Extension: Captured image ${captures.length}`);
     }
     
     if (isCapturing) {
@@ -676,79 +706,76 @@ function startCaptureLoop() {
 async function processCapturedImages() {
   if (captures.length === 0) return;
   
-  console.log(`Processing ${captures.length} captured images`);
+  console.log(`🔧 DocuFlow Extension: Processing ${captures.length} captured images`);
   // For now, just use the last capture
-  // In a full implementation, you'd merge all captures into one image
   const latestCapture = captures[captures.length - 1];
   
-  // Here you would upload to Supabase storage and link to runsheet
-  console.log('Would upload capture to Supabase:', latestCapture.substring(0, 50) + '...');
+  showNotification(`${captures.length} images captured`, 'success');
 }
 
 // Sync data with Supabase
 async function syncData() {
-  if (!isAuthenticated) {
-    console.log('Not authenticated, skipping sync');
+  if (!activeRunsheet || !userSession) {
+    showNotification('No active runsheet or authentication', 'error');
     return;
   }
   
-  const inputs = runsheetFrame.querySelectorAll('input');
+  console.log('🔧 DocuFlow Extension: Syncing data');
+  
+  // Gather data from input fields
+  const inputs = document.querySelectorAll('#docuflow-runsheet-frame input');
   const rowData = {};
   
   inputs.forEach(input => {
-    const field = input.getAttribute('data-field');
-    if (field && input.value.trim()) {
-      rowData[field] = input.value.trim();
+    if (input.dataset.column && input.value.trim()) {
+      rowData[input.dataset.column] = input.value.trim();
     }
   });
   
   if (Object.keys(rowData).length === 0) {
-    console.log('No data to sync');
+    console.log('🔧 DocuFlow Extension: No data to sync');
     return;
   }
   
-  console.log('Syncing data:', rowData);
-  
   try {
-    // Call the extension-sync edge function
-    const response = await fetch(`${SUPABASE_URL}/functions/v1/extension-sync`, {
+    const response = await fetch('https://xnpmrafjjqsissbtempj.supabase.co/functions/v1/extension-sync', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+        'Authorization': `Bearer ${userSession.access_token}`,
+        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhucG1yYWZqanFzaXNzYnRlbXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4NzMyNjcsImV4cCI6MjA2ODQ0OTI2N30.aQG15Ed8IOLJfM5p7XF_kEM5FUz8zJug1pxAi9rTTsg',
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        runsheet_id: activeRunsheet?.id || 'default',
+        runsheet_id: activeRunsheet.id,
         row_data: rowData,
-        user_id: currentUser?.id
+        screenshot_url: captures.length > 0 ? captures[captures.length - 1] : null
       })
     });
     
     const result = await response.json();
     
     if (result.success) {
-      console.log('Data synced successfully');
-      showNotification('Data synced!', 'success');
+      showNotification('Data synced successfully!', 'success');
+      console.log('🔧 DocuFlow Extension: Data synced successfully');
     } else {
-      console.error('Sync failed:', result.error);
-      showNotification('Sync failed', 'error');
+      throw new Error(result.error || 'Sync failed');
     }
   } catch (error) {
     console.error('Sync error:', error);
-    showNotification('Sync error', 'error');
+    showNotification('Failed to sync data', 'error');
   }
 }
 
-// Toggle minimize state
+// Toggle frame minimization
 function toggleMinimize() {
-  const frameContent = runsheetFrame.querySelector('.frame-content');
+  const content = document.querySelector('.frame-content');
   const minimizeBtn = document.getElementById('minimize-btn');
   
-  if (frameContent.style.display === 'none') {
-    frameContent.style.display = 'block';
+  if (content.style.display === 'none') {
+    content.style.display = 'block';
     minimizeBtn.textContent = '−';
   } else {
-    frameContent.style.display = 'none';
+    content.style.display = 'none';
     minimizeBtn.textContent = '+';
   }
 }
@@ -761,12 +788,15 @@ function showNotification(message, type = 'info') {
   
   document.body.appendChild(notification);
   
+  // Auto-remove after 3 seconds
   setTimeout(() => {
-    notification.remove();
+    if (notification.parentNode) {
+      document.body.removeChild(notification);
+    }
   }, 3000);
 }
 
-// Debounce function
+// Debounce utility function
 function debounce(func, wait) {
   let timeout;
   return function executedFunction(...args) {
@@ -781,58 +811,38 @@ function debounce(func, wait) {
 
 // Initialize the extension
 async function init() {
-  console.log('Initializing DocuFlow extension');
-  
-  // Skip on chrome:// pages and extension pages
-  if (window.location.href.startsWith('chrome://') || 
-      window.location.href.startsWith('chrome-extension://')) {
+  // Check if extension is disabled
+  const settings = await chrome.storage.local.get(['extension_disabled']);
+  if (settings.extension_disabled) {
+    console.log('🔧 DocuFlow Extension: Extension is disabled');
     return;
   }
   
-  // Always show the runsheet button
+  console.log('🔧 DocuFlow Extension: Initializing');
+  
+  // Create the runsheet button
   createRunsheetButton();
   
-  // Check if extension is enabled
-  const result = await chrome.storage.local.get(['extensionEnabled']);
-  if (result.extensionEnabled === false) {
-    console.log('Extension is disabled');
-    return;
-  }
-  
-  console.log('Extension initialized successfully');
+  console.log('🔧 DocuFlow Extension: Initialized successfully');
 }
 
-// Listen for messages from popup
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === 'toggleExtension') {
-    const button = document.getElementById('docuflow-runsheet-button');
-    if (message.enabled) {
-      if (button) button.style.display = 'flex';
-    } else {
-      if (button) button.style.display = 'none';
-      if (runsheetFrame) {
-        runsheetFrame.remove();
-        runsheetFrame = null;
-      }
+// Listen for messages from other extension parts
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  console.log('🔧 DocuFlow Extension: Received message:', request);
+  
+  if (request.action === 'toggle') {
+    if (runsheetButton) {
+      runsheetButton.style.display = runsheetButton.style.display === 'none' ? 'block' : 'none';
     }
-    sendResponse({ success: true });
+  } else if (request.action === 'updateAuth') {
+    // Refresh auth status
+    checkAuth();
   }
   
-  if (message.action === 'authStatusChanged') {
-    if (message.authenticated) {
-      isAuthenticated = true;
-      currentUser = message.user;
-      activeRunsheet = message.runsheet;
-    } else {
-      isAuthenticated = false;
-      currentUser = null;
-      activeRunsheet = null;
-    }
-    sendResponse({ success: true });
-  }
+  sendResponse({ success: true });
 });
 
-// Initialize when DOM is ready
+// Initialize when page loads
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);
 } else {
