@@ -2,19 +2,12 @@
 
 console.log('🔧 DocuFlow Extension: Content script loaded');
 
-// Prevent multiple script loading
-if (window.docuflowExtensionLoaded) {
-  console.log('🔧 DocuFlow Extension: Already loaded, skipping');
-  return;
-}
-window.docuflowExtensionLoaded = true;
-
-// Global variables
-let runsheetButton = null;
-let runsheetFrame = null;
-let activeRunsheet = null;
-let captures = [];
-let isCapturing = false;
+// Global variables (with fallback to prevent redeclaration errors)
+let runsheetButton = window.runsheetButton || null;
+let runsheetFrame = window.runsheetFrame || null;
+let activeRunsheet = window.activeRunsheet || null;
+let captures = window.captures || [];
+let isCapturing = window.isCapturing || false;
 let userSession = null;
 
 // Check authentication status
@@ -1486,6 +1479,8 @@ async function init() {
   
   console.log('🔧 DocuFlow Extension: Initialized successfully');
 }
+
+} // End of extension loading check
 
 // Listen for messages from other extension parts
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
