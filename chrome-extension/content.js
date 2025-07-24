@@ -531,7 +531,7 @@ function loadRunsheet(runsheet) {
   
   activeRunsheet = runsheet;
   
-  // Store runsheet data for the session
+  // Store runsheet data for persistence across page navigation
   chrome.storage.local.set({ 
     'active_runsheet': runsheet 
   });
@@ -1052,9 +1052,19 @@ function toggleMinimize() {
   if (content.style.display === 'none') {
     content.style.display = 'block';
     minimizeBtn.textContent = '−';
+    
+    // Update stored state
+    if (activeRunsheet) {
+      chrome.storage.local.set({ 'active_runsheet': activeRunsheet });
+    }
   } else {
     content.style.display = 'none';
     minimizeBtn.textContent = '+';
+    
+    // Update stored state
+    if (activeRunsheet) {
+      chrome.storage.local.set({ 'active_runsheet': activeRunsheet });
+    }
   }
 }
 
@@ -1098,8 +1108,30 @@ async function init() {
   
   console.log('🔧 DocuFlow Extension: Initializing');
   
+  // Check authentication
+  const isAuthenticated = await checkAuth();
+  
   // Create the runsheet button
   createRunsheetButton();
+  
+  // Check if there's an active runsheet to restore
+  const storedData = await chrome.storage.local.get(['active_runsheet']);
+  if (storedData.active_runsheet && isAuthenticated) {
+    console.log('🔧 DocuFlow Extension: Restoring active runsheet:', storedData.active_runsheet.name);
+    
+    // Restore the active runsheet
+    activeRunsheet = storedData.active_runsheet;
+    
+    // Create and show the frame with the restored runsheet
+    createRunsheetFrame();
+    if (runsheetFrame) {
+      runsheetFrame.style.display = 'block';
+      document.body.appendChild(runsheetFrame);
+      setupFrameEventListeners();
+    }
+    
+    showNotification(`Restored runsheet: ${activeRunsheet.name}`, 'success');
+  }
   
   console.log('🔧 DocuFlow Extension: Initialized successfully');
 }
@@ -1115,6 +1147,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   } else if (request.action === 'updateAuth') {
     // Refresh auth status
     checkAuth();
+  } else if (request.action === 'deactivate') {
+    // Clear active runsheet and hide frame
+    activeRunsheet = null;
+    chrome.storage.local.remove(['active_runsheet']);
+    if (runsheetFrame) {
+      runsheetFrame.remove();
+      runsheetFrame = null;
+    }
+    showNotification('Extension deactivated', 'info');
   }
   
   sendResponse({ success: true });
