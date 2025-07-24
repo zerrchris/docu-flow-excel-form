@@ -11,6 +11,13 @@ let isCapturing = false;
 let userSession = null;
 let currentViewMode = 'single'; // 'single' or 'full'
 
+// Snip mode variables
+let isSnipMode = false;
+let snipOverlay = null;
+let snipSelection = null;
+let capturedSnips = [];
+let snipControlPanel = null;
+
 // Check authentication status
 async function checkAuth() {
   try {
@@ -1821,6 +1828,469 @@ async function init() {
   console.log('🔧 DocuFlow Extension: Initialized successfully');
 }
 
+// =============================================================================
+// SNIP FUNCTIONALITY
+// =============================================================================
+
+// Start snip mode
+function startSnipMode() {
+  if (isSnipMode) return;
+  
+  console.log('🔧 DocuFlow Extension: Starting snip mode');
+  isSnipMode = true;
+  capturedSnips = [];
+  
+  createSnipOverlay();
+  createSnipControlPanel();
+  showNotification('Snip mode active! Drag to select areas to capture.', 'info');
+}
+
+// Create snip overlay for selection
+function createSnipOverlay() {
+  if (snipOverlay) return;
+  
+  snipOverlay = document.createElement('div');
+  snipOverlay.id = 'docuflow-snip-overlay';
+  snipOverlay.style.cssText = `
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    background: rgba(0, 0, 0, 0.3) !important;
+    z-index: 2147483645 !important;
+    cursor: crosshair !important;
+    user-select: none !important;
+  `;
+  
+  let isSelecting = false;
+  let startX, startY, currentX, currentY;
+  
+  // Create selection rectangle
+  const selectionRect = document.createElement('div');
+  selectionRect.style.cssText = `
+    position: absolute !important;
+    border: 2px dashed #3b82f6 !important;
+    background: rgba(59, 130, 246, 0.1) !important;
+    display: none !important;
+    pointer-events: none !important;
+  `;
+  snipOverlay.appendChild(selectionRect);
+  
+  // Mouse events for selection
+  snipOverlay.addEventListener('mousedown', (e) => {
+    isSelecting = true;
+    startX = e.clientX;
+    startY = e.clientY;
+    currentX = startX;
+    currentY = startY;
+    
+    selectionRect.style.left = startX + 'px';
+    selectionRect.style.top = startY + 'px';
+    selectionRect.style.width = '0px';
+    selectionRect.style.height = '0px';
+    selectionRect.style.display = 'block';
+  });
+  
+  snipOverlay.addEventListener('mousemove', (e) => {
+    if (!isSelecting) return;
+    
+    currentX = e.clientX;
+    currentY = e.clientY;
+    
+    const left = Math.min(startX, currentX);
+    const top = Math.min(startY, currentY);
+    const width = Math.abs(currentX - startX);
+    const height = Math.abs(currentY - startY);
+    
+    selectionRect.style.left = left + 'px';
+    selectionRect.style.top = top + 'px';
+    selectionRect.style.width = width + 'px';
+    selectionRect.style.height = height + 'px';
+  });
+  
+  snipOverlay.addEventListener('mouseup', async (e) => {
+    if (!isSelecting) return;
+    
+    isSelecting = false;
+    selectionRect.style.display = 'none';
+    
+    const left = Math.min(startX, currentX);
+    const top = Math.min(startY, currentY);
+    const width = Math.abs(currentX - startX);
+    const height = Math.abs(currentY - startY);
+    
+    if (width < 10 || height < 10) {
+      showNotification('Selection too small, please try again', 'error');
+      return;
+    }
+    
+    // Hide overlay temporarily for clean capture
+    snipOverlay.style.display = 'none';
+    snipControlPanel.style.display = 'none';
+    
+    // Wait a bit for UI to hide
+    setTimeout(async () => {
+      await captureSelectedArea(left, top, width, height);
+      
+      // Show overlay and controls again
+      snipOverlay.style.display = 'block';
+      snipControlPanel.style.display = 'flex';
+    }, 100);
+  });
+  
+  document.body.appendChild(snipOverlay);
+}
+
+// Create snip control panel
+function createSnipControlPanel() {
+  if (snipControlPanel) return;
+  
+  snipControlPanel = document.createElement('div');
+  snipControlPanel.id = 'docuflow-snip-controls';
+  snipControlPanel.style.cssText = `
+    position: fixed !important;
+    top: 20px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    background: white !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 8px !important;
+    padding: 12px 16px !important;
+    z-index: 2147483647 !important;
+    display: flex !important;
+    gap: 12px !important;
+    align-items: center !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+  `;
+  
+  // Snip counter
+  const counter = document.createElement('span');
+  counter.id = 'snip-counter';
+  counter.style.cssText = `
+    font-size: 14px !important;
+    color: #374151 !important;
+    font-weight: 500 !important;
+  `;
+  counter.textContent = 'Snips captured: 0';
+  
+  // Done button
+  const doneButton = document.createElement('button');
+  doneButton.textContent = 'Done Snipping';
+  doneButton.style.cssText = `
+    background: #3b82f6 !important;
+    color: white !important;
+    border: none !important;
+    padding: 8px 16px !important;
+    border-radius: 6px !important;
+    cursor: pointer !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+  `;
+  
+  doneButton.addEventListener('click', finishSnipping);
+  
+  // Cancel button
+  const cancelButton = document.createElement('button');
+  cancelButton.textContent = 'Cancel';
+  cancelButton.style.cssText = `
+    background: #ef4444 !important;
+    color: white !important;
+    border: none !important;
+    padding: 8px 16px !important;
+    border-radius: 6px !important;
+    cursor: pointer !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+  `;
+  
+  cancelButton.addEventListener('click', cancelSnipping);
+  
+  snipControlPanel.appendChild(counter);
+  snipControlPanel.appendChild(doneButton);
+  snipControlPanel.appendChild(cancelButton);
+  
+  document.body.appendChild(snipControlPanel);
+}
+
+// Capture selected area
+async function captureSelectedArea(left, top, width, height) {
+  try {
+    // Get tab capture
+    const response = await chrome.runtime.sendMessage({ action: 'captureTab' });
+    
+    if (response.error) {
+      throw new Error(response.error);
+    }
+    
+    const img = new Image();
+    img.onload = () => {
+      // Create canvas for cropping
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      // Account for device pixel ratio
+      const ratio = window.devicePixelRatio || 1;
+      
+      canvas.width = width * ratio;
+      canvas.height = height * ratio;
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      
+      // Draw cropped portion
+      ctx.drawImage(
+        img,
+        left * ratio, top * ratio, width * ratio, height * ratio,
+        0, 0, width * ratio, height * ratio
+      );
+      
+      // Convert to blob
+      canvas.toBlob((blob) => {
+        if (blob) {
+          capturedSnips.push({
+            blob: blob,
+            timestamp: Date.now(),
+            width: width,
+            height: height
+          });
+          
+          updateSnipCounter();
+          showNotification(`Snip ${capturedSnips.length} captured!`, 'success');
+        } else {
+          showNotification('Failed to capture snip', 'error');
+        }
+      }, 'image/png');
+    };
+    
+    img.src = response.dataUrl;
+    
+  } catch (error) {
+    console.error('Error capturing snip:', error);
+    showNotification('Failed to capture snip: ' + error.message, 'error');
+  }
+}
+
+// Update snip counter
+function updateSnipCounter() {
+  const counter = document.getElementById('snip-counter');
+  if (counter) {
+    counter.textContent = `Snips captured: ${capturedSnips.length}`;
+  }
+}
+
+// Finish snipping process
+async function finishSnipping() {
+  if (capturedSnips.length === 0) {
+    showNotification('No snips captured', 'error');
+    return;
+  }
+  
+  try {
+    showNotification('Processing snips...', 'info');
+    
+    // Combine snips vertically
+    const combinedBlob = await combineSnipsVertically(capturedSnips);
+    
+    // Upload to Supabase Storage
+    const uploadResult = await uploadSnipToStorage(combinedBlob);
+    
+    // Link to current runsheet row
+    await linkSnipToRunsheet(uploadResult.url);
+    
+    showNotification('Snips combined and linked successfully!', 'success');
+    
+  } catch (error) {
+    console.error('Error finishing snipping:', error);
+    showNotification('Failed to process snips: ' + error.message, 'error');
+  } finally {
+    cleanupSnipMode();
+  }
+}
+
+// Cancel snipping
+function cancelSnipping() {
+  capturedSnips = [];
+  cleanupSnipMode();
+  showNotification('Snipping cancelled', 'info');
+}
+
+// Cleanup snip mode
+function cleanupSnipMode() {
+  isSnipMode = false;
+  
+  if (snipOverlay) {
+    snipOverlay.remove();
+    snipOverlay = null;
+  }
+  
+  if (snipControlPanel) {
+    snipControlPanel.remove();
+    snipControlPanel = null;
+  }
+}
+
+// Combine snips vertically into one image
+async function combineSnipsVertically(snips) {
+  return new Promise((resolve, reject) => {
+    if (snips.length === 0) {
+      reject(new Error('No snips to combine'));
+      return;
+    }
+    
+    if (snips.length === 1) {
+      resolve(snips[0].blob);
+      return;
+    }
+    
+    // Calculate total height and max width
+    let totalHeight = 0;
+    let maxWidth = 0;
+    const images = [];
+    let loadedCount = 0;
+    
+    // Load all images first
+    snips.forEach((snip, index) => {
+      const img = new Image();
+      img.onload = () => {
+        images[index] = img;
+        totalHeight += img.height;
+        maxWidth = Math.max(maxWidth, img.width);
+        loadedCount++;
+        
+        if (loadedCount === snips.length) {
+          // All images loaded, combine them
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          
+          canvas.width = maxWidth;
+          canvas.height = totalHeight;
+          
+          let currentY = 0;
+          images.forEach(img => {
+            // Center image horizontally if it's narrower than maxWidth
+            const x = (maxWidth - img.width) / 2;
+            ctx.drawImage(img, x, currentY);
+            currentY += img.height;
+          });
+          
+          canvas.toBlob((blob) => {
+            if (blob) {
+              resolve(blob);
+            } else {
+              reject(new Error('Failed to create combined image'));
+            }
+          }, 'image/png');
+        }
+      };
+      
+      img.onerror = () => {
+        reject(new Error('Failed to load snip image'));
+      };
+      
+      img.src = URL.createObjectURL(snip.blob);
+    });
+  });
+}
+
+// Upload snip to Supabase Storage
+async function uploadSnipToStorage(blob) {
+  try {
+    if (!userSession) {
+      throw new Error('User not authenticated');
+    }
+    
+    // Create form data
+    const formData = new FormData();
+    const filename = `snip-${Date.now()}.png`;
+    const file = new File([blob], filename, { type: 'image/png' });
+    
+    formData.append('file', file);
+    
+    // Upload to Supabase Storage
+    const response = await fetch('https://xnpmrafjjqsissbtempj.supabase.co/storage/v1/object/documents/' + userSession.user.id + '/snips/' + filename, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${userSession.access_token}`,
+        'x-upsert': 'true'
+      },
+      body: formData
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to upload snip to storage');
+    }
+    
+    // Get public URL
+    const publicUrl = `https://xnpmrafjjqsissbtempj.supabase.co/storage/v1/object/public/documents/${userSession.user.id}/snips/${filename}`;
+    
+    return {
+      url: publicUrl,
+      filename: filename
+    };
+    
+  } catch (error) {
+    console.error('Error uploading snip:', error);
+    throw error;
+  }
+}
+
+// Link snip to current runsheet row
+async function linkSnipToRunsheet(snipUrl) {
+  try {
+    if (!activeRunsheet || !activeRunsheet.id) {
+      throw new Error('No active runsheet found');
+    }
+    
+    // Get current row being worked on (usually the first row with empty data)
+    const runsheetData = activeRunsheet.data || [];
+    let targetRowIndex = 0;
+    
+    // Find the first row that doesn't have a screenshot_url already
+    for (let i = 0; i < runsheetData.length; i++) {
+      if (!runsheetData[i].screenshot_url) {
+        targetRowIndex = i;
+        break;
+      }
+    }
+    
+    // Update the row with screenshot URL
+    if (!runsheetData[targetRowIndex]) {
+      runsheetData[targetRowIndex] = {};
+    }
+    runsheetData[targetRowIndex].screenshot_url = snipUrl;
+    
+    // Update the runsheet in Supabase
+    const response = await fetch('https://xnpmrafjjqsissbtempj.supabase.co/rest/v1/runsheets?id=eq.' + activeRunsheet.id, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${userSession.access_token}`,
+        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhucG1yYWZqanFzaXNzYnRlbXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4NzMyNjcsImV4cCI6MjA2ODQ0OTI2N30.aQG15Ed8IOLJfM5p7XF_kEM5FUz8zJug1pxAi9rTTsg'
+      },
+      body: JSON.stringify({
+        data: runsheetData
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to update runsheet with snip URL');
+    }
+    
+    // Update local activeRunsheet
+    activeRunsheet.data = runsheetData;
+    
+    // Refresh the UI if visible
+    if (runsheetFrame && runsheetFrame.style.display !== 'none') {
+      updateRunsheetDisplay();
+    }
+    
+  } catch (error) {
+    console.error('Error linking snip to runsheet:', error);
+    throw error;
+  }
+}
+
 // Listen for messages from other extension parts
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log('🔧 DocuFlow Extension: Received message:', request);
@@ -1841,6 +2311,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     // Handle view mode switching from popup
     switchViewMode(request.viewMode);
     showNotification(`Switched to ${request.viewMode === 'single' ? 'single entry' : 'full view'} mode`, 'info');
+  } else if (request.action === 'startSnipMode') {
+    // Handle snip mode start from popup
+    startSnipMode();
   } else if (request.action === 'updateAuth') {
     // Refresh auth status
     checkAuth();

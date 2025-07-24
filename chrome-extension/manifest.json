@@ -9,7 +9,8 @@
     "storage",
     "tabs",
     "scripting",
-    "contextMenus"
+    "contextMenus",
+    "desktopCapture"
   ],
 
   "host_permissions": [

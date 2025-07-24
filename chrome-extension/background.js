@@ -17,6 +17,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     });
     return true; // Keep message channel open for async response
   }
+
+  if (message.action === 'startScreenCapture') {
+    // Start screen capture session for snip functionality
+    chrome.desktopCapture.chooseDesktopMedia(['tab'], sender.tab, (streamId) => {
+      if (chrome.runtime.lastError) {
+        console.error('Desktop capture error:', chrome.runtime.lastError);
+        sendResponse({ error: chrome.runtime.lastError.message });
+      } else if (streamId) {
+        sendResponse({ streamId });
+      } else {
+        sendResponse({ error: 'User cancelled screen capture' });
+      }
+    });
+    return true; // Keep message channel open for async response
+  }
   
   if (message.action === 'openPopup') {
     // Handle popup opening requests

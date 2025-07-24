@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const statusDiv = document.getElementById('status');
   const toggleBtn = document.getElementById('toggleBtn');
   const viewModeBtn = document.getElementById('viewModeBtn');
+  const startSnipBtn = document.getElementById('startSnipBtn');
   const openAppBtn = document.getElementById('openApp');
 
   // Check current extension status
@@ -21,8 +22,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (isEnabled && hasActiveRunsheet) {
         viewModeBtn.style.display = 'block';
         viewModeBtn.textContent = viewMode === 'single' ? 'Switch to Full View' : 'Switch to Single Entry';
+        startSnipBtn.style.display = 'block';
       } else {
         viewModeBtn.style.display = 'none';
+        startSnipBtn.style.display = 'none';
       }
       
       return isEnabled;
@@ -82,6 +85,23 @@ document.addEventListener('DOMContentLoaded', async () => {
       await checkStatus();
     } catch (error) {
       console.error('Error toggling view mode:', error);
+    }
+  });
+
+  // Start snip mode
+  startSnipBtn.addEventListener('click', async () => {
+    try {
+      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tabs[0]) {
+        chrome.tabs.sendMessage(tabs[0].id, { 
+          action: 'startSnipMode'
+        }).catch(() => {
+          console.error('Could not start snip mode');
+        });
+      }
+      window.close(); // Close popup after starting snip mode
+    } catch (error) {
+      console.error('Error starting snip mode:', error);
     }
   });
 
