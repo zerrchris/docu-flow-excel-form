@@ -804,10 +804,138 @@ function createSingleEntryView(content) {
     cell.style.minWidth = `${120}px`;
     cell.style.position = 'relative';
     
-    const cellContent = document.createElement('div');
-    cellContent.className = 'cell-content';
-    cellContent.textContent = column;
-    cell.appendChild(cellContent);
+    // Special handling for Document File Name column
+    if (column === 'Document File Name') {
+      // Create header with file upload functionality
+      const headerContent = document.createElement('div');
+      headerContent.style.cssText = `
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        gap: 4px !important;
+        padding: 4px !important;
+        height: 100% !important;
+        min-height: 60px !important;
+      `;
+      
+      const titleText = document.createElement('div');
+      titleText.textContent = 'Document File Name';
+      titleText.style.cssText = `
+        font-weight: 600 !important;
+        font-size: 10px !important;
+        text-align: center !important;
+        margin-bottom: 4px !important;
+      `;
+      
+      // Create file upload area
+      const uploadArea = document.createElement('div');
+      uploadArea.style.cssText = `
+        border: 1px dashed hsl(var(--border, 214 32% 91%)) !important;
+        border-radius: 4px !important;
+        padding: 6px !important;
+        text-align: center !important;
+        cursor: pointer !important;
+        background: hsl(var(--background, 0 0% 100%)) !important;
+        width: 100% !important;
+        transition: all 0.2s ease !important;
+        min-height: 40px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+      `;
+      
+      const uploadIcon = document.createElement('div');
+      uploadIcon.innerHTML = '📎';
+      uploadIcon.style.cssText = `
+        font-size: 12px !important;
+        margin-bottom: 2px !important;
+      `;
+      
+      const uploadText = document.createElement('div');
+      uploadText.textContent = 'Drop file or click';
+      uploadText.style.cssText = `
+        font-size: 8px !important;
+        color: hsl(var(--muted-foreground, 215 16% 47%)) !important;
+        line-height: 1.2 !important;
+      `;
+      
+      uploadArea.appendChild(uploadIcon);
+      uploadArea.appendChild(uploadText);
+      
+      // Create hidden file input
+      const fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.accept = 'image/*,.pdf,.doc,.docx';
+      fileInput.style.display = 'none';
+      
+      // Handle file upload
+      const handleFileUpload = (file) => {
+        if (file) {
+          // Update the current row's Document File Name field
+          const documentInput = document.querySelector('.editable-row input[data-column="Document File Name"]');
+          if (documentInput) {
+            documentInput.value = file.name;
+            
+            // Store file for potential processing
+            if (!window.extensionFileStorage) {
+              window.extensionFileStorage = new Map();
+            }
+            window.extensionFileStorage.set(file.name, file);
+            
+            showNotification(`File "${file.name}" ready to link`, 'success');
+          }
+        }
+      };
+      
+      // File input change handler
+      fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          handleFileUpload(file);
+        }
+      });
+      
+      // Click handler for upload area
+      uploadArea.addEventListener('click', () => {
+        fileInput.click();
+      });
+      
+      // Drag and drop handlers
+      uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.style.border = '1px dashed hsl(var(--primary, 215 80% 40%))';
+        uploadArea.style.background = 'hsl(var(--primary, 215 80% 40%) / 0.1)';
+      });
+      
+      uploadArea.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        uploadArea.style.border = '1px dashed hsl(var(--border, 214 32% 91%))';
+        uploadArea.style.background = 'hsl(var(--background, 0 0% 100%))';
+      });
+      
+      uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.style.border = '1px dashed hsl(var(--border, 214 32% 91%))';
+        uploadArea.style.background = 'hsl(var(--background, 0 0% 100%))';
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+          handleFileUpload(files[0]);
+        }
+      });
+      
+      headerContent.appendChild(titleText);
+      headerContent.appendChild(uploadArea);
+      headerContent.appendChild(fileInput);
+      cell.appendChild(headerContent);
+    } else {
+      // Normal header for other columns
+      const cellContent = document.createElement('div');
+      cellContent.className = 'cell-content';
+      cellContent.textContent = column;
+      cell.appendChild(cellContent);
+    }
     
     // Add resize handle
     const resizeHandle = document.createElement('div');
