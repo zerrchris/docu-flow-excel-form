@@ -985,10 +985,7 @@ function createRunsheetFrame() {
       cell.appendChild(textarea);
     }
     
-    // Auto-sync on change
-    input.addEventListener('input', debounce(syncData, 1000));
-    
-    // Add "To Sheet" functionality for Document File Name column
+    // Document File Name special handling
     if (column === 'Document File Name') {
       const buttonContainer = document.createElement('div');
       buttonContainer.style.position = 'absolute';
