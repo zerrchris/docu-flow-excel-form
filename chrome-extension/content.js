@@ -905,14 +905,7 @@ function refreshSingleEntryView() {
     }
   }, 100);
 }
-  const emptyRowIndex = runsheetData.data.findIndex(row => {
-    return runsheetData.columns.every(col => !row[col] || row[col].trim() === '');
-  });
-  
-  // If no empty row found, return the next index (add to end)
-  return emptyRowIndex === -1 ? runsheetData.data.length : emptyRowIndex;
-}
-
+// Create single entry view (original functionality)
 // Create single entry view (original functionality)
 function createSingleEntryView(content) {
   // Create dynamic table based on runsheet data
