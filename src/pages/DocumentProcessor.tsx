@@ -895,23 +895,6 @@ Image: [base64 image data]`;
             </Link>
             <div className="flex items-center gap-4">
               <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  if (hasUnsavedChanges) {
-                    // Add marker for navigation dialog
-                    document.body.setAttribute('data-new-runsheet-triggered', 'true');
-                    setShowNavigationDialog(true);
-                  } else {
-                    handleStartNew();
-                  }
-                }}
-                className="gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                New Runsheet
-              </Button>
-              <Button
                 variant="default"
                 size="sm"
                 onClick={() => {
@@ -1041,18 +1024,7 @@ Image: [base64 image data]`;
               variant="destructive" 
               onClick={() => {
                 setShowNavigationDialog(false);
-                if (showNavigationDialog) {
-                  // Check if this was triggered by New Runsheet button
-                  const isNewRunsheet = document.querySelector('[data-new-runsheet-triggered]');
-                  if (isNewRunsheet) {
-                    handleStartNew();
-                    isNewRunsheet.removeAttribute('data-new-runsheet-triggered');
-                  } else {
-                    navigate('/app');
-                  }
-                } else {
-                  navigate('/app');
-                }
+                navigate('/app');
               }}
             >
               Leave Without Saving

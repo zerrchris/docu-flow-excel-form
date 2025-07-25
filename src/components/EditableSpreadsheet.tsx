@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useActiveRunsheet } from '@/hooks/useActiveRunsheet';
-
+import { useMultipleRunsheets } from '@/hooks/useMultipleRunsheets';
 import * as XLSX from 'xlsx';
 import JSZip from 'jszip';
 import { Card } from '@/components/ui/card';
@@ -79,6 +79,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const { toast } = useToast();
   const navigate = useNavigate();
   const { setActiveRunsheet, clearActiveRunsheet, currentRunsheet, updateRunsheet } = useActiveRunsheet();
+  const { removeRunsheet, addRunsheet, switchToTab } = useMultipleRunsheets();
   const [user, setUser] = useState<User | null>(null);
   
   // Track locally which columns need configuration
@@ -140,6 +141,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [editingColumnInstructions, setEditingColumnInstructions] = useState<string>('');
   const [selectedColumn, setSelectedColumn] = useState<string>('');
   const [columnInstructions, setColumnInstructions] = useState<Record<string, string>>({});
+  const [showNewRunsheetDialog, setShowNewRunsheetDialog] = useState(false);
   const [showAnalyzeWarningDialog, setShowAnalyzeWarningDialog] = useState(false);
   const [pendingAnalysis, setPendingAnalysis] = useState<{file: File, filename: string, rowIndex: number} | null>(null);
   const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] = useState(false);
@@ -690,11 +692,10 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             lastSaveTime: new Date()
           };
           
-          // Update the active runsheet with the database ID
-          setActiveRunsheet({
-            name: finalName,
-            id: updateResult.id
-          });
+          // Remove the old legacy runsheet and add the new one with database ID
+          removeRunsheet(currentRunsheet.id); // Remove legacy ID runsheet
+          addRunsheet(updatedRunsheet); // Add new runsheet with database ID
+          switchToTab(updateResult.id); // Switch to the new tab
         }
       } else {
         // Create new runsheet - check for name conflicts
@@ -742,11 +743,10 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             lastSaveTime: new Date()
           };
           
-          // Update the active runsheet with the database ID
-          setActiveRunsheet({
-            name: finalName,
-            id: savedRunsheet.id
-          });
+          // Remove the old legacy runsheet and add the new one with database ID
+          removeRunsheet(currentRunsheet.id); // Remove legacy ID runsheet
+          addRunsheet(updatedRunsheet); // Add new runsheet with database ID
+          switchToTab(savedRunsheet.id); // Switch to the new tab
         }
       }
 
@@ -826,7 +826,10 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       setLastSaveTime(new Date());
       onUnsavedChanges?.(false);
 
-      // Clear the active runsheet status
+      // Clear the active runsheet status and navigate
+      if (currentRunsheet) {
+        removeRunsheet(currentRunsheet.id);
+      }
       clearActiveRunsheet();
 
       toast({
@@ -917,11 +920,9 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           lastSaveTime: new Date()
         };
         
-        // Update the active runsheet with the database ID
-        setActiveRunsheet({
-          name: finalName,
-          id: savedRunsheet.id
-        });
+        removeRunsheet(currentRunsheet.id);
+        addRunsheet(updatedRunsheet);
+        switchToTab(savedRunsheet.id);
       }
       
       const savedState = JSON.stringify({ data, columns, runsheetName: finalName, columnInstructions });
@@ -2921,7 +2922,125 @@ ${extractionFields}`
                 Multiple Files
               </Button>
             )}
-           </div>
+            
+              {/* New Runsheet Button */}
+              <Dialog open={showNewRunsheetDialog} onOpenChange={setShowNewRunsheetDialog}>
+                <DialogTrigger asChild>
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    onClick={(e) => {
+                      if (hasUnsavedChanges) {
+                        e.preventDefault();
+                        setShowUnsavedChangesDialog(true);
+                      }
+                    }}
+                  >
+                    <Plus className="h-4 w-4" />
+                    New
+                  </Button>
+                </DialogTrigger>
+               <DialogContent className="sm:max-w-[500px]">
+                 <DialogHeader>
+                   <DialogTitle className="text-2xl font-bold text-center">Start New Runsheet</DialogTitle>
+                   <DialogDescription className="text-center pt-2">
+                     How would you like to get started?
+                   </DialogDescription>
+                 </DialogHeader>
+                 
+                 <div className="grid gap-4 py-6">
+                   <Button
+                     onClick={() => {
+                       // Trigger document upload
+                       const event = new CustomEvent('triggerDocumentUpload');
+                       window.dispatchEvent(event);
+                     }}
+                     className="h-16 flex flex-col gap-2 text-left"
+                     variant="outline"
+                   >
+                     <div className="flex items-center gap-3 w-full">
+                       <Upload className="h-6 w-6" />
+                       <div className="flex flex-col text-left">
+                         <span className="font-semibold">Upload Documents</span>
+                         <span className="text-sm text-muted-foreground">Upload PDF or image files to extract data</span>
+                       </div>
+                     </div>
+                   </Button>
+                   
+                   <Button
+                     onClick={fetchSavedRunsheets}
+                     className="h-16 flex flex-col gap-2 text-left"
+                     variant="outline"
+                   >
+                     <div className="flex items-center gap-3 w-full">
+                       <FolderOpen className="h-6 w-6" />
+                       <div className="flex flex-col text-left">
+                         <span className="font-semibold">Open Existing Runsheet</span>
+                         <span className="text-sm text-muted-foreground">Load a previously saved runsheet</span>
+                       </div>
+                     </div>
+                   </Button>
+                   
+                   <Button
+                     onClick={() => setShowGoogleDrivePicker(true)}
+                     className="h-16 flex flex-col gap-2 text-left"
+                     variant="outline"
+                   >
+                     <div className="flex items-center gap-3 w-full">
+                       <Cloud className="h-6 w-6" />
+                       <div className="flex flex-col text-left">
+                         <span className="font-semibold">Google Drive Import</span>
+                         <span className="text-sm text-muted-foreground">Import documents from Google Drive</span>
+                       </div>
+                     </div>
+                   </Button>
+                    
+                    <Button
+                      onClick={() => {
+                        // Reset all data to default state
+                        setRunsheetName('Untitled Runsheet');
+                        setData(Array.from({ length: 20 }, () => {
+                          const row: Record<string, string> = {};
+                          initialColumns.forEach(col => row[col] = '');
+                          return row;
+                        }));
+                        setColumns(initialColumns);
+                        setSelectedCell(null);
+                        setEditingCell(null);
+                        setCellValue('');
+                        setSelectedRange(null);
+                        setHasUnsavedChanges(false);
+                        setLastSavedState('');
+                        onDataChange?.(Array.from({ length: 20 }, () => {
+                          const row: Record<string, string> = {};
+                          initialColumns.forEach(col => row[col] = '');
+                          return row;
+                        }));
+                        onColumnChange(initialColumns);
+                        
+                        // Close the dialog
+                        setShowNewRunsheetDialog(false);
+                        
+                        toast({
+                          title: "New runsheet started",
+                          description: "Started with a fresh, empty runsheet.",
+                        });
+                      }}
+                      className="h-16 flex flex-col gap-2 text-left"
+                      variant="default"
+                    >
+                      <div className="flex items-center gap-3 w-full">
+                        <Plus className="h-6 w-6" />
+                        <div className="flex flex-col text-left">
+                          <span className="font-semibold">Start New Runsheet</span>
+                          <span className="text-sm text-muted-foreground">Begin with a fresh, empty runsheet</span>
+                        </div>
+                      </div>
+                    </Button>
+                 </div>
+               </DialogContent>
+             </Dialog>
           </div>
           <div className="text-sm text-muted-foreground">
             Right-click column headers to insert or remove columns
@@ -3428,38 +3547,24 @@ ${extractionFields}`
               </Button>
               <Button 
                 variant="destructive" 
-                 onClick={() => {
-                   setShowUnsavedChangesDialog(false);
-                   // Reset to fresh runsheet state
-                   setRunsheetName('Untitled Runsheet');
-                   setData(Array.from({ length: 20 }, () => {
-                     const row: Record<string, string> = {};
-                     initialColumns.forEach(col => row[col] = '');
-                     return row;
-                   }));
-                   clearActiveRunsheet();
-                 }}
-                 className="w-full sm:w-auto"
-               >
-                 Continue Without Saving
-               </Button>
-               <Button 
-                 onClick={async () => {
-                   setShowUnsavedChangesDialog(false);
-                   await saveRunsheet();
-                   // Reset to fresh runsheet state after saving
-                   setRunsheetName('Untitled Runsheet');
-                   setData(Array.from({ length: 20 }, () => {
-                     const row: Record<string, string> = {};
-                     initialColumns.forEach(col => row[col] = '');
-                     return row;
-                   }));
-                   clearActiveRunsheet();
-                  }}
-                  className="w-full sm:w-auto"
-                >
-                  Save & Continue
-                </Button>
+                onClick={() => {
+                  setShowUnsavedChangesDialog(false);
+                  setShowNewRunsheetDialog(true);
+                }}
+                className="w-full sm:w-auto"
+              >
+                Continue Without Saving
+              </Button>
+              <Button 
+                onClick={async () => {
+                  setShowUnsavedChangesDialog(false);
+                  await saveRunsheet();
+                  setShowNewRunsheetDialog(true);
+                }}
+                className="w-full sm:w-auto"
+              >
+                Save & Continue
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
