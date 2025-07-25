@@ -840,7 +840,7 @@ function createRunsheetFrame() {
     </span>
     <div class="frame-controls">
       <button id="open-app-btn" class="control-btn">🚀 Open in App</button>
-      <button id="view-mode-btn" class="control-btn">${currentViewMode === 'single' ? '📋 Full View' : '📝 Single Entry'}</button>
+      <button id="view-mode-btn" class="control-btn">${currentViewMode === 'single' ? '📋 Quick View' : '📝 Back to Entry'}</button>
       <button id="select-runsheet-btn" class="control-btn">📄 Select Sheet</button>
     </div>
   `;
@@ -1756,7 +1756,7 @@ function switchViewMode(newMode) {
 function updateViewModeButton() {
   const viewModeBtn = document.getElementById('view-mode-btn');
   if (viewModeBtn) {
-    viewModeBtn.textContent = currentViewMode === 'single' ? '📋 Full View' : '📝 Single Entry';
+    viewModeBtn.textContent = currentViewMode === 'single' ? '📋 Quick View' : '📝 Back to Entry';
   }
 }
 
