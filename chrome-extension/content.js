@@ -2334,6 +2334,11 @@ async function showRunsheetSelector() {
     activeRunsheet = null;
     chrome.storage.local.remove('activeRunsheet');
     createRunsheetFrame();
+    if (runsheetFrame) {
+      runsheetFrame.style.display = 'block';
+      document.body.appendChild(runsheetFrame);
+      setupFrameEventListeners();
+    }
     showNotification('Started new runsheet', 'success');
   });
 
@@ -2451,6 +2456,11 @@ function loadSelectedRunsheet(runsheetData) {
 
   // Refresh the frame
   createRunsheetFrame();
+  if (runsheetFrame) {
+    runsheetFrame.style.display = 'block';
+    document.body.appendChild(runsheetFrame);
+    setupFrameEventListeners();
+  }
   
   showNotification(`Loaded runsheet: ${runsheetData.name}`, 'success');
 }
