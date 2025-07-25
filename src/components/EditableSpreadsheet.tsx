@@ -2966,9 +2966,6 @@ ${extractionFields}`
                               detail: { file: files[0] }
                             });
                             window.dispatchEvent(importEvent);
-                            
-                            // Close the dialog after import
-                            setShowNewRunsheetDialog(false);
                           }
                         };
                         
