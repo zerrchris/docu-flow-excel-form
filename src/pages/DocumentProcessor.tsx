@@ -1049,12 +1049,16 @@ Image: [base64 image data]`;
               You have unsaved changes in your runsheet. What would you like to do?
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="flex gap-3">
-            <Button variant="outline" onClick={() => setShowNavigationDialog(false)}>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowNavigationDialog(false)}
+              className="w-full sm:w-auto"
+            >
               Cancel
             </Button>
             <Button 
-              variant="secondary" 
+              variant="default" 
               onClick={() => {
                 // Save current runsheet and then navigate to dashboard
                 const saveEvent = new CustomEvent('saveCurrentRunsheet');
@@ -1062,6 +1066,7 @@ Image: [base64 image data]`;
                 setShowNavigationDialog(false);
                 setTimeout(() => navigate('/app'), 500);
               }}
+              className="w-full sm:w-auto"
             >
               Save and Go to Dashboard
             </Button>
@@ -1071,6 +1076,7 @@ Image: [base64 image data]`;
                 setShowNavigationDialog(false);
                 navigate('/app');
               }}
+              className="w-full sm:w-auto"
             >
               Go to Dashboard Without Saving
             </Button>
