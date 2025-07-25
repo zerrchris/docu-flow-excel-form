@@ -1758,37 +1758,7 @@ function createFullRunsheetView(content) {
 
   table.appendChild(tbody);
 
-  // Add controls for full view
-  const controls = document.createElement('div');
-  controls.style.cssText = `
-    margin-top: 8px !important;
-    display: flex !important;
-    gap: 8px !important;
-    justify-content: center !important;
-  `;
-
-  const addRowBtn = document.createElement('button');
-  addRowBtn.textContent = '+ Add New Row';
-  addRowBtn.style.cssText = `
-    padding: 6px 12px !important;
-    background: hsl(var(--primary, 215 80% 40%)) !important;
-    color: hsl(var(--primary-foreground, 210 40% 98%)) !important;
-    border: none !important;
-    border-radius: 4px !important;
-    cursor: pointer !important;
-    font-size: 11px !important;
-    font-weight: 500 !important;
-  `;
-  
-  addRowBtn.addEventListener('click', () => {
-    // Switch to single entry mode for adding new row
-    switchViewMode('single');
-  });
-
-  controls.appendChild(addRowBtn);
-
   fullViewContainer.appendChild(table);
-  fullViewContainer.appendChild(controls);
   content.appendChild(fullViewContainer);
 }
 
