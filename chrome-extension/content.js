@@ -861,6 +861,11 @@ function createSingleEntryView(content) {
   // Create header row with resizable columns
   const headerRow = document.createElement('div');
   headerRow.className = 'table-row header-row';
+  headerRow.style.cssText = `
+    height: 18px !important;
+    min-height: 18px !important;
+    max-height: 18px !important;
+  `;
   
   runsheetData.columns.forEach((column, index) => {
     const cell = document.createElement('div');
@@ -868,6 +873,9 @@ function createSingleEntryView(content) {
     cell.style.width = `${120}px`; // Default width
     cell.style.minWidth = `${120}px`;
     cell.style.position = 'relative';
+    cell.style.height = '18px';
+    cell.style.maxHeight = '18px';
+    cell.style.overflow = 'hidden';
     
     // Special handling for Document File Name column
     if (column === 'Document File Name') {
@@ -876,15 +884,17 @@ function createSingleEntryView(content) {
       headerContent.className = 'document-header-container';
       headerContent.style.cssText = `
         display: flex !important;
-        flex-direction: column !important;
+        flex-direction: row !important;
         align-items: center !important;
-        gap: 6px !important;
-        padding: 8px !important;
-        height: 100% !important;
-        min-height: 80px !important;
+        gap: 2px !important;
+        padding: 0px 2px !important;
+        height: 18px !important;
+        max-height: 18px !important;
         background: hsl(var(--card, 0 0% 100%)) !important;
         border: 1px dashed hsl(var(--border, 214 32% 91%)) !important;
-        border-radius: 6px !important;
+        border-radius: 2px !important;
+        font-size: 9px !important;
+        overflow: hidden !important;
       `;
       
       // Create upload interface (shown when no document)
@@ -892,12 +902,13 @@ function createSingleEntryView(content) {
       uploadInterface.className = 'upload-interface';
       uploadInterface.style.cssText = `
         display: flex !important;
-        flex-direction: column !important;
+        flex-direction: row !important;
         align-items: center !important;
-        gap: 4px !important;
+        gap: 2px !important;
         width: 100% !important;
         cursor: pointer !important;
         transition: all 0.2s ease !important;
+        height: 16px !important;
       `;
       
       // Add File button
@@ -907,12 +918,14 @@ function createSingleEntryView(content) {
         background: hsl(var(--primary, 215 80% 40%)) !important;
         color: hsl(var(--primary-foreground, 210 40% 98%)) !important;
         border: none !important;
-        border-radius: 4px !important;
-        padding: 4px 8px !important;
-        font-size: 10px !important;
+        border-radius: 2px !important;
+        padding: 1px 4px !important;
+        font-size: 8px !important;
         cursor: pointer !important;
-        width: 100% !important;
+        flex: 1 !important;
         transition: all 0.2s ease !important;
+        height: 14px !important;
+        line-height: 1 !important;
       `;
       
       // Screenshot button
@@ -922,66 +935,69 @@ function createSingleEntryView(content) {
         background: hsl(var(--secondary, 210 40% 96%)) !important;
         color: hsl(var(--secondary-foreground, 222 47% 11%)) !important;
         border: 1px solid hsl(var(--border, 214 32% 91%)) !important;
-        border-radius: 4px !important;
-        padding: 4px 8px !important;
-        font-size: 10px !important;
+        border-radius: 2px !important;
+        padding: 1px 4px !important;
+        font-size: 8px !important;
         cursor: pointer !important;
-        width: 100% !important;
+        flex: 1 !important;
         transition: all 0.2s ease !important;
+        height: 14px !important;
+        line-height: 1 !important;
       `;
       
-      // Create document display interface (shown when document exists)
       const documentInterface = document.createElement('div');
       documentInterface.className = 'document-interface';
       documentInterface.style.cssText = `
         display: none !important;
-        flex-direction: column !important;
+        flex-direction: row !important;
         align-items: center !important;
-        gap: 4px !important;
+        gap: 2px !important;
         width: 100% !important;
-        padding: 4px !important;
+        padding: 0px 2px !important;
         background: hsl(var(--background, 0 0% 100%)) !important;
         border: 1px solid hsl(var(--border, 214 32% 91%)) !important;
-        border-radius: 4px !important;
+        border-radius: 2px !important;
+        height: 16px !important;
       `;
       
-      // Document filename display
+      // Document filename display - positioned to the left
       const filenameDisplay = document.createElement('div');
       filenameDisplay.className = 'filename-display';
       filenameDisplay.style.cssText = `
         display: flex !important;
         align-items: center !important;
-        gap: 4px !important;
-        width: 100% !important;
-        padding: 2px !important;
+        gap: 2px !important;
+        flex: 1 !important;
+        padding: 0px !important;
+        overflow: hidden !important;
       `;
       
       const fileIcon = document.createElement('span');
       fileIcon.innerHTML = '📄';
       fileIcon.style.cssText = `
-        font-size: 12px !important;
+        font-size: 8px !important;
         flex-shrink: 0 !important;
+        line-height: 1 !important;
       `;
       
       const filenameText = document.createElement('span');
       filenameText.className = 'filename-text';
       filenameText.style.cssText = `
-        font-size: 10px !important;
+        font-size: 8px !important;
         font-weight: 500 !important;
         color: hsl(var(--foreground, 222 47% 11%)) !important;
         flex: 1 !important;
-        word-break: break-word !important;
-        line-height: 1.2 !important;
         overflow: hidden !important;
         text-overflow: ellipsis !important;
         white-space: nowrap !important;
+        line-height: 1 !important;
       `;
       
       // Document controls - positioned to the right of filename
       const documentControls = document.createElement('div');
       documentControls.style.cssText = `
         display: flex !important;
-        gap: 2px !important;
+        gap: 1px !important;
         flex-shrink: 0 !important;
         margin-left: auto !important;
       `;
@@ -994,12 +1010,14 @@ function createSingleEntryView(content) {
         background: hsl(var(--secondary, 210 40% 96%)) !important;
         color: hsl(var(--secondary-foreground, 222 47% 11%)) !important;
         border: 1px solid hsl(var(--border, 214 32% 91%)) !important;
-        border-radius: 3px !important;
-        padding: 2px 4px !important;
-        font-size: 8px !important;
+        border-radius: 2px !important;
+        padding: 1px 2px !important;
+        font-size: 6px !important;
         cursor: pointer !important;
-        flex: 1 !important;
+        width: 12px !important;
+        height: 12px !important;
         transition: all 0.2s ease !important;
+        line-height: 1 !important;
       `;
       docBrainBtn.title = 'Analyze document';
       
@@ -1011,12 +1029,14 @@ function createSingleEntryView(content) {
         background: hsl(var(--secondary, 210 40% 96%)) !important;
         color: hsl(var(--secondary-foreground, 222 47% 11%)) !important;
         border: 1px solid hsl(var(--border, 214 32% 91%)) !important;
-        border-radius: 3px !important;
-        padding: 2px 4px !important;
-        font-size: 8px !important;
+        border-radius: 2px !important;
+        padding: 1px 2px !important;
+        font-size: 6px !important;
         cursor: pointer !important;
-        flex: 1 !important;
+        width: 12px !important;
+        height: 12px !important;
         transition: all 0.2s ease !important;
+        line-height: 1 !important;
       `;
       editBtn.title = 'Rename document';
       
@@ -1028,12 +1048,14 @@ function createSingleEntryView(content) {
         background: hsl(var(--destructive, 0 84% 60%)) !important;
         color: white !important;
         border: 1px solid hsl(var(--destructive, 0 84% 60%)) !important;
-        border-radius: 3px !important;
-        padding: 2px 4px !important;
-        font-size: 8px !important;
+        border-radius: 2px !important;
+        padding: 1px 2px !important;
+        font-size: 6px !important;
         cursor: pointer !important;
-        flex: 1 !important;
+        width: 12px !important;
+        height: 12px !important;
         transition: all 0.2s ease !important;
+        line-height: 1 !important;
       `;
       deleteBtn.title = 'Remove document';
       
@@ -1210,12 +1232,15 @@ function createSingleEntryView(content) {
       cellContent.className = 'cell-content';
       cellContent.textContent = column;
       cellContent.style.cssText = `
-        height: auto !important;
-        min-height: 20px !important;
+        height: 16px !important;
+        line-height: 16px !important;
         overflow: hidden !important;
         text-overflow: ellipsis !important;
         white-space: nowrap !important;
-        padding: 2px !important;
+        padding: 0px 2px !important;
+        font-size: 11px !important;
+        display: flex !important;
+        align-items: center !important;
       `;
       cell.appendChild(cellContent);
     }
