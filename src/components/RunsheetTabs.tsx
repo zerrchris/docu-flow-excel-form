@@ -23,6 +23,7 @@ const RunsheetTabs: React.FC<RunsheetTabsProps> = ({ children }) => {
   } = useMultipleRunsheets();
 
   const [showCloseConfirmDialog, setShowCloseConfirmDialog] = useState(false);
+  const [showNewRunsheetDialog, setShowNewRunsheetDialog] = useState(false);
   const [runsheetToClose, setRunsheetToClose] = useState<string | null>(null);
 
   const handleTabSelect = (runsheetId: string) => {
@@ -59,7 +60,40 @@ const RunsheetTabs: React.FC<RunsheetTabsProps> = ({ children }) => {
     }
   };
 
+  const handleSaveAndNew = async () => {
+    // Dispatch save event first
+    const saveEvent = new CustomEvent('saveCurrentRunsheet');
+    window.dispatchEvent(saveEvent);
+    
+    // Wait a bit for save to complete, then create new runsheet
+    setTimeout(() => {
+      createNewRunsheet();
+      setShowNewRunsheetDialog(false);
+      setRunsheetToClose(null);
+    }, 500);
+  };
+
+  const handleContinueWithoutSaving = () => {
+    createNewRunsheet();
+    setShowNewRunsheetDialog(false);
+    setRunsheetToClose(null);
+  };
+
   const handleNewTab = () => {
+    // Check if current runsheet has unsaved changes
+    const currentRunsheet = activeRunsheets.find(r => r.id === currentTabId);
+    
+    if (currentRunsheet?.hasUnsavedChanges) {
+      // Show confirmation dialog for unsaved changes
+      setRunsheetToClose(currentTabId);
+      setShowNewRunsheetDialog(true);
+    } else {
+      // No unsaved changes, create new runsheet directly
+      createNewRunsheet();
+    }
+  };
+
+  const createNewRunsheet = () => {
     // Generate a new runsheet ID and add it
     const newRunsheet: ActiveRunsheet = {
       id: `new-${Date.now()}`,
@@ -71,6 +105,10 @@ const RunsheetTabs: React.FC<RunsheetTabsProps> = ({ children }) => {
     };
     
     addRunsheet(newRunsheet);
+    
+    // Dispatch event to reset the spreadsheet to defaults
+    const resetEvent = new CustomEvent('startNewRunsheet');
+    window.dispatchEvent(resetEvent);
   };
 
   const runsheetToCloseData = runsheetToClose ? activeRunsheets.find(r => r.id === runsheetToClose) : null;
@@ -132,6 +170,38 @@ const RunsheetTabs: React.FC<RunsheetTabsProps> = ({ children }) => {
               onClick={handleForceClose}
             >
               Close Without Saving
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* New Runsheet Confirmation Dialog */}
+      <Dialog open={showNewRunsheetDialog} onOpenChange={setShowNewRunsheetDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Start New Runsheet</DialogTitle>
+            <DialogDescription>
+              "{runsheetToCloseData?.name}" has unsaved changes. What would you like to do?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowNewRunsheetDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={handleSaveAndNew}
+            >
+              Save and Start New
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleContinueWithoutSaving}
+            >
+              Continue Without Saving
             </Button>
           </DialogFooter>
         </DialogContent>
