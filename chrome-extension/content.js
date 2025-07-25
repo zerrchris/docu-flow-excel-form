@@ -641,6 +641,21 @@ async function addRowToSheet() {
       
       console.log('🔧 RunsheetPro Extension: Row added successfully to index:', nextRowIndex);
       
+      // Update the local activeRunsheet data with the new row
+      if (!activeRunsheet.data) {
+        activeRunsheet.data = [];
+      }
+      
+      // Ensure the data array has enough rows
+      while (activeRunsheet.data.length <= nextRowIndex) {
+        const emptyRow = {};
+        activeRunsheet.columns.forEach(col => emptyRow[col] = '');
+        activeRunsheet.data.push(emptyRow);
+      }
+      
+      // Update the specific row with the new data
+      activeRunsheet.data[nextRowIndex] = { ...activeRunsheet.data[nextRowIndex], ...rowData };
+      
       // Update the global current row tracking to the next empty row
       if (window.currentDisplayRowIndex !== undefined) {
         window.currentDisplayRowIndex = nextRowIndex + 1;
