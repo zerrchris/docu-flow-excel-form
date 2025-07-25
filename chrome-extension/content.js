@@ -3192,31 +3192,6 @@ async function linkSnipToRunsheet(snipUrl) {
     throw error;
   }
 }
-        if (uploadInterface && documentInterface && filenameText) {
-          uploadInterface.style.display = 'none';
-          documentInterface.style.display = 'flex';
-          filenameText.textContent = filename;
-          headerContainer.style.border = '1px solid hsl(var(--border, 214 32% 91%))';
-        }
-      }
-      
-      // Create a file object for the brain button functionality
-      const file = new File([new Blob()], filename, { type: 'image/png' });
-      window.currentAnalysisFile = file;
-      window.currentAnalysisFileName = filename;
-    }
-    
-    // Refresh the UI if visible
-    if (runsheetFrame && runsheetFrame.style.display !== 'none') {
-      updateRunsheetDisplay();
-    }
-    
-  } catch (error) {
-    console.error('Error linking snip to runsheet:', error);
-    throw error;
-  }
-}
-
 // Listen for messages from other extension parts
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log('🔧 RunsheetPro Extension: Received message:', request);
