@@ -628,6 +628,13 @@ async function addRowToSheet() {
       }
       
       console.log('🔧 RunsheetPro Extension: Row added successfully to index:', nextRowIndex);
+      
+      // Update the global current row tracking to the next empty row
+      if (window.currentDisplayRowIndex !== undefined) {
+        window.currentDisplayRowIndex = nextRowIndex + 1;
+        // Refresh the single entry view to show the next empty row
+        refreshSingleEntryView();
+      }
     } else {
       throw new Error(result.error || 'Failed to add row');
     }
@@ -813,7 +820,11 @@ function createRunsheetFrame() {
   const header = document.createElement('div');
   header.className = 'frame-header';
   header.innerHTML = `
-    <span class="frame-title">RunsheetPro Runsheet - ${activeRunsheet?.name || 'Default'}</span>
+    <span class="frame-title">RunsheetPro Runsheet - ${activeRunsheet?.name || 'Default'} 
+      <span id="current-row-indicator" style="font-size: 12px; color: hsl(var(--muted-foreground, 215 16% 47%)); margin-left: 8px;">
+        (Row ${(window.currentDisplayRowIndex || 0) + 1})
+      </span>
+    </span>
     <div class="frame-controls">
       <button id="open-app-btn" class="control-btn">🚀 Open in App</button>
       <button id="view-mode-btn" class="control-btn">${currentViewMode === 'single' ? '📋 Full View' : '📝 Single Entry'}</button>
@@ -845,6 +856,43 @@ function createRunsheetFrame() {
   setupFrameEventListeners();
 }
 
+// Helper function to find the first empty row
+function findFirstEmptyRow(runsheetData) {
+  if (!runsheetData.data || !Array.isArray(runsheetData.data) || runsheetData.data.length === 0) {
+    return 0; // First row if no data exists
+}
+
+// Refresh single entry view to show current row
+function refreshSingleEntryView() {
+  if (!activeRunsheet) return;
+  
+  const content = document.querySelector('#runsheetpro-runsheet-frame .frame-content');
+  if (!content) return;
+  
+  // Clear current content
+  content.innerHTML = '';
+  
+  // Recreate single entry view
+  createSingleEntryView(content);
+  
+  // Focus first input for quick data entry
+  setTimeout(() => {
+    const firstInput = document.querySelector('#runsheetpro-runsheet-frame input, #runsheetpro-runsheet-frame textarea');
+    if (firstInput) {
+      firstInput.focus();
+    }
+  }, 100);
+}
+  
+  // Find first empty row
+  const emptyRowIndex = runsheetData.data.findIndex(row => {
+    return runsheetData.columns.every(col => !row[col] || row[col].trim() === '');
+  });
+  
+  // If no empty row found, return the next index (add to end)
+  return emptyRowIndex === -1 ? runsheetData.data.length : emptyRowIndex;
+}
+
 // Create single entry view (original functionality)
 function createSingleEntryView(content) {
   // Create dynamic table based on runsheet data
@@ -856,6 +904,12 @@ function createSingleEntryView(content) {
     columns: ['Inst Number', 'Book/Page', 'Inst Type', 'Recording Date', 'Document Date', 'Grantor', 'Grantee', 'Legal Description', 'Notes', 'Document File Name'],
     data: []  // Start with no rows until user adds data
   };
+
+  // Find the first empty row index
+  let currentRowIndex = findFirstEmptyRow(runsheetData);
+  
+  // Store current row index globally for tracking
+  window.currentDisplayRowIndex = currentRowIndex;
   
   // Create header row with resizable columns
   const headerRow = document.createElement('div');
@@ -1306,7 +1360,7 @@ function createSingleEntryView(content) {
   // Create editable data row (show first row of data)
   const dataRow = document.createElement('div');
   dataRow.className = 'table-row editable-row';
-  dataRow.dataset.rowIndex = 0;
+  dataRow.dataset.rowIndex = currentRowIndex;
   
   runsheetData.columns.forEach((column, colIndex) => {
     const cell = document.createElement('div');
@@ -1321,7 +1375,7 @@ function createSingleEntryView(content) {
       // Create hidden input to store the filename value but don't display it
       const input = document.createElement('input');
       input.type = 'hidden';
-      input.value = runsheetData.data[0]?.[column] || '';
+      input.value = runsheetData.data[currentRowIndex]?.[column] || '';
       input.dataset.field = column.toLowerCase().replace(/\s+/g, '_').replace(/[^\w]/g, '');
       input.dataset.column = column;
       
@@ -1329,7 +1383,7 @@ function createSingleEntryView(content) {
     } else {
       // Other columns use textarea for multi-line support
       const textarea = document.createElement('textarea');
-      textarea.value = runsheetData.data[0]?.[column] || '';
+      textarea.value = runsheetData.data[currentRowIndex]?.[column] || '';
       textarea.dataset.field = column.toLowerCase().replace(/\s+/g, '_').replace(/[^\w]/g, '');
       textarea.dataset.column = column;
       
