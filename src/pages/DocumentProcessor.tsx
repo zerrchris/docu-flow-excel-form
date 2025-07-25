@@ -1068,7 +1068,7 @@ Image: [base64 image data]`;
               }}
               className="w-full sm:w-auto"
             >
-              Save and Go to Dashboard
+              Save
             </Button>
             <Button 
               variant="destructive" 
@@ -1078,7 +1078,7 @@ Image: [base64 image data]`;
               }}
               className="w-full sm:w-auto"
             >
-              Go to Dashboard Without Saving
+              Continue without saving
             </Button>
           </DialogFooter>
         </DialogContent>
