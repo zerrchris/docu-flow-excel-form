@@ -1426,6 +1426,13 @@ function createSingleEntryView(content) {
             } else if (nextButton) {
               nextButton.focus();
             }
+          } else {
+            // If this is the last cell, focus the add row button in the Document File Name cell
+            const documentCell = dataRow.querySelector('[data-column="Document File Name"]')?.closest('.table-cell');
+            const addButton = documentCell?.querySelector('.add-row-btn');
+            if (addButton) {
+              addButton.focus();
+            }
           }
         } else if (e.key === 'Tab' && e.shiftKey) {
           // Shift+Tab moves to previous field
@@ -1487,11 +1494,14 @@ function createSingleEntryView(content) {
           e.preventDefault();
           addRowToSheet();
         } else if (e.key === 'Tab' && e.shiftKey) {
-          // Shift+Tab moves back to Document File Name input
+          // Shift+Tab moves back to the last textarea field (since Document File Name input is hidden)
           e.preventDefault();
-          const documentInput = cell.querySelector('input[data-column="Document File Name"]');
-          if (documentInput) {
-            documentInput.focus();
+          const lastTextareaCell = Array.from(dataRow.children).reverse().find(cell => 
+            cell.querySelector('textarea') && !cell.querySelector('[data-column="Document File Name"]')
+          );
+          const lastTextarea = lastTextareaCell?.querySelector('textarea');
+          if (lastTextarea) {
+            lastTextarea.focus();
           }
         } else if (e.key === 'Tab' && !e.shiftKey) {
           // Tab moves to first field in next row or wraps to first field
