@@ -1056,23 +1056,23 @@ Image: [base64 image data]`;
             <Button 
               variant="secondary" 
               onClick={() => {
-                // Save current runsheet and then start new
+                // Save current runsheet and then navigate to dashboard
                 const saveEvent = new CustomEvent('saveCurrentRunsheet');
                 window.dispatchEvent(saveEvent);
                 setShowNavigationDialog(false);
-                setTimeout(() => startNewRunsheet(), 500);
+                setTimeout(() => navigate('/app'), 500);
               }}
             >
-              Save and New
+              Save and Go to Dashboard
             </Button>
             <Button 
               variant="destructive" 
               onClick={() => {
                 setShowNavigationDialog(false);
-                startNewRunsheet();
+                navigate('/app');
               }}
             >
-              Continue Without Saving
+              Go to Dashboard Without Saving
             </Button>
           </DialogFooter>
         </DialogContent>
