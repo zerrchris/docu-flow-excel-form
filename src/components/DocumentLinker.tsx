@@ -437,6 +437,7 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                 value={editedFilename}
                 onChange={(e) => setEditedFilename(e.target.value)}
                 className="h-6 text-xs flex-1"
+                tabIndex={-1}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleRenameDocument();
                   if (e.key === 'Escape') {
