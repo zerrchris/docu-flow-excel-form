@@ -3113,21 +3113,32 @@ async function uploadSnipToStorage(blob) {
 // Link snip to current runsheet row
 async function linkSnipToRunsheet(snipUrl) {
   try {
+    console.log('🔧 Starting linkSnipToRunsheet with URL:', snipUrl);
+    
     if (!activeRunsheet || !activeRunsheet.id) {
+      console.error('No active runsheet found:', activeRunsheet);
       throw new Error('No active runsheet found');
     }
+    
+    console.log('Active runsheet:', activeRunsheet.id, 'User session:', !!userSession);
     
     // Get current row being worked on
     const runsheetData = activeRunsheet.data || [];
     let targetRowIndex = window.currentDisplayRowIndex || 0;
     
-    console.log('Linking snip to row index:', targetRowIndex);
+    console.log('Linking snip to row index:', targetRowIndex, 'Current data length:', runsheetData.length);
     
-    // Update the row with screenshot URL
+    // Update the row with snip URL in Document File Name column
     if (!runsheetData[targetRowIndex]) {
       runsheetData[targetRowIndex] = {};
     }
-    runsheetData[targetRowIndex].screenshot_url = snipUrl;
+    
+    // Store the snip URL in the Document File Name column
+    const filename = `captured_snip_${Date.now()}.png`;
+    runsheetData[targetRowIndex]['Document File Name'] = filename;
+    
+    console.log('Updated row data:', runsheetData[targetRowIndex]);
+    console.log('Making PATCH request to update runsheet...');
     
     // Update the runsheet in Supabase
     const response = await fetch('https://xnpmrafjjqsissbtempj.supabase.co/rest/v1/runsheets?id=eq.' + activeRunsheet.id, {
@@ -3138,9 +3149,12 @@ async function linkSnipToRunsheet(snipUrl) {
         'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhucG1yYWZqanFzaXNzYnRlbXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4NzMyNjcsImV4cCI6MjA2ODQ0OTI2N30.aQG15Ed8IOLJfM5p7XF_kEM5FUz8zJug1pxAi9rTTsg'
       },
       body: JSON.stringify({
-        data: runsheetData
+        data: runsheetData,
+        updated_at: new Date().toISOString()
       })
     });
+    
+    console.log('PATCH response status:', response.status);
     
     if (!response.ok) {
       const errorText = await response.text();
@@ -3148,14 +3162,30 @@ async function linkSnipToRunsheet(snipUrl) {
       throw new Error(`Failed to update runsheet with snip URL: ${response.status} ${errorText}`);
     }
     
+    console.log('Runsheet updated successfully');
+    
     // Update local activeRunsheet
     activeRunsheet.data = runsheetData;
     
     // Update the Document File Name field in the UI
-    const filename = `captured_snip_${Date.now()}.png`;
     const input = document.querySelector(`input[data-column="Document File Name"]`);
     if (input) {
       input.value = filename;
+      console.log('Updated Document File Name input with:', filename);
+    }
+    
+    console.log('Snip linked successfully to row', targetRowIndex);
+    
+  } catch (error) {
+    console.error('Error in linkSnipToRunsheet:', error);
+    console.error('Error details:', {
+      activeRunsheet: !!activeRunsheet,
+      activeRunsheetId: activeRunsheet?.id,
+      userSession: !!userSession,
+      userSessionToken: !!userSession?.access_token
+    });
+    throw error;
+  }
       
       // Trigger the header switch to document mode
       const headerContainer = document.querySelector('.document-header-container');
