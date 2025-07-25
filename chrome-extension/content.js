@@ -606,7 +606,14 @@ async function addRowToSheet() {
       })
     });
     
+    if (!syncResponse.ok) {
+      const errorText = await syncResponse.text();
+      console.error('Sync response not ok:', syncResponse.status, errorText);
+      throw new Error(`HTTP ${syncResponse.status}: ${errorText}`);
+    }
+    
     const result = await syncResponse.json();
+    console.log('Sync response result:', result);
     
     if (result.success) {
       showNotification(`Row ${nextRowIndex + 1} added successfully!`, 'success');
@@ -636,11 +643,12 @@ async function addRowToSheet() {
         refreshSingleEntryView();
       }
     } else {
+      console.error('Sync result indicates failure:', result);
       throw new Error(result.error || 'Failed to add row');
     }
   } catch (error) {
     console.error('Add row error:', error);
-    showNotification('Failed to add row to sheet', 'error');
+    showNotification('Failed to add row to sheet: ' + error.message, 'error');
   }
 }
 
@@ -1530,7 +1538,7 @@ function createSingleEntryView(content) {
       // Full-width Add Row button
       const addRowBtn = document.createElement('button');
       addRowBtn.className = 'add-row-btn';
-      addRowBtn.textContent = 'Add Row';
+      addRowBtn.textContent = 'Add to Row';
       addRowBtn.style.cssText = `
         background: hsl(var(--primary, 215 80% 40%)) !important;
         color: hsl(var(--primary-foreground, 210 40% 98%)) !important;
@@ -3083,7 +3091,9 @@ async function uploadSnipToStorage(blob) {
     });
     
     if (!response.ok) {
-      throw new Error('Failed to upload snip to storage');
+      const errorText = await response.text();
+      console.error('Failed to upload snip to storage:', response.status, errorText);
+      throw new Error(`Failed to upload snip to storage: ${response.status} ${errorText}`);
     }
     
     // Get public URL
@@ -3107,17 +3117,11 @@ async function linkSnipToRunsheet(snipUrl) {
       throw new Error('No active runsheet found');
     }
     
-    // Get current row being worked on (usually the first row with empty data)
+    // Get current row being worked on
     const runsheetData = activeRunsheet.data || [];
-    let targetRowIndex = 0;
+    let targetRowIndex = window.currentDisplayRowIndex || 0;
     
-    // Find the first row that doesn't have a screenshot_url already
-    for (let i = 0; i < runsheetData.length; i++) {
-      if (!runsheetData[i].screenshot_url) {
-        targetRowIndex = i;
-        break;
-      }
-    }
+    console.log('Linking snip to row index:', targetRowIndex);
     
     // Update the row with screenshot URL
     if (!runsheetData[targetRowIndex]) {
@@ -3139,7 +3143,9 @@ async function linkSnipToRunsheet(snipUrl) {
     });
     
     if (!response.ok) {
-      throw new Error('Failed to update runsheet with snip URL');
+      const errorText = await response.text();
+      console.error('Failed to update runsheet with snip URL:', response.status, errorText);
+      throw new Error(`Failed to update runsheet with snip URL: ${response.status} ${errorText}`);
     }
     
     // Update local activeRunsheet
