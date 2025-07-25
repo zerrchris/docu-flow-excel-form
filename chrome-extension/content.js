@@ -2333,7 +2333,7 @@ async function showRunsheetSelector() {
     // Clear current runsheet and start fresh
     activeRunsheet = null;
     chrome.storage.local.remove('activeRunsheet');
-    showRunsheetFrame();
+    createRunsheetFrame();
     showNotification('Started new runsheet', 'success');
   });
 
@@ -2450,7 +2450,7 @@ function loadSelectedRunsheet(runsheetData) {
   chrome.storage.local.set({ activeRunsheet });
 
   // Refresh the frame
-  showRunsheetFrame();
+  createRunsheetFrame();
   
   showNotification(`Loaded runsheet: ${runsheetData.name}`, 'success');
 }
