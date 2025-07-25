@@ -2353,7 +2353,7 @@ async function showRunsheetSelector() {
       throw new Error('User not authenticated');
     }
 
-    const response = await fetch(`${API_BASE_URL}/functions/v1/get-user-runsheets`, {
+    const response = await fetch(`https://xnpmrafjjqsissbtempj.supabase.co/functions/v1/get-user-runsheets`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
