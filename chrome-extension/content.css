@@ -115,9 +115,14 @@
   border-right: 1px solid hsl(var(--border, 0 0% 89%)) !important;
   display: flex !important;
   align-items: center !important;
-  min-height: 32px !important;
+  min-height: 20px !important;
   font-size: 11px !important;
   position: relative !important;
+}
+
+/* Data row cells should be more compact */
+.editable-row .table-cell {
+  min-height: 18px !important;
 }
 
 .table-cell:last-child {
