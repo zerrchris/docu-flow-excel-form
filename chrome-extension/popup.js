@@ -9,10 +9,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Check current extension status
   const checkStatus = async () => {
     try {
-      const result = await chrome.storage.local.get(['extensionEnabled', 'viewMode', 'activeRunsheet']);
+      const result = await chrome.storage.local.get(['extensionEnabled', 'viewMode', 'activeRunsheet', 'active_runsheet']);
       const isEnabled = result.extensionEnabled !== false;
       const viewMode = result.viewMode || 'single'; // 'single' or 'full'
-      const hasActiveRunsheet = result.activeRunsheet;
+      const hasActiveRunsheet = result.activeRunsheet || result.active_runsheet;
       
       statusDiv.textContent = isEnabled ? 'Extension Active' : 'Extension Inactive';
       statusDiv.className = `status ${isEnabled ? 'active' : 'inactive'}`;

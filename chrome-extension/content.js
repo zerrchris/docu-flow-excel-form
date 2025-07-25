@@ -2030,12 +2030,13 @@ async function init() {
   console.log('🔧 DocuFlow Extension: Runsheet button created');
   
   // Check if there's an active runsheet to restore
-  const storedData = await chrome.storage.local.get(['active_runsheet']);
-  if (storedData.active_runsheet && isAuthenticated) {
-    console.log('🔧 DocuFlow Extension: Restoring active runsheet:', storedData.active_runsheet.name);
+  const storedData = await chrome.storage.local.get(['active_runsheet', 'activeRunsheet']);
+  const activeRunsheetData = storedData.active_runsheet || storedData.activeRunsheet;
+  if (activeRunsheetData && isAuthenticated) {
+    console.log('🔧 DocuFlow Extension: Restoring active runsheet:', activeRunsheetData.name);
     
     // Restore the active runsheet
-    activeRunsheet = storedData.active_runsheet;
+    activeRunsheet = activeRunsheetData;
     
     // Create and show the frame with the restored runsheet
     createRunsheetFrame();
