@@ -817,6 +817,7 @@ function createRunsheetFrame() {
     <div class="frame-controls">
       <button id="open-app-btn" class="control-btn">🚀 Open in App</button>
       <button id="view-mode-btn" class="control-btn">${currentViewMode === 'single' ? '📋 Full View' : '📝 Single Entry'}</button>
+      <button id="select-runsheet-btn" class="control-btn">📄 Select Sheet</button>
     </div>
   `;
   
@@ -1732,6 +1733,14 @@ function setupFrameEventListeners() {
       switchViewMode(newMode);
     });
   }
+  
+  // Select runsheet button
+  const selectRunsheetBtn = document.getElementById('select-runsheet-btn');
+  if (selectRunsheetBtn) {
+    selectRunsheetBtn.addEventListener('click', () => {
+      showRunsheetSelector();
+    });
+  }
 }
 
 // Open current runsheet in the main app
@@ -2232,6 +2241,218 @@ function showSnipModeSelector() {
       button.style.boxShadow = 'none';
     });
   });
+}
+
+// Show runsheet selector modal
+async function showRunsheetSelector() {
+  // Remove any existing selector
+  const existingSelector = document.getElementById('runsheetpro-runsheet-selector');
+  if (existingSelector) {
+    existingSelector.remove();
+  }
+
+  // Create overlay
+  const overlay = document.createElement('div');
+  overlay.id = 'runsheetpro-runsheet-selector';
+  overlay.style.cssText = `
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    background: rgba(0, 0, 0, 0.5) !important;
+    z-index: 2147483647 !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  `;
+
+  // Create modal
+  const modal = document.createElement('div');
+  modal.style.cssText = `
+    background: white !important;
+    border-radius: 12px !important;
+    padding: 24px !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3) !important;
+    max-width: 600px !important;
+    max-height: 80vh !important;
+    width: 90vw !important;
+    color: #1f2937 !important;
+    overflow-y: auto !important;
+  `;
+
+  modal.innerHTML = `
+    <div style="text-align: center; margin-bottom: 24px;">
+      <h2 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: #1f2937;">Select Runsheet</h2>
+      <p style="margin: 0; color: #6b7280; font-size: 14px;">Choose from your saved runsheets</p>
+    </div>
+    
+    <div id="runsheets-loading" style="text-align: center; padding: 40px;">
+      <div style="display: inline-block; width: 40px; height: 40px; border: 4px solid #f3f4f6; border-top: 4px solid #3b82f6; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+      <p style="margin-top: 16px; color: #6b7280;">Loading runsheets...</p>
+    </div>
+    
+    <div id="runsheets-list" style="display: none;"></div>
+    
+    <div style="text-align: center; margin-top: 20px;">
+      <button id="cancel-runsheet-selector" style="
+        background: transparent;
+        color: #6b7280;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        padding: 8px 16px;
+        cursor: pointer;
+        font-size: 14px;
+        margin-right: 12px;
+      ">Cancel</button>
+      <button id="create-new-runsheet" style="
+        background: #3b82f6;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        padding: 8px 16px;
+        cursor: pointer;
+        font-size: 14px;
+      ">Create New</button>
+    </div>
+  `;
+
+  overlay.appendChild(modal);
+
+  // Cancel button
+  const cancelBtn = modal.querySelector('#cancel-runsheet-selector');
+  cancelBtn.addEventListener('click', () => {
+    overlay.remove();
+  });
+
+  // Create new button
+  const createNewBtn = modal.querySelector('#create-new-runsheet');
+  createNewBtn.addEventListener('click', () => {
+    overlay.remove();
+    // Clear current runsheet and start fresh
+    activeRunsheet = null;
+    chrome.storage.local.remove('activeRunsheet');
+    showRunsheetFrame();
+    showNotification('Started new runsheet', 'success');
+  });
+
+  // Close on overlay click
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) {
+      overlay.remove();
+    }
+  });
+
+  document.body.appendChild(overlay);
+
+  // Load runsheets
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
+    const response = await fetch(`${API_BASE_URL}/functions/v1/get-user-runsheets`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${user.access_token}`
+      },
+      body: JSON.stringify({})
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch runsheets: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const runsheets = data.runsheets || [];
+
+    // Hide loading and show list
+    const loadingDiv = modal.querySelector('#runsheets-loading');
+    const listDiv = modal.querySelector('#runsheets-list');
+    loadingDiv.style.display = 'none';
+    listDiv.style.display = 'block';
+
+    if (runsheets.length === 0) {
+      listDiv.innerHTML = `
+        <div style="text-align: center; padding: 40px; color: #6b7280;">
+          <p style="margin: 0; font-size: 16px;">No saved runsheets found</p>
+          <p style="margin: 8px 0 0 0; font-size: 14px;">Create your first runsheet to get started</p>
+        </div>
+      `;
+    } else {
+      listDiv.innerHTML = runsheets.map(runsheet => `
+        <div class="runsheet-item" data-runsheet='${JSON.stringify(runsheet)}' style="
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          padding: 16px;
+          margin-bottom: 12px;
+          cursor: pointer;
+          transition: all 0.2s;
+          background: white;
+        ">
+          <div style="font-weight: 600; font-size: 16px; margin-bottom: 4px; color: #1f2937;">${runsheet.name}</div>
+          <div style="font-size: 14px; color: #6b7280; margin-bottom: 8px;">
+            Created: ${new Date(runsheet.created_at).toLocaleDateString()}
+          </div>
+          <div style="font-size: 12px; color: #9ca3af;">
+            ${(runsheet.data && runsheet.data.length) || 0} rows • ${(runsheet.columns && runsheet.columns.length) || 0} columns
+          </div>
+        </div>
+      `).join('');
+
+      // Add hover effects and click handlers
+      const runsheetItems = listDiv.querySelectorAll('.runsheet-item');
+      runsheetItems.forEach(item => {
+        item.addEventListener('mouseenter', () => {
+          item.style.backgroundColor = '#f9fafb';
+          item.style.borderColor = '#3b82f6';
+        });
+        
+        item.addEventListener('mouseleave', () => {
+          item.style.backgroundColor = 'white';
+          item.style.borderColor = '#e5e7eb';
+        });
+        
+        item.addEventListener('click', () => {
+          const runsheetData = JSON.parse(item.dataset.runsheet);
+          loadSelectedRunsheet(runsheetData);
+          overlay.remove();
+        });
+      });
+    }
+  } catch (error) {
+    console.error('Failed to load runsheets:', error);
+    const loadingDiv = modal.querySelector('#runsheets-loading');
+    loadingDiv.innerHTML = `
+      <div style="text-align: center; color: #dc2626;">
+        <p style="margin: 0;">Failed to load runsheets</p>
+        <p style="margin: 8px 0 0 0; font-size: 14px;">${error.message}</p>
+      </div>
+    `;
+  }
+}
+
+// Load selected runsheet
+function loadSelectedRunsheet(runsheetData) {
+  // Convert database format to extension format
+  activeRunsheet = {
+    id: runsheetData.id,
+    name: runsheetData.name,
+    columns: runsheetData.columns || [],
+    data: runsheetData.data || [],
+    columnInstructions: runsheetData.column_instructions || {}
+  };
+
+  // Save to storage
+  chrome.storage.local.set({ activeRunsheet });
+
+  // Refresh the frame
+  showRunsheetFrame();
+  
+  showNotification(`Loaded runsheet: ${runsheetData.name}`, 'success');
 }
 
 // Start snip mode with specific mode
