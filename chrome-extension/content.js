@@ -873,6 +873,15 @@ function createRunsheetFrame() {
 function findFirstEmptyRow(runsheetData) {
   if (!runsheetData.data || !Array.isArray(runsheetData.data) || runsheetData.data.length === 0) {
     return 0; // First row if no data exists
+  }
+  
+  // Find first empty row
+  const emptyRowIndex = runsheetData.data.findIndex(row => {
+    return runsheetData.columns.every(col => !row[col] || row[col].trim() === '');
+  });
+  
+  // If no empty row found, return the next index (add to end)
+  return emptyRowIndex === -1 ? runsheetData.data.length : emptyRowIndex;
 }
 
 // Refresh single entry view to show current row
@@ -896,8 +905,6 @@ function refreshSingleEntryView() {
     }
   }, 100);
 }
-  
-  // Find first empty row
   const emptyRowIndex = runsheetData.data.findIndex(row => {
     return runsheetData.columns.every(col => !row[col] || row[col].trim() === '');
   });
