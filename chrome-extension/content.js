@@ -2087,6 +2087,153 @@ async function init() {
 // SNIP FUNCTIONALITY
 // =============================================================================
 
+// Show snip mode selector modal
+function showSnipModeSelector() {
+  // Remove any existing selector
+  const existingSelector = document.getElementById('runsheetpro-snip-selector');
+  if (existingSelector) {
+    existingSelector.remove();
+  }
+
+  // Create overlay
+  const overlay = document.createElement('div');
+  overlay.id = 'runsheetpro-snip-selector';
+  overlay.style.cssText = `
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    background: rgba(0, 0, 0, 0.5) !important;
+    z-index: 2147483647 !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  `;
+
+  // Create modal
+  const modal = document.createElement('div');
+  modal.style.cssText = `
+    background: white !important;
+    border-radius: 12px !important;
+    padding: 24px !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3) !important;
+    max-width: 480px !important;
+    width: 90vw !important;
+    color: #1f2937 !important;
+  `;
+
+  modal.innerHTML = `
+    <div style="text-align: center; margin-bottom: 24px;">
+      <h2 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: #1f2937;">Choose Screenshot Mode</h2>
+      <p style="margin: 0; color: #6b7280; font-size: 14px;">Select how you want to capture your screenshots</p>
+    </div>
+    
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      <button id="single-snip-option" style="
+        background: #3b82f6;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 16px;
+        text-align: left;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 14px;
+      ">
+        <div style="font-weight: 600; margin-bottom: 4px;">📷 Single Snip</div>
+        <div style="opacity: 0.9; font-size: 13px;">Capture one area and automatically link it to your runsheet</div>
+      </button>
+      
+      <button id="scroll-snip-option" style="
+        background: #10b981;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 16px;
+        text-align: left;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 14px;
+      ">
+        <div style="font-weight: 600; margin-bottom: 4px;">📜 Snip & Scroll</div>
+        <div style="opacity: 0.9; font-size: 13px;">Capture multiple areas on the same page by scrolling between snips</div>
+      </button>
+      
+      <button id="navigate-snip-option" style="
+        background: #f59e0b;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 16px;
+        text-align: left;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 14px;
+      ">
+        <div style="font-weight: 600; margin-bottom: 4px;">🔗 Click & Navigate</div>
+        <div style="opacity: 0.9; font-size: 13px;">Capture areas across multiple pages by clicking links or navigating</div>
+      </button>
+    </div>
+    
+    <div style="text-align: center; margin-top: 20px;">
+      <button id="cancel-snip-selector" style="
+        background: transparent;
+        color: #6b7280;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        padding: 8px 16px;
+        cursor: pointer;
+        font-size: 14px;
+      ">Cancel</button>
+    </div>
+  `;
+
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  // Add event listeners
+  document.getElementById('single-snip-option').addEventListener('click', () => {
+    overlay.remove();
+    startSnipMode('single');
+  });
+
+  document.getElementById('scroll-snip-option').addEventListener('click', () => {
+    overlay.remove();
+    startSnipMode('scroll');
+  });
+
+  document.getElementById('navigate-snip-option').addEventListener('click', () => {
+    overlay.remove();
+    startSnipMode('navigate');
+  });
+
+  document.getElementById('cancel-snip-selector').addEventListener('click', () => {
+    overlay.remove();
+  });
+
+  // Close on overlay click
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) {
+      overlay.remove();
+    }
+  });
+
+  // Add hover effects
+  const buttons = modal.querySelectorAll('button[id$="-option"]');
+  buttons.forEach(button => {
+    button.addEventListener('mouseenter', () => {
+      button.style.transform = 'translateY(-2px)';
+      button.style.boxShadow = '0 8px 20px rgba(0, 0, 0, 0.2)';
+    });
+    button.addEventListener('mouseleave', () => {
+      button.style.transform = 'translateY(0)';
+      button.style.boxShadow = 'none';
+    });
+  });
+}
+
 // Start snip mode with specific mode
 function startSnipMode(mode = 'single') {
   if (isSnipMode) return;
@@ -2771,9 +2918,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     // Handle view mode switching from popup
     switchViewMode(request.viewMode);
     showNotification(`Switched to ${request.viewMode === 'single' ? 'single entry' : 'full view'} mode`, 'info');
-  } else if (request.action === 'startSnipMode') {
-    // Handle snip mode start from popup
-    startSnipMode(request.mode || 'single');
+  } else if (request.action === 'showSnipModeSelector') {
+    // Show snip mode selection modal
+    showSnipModeSelector();
   } else if (request.action === 'updateAuth') {
     // Refresh auth status
     checkAuth();

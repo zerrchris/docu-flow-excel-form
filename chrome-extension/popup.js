@@ -3,9 +3,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const statusDiv = document.getElementById('status');
   const toggleBtn = document.getElementById('toggleBtn');
   const viewModeBtn = document.getElementById('viewModeBtn');
-  const singleSnipBtn = document.getElementById('singleSnipBtn');
-  const scrollSnipBtn = document.getElementById('scrollSnipBtn');
-  const navigateSnipBtn = document.getElementById('navigateSnipBtn');
+  const screenshotBtn = document.getElementById('screenshotBtn');
   const openAppBtn = document.getElementById('openApp');
 
   // Check current extension status
@@ -24,14 +22,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (isEnabled && hasActiveRunsheet) {
         viewModeBtn.style.display = 'block';
         viewModeBtn.textContent = viewMode === 'single' ? 'Switch to Full View' : 'Switch to Single Entry';
-        singleSnipBtn.style.display = 'block';
-        scrollSnipBtn.style.display = 'block';
-        navigateSnipBtn.style.display = 'block';
+        screenshotBtn.style.display = 'block';
       } else {
         viewModeBtn.style.display = 'none';
-        singleSnipBtn.style.display = 'none';
-        scrollSnipBtn.style.display = 'none';
-        navigateSnipBtn.style.display = 'none';
+        screenshotBtn.style.display = 'none';
       }
       
       return isEnabled;
@@ -94,57 +88,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // Single snip mode
-  singleSnipBtn.addEventListener('click', async () => {
+  // Screenshot button
+  screenshotBtn.addEventListener('click', async () => {
     try {
       const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
       if (tabs[0]) {
         chrome.tabs.sendMessage(tabs[0].id, { 
-          action: 'startSnipMode',
-          mode: 'single'
+          action: 'showSnipModeSelector'
         }).catch(() => {
-          console.error('Could not start single snip mode');
+          console.error('Could not show snip mode selector');
         });
       }
       window.close(); // Close popup after starting snip mode
     } catch (error) {
-      console.error('Error starting single snip mode:', error);
-    }
-  });
-
-  // Snip and scroll mode
-  scrollSnipBtn.addEventListener('click', async () => {
-    try {
-      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (tabs[0]) {
-        chrome.tabs.sendMessage(tabs[0].id, { 
-          action: 'startSnipMode',
-          mode: 'scroll'
-        }).catch(() => {
-          console.error('Could not start scroll snip mode');
-        });
-      }
-      window.close(); // Close popup after starting snip mode
-    } catch (error) {
-      console.error('Error starting scroll snip mode:', error);
-    }
-  });
-
-  // Click and navigate mode
-  navigateSnipBtn.addEventListener('click', async () => {
-    try {
-      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (tabs[0]) {
-        chrome.tabs.sendMessage(tabs[0].id, { 
-          action: 'startSnipMode',
-          mode: 'navigate'
-        }).catch(() => {
-          console.error('Could not start navigate snip mode');
-        });
-      }
-      window.close(); // Close popup after starting snip mode
-    } catch (error) {
-      console.error('Error starting navigate snip mode:', error);
+      console.error('Error showing snip mode selector:', error);
     }
   });
 
