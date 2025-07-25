@@ -1428,7 +1428,23 @@ function createSingleEntryView(content) {
           // Tab moves to next field
           e.preventDefault();
           const currentIndex = Array.from(dataRow.children).indexOf(cell);
-          if (currentIndex < dataRow.children.length - 1) {
+          
+          // Check if this is the last editable cell (not counting Document File Name)
+          const allCells = Array.from(dataRow.children);
+          const editableCells = allCells.filter(c => c.querySelector('textarea'));
+          const isLastEditableCell = editableCells[editableCells.length - 1] === cell;
+          
+          if (isLastEditableCell) {
+            // Focus the add row button in the Document File Name cell
+            const documentCell = allCells.find(c => {
+              const input = c.querySelector('input[data-column="Document File Name"]');
+              return input !== null;
+            });
+            const addButton = documentCell?.querySelector('.add-row-btn');
+            if (addButton) {
+              addButton.focus();
+            }
+          } else if (currentIndex < dataRow.children.length - 1) {
             const nextCell = dataRow.children[currentIndex + 1];
             const nextTextarea = nextCell.querySelector('textarea');
             const nextInput = nextCell.querySelector('input');
@@ -1439,13 +1455,6 @@ function createSingleEntryView(content) {
               nextInput.focus();
             } else if (nextButton) {
               nextButton.focus();
-            }
-          } else {
-            // If this is the last cell, focus the add row button in the Document File Name cell
-            const documentCell = dataRow.querySelector('.table-cell[data-column="Document File Name"]');
-            const addButton = documentCell?.querySelector('.add-row-btn');
-            if (addButton) {
-              addButton.focus();
             }
           }
         }
