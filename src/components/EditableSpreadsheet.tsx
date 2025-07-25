@@ -1122,11 +1122,15 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     
     // Now set everything together to avoid triggering missing column checks prematurely
     setRunsheetName(runsheet.name);
+    console.log('🔧 Debug: Setting runsheet data:', runsheet.data);
+    console.log('🔧 Debug: Data length:', runsheet.data?.length);
+    console.log('🔧 Debug: First row sample:', runsheet.data?.[0]);
     setData(runsheet.data);
     setColumnInstructions(finalColumnInstructions);
     onColumnInstructionsChange?.(finalColumnInstructions);
     
     // Set columns last, after column instructions are ready
+    console.log('🔧 Debug: Setting runsheet columns:', runsheet.columns);
     setColumns(runsheet.columns);
     onColumnChange(runsheet.columns);
     
@@ -1190,7 +1194,11 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       }
 
       if (runsheet) {
-        console.log('Loading runsheet from URL:', runsheet);
+        console.log('🔧 Debug: Loading runsheet from URL:', runsheet);
+        console.log('🔧 Debug: Runsheet ID:', runsheet.id);
+        console.log('🔧 Debug: Runsheet name:', runsheet.name);
+        console.log('🔧 Debug: Runsheet data:', runsheet.data);
+        console.log('🔧 Debug: Runsheet columns:', runsheet.columns);
         setIsLoadingRunsheet(true);
         await loadRunsheet(runsheet);
       }
