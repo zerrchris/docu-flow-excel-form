@@ -968,19 +968,21 @@ function createSingleEntryView(content) {
         font-size: 10px !important;
         font-weight: 500 !important;
         color: hsl(var(--foreground, 222 47% 11%)) !important;
-        text-align: center !important;
         flex: 1 !important;
         word-break: break-word !important;
         line-height: 1.2 !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
       `;
       
-      // Document controls
+      // Document controls - positioned to the right of filename
       const documentControls = document.createElement('div');
       documentControls.style.cssText = `
         display: flex !important;
         gap: 2px !important;
-        width: 100% !important;
-        justify-content: center !important;
+        flex-shrink: 0 !important;
+        margin-left: auto !important;
       `;
       
       // Brain button
@@ -1038,14 +1040,14 @@ function createSingleEntryView(content) {
       uploadInterface.appendChild(addFileBtn);
       uploadInterface.appendChild(screenshotBtn);
       
-      // Build document interface
+      // Build document interface with controls on the right side of filename
       filenameDisplay.appendChild(fileIcon);
       filenameDisplay.appendChild(filenameText);
+      filenameDisplay.appendChild(documentControls);
       documentControls.appendChild(docBrainBtn);
       documentControls.appendChild(editBtn);
       documentControls.appendChild(deleteBtn);
       documentInterface.appendChild(filenameDisplay);
-      documentInterface.appendChild(documentControls);
       
       // Create hidden file input
       const fileInput = document.createElement('input');
@@ -1078,10 +1080,10 @@ function createSingleEntryView(content) {
       // Handle file upload
       const handleFileUpload = (file) => {
         if (file) {
-          // Update the current row's Document File Name field
-          const documentInput = document.querySelector('.editable-row input[data-column="Document File Name"]');
-          if (documentInput) {
-            documentInput.value = file.name;
+        // Update the current row's Document File Name field (hidden input)
+        const documentInput = document.querySelector('.editable-row input[data-column="Document File Name"]');
+        if (documentInput) {
+          documentInput.value = file.name;
             
             // Store file for potential processing
             if (!window.extensionFileStorage) {
@@ -1206,6 +1208,14 @@ function createSingleEntryView(content) {
       const cellContent = document.createElement('div');
       cellContent.className = 'cell-content';
       cellContent.textContent = column;
+      cellContent.style.cssText = `
+        height: auto !important;
+        min-height: 20px !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+        padding: 2px !important;
+      `;
       cell.appendChild(cellContent);
     }
     
@@ -1282,60 +1292,13 @@ function createSingleEntryView(content) {
     
     // Create textarea instead of input for multi-line support (except for Document File Name)
     if (column === 'Document File Name') {
-      // Document File Name uses regular input
+      // Document File Name column gets no visible input in data row, just the add row button
+      // Create hidden input to store the filename value but don't display it
       const input = document.createElement('input');
-      input.type = 'text';
+      input.type = 'hidden';
       input.value = runsheetData.data[0]?.[column] || '';
       input.dataset.field = column.toLowerCase().replace(/\s+/g, '_').replace(/[^\w]/g, '');
       input.dataset.column = column;
-      input.readOnly = true;
-      
-      // Add Enter key handler to trigger Add Row button and Tab navigation
-      input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          // Find and click the Add Row button
-          const addButton = cell.querySelector('.add-row-btn');
-          if (addButton) {
-            addRowToSheet();
-          }
-        } else if (e.key === 'Tab' && !e.shiftKey) {
-          // Tab moves to next field or Add Row button if last field
-          e.preventDefault();
-          const currentIndex = Array.from(dataRow.children).indexOf(cell);
-          if (currentIndex < dataRow.children.length - 1) {
-            // Move to next cell
-            const nextCell = dataRow.children[currentIndex + 1];
-            const nextTextarea = nextCell.querySelector('textarea');
-            const nextInput = nextCell.querySelector('input');
-            if (nextTextarea) {
-              nextTextarea.focus();
-            } else if (nextInput) {
-              nextInput.focus();
-            }
-          } else {
-            // If this is the last field, focus the Add Row button
-            const addButton = cell.querySelector('.add-row-btn');
-            if (addButton) {
-              addButton.focus();
-            }
-          }
-        } else if (e.key === 'Tab' && e.shiftKey) {
-          // Shift+Tab moves to previous field
-          e.preventDefault();
-          const currentIndex = Array.from(dataRow.children).indexOf(cell);
-          if (currentIndex > 0) {
-            const prevCell = dataRow.children[currentIndex - 1];
-            const prevTextarea = prevCell.querySelector('textarea');
-            const prevInput = prevCell.querySelector('input');
-            if (prevTextarea) {
-              prevTextarea.focus();
-            } else if (prevInput) {
-              prevInput.focus();
-            }
-          }
-        }
-      });
       
       cell.appendChild(input);
     } else {
@@ -1567,7 +1530,7 @@ function createFullRunsheetView(content) {
     const th = document.createElement('th');
     th.textContent = column;
     th.style.cssText = `
-      padding: 8px 4px !important;
+      padding: 4px !important;
       text-align: left !important;
       font-weight: 600 !important;
       border-right: 1px solid hsl(var(--border, 214 32% 91%)) !important;
@@ -1576,6 +1539,8 @@ function createFullRunsheetView(content) {
       overflow: hidden !important;
       text-overflow: ellipsis !important;
       white-space: nowrap !important;
+      height: auto !important;
+      line-height: 1.2 !important;
     `;
     headerRow.appendChild(th);
   });
