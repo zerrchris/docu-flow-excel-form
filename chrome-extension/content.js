@@ -1410,6 +1410,20 @@ function createSingleEntryView(content) {
         } else if (e.key === 'Enter' && e.altKey) {
           // Alt+Enter creates line break - allow default behavior and resize
           setTimeout(autoResize, 0);
+        } else if (e.key === 'Tab' && e.shiftKey) {
+          // Shift+Tab moves to previous field
+          e.preventDefault();
+          const currentIndex = Array.from(dataRow.children).indexOf(cell);
+          if (currentIndex > 0) {
+            const prevCell = dataRow.children[currentIndex - 1];
+            const prevTextarea = prevCell.querySelector('textarea');
+            const prevInput = prevCell.querySelector('input');
+            if (prevTextarea) {
+              prevTextarea.focus();
+            } else if (prevInput) {
+              prevInput.focus();
+            }
+          }
         } else if (e.key === 'Tab') {
           // Tab moves to next field
           e.preventDefault();
@@ -1428,24 +1442,10 @@ function createSingleEntryView(content) {
             }
           } else {
             // If this is the last cell, focus the add row button in the Document File Name cell
-            const documentCell = dataRow.querySelector('[data-column="Document File Name"]')?.closest('.table-cell');
+            const documentCell = dataRow.querySelector('.table-cell[data-column="Document File Name"]');
             const addButton = documentCell?.querySelector('.add-row-btn');
             if (addButton) {
               addButton.focus();
-            }
-          }
-        } else if (e.key === 'Tab' && e.shiftKey) {
-          // Shift+Tab moves to previous field
-          e.preventDefault();
-          const currentIndex = Array.from(dataRow.children).indexOf(cell);
-          if (currentIndex > 0) {
-            const prevCell = dataRow.children[currentIndex - 1];
-            const prevTextarea = prevCell.querySelector('textarea');
-            const prevInput = prevCell.querySelector('input');
-            if (prevTextarea) {
-              prevTextarea.focus();
-            } else if (prevInput) {
-              prevInput.focus();
             }
           }
         }
