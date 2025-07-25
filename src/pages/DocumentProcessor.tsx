@@ -1071,7 +1071,7 @@ Image: [base64 image data]`;
               Save
             </Button>
             <Button 
-              variant="destructive" 
+              variant="secondary" 
               onClick={() => {
                 setShowNavigationDialog(false);
                 navigate('/app');
