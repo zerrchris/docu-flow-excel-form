@@ -1,6 +1,7 @@
 // DocuFlow Runsheet Assistant - Content Script
 
-console.log('🔧 DocuFlow Extension: Content script loaded');
+console.log('🔧 DocuFlow Extension: Content script loading started');
+console.log('🔧 DocuFlow Extension: Document ready state:', document.readyState);
 
 // Global variables
 let runsheetButton = null;
@@ -2701,8 +2702,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 // Initialize when page loads
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', init);
-} else {
-  init();
+try {
+  console.log('🔧 DocuFlow Extension: Initializing...');
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+} catch (error) {
+  console.error('🔧 DocuFlow Extension: Initialization error:', error);
 }
