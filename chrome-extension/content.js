@@ -1855,8 +1855,8 @@ function openCurrentRunsheetInApp() {
     ? 'http://localhost:5173' 
     : 'https://preview--docu-flow-excel-form.lovable.app';
   
-  // Construct URL to open the runsheet directly
-  const runsheetUrl = `${appUrl}/runsheet`;
+  // Construct URL to open the specific runsheet
+  const runsheetUrl = `${appUrl}/runsheet?id=${activeRunsheet.id || 'default'}`;
   
   // Open in new tab
   window.open(runsheetUrl, '_blank');
