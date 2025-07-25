@@ -561,6 +561,24 @@ async function addRowToSheet() {
     }
   });
   
+  // Check if there's a captured snip to include
+  if (window.currentCapturedSnip && window.currentSnipFilename) {
+    console.log('🔧 RunsheetPro Extension: Including captured snip in row data');
+    // Upload the snip first, then include its filename in the row data
+    try {
+      const uploadResult = await uploadSnipToStorage(window.currentCapturedSnip);
+      rowData['Document File Name'] = window.currentSnipFilename;
+      hasData = true;
+      
+      // Clear the captured snip since we're about to save it
+      window.currentCapturedSnip = null;
+      window.currentSnipFilename = null;
+    } catch (error) {
+      console.error('Error uploading captured snip:', error);
+      showNotification('Failed to upload captured snip, but continuing with other data...', 'warning');
+    }
+  }
+  
   if (!hasData) {
     showNotification('Please enter some data first', 'error');
     return;
@@ -2799,17 +2817,39 @@ async function captureSelectedArea(left, top, width, height) {
           
           showNotification(`Snip ${capturedSnips.length} captured!`, 'success');
           
-          // Handle single mode auto-completion
+          // Handle single mode - just store the snip locally, don't save to database yet
           if (snipMode === 'single') {
             try {
-              // Upload and link the snip immediately for single mode
-              const uploadResult = await uploadSnipToStorage(blob);
-              await linkSnipToRunsheet(uploadResult.url);
+              // Store the snip locally for later use
+              window.currentCapturedSnip = blob;
+              window.currentSnipFilename = `captured_snip_${Date.now()}.png`;
+              
+              // Update the Document File Name field in the UI
+              const input = document.querySelector(`input[data-column="Document File Name"]`);
+              if (input) {
+                input.value = window.currentSnipFilename;
+              }
+              
+              // Update the Document File Name column header to show the document interface
+              const headerContainer = document.querySelector('.document-header-container');
+              if (headerContainer) {
+                const uploadInterface = headerContainer.querySelector('.upload-interface');
+                const documentInterface = headerContainer.querySelector('.document-interface');
+                const filenameText = headerContainer.querySelector('.filename-text');
+                
+                if (uploadInterface && documentInterface && filenameText) {
+                  uploadInterface.style.display = 'none';
+                  documentInterface.style.display = 'flex';
+                  filenameText.textContent = window.currentSnipFilename;
+                  headerContainer.style.border = '1px solid hsl(var(--border, 214 32% 91%))';
+                }
+              }
+              
               cleanupSnipMode();
-              showNotification('Snip linked to runsheet!', 'success');
+              showNotification('Snip captured! Fill in data and click "Add to Row" to save everything together.', 'success');
             } catch (error) {
-              console.error('Error auto-linking snip:', error);
-              showNotification('Snip captured but failed to link to runsheet', 'error');
+              console.error('Error capturing snip:', error);
+              showNotification('Failed to capture snip', 'error');
               cleanupSnipMode();
             }
           }
