@@ -1,7 +1,7 @@
-// DocuFlow Runsheet Assistant - Content Script
+// RunsheetPro Runsheet Assistant - Content Script
 
-console.log('🔧 DocuFlow Extension: Content script loading started');
-console.log('🔧 DocuFlow Extension: Document ready state:', document.readyState);
+console.log('🔧 RunsheetPro Extension: Content script loading started');
+console.log('🔧 RunsheetPro Extension: Document ready state:', document.readyState);
 
 // Global variables
 let runsheetButton = null;
@@ -25,10 +25,10 @@ async function checkAuth() {
     const authData = await chrome.storage.local.get(['supabase_session']);
     if (authData.supabase_session && authData.supabase_session.access_token) {
       userSession = authData.supabase_session;
-      console.log('🔧 DocuFlow Extension: User authenticated');
+      console.log('🔧 RunsheetPro Extension: User authenticated');
       return true;
     }
-    console.log('🔧 DocuFlow Extension: No authentication found');
+    console.log('🔧 RunsheetPro Extension: No authentication found');
     return false;
   } catch (error) {
     console.error('Auth check failed:', error);
@@ -40,10 +40,10 @@ async function checkAuth() {
 function createRunsheetButton() {
   if (runsheetButton) return; // Already exists
   
-  console.log('🔧 DocuFlow Extension: Creating runsheet button');
+  console.log('🔧 RunsheetPro Extension: Creating runsheet button');
   
   runsheetButton = document.createElement('div');
-  runsheetButton.id = 'docuflow-runsheet-button';
+  runsheetButton.id = 'runsheetpro-runsheet-button';
   runsheetButton.style.cssText = `
     position: fixed !important;
     bottom: 20px !important;
@@ -65,7 +65,7 @@ function createRunsheetButton() {
     user-select: none !important;
   `;
   runsheetButton.innerHTML = '📋';
-  runsheetButton.title = 'DocuFlow Runsheet Assistant';
+  runsheetButton.title = 'RunsheetPro Runsheet Assistant';
   
   // Hover effects
   runsheetButton.addEventListener('mouseenter', () => {
@@ -92,11 +92,11 @@ function createRunsheetButton() {
 
 // Show sign-in popup
 function showSignInPopup() {
-  console.log('🔧 DocuFlow Extension: Showing sign-in popup');
+  console.log('🔧 RunsheetPro Extension: Showing sign-in popup');
   
   // Create dialog
   const dialog = document.createElement('div');
-  dialog.id = 'docuflow-signin-popup';
+  dialog.id = 'runsheetpro-signin-popup';
   dialog.style.cssText = `
     position: fixed !important;
     top: 50% !important;
@@ -127,7 +127,7 @@ function showSignInPopup() {
 
   dialog.innerHTML = `
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-      <h3 style="margin: 0; font-size: 18px; font-weight: 600;">Sign In to DocuFlow</h3>
+      <h3 style="margin: 0; font-size: 18px; font-weight: 600;">Sign In to RunsheetPro</h3>
       <button id="close-signin" style="background: none; border: none; font-size: 20px; cursor: pointer; color: hsl(var(--muted-foreground, 215 16% 47%));">×</button>
     </div>
     <form id="signin-form" style="display: flex; flex-direction: column; gap: 16px;">
@@ -235,11 +235,11 @@ function showSignInPopup() {
 
 // Show quick create dialog
 function showQuickCreateDialog() {
-  console.log('🔧 DocuFlow Extension: Showing quick create dialog');
+  console.log('🔧 RunsheetPro Extension: Showing quick create dialog');
   
   // Create dialog
   const dialog = document.createElement('div');
-  dialog.id = 'docuflow-quick-create';
+  dialog.id = 'runsheetpro-quick-create';
   dialog.style.cssText = `
     position: fixed !important;
     top: 50% !important;
@@ -375,11 +375,11 @@ function showQuickCreateDialog() {
 
 // Show runsheet selector with real data from Supabase
 async function showRunsheetSelector() {
-  console.log('🔧 DocuFlow Extension: Showing runsheet selector');
+  console.log('🔧 RunsheetPro Extension: Showing runsheet selector');
   
   // Create dialog
   const dialog = document.createElement('div');
-  dialog.id = 'docuflow-runsheet-selector';
+  dialog.id = 'runsheetpro-runsheet-selector';
   dialog.style.cssText = `
     position: fixed !important;
     top: 50% !important;
@@ -541,10 +541,10 @@ async function addRowToSheet() {
     return;
   }
   
-  console.log('🔧 DocuFlow Extension: Adding row to sheet');
+  console.log('🔧 RunsheetPro Extension: Adding row to sheet');
   
   // Gather data from input fields and textareas
-  const inputs = document.querySelectorAll('#docuflow-runsheet-frame input, #docuflow-runsheet-frame textarea');
+  const inputs = document.querySelectorAll('#runsheetpro-runsheet-frame input, #runsheetpro-runsheet-frame textarea');
   const rowData = {};
   let hasData = false;
   
@@ -621,12 +621,12 @@ async function addRowToSheet() {
       });
       
       // Focus back to first input or textarea for quick data entry
-      const firstInput = document.querySelector('#docuflow-runsheet-frame input, #docuflow-runsheet-frame textarea');
+      const firstInput = document.querySelector('#runsheetpro-runsheet-frame input, #runsheetpro-runsheet-frame textarea');
       if (firstInput) {
         firstInput.focus();
       }
       
-      console.log('🔧 DocuFlow Extension: Row added successfully to index:', nextRowIndex);
+      console.log('🔧 RunsheetPro Extension: Row added successfully to index:', nextRowIndex);
     } else {
       throw new Error(result.error || 'Failed to add row');
     }
@@ -695,7 +695,7 @@ async function analyzeDocument(file, filename) {
 
 // Load a specific runsheet
 function loadRunsheet(runsheet) {
-  console.log('🔧 DocuFlow Extension: Loading runsheet:', runsheet.name);
+  console.log('🔧 RunsheetPro Extension: Loading runsheet:', runsheet.name);
   
   activeRunsheet = runsheet;
   
@@ -743,14 +743,14 @@ function toggleRunsheetFrame() {
 function createRunsheetFrame() {
   if (runsheetFrame) return; // Already exists
   
-  console.log('🔧 DocuFlow Extension: Creating runsheet frame');
+  console.log('🔧 RunsheetPro Extension: Creating runsheet frame');
   
   // Create main frame container
   runsheetFrame = document.createElement('div');
-  runsheetFrame.id = 'docuflow-runsheet-frame';
+  runsheetFrame.id = 'runsheetpro-runsheet-frame';
   
   // Restore saved height or use default
-  const savedHeight = localStorage.getItem('docuflow-frame-height') || '200';
+  const savedHeight = localStorage.getItem('runsheetpro-frame-height') || '200';
   runsheetFrame.style.height = `${savedHeight}px`;
   document.body.style.paddingBottom = `${savedHeight}px`;
   
@@ -793,7 +793,7 @@ function createRunsheetFrame() {
     document.body.style.paddingBottom = `${newHeight}px`;
     
     // Save preferred height
-    localStorage.setItem('docuflow-frame-height', newHeight.toString());
+    localStorage.setItem('runsheetpro-frame-height', newHeight.toString());
   };
   
   const handleMouseUp = () => {
@@ -812,7 +812,7 @@ function createRunsheetFrame() {
   const header = document.createElement('div');
   header.className = 'frame-header';
   header.innerHTML = `
-    <span class="frame-title">DocuFlow Runsheet - ${activeRunsheet?.name || 'Default'}</span>
+    <span class="frame-title">RunsheetPro Runsheet - ${activeRunsheet?.name || 'Default'}</span>
     <div class="frame-controls">
       <button id="open-app-btn" class="control-btn">🚀 Open in App</button>
       <button id="view-mode-btn" class="control-btn">${currentViewMode === 'single' ? '📋 Full View' : '📝 Single Entry'}</button>
@@ -1285,7 +1285,7 @@ function createSingleEntryView(content) {
       const width = Math.max(80, startWidth + e.clientX - startX);
       
       // Update all cells in this column
-      const allCells = document.querySelectorAll(`#docuflow-runsheet-frame .table-cell:nth-child(${index + 1})`);
+      const allCells = document.querySelectorAll(`#runsheetpro-runsheet-frame .table-cell:nth-child(${index + 1})`);
       allCells.forEach(c => {
         c.style.width = `${width}px`;
         c.style.minWidth = `${width}px`;
@@ -1784,7 +1784,7 @@ function openCurrentRunsheetInApp() {
 
 // Start snip mode (select area to capture)
 function startSnipMode() {
-  console.log('🔧 DocuFlow Extension: Starting snip mode');
+  console.log('🔧 RunsheetPro Extension: Starting snip mode');
   
   // Create overlay for area selection
   const overlay = document.createElement('div');
@@ -1878,7 +1878,7 @@ function startSnipMode() {
 
 // Capture selected area
 async function captureSelectedArea(left, top, width, height) {
-  console.log('🔧 DocuFlow Extension: Capturing area:', { left, top, width, height });
+  console.log('🔧 RunsheetPro Extension: Capturing area:', { left, top, width, height });
   
   try {
     // Request screenshot from background script
@@ -1905,7 +1905,7 @@ async function captureSelectedArea(left, top, width, height) {
         captures.push(croppedDataUrl);
         showNotification('Area captured successfully!', 'success');
         
-        console.log('🔧 DocuFlow Extension: Snipped area captured');
+        console.log('🔧 RunsheetPro Extension: Snipped area captured');
       };
       img.src = response.dataUrl;
     }
@@ -1945,7 +1945,7 @@ function startCaptureLoop() {
   chrome.runtime.sendMessage({ action: 'captureTab' }, (response) => {
     if (response && response.dataUrl) {
       captures.push(response.dataUrl);
-      console.log(`🔧 DocuFlow Extension: Captured image ${captures.length}`);
+      console.log(`🔧 RunsheetPro Extension: Captured image ${captures.length}`);
     }
     
     if (isCapturing) {
@@ -1958,7 +1958,7 @@ function startCaptureLoop() {
 async function processCapturedImages() {
   if (captures.length === 0) return;
   
-  console.log(`🔧 DocuFlow Extension: Processing ${captures.length} captured images`);
+  console.log(`🔧 RunsheetPro Extension: Processing ${captures.length} captured images`);
   // For now, just use the last capture
   const latestCapture = captures[captures.length - 1];
   
@@ -1972,10 +1972,10 @@ async function syncData() {
     return;
   }
   
-  console.log('🔧 DocuFlow Extension: Syncing data');
+  console.log('🔧 RunsheetPro Extension: Syncing data');
   
   // Gather data from input fields and textareas
-  const inputs = document.querySelectorAll('#docuflow-runsheet-frame input, #docuflow-runsheet-frame textarea');
+  const inputs = document.querySelectorAll('#runsheetpro-runsheet-frame input, #runsheetpro-runsheet-frame textarea');
   const rowData = {};
   
   inputs.forEach(input => {
@@ -1985,7 +1985,7 @@ async function syncData() {
   });
   
   if (Object.keys(rowData).length === 0) {
-    console.log('🔧 DocuFlow Extension: No data to sync');
+    console.log('🔧 RunsheetPro Extension: No data to sync');
     return;
   }
   
@@ -2008,7 +2008,7 @@ async function syncData() {
     
     if (result.success) {
       showNotification('Data synced successfully!', 'success');
-      console.log('🔧 DocuFlow Extension: Data synced successfully');
+      console.log('🔧 RunsheetPro Extension: Data synced successfully');
     } else {
       throw new Error(result.error || 'Sync failed');
     }
@@ -2045,7 +2045,7 @@ function toggleMinimize() {
 // Show notification
 function showNotification(message, type = 'info') {
   const notification = document.createElement('div');
-  notification.className = `docuflow-notification ${type}`;
+  notification.className = `runsheetpro-notification ${type}`;
   notification.textContent = message;
   
   document.body.appendChild(notification);
@@ -2076,11 +2076,11 @@ async function init() {
   // Check if extension is disabled
   const settings = await chrome.storage.local.get(['extension_disabled']);
   if (settings.extension_disabled) {
-    console.log('🔧 DocuFlow Extension: Extension is disabled');
+    console.log('🔧 RunsheetPro Extension: Extension is disabled');
     return;
   }
   
-  console.log('🔧 DocuFlow Extension: Initializing');
+  console.log('🔧 RunsheetPro Extension: Initializing');
   
   // Check authentication
   const isAuthenticated = await checkAuth();
@@ -2091,7 +2091,7 @@ async function init() {
   // Check if there's an active runsheet to restore
   const storedData = await chrome.storage.local.get(['active_runsheet']);
   if (storedData.active_runsheet && isAuthenticated) {
-    console.log('🔧 DocuFlow Extension: Restoring active runsheet:', storedData.active_runsheet.name);
+    console.log('🔧 RunsheetPro Extension: Restoring active runsheet:', storedData.active_runsheet.name);
     
     // Restore the active runsheet
     activeRunsheet = storedData.active_runsheet;
@@ -2107,7 +2107,7 @@ async function init() {
     showNotification(`Restored runsheet: ${activeRunsheet.name}`, 'success');
   }
   
-  console.log('🔧 DocuFlow Extension: Initialized successfully');
+  console.log('🔧 RunsheetPro Extension: Initialized successfully');
 }
 
 // =============================================================================
@@ -2118,7 +2118,7 @@ async function init() {
 function startSnipMode() {
   if (isSnipMode) return;
   
-  console.log('🔧 DocuFlow Extension: Starting snip mode');
+  console.log('🔧 RunsheetPro Extension: Starting snip mode');
   isSnipMode = true;
   capturedSnips = [];
   
@@ -2132,7 +2132,7 @@ function createSnipOverlay() {
   if (snipOverlay) return;
   
   snipOverlay = document.createElement('div');
-  snipOverlay.id = 'docuflow-snip-overlay';
+  snipOverlay.id = 'runsheetpro-snip-overlay';
   snipOverlay.style.cssText = `
     position: fixed !important;
     top: 0 !important;
@@ -2229,7 +2229,7 @@ function createSnipControlPanel() {
   if (snipControlPanel) return;
   
   snipControlPanel = document.createElement('div');
-  snipControlPanel.id = 'docuflow-snip-controls';
+  snipControlPanel.id = 'runsheetpro-snip-controls';
   snipControlPanel.style.cssText = `
     position: fixed !important;
     top: 20px !important;
@@ -2415,7 +2415,7 @@ function hideSnipModeForNavigation() {
 // Create navigation control panel with snip again option
 function createNavigationControlPanel() {
   const navPanel = document.createElement('div');
-  navPanel.id = 'docuflow-nav-controls';
+  navPanel.id = 'runsheetpro-nav-controls';
   navPanel.style.cssText = `
     position: fixed !important;
     top: 20px !important;
@@ -2539,7 +2539,7 @@ function cleanupSnipMode() {
   }
   
   // Also remove navigation panel if it exists
-  const navPanel = document.getElementById('docuflow-nav-controls');
+  const navPanel = document.getElementById('runsheetpro-nav-controls');
   if (navPanel) {
     navPanel.remove();
   }
@@ -2735,7 +2735,7 @@ async function linkSnipToRunsheet(snipUrl) {
 
 // Listen for messages from other extension parts
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  console.log('🔧 DocuFlow Extension: Received message:', request);
+  console.log('🔧 RunsheetPro Extension: Received message:', request);
   
   if (request.action === 'toggle') {
     if (runsheetButton) {
@@ -2775,12 +2775,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 // Initialize when page loads
 try {
-  console.log('🔧 DocuFlow Extension: Initializing...');
+  console.log('🔧 RunsheetPro Extension: Initializing...');
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
     init();
   }
 } catch (error) {
-  console.error('🔧 DocuFlow Extension: Initialization error:', error);
+  console.error('🔧 RunsheetPro Extension: Initialization error:', error);
 }

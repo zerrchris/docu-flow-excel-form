@@ -1,5 +1,5 @@
-// Background script for DocuFlow Runsheet Assistant
-console.log('DocuFlow extension background script loaded');
+// Background script for RunsheetPro Runsheet Assistant
+console.log('RunsheetPro extension background script loaded');
 
 // Handle messages from content scripts
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -42,7 +42,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 // Handle extension installation
 chrome.runtime.onInstalled.addListener((details) => {
-  console.log('DocuFlow extension installed:', details.reason);
+  console.log('RunsheetPro extension installed:', details.reason);
   
   if (details.reason === 'install') {
     // Set default settings on first install

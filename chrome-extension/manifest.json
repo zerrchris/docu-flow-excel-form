@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "DocuFlow Runsheet Assistant",
+  "name": "RunsheetPro Assistant",
   "version": "1.0.0",
   "description": "Add runsheet functionality to any webpage for document processing",
   
@@ -34,7 +34,7 @@
 
   "action": {
     "default_popup": "popup.html",
-    "default_title": "DocuFlow Runsheet"
+    "default_title": "RunsheetPro"
   },
 
   "web_accessible_resources": [
