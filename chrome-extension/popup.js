@@ -113,7 +113,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     const appUrl = isLocalDevelopment 
       ? 'http://localhost:5173' 
-      : 'https://docuflow-chrome-extension.lovableproject.com';
+      : 'https://preview--docu-flow-excel-form.lovable.app';
       
     chrome.tabs.create({ 
       url: appUrl 
