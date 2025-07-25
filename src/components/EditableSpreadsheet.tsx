@@ -3131,9 +3131,16 @@ ${extractionFields}`
                </TableRow>
              </TableHeader>
 
-             {/* Table Body */}
-             <TableBody>
-               {data.map((row, rowIndex) => (
+              {/* Table Body */}
+              <TableBody>
+                {(() => {
+                  console.log('🔧 EditableSpreadsheet: Rendering table body');
+                  console.log('🔧 EditableSpreadsheet: Data length:', data?.length);
+                  console.log('🔧 EditableSpreadsheet: Data sample:', data?.[0]);
+                  console.log('🔧 EditableSpreadsheet: Columns:', columns);
+                  return null;
+                })()}
+                {data.map((row, rowIndex) => (
                  <React.Fragment key={rowIndex}>
                    {/* Show inline document viewer above this row if it's selected */}
                    {inlineViewerRow === rowIndex && (
