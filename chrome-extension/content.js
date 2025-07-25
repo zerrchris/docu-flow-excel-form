@@ -677,9 +677,10 @@ async function addRowToSheet() {
       // Update the global current row tracking to the next empty row
       if (window.currentDisplayRowIndex !== undefined) {
         window.currentDisplayRowIndex = nextRowIndex + 1;
-        // Refresh the single entry view to show the next empty row
-        refreshSingleEntryView();
       }
+      
+      // Refresh the current view (both single and full views)
+      refreshCurrentView();
     } else {
       console.error('Sync result indicates failure:', result);
       throw new Error(result.error || 'Failed to add row');
@@ -937,6 +938,34 @@ function refreshSingleEntryView() {
       firstInput.focus();
     }
   }, 100);
+}
+
+// Refresh the current view (either single or full)
+function refreshCurrentView() {
+  if (!activeRunsheet) return;
+  
+  const content = document.querySelector('#runsheetpro-runsheet-frame .frame-content');
+  if (!content) return;
+  
+  // Clear current content
+  content.innerHTML = '';
+  
+  // Recreate the appropriate view based on current mode
+  if (currentViewMode === 'full') {
+    createFullRunsheetView(content);
+  } else {
+    createSingleEntryView(content);
+  }
+  
+  // Focus first input for quick data entry in single entry mode
+  if (currentViewMode === 'single') {
+    setTimeout(() => {
+      const firstInput = document.querySelector('#runsheetpro-runsheet-frame input, #runsheetpro-runsheet-frame textarea');
+      if (firstInput) {
+        firstInput.focus();
+      }
+    }, 100);
+  }
 }
 // Create single entry view (original functionality)
 // Create single entry view (original functionality)

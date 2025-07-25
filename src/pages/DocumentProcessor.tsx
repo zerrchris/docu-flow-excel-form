@@ -182,10 +182,24 @@ const DocumentProcessor: React.FC = () => {
     }
   }, [location.state]);
 
-  // Handle URL parameters for actions (upload, google-drive, etc.)
+  // Handle URL parameters for actions (upload, google-drive, etc.) and runsheet ID
   useEffect(() => {
     const action = searchParams.get('action');
+    const runsheetId = searchParams.get('id');
     console.log('DocumentProcessor useEffect - action from searchParams:', action);
+    console.log('DocumentProcessor useEffect - runsheetId from searchParams:', runsheetId);
+    
+    // Load specific runsheet if ID is provided
+    if (runsheetId && !loadedRunsheetRef.current) {
+      console.log('Loading runsheet from URL parameter:', runsheetId);
+      loadedRunsheetRef.current = runsheetId;
+      
+      // Dispatch event to load the runsheet
+      const loadEvent = new CustomEvent('loadSpecificRunsheet', {
+        detail: { runsheetId }
+      });
+      window.dispatchEvent(loadEvent);
+    }
     
     if (action === 'upload') {
       console.log('Upload action detected, triggering runsheet file dialog...');
@@ -227,7 +241,7 @@ const DocumentProcessor: React.FC = () => {
       const googleDriveEvent = new CustomEvent('openGoogleDrivePicker');
       window.dispatchEvent(googleDriveEvent);
     }
-  }, [searchParams]);
+  }, [searchParams, loadedRunsheetRef]);
 
   // Handle file selection from dashboard upload
   const handleDashboardFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
