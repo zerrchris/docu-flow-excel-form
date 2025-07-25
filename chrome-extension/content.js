@@ -817,10 +817,6 @@ function createRunsheetFrame() {
     <div class="frame-controls">
       <button id="open-app-btn" class="control-btn">🚀 Open in App</button>
       <button id="view-mode-btn" class="control-btn">${currentViewMode === 'single' ? '📋 Full View' : '📝 Single Entry'}</button>
-      <button id="snip-btn" class="control-btn">✂️ Snip</button>
-      <button id="capture-btn" class="control-btn">📷 Capture</button>
-      <button id="sync-btn" class="control-btn">🔄 Sync</button>
-      <button id="minimize-btn" class="control-btn">−</button>
     </div>
   `;
   
@@ -1736,30 +1732,6 @@ function setupFrameEventListeners() {
       switchViewMode(newMode);
     });
   }
-  
-  // Snip button
-  const snipBtn = document.getElementById('snip-btn');
-  if (snipBtn) {
-    snipBtn.addEventListener('click', startSnipMode);
-  }
-  
-  // Capture button
-  const captureBtn = document.getElementById('capture-btn');
-  if (captureBtn) {
-    captureBtn.addEventListener('click', toggleCapture);
-  }
-  
-  // Sync button
-  const syncBtn = document.getElementById('sync-btn');
-  if (syncBtn) {
-    syncBtn.addEventListener('click', syncData);
-  }
-  
-  // Minimize button
-  const minimizeBtn = document.getElementById('minimize-btn');
-  if (minimizeBtn) {
-    minimizeBtn.addEventListener('click', toggleMinimize);
-  }
 }
 
 // Open current runsheet in the main app
@@ -2228,11 +2200,8 @@ function createSnipOverlay() {
     setTimeout(async () => {
       await captureSelectedArea(left, top, width, height);
       
-      // Handle different modes after capture
-      if (snipMode === 'single') {
-        // Single mode: auto-finish after one capture
-        setTimeout(() => finishSnipping(), 500);
-      } else {
+      // Handle different modes after capture  
+      if (snipMode !== 'single') {
         // Multi-capture modes: show controls and continue
         if (snipMode === 'scroll') {
           snipOverlay.style.display = 'block';
@@ -2356,7 +2325,7 @@ async function captureSelectedArea(left, top, width, height) {
       );
       
       // Convert to blob
-      canvas.toBlob((blob) => {
+      canvas.toBlob(async (blob) => {
         if (blob) {
           capturedSnips.push({
             blob: blob,
@@ -2369,8 +2338,26 @@ async function captureSelectedArea(left, top, width, height) {
           updateSnipCounter();
           
           showNotification(`Snip ${capturedSnips.length} captured!`, 'success');
+          
+          // Handle single mode auto-completion
+          if (snipMode === 'single') {
+            try {
+              // Upload and link the snip immediately for single mode
+              const uploadResult = await uploadSnipToStorage(blob);
+              await linkSnipToRunsheet(uploadResult.url);
+              cleanupSnipMode();
+              showNotification('Snip linked to runsheet!', 'success');
+            } catch (error) {
+              console.error('Error auto-linking snip:', error);
+              showNotification('Snip captured but failed to link to runsheet', 'error');
+              cleanupSnipMode();
+            }
+          }
         } else {
           showNotification('Failed to capture snip', 'error');
+          if (snipMode === 'single') {
+            cleanupSnipMode();
+          }
         }
       }, 'image/png');
     };
