@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-do
 import { toast } from '@/components/ui/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Upload, FolderOpen, Plus, AlertTriangle, Smartphone, Files, Home, FileStack } from 'lucide-react';
+import { Upload, FolderOpen, Plus, AlertTriangle, Smartphone, Files, Home, FileStack, RefreshCw } from 'lucide-react';
 import DocumentFrame from '@/components/DocumentFrame';
 import EditableSpreadsheet from '@/components/EditableSpreadsheet';
 import AuthButton from '@/components/AuthButton';
@@ -865,15 +865,31 @@ Image: [base64 image data]`;
 
   // Handle starting a new runsheet
   const handleStartNew = () => {
+    if (hasUnsavedChanges) {
+      setShowNavigationDialog(true);
+    } else {
+      startNewRunsheet();
+    }
+  };
+
+  const startNewRunsheet = () => {
     // Reset to default state with default extraction instructions
     setColumns(DEFAULT_COLUMNS);
     setColumnInstructions(DEFAULT_EXTRACTION_INSTRUCTIONS);
     setSpreadsheetData([]);
     setFormData({});
     
+    // Clear unsaved changes flag
+    setHasUnsavedChanges(false);
+    
     // Dispatch event to reset the spreadsheet
     const resetEvent = new CustomEvent('resetSpreadsheet');
     window.dispatchEvent(resetEvent);
+    
+    toast({
+      title: "New runsheet started",
+      description: "Started a fresh runsheet with default settings.",
+    });
   };
 
 
@@ -894,6 +910,15 @@ Image: [base64 image data]`;
               </h1>
             </Link>
             <div className="flex items-center gap-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleStartNew}
+                className="gap-2"
+              >
+                <RefreshCw className="h-4 w-4" />
+                New Runsheet
+              </Button>
               <Button
                 variant="default"
                 size="sm"
@@ -1021,13 +1046,24 @@ Image: [base64 image data]`;
               Cancel
             </Button>
             <Button 
+              variant="secondary" 
+              onClick={() => {
+                const saveEvent = new CustomEvent('saveCurrentRunsheet');
+                window.dispatchEvent(saveEvent);
+                setShowNavigationDialog(false);
+                setTimeout(() => startNewRunsheet(), 500);
+              }}
+            >
+              Save and New
+            </Button>
+            <Button 
               variant="destructive" 
               onClick={() => {
                 setShowNavigationDialog(false);
-                navigate('/app');
+                startNewRunsheet();
               }}
             >
-              Leave Without Saving
+              Continue Without Saving
             </Button>
           </DialogFooter>
         </DialogContent>
