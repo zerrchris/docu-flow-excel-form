@@ -3179,6 +3179,26 @@ async function linkSnipToRunsheet(snipUrl) {
       console.log('Updated Document File Name input with:', filename);
     }
     
+    // Update the Document File Name column header to show the document interface
+    const headerContainer = document.querySelector('.document-header-container');
+    if (headerContainer) {
+      const uploadInterface = headerContainer.querySelector('.upload-interface');
+      const documentInterface = headerContainer.querySelector('.document-interface');
+      const filenameText = headerContainer.querySelector('.filename-text');
+      
+      if (uploadInterface && documentInterface && filenameText) {
+        uploadInterface.style.display = 'none';
+        documentInterface.style.display = 'flex';
+        filenameText.textContent = filename;
+        headerContainer.style.border = '1px solid hsl(var(--border, 214 32% 91%))';
+      }
+    }
+    
+    // Create a file object for the brain button functionality
+    const file = new File([new Blob()], filename, { type: 'image/png' });
+    window.currentAnalysisFile = file;
+    window.currentAnalysisFileName = filename;
+    
     console.log('Snip linked successfully to row', targetRowIndex);
     
   } catch (error) {
