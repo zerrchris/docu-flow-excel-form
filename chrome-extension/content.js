@@ -3186,13 +3186,7 @@ async function linkSnipToRunsheet(snipUrl) {
     });
     throw error;
   }
-      
-      // Trigger the header switch to document mode
-      const headerContainer = document.querySelector('.document-header-container');
-      if (headerContainer) {
-        const uploadInterface = headerContainer.querySelector('.upload-interface');
-        const documentInterface = headerContainer.querySelector('.document-interface');
-        const filenameText = headerContainer.querySelector('.filename-text');
+}
         
         if (uploadInterface && documentInterface && filenameText) {
           uploadInterface.style.display = 'none';
