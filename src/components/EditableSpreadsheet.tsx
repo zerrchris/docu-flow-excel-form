@@ -2962,8 +2962,8 @@ ${extractionFields}`
                      <div className="flex items-center gap-3 w-full">
                        <Upload className="h-6 w-6" />
                        <div className="flex flex-col text-left">
-                         <span className="font-semibold">Upload Documents</span>
-                         <span className="text-sm text-muted-foreground">Upload PDF or image files to extract data</span>
+                          <span className="font-semibold">Upload Runsheet</span>
+                          <span className="text-sm text-muted-foreground">Upload Excel (.xlsx, .xls) or CSV files from your device</span>
                        </div>
                      </div>
                    </Button>
