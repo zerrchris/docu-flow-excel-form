@@ -1042,7 +1042,7 @@ Image: [base64 image data]`;
 
       {/* Navigation Confirmation Dialog */}
       <Dialog open={showNavigationDialog} onOpenChange={setShowNavigationDialog}>
-        <DialogContent className="sm:max-w-[400px]">
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Unsaved Changes</DialogTitle>
             <DialogDescription>
