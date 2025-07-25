@@ -814,6 +814,7 @@ function createRunsheetFrame() {
   header.innerHTML = `
     <span class="frame-title">DocuFlow Runsheet - ${activeRunsheet?.name || 'Default'}</span>
     <div class="frame-controls">
+      <button id="open-app-btn" class="control-btn">🚀 Open in App</button>
       <button id="view-mode-btn" class="control-btn">${currentViewMode === 'single' ? '📋 Full View' : '📝 Single Entry'}</button>
       <button id="snip-btn" class="control-btn">✂️ Snip</button>
       <button id="capture-btn" class="control-btn">📷 Capture</button>
@@ -1720,6 +1721,12 @@ function linkCapturedImageToRow(rowIndex) {
 function setupFrameEventListeners() {
   if (!runsheetFrame) return;
   
+  // Open in app button
+  const openAppBtn = document.getElementById('open-app-btn');
+  if (openAppBtn) {
+    openAppBtn.addEventListener('click', openCurrentRunsheetInApp);
+  }
+  
   // View mode button
   const viewModeBtn = document.getElementById('view-mode-btn');
   if (viewModeBtn) {
@@ -1752,6 +1759,27 @@ function setupFrameEventListeners() {
   if (minimizeBtn) {
     minimizeBtn.addEventListener('click', toggleMinimize);
   }
+}
+
+// Open current runsheet in the main app
+function openCurrentRunsheetInApp() {
+  if (!activeRunsheet) {
+    showNotification('No active runsheet to open', 'error');
+    return;
+  }
+  
+  // Get the current domain (you may need to adjust this URL based on your app's deployment)
+  const appUrl = window.location.origin.includes('localhost') 
+    ? 'http://localhost:5173' 
+    : 'https://your-app-domain.com'; // Replace with your actual app domain
+  
+  // Construct URL with runsheet ID as a parameter
+  const runsheetUrl = `${appUrl}/dashboard?runsheet=${activeRunsheet.id || 'default'}`;
+  
+  // Open in new tab
+  window.open(runsheetUrl, '_blank');
+  
+  showNotification(`Opening runsheet: ${activeRunsheet.name}`, 'info');
 }
 
 // Start snip mode (select area to capture)
