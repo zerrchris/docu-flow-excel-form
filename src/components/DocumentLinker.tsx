@@ -467,6 +467,7 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                 <Button
                   variant="ghost"
                   size="sm"
+                  tabIndex={-1}
                   onClick={(e) => {
                     e.stopPropagation();
                     onAnalyzeDocument(uploadedFile, filename);
@@ -481,6 +482,7 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                   <Button
                     variant="ghost"
                     size="sm"
+                    tabIndex={-1}
                     onClick={(e) => {
                       e.stopPropagation(); // Prevent cell edit mode
                       onOpenWorkspace();
@@ -494,6 +496,7 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                <Button
                  variant="ghost"
                  size="sm"
+                 tabIndex={-1}
                  onClick={(e) => {
                    e.stopPropagation(); // Prevent cell edit mode
                    setEditedFilename(filename);
@@ -507,6 +510,7 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                <Button
                  variant="ghost"
                  size="sm"
+                 tabIndex={-1}
                  onClick={async (e) => {
                   e.stopPropagation(); // Prevent cell edit mode
                   
@@ -566,6 +570,7 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
               <Button
                 variant="ghost"
                 size="sm"
+                tabIndex={-1}
                 onClick={(e) => {
                   e.stopPropagation(); // Prevent cell edit mode
                   handleRemoveDocument();
@@ -611,6 +616,7 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
           <Button
             variant="ghost"
             size="sm"
+            tabIndex={-1}
             onClick={openFileSelector}
             disabled={isUploading}
             className="h-8 text-xs"

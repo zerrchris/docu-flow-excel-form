@@ -3239,45 +3239,46 @@ ${extractionFields}`
                               onKeyDown={(e) => column !== 'Document File Name' && handleKeyDown(e, rowIndex, column)}
                             >
                               {column === 'Document File Name' ? (
-                                <DocumentLinker
-                                  key={`${rowIndex}-${row['Document File Name']}`}
-                                  runsheetId={currentRunsheetId || ''}
-                                  rowIndex={rowIndex}
-                                  currentFilename={row['Document File Name']}
-                                  documentPath={(() => {
-                                    const dbPath = documentMap.get(rowIndex)?.file_path;
-                                    const storagePath = row['Storage Path'];
-                                    return dbPath || storagePath;
-                                  })()}
-                                  existingDocumentUrl={row['Document File Name'] && row['Document File Name'].trim() !== '' ? 'exists' : undefined}
-                                   onDocumentLinked={(filename) => {
-                                      console.log('🔧 EditableSpreadsheet: onDocumentLinked called with filename:', filename);
-                                      console.log('🔧 EditableSpreadsheet: Current row data before update:', data[rowIndex]);
-                                      const newData = [...data];
-                                      newData[rowIndex] = {
-                                        ...newData[rowIndex],
-                                        'Document File Name': filename
-                                      };
-                                      console.log('🔧 EditableSpreadsheet: New row data after update:', newData[rowIndex]);
-                                      setData(newData);
-                                      onDataChange?.(newData);
-                                     
-                                      // Refresh document map after a short delay to ensure DB is updated
-                                      if (currentRunsheetId) {
-                                        setTimeout(() => {
-                                          console.log('🔧 EditableSpreadsheet: Refreshing document map');
-                                          DocumentService.getDocumentMapForRunsheet(currentRunsheetId).then(setDocumentMap);
-                                        }, 500);
-                                      }
-                                   }}
-                                   onDocumentRemoved={() => {
-                                     const newData = [...data];
-                                     newData[rowIndex] = {
-                                       ...newData[rowIndex],
-                                       'Document File Name': ''
-                                     };
-                                     setData(newData);
-                                     onDataChange?.(newData);
+                                <div tabIndex={-1} className="w-full h-full">
+                                  <DocumentLinker
+                                    key={`${rowIndex}-${row['Document File Name']}`}
+                                    runsheetId={currentRunsheetId || ''}
+                                    rowIndex={rowIndex}
+                                    currentFilename={row['Document File Name']}
+                                    documentPath={(() => {
+                                      const dbPath = documentMap.get(rowIndex)?.file_path;
+                                      const storagePath = row['Storage Path'];
+                                      return dbPath || storagePath;
+                                    })()}
+                                    existingDocumentUrl={row['Document File Name'] && row['Document File Name'].trim() !== '' ? 'exists' : undefined}
+                                     onDocumentLinked={(filename) => {
+                                        console.log('🔧 EditableSpreadsheet: onDocumentLinked called with filename:', filename);
+                                        console.log('🔧 EditableSpreadsheet: Current row data before update:', data[rowIndex]);
+                                        const newData = [...data];
+                                        newData[rowIndex] = {
+                                          ...newData[rowIndex],
+                                          'Document File Name': filename
+                                        };
+                                        console.log('🔧 EditableSpreadsheet: New row data after update:', newData[rowIndex]);
+                                        setData(newData);
+                                        onDataChange?.(newData);
+                                       
+                                        // Refresh document map after a short delay to ensure DB is updated
+                                        if (currentRunsheetId) {
+                                          setTimeout(() => {
+                                            console.log('🔧 EditableSpreadsheet: Refreshing document map');
+                                            DocumentService.getDocumentMapForRunsheet(currentRunsheetId).then(setDocumentMap);
+                                          }, 500);
+                                        }
+                                     }}
+                                     onDocumentRemoved={() => {
+                                       const newData = [...data];
+                                       newData[rowIndex] = {
+                                         ...newData[rowIndex],
+                                         'Document File Name': ''
+                                       };
+                                       setData(newData);
+                                       onDataChange?.(newData);
                                     setDocumentMap(prev => {
                                       const newMap = new Map(prev);
                                       newMap.delete(rowIndex);
@@ -3310,9 +3311,10 @@ ${extractionFields}`
                                   isSpreadsheetUpload={true}
                                   autoAnalyze={false}
                                 />
+                                </div>
                                ) : (
                                 row[column] || ''
-                              )}
+                               )}
                             </div>
                         )}
                      </TableCell>
