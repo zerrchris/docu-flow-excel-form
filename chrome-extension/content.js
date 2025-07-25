@@ -2348,8 +2348,8 @@ async function showRunsheetSelector() {
 
   // Load runsheets
   try {
-    const user = await getCurrentUser();
-    if (!user) {
+    // Check if user is authenticated
+    if (!userSession || !userSession.access_token) {
       throw new Error('User not authenticated');
     }
 
@@ -2357,7 +2357,7 @@ async function showRunsheetSelector() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${user.access_token}`
+        'Authorization': `Bearer ${userSession.access_token}`
       },
       body: JSON.stringify({})
     });
