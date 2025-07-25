@@ -2959,15 +2959,16 @@ ${extractionFields}`
                         fileInput.multiple = false;
                         fileInput.style.display = 'none';
                         
-                        fileInput.onchange = (e) => {
-                          const files = (e.target as HTMLInputElement).files;
-                          if (files && files.length > 0) {
-                            const importEvent = new CustomEvent('importRunsheetFile', {
-                              detail: { file: files[0] }
-                            });
-                            window.dispatchEvent(importEvent);
-                          }
-                        };
+                         fileInput.onchange = (e) => {
+                           const files = (e.target as HTMLInputElement).files;
+                           if (files && files.length > 0) {
+                             const importEvent = new CustomEvent('importRunsheetFile', {
+                               detail: { file: files[0] }
+                             });
+                             window.dispatchEvent(importEvent);
+                             setShowNewRunsheetDialog(false);
+                           }
+                         };
                         
                         document.body.appendChild(fileInput);
                         fileInput.click();
@@ -2990,11 +2991,14 @@ ${extractionFields}`
                      </div>
                    </Button>
                    
-                   <Button
-                     onClick={fetchSavedRunsheets}
-                     className="h-16 flex flex-col gap-2 text-left"
-                     variant="outline"
-                   >
+                    <Button
+                      onClick={() => {
+                        fetchSavedRunsheets();
+                        setShowNewRunsheetDialog(false);
+                      }}
+                      className="h-16 flex flex-col gap-2 text-left"
+                      variant="outline"
+                    >
                      <div className="flex items-center gap-3 w-full">
                        <FolderOpen className="h-6 w-6" />
                        <div className="flex flex-col text-left">
@@ -3004,11 +3008,14 @@ ${extractionFields}`
                      </div>
                    </Button>
                    
-                   <Button
-                     onClick={() => setShowGoogleDrivePicker(true)}
-                     className="h-16 flex flex-col gap-2 text-left"
-                     variant="outline"
-                   >
+                    <Button
+                      onClick={() => {
+                        setShowGoogleDrivePicker(true);
+                        setShowNewRunsheetDialog(false);
+                      }}
+                      className="h-16 flex flex-col gap-2 text-left"
+                      variant="outline"
+                    >
                      <div className="flex items-center gap-3 w-full">
                        <Cloud className="h-6 w-6" />
                        <div className="flex flex-col text-left">
