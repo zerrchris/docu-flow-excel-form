@@ -39,9 +39,14 @@ async function checkAuth() {
 
 // Create the floating runsheet button
 function createRunsheetButton() {
-  if (runsheetButton) return; // Already exists
+  console.log('🔧 RunsheetPro Extension: createRunsheetButton() called');
   
-  console.log('🔧 RunsheetPro Extension: Creating runsheet button');
+  if (runsheetButton) {
+    console.log('🔧 RunsheetPro Extension: Button already exists, skipping creation');
+    return; // Already exists
+  }
+  
+  console.log('🔧 RunsheetPro Extension: Creating new runsheet button');
   
   runsheetButton = document.createElement('div');
   runsheetButton.id = 'runsheetpro-runsheet-button';
@@ -3187,7 +3192,6 @@ async function linkSnipToRunsheet(snipUrl) {
     throw error;
   }
 }
-        
         if (uploadInterface && documentInterface && filenameText) {
           uploadInterface.style.display = 'none';
           documentInterface.style.display = 'flex';
@@ -3255,12 +3259,20 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 // Initialize when page loads
 try {
-  console.log('🔧 RunsheetPro Extension: Initializing...');
+  console.log('🔧 RunsheetPro Extension: Starting initialization...');
+  console.log('🔧 RunsheetPro Extension: Document ready state:', document.readyState);
+  
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+    console.log('🔧 RunsheetPro Extension: Adding DOMContentLoaded listener');
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('🔧 RunsheetPro Extension: DOMContentLoaded fired, calling init()');
+      init();
+    });
   } else {
+    console.log('🔧 RunsheetPro Extension: Document ready, calling init() immediately');
     init();
   }
 } catch (error) {
-  console.error('🔧 RunsheetPro Extension: Initialization error:', error);
+  console.error('🔧 RunsheetPro Extension: Critical initialization error:', error);
+  console.error('🔧 RunsheetPro Extension: Error stack:', error.stack);
 }
