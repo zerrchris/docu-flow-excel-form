@@ -873,17 +873,25 @@ Image: [base64 image data]`;
   };
 
   const startNewRunsheet = () => {
+    // Clear the loaded runsheet ref to allow fresh loading
+    loadedRunsheetRef.current = null;
+    
     // Reset to default state with default extraction instructions
     setColumns(DEFAULT_COLUMNS);
     setColumnInstructions(DEFAULT_EXTRACTION_INSTRUCTIONS);
     setSpreadsheetData([]);
     setFormData({});
     
+    // Clear any file state
+    setFile(null);
+    setPreviewUrl(null);
+    setPendingFiles([]);
+    
     // Clear unsaved changes flag
     setHasUnsavedChanges(false);
     
-    // Dispatch event to reset the spreadsheet
-    const resetEvent = new CustomEvent('resetSpreadsheet');
+    // Dispatch event to reset the spreadsheet to fresh state
+    const resetEvent = new CustomEvent('startNewRunsheet');
     window.dispatchEvent(resetEvent);
     
     toast({
@@ -1048,6 +1056,7 @@ Image: [base64 image data]`;
             <Button 
               variant="secondary" 
               onClick={() => {
+                // Save current runsheet and then start new
                 const saveEvent = new CustomEvent('saveCurrentRunsheet');
                 window.dispatchEvent(saveEvent);
                 setShowNavigationDialog(false);
