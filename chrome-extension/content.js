@@ -14,6 +14,7 @@ let currentViewMode = 'single'; // 'single' or 'full'
 
 // Snip mode variables
 let isSnipMode = false;
+let snipMode = 'single'; // 'single', 'scroll', 'navigate'
 let snipOverlay = null;
 let snipSelection = null;
 let capturedSnips = [];
@@ -2114,17 +2115,27 @@ async function init() {
 // SNIP FUNCTIONALITY
 // =============================================================================
 
-// Start snip mode
-function startSnipMode() {
+// Start snip mode with specific mode
+function startSnipMode(mode = 'single') {
   if (isSnipMode) return;
   
-  console.log('🔧 RunsheetPro Extension: Starting snip mode');
+  console.log('🔧 RunsheetPro Extension: Starting snip mode:', mode);
   isSnipMode = true;
+  snipMode = mode;
   capturedSnips = [];
   
   createSnipOverlay();
-  createSnipControlPanel();
-  showNotification('Snip mode active! Drag to select areas to capture.', 'info');
+  if (mode !== 'single') {
+    createSnipControlPanel();
+  }
+  
+  const messages = {
+    single: 'Single snip mode! Drag to select area - it will auto-submit when done.',
+    scroll: 'Snip & scroll mode! Drag to select areas, scroll as needed.',
+    navigate: 'Click & navigate mode! Drag to select areas, navigate between pages.'
+  };
+  
+  showNotification(messages[mode], 'info');
 }
 
 // Create snip overlay for selection
@@ -2209,15 +2220,30 @@ function createSnipOverlay() {
     
     // Hide overlay temporarily for clean capture
     snipOverlay.style.display = 'none';
-    snipControlPanel.style.display = 'none';
+    if (snipControlPanel) {
+      snipControlPanel.style.display = 'none';
+    }
     
     // Wait a bit for UI to hide
     setTimeout(async () => {
       await captureSelectedArea(left, top, width, height);
       
-      // Show overlay and controls again
-      snipOverlay.style.display = 'block';
-      snipControlPanel.style.display = 'flex';
+      // Handle different modes after capture
+      if (snipMode === 'single') {
+        // Single mode: auto-finish after one capture
+        setTimeout(() => finishSnipping(), 500);
+      } else {
+        // Multi-capture modes: show controls and continue
+        if (snipMode === 'scroll') {
+          snipOverlay.style.display = 'block';
+          if (snipControlPanel) {
+            snipControlPanel.style.display = 'flex';
+          }
+        } else if (snipMode === 'navigate') {
+          // Navigate mode: hide overlay, show fixed navigation controls
+          hideSnipModeForNavigation();
+        }
+      }
     }, 100);
   });
   
@@ -2230,9 +2256,11 @@ function createSnipControlPanel() {
   
   snipControlPanel = document.createElement('div');
   snipControlPanel.id = 'runsheetpro-snip-controls';
+  
+  // Position control panel at bottom of viewport to avoid interfering with snipping
   snipControlPanel.style.cssText = `
     position: fixed !important;
-    top: 20px !important;
+    bottom: 20px !important;
     left: 50% !important;
     transform: translateX(-50%) !important;
     background: white !important;
@@ -2259,7 +2287,7 @@ function createSnipControlPanel() {
   
   // Done button
   const doneButton = document.createElement('button');
-  doneButton.textContent = 'Done Snipping';
+  doneButton.textContent = snipMode === 'scroll' ? 'Done Snipping' : 'Finish Snipping';
   doneButton.style.cssText = `
     background: #3b82f6 !important;
     color: white !important;
@@ -2337,9 +2365,10 @@ async function captureSelectedArea(left, top, width, height) {
             height: height
           });
           
-          // Hide snip mode temporarily to allow navigation
-          hideSnipModeForNavigation();
-          showNotification(`Snip ${capturedSnips.length} captured! Navigate to next section if needed.`, 'success');
+          // Update counter
+          updateSnipCounter();
+          
+          showNotification(`Snip ${capturedSnips.length} captured!`, 'success');
         } else {
           showNotification('Failed to capture snip', 'error');
         }
@@ -2416,9 +2445,11 @@ function hideSnipModeForNavigation() {
 function createNavigationControlPanel() {
   const navPanel = document.createElement('div');
   navPanel.id = 'runsheetpro-nav-controls';
+  
+  // Position at bottom to avoid interfering with page content
   navPanel.style.cssText = `
     position: fixed !important;
-    top: 20px !important;
+    bottom: 20px !important;
     right: 20px !important;
     background: white !important;
     border: 1px solid #e5e7eb !important;
@@ -2467,7 +2498,7 @@ function createNavigationControlPanel() {
   
   // Done button
   const doneButton = document.createElement('button');
-  doneButton.textContent = 'Done Snipping';
+  doneButton.textContent = 'Finished Snipping';
   doneButton.style.cssText = `
     background: #10b981 !important;
     color: white !important;
@@ -2755,7 +2786,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     showNotification(`Switched to ${request.viewMode === 'single' ? 'single entry' : 'full view'} mode`, 'info');
   } else if (request.action === 'startSnipMode') {
     // Handle snip mode start from popup
-    startSnipMode();
+    startSnipMode(request.mode || 'single');
   } else if (request.action === 'updateAuth') {
     // Refresh auth status
     checkAuth();
