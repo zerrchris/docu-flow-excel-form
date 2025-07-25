@@ -2025,9 +2025,9 @@ async function init() {
   const isAuthenticated = await checkAuth();
   console.log('🔧 DocuFlow Extension: Authentication status:', isAuthenticated);
   
-  // Create the runsheet button
-  createRunsheetButton();
-  console.log('🔧 DocuFlow Extension: Runsheet button created');
+  // Automatically show the spreadsheet component
+  showRunsheetFrame();
+  console.log('🔧 DocuFlow Extension: Spreadsheet component shown automatically');
   
   // Check if there's an active runsheet to restore
   const storedData = await chrome.storage.local.get(['active_runsheet', 'activeRunsheet']);
@@ -2690,16 +2690,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     // Handle extension enable/disable from popup
     console.log('🔧 DocuFlow Extension: Toggle extension:', request.enabled);
     if (request.enabled) {
-      if (!runsheetButton) {
-        console.log('🔧 DocuFlow Extension: Button not found, creating it');
-        createRunsheetButton();
-      }
-      if (runsheetButton) {
-        runsheetButton.style.display = 'block';
-        console.log('🔧 DocuFlow Extension: Button shown');
-      }
+      // Automatically show the spreadsheet component when enabled
+      showRunsheetFrame();
+      console.log('🔧 DocuFlow Extension: Spreadsheet component shown automatically');
     } else {
-      if (runsheetButton) runsheetButton.style.display = 'none';
+      // Hide the spreadsheet component when disabled
       if (runsheetFrame) runsheetFrame.style.display = 'none';
     }
   } else if (request.action === 'switchViewMode') {
