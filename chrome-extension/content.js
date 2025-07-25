@@ -1771,7 +1771,7 @@ function openCurrentRunsheetInApp() {
   // Get the current domain (you may need to adjust this URL based on your app's deployment)
   const appUrl = window.location.origin.includes('localhost') 
     ? 'http://localhost:5173' 
-    : 'https://your-app-domain.com'; // Replace with your actual app domain
+    : 'https://docuflow-chrome-extension.lovableproject.com';
   
   // Construct URL with runsheet ID as a parameter
   const runsheetUrl = `${appUrl}/dashboard?runsheet=${activeRunsheet.id || 'default'}`;

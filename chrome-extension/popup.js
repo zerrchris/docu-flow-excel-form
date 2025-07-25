@@ -108,7 +108,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Open main application
   openAppBtn.addEventListener('click', () => {
     chrome.tabs.create({ 
-      url: 'https://lovableproject.com' 
+      url: 'https://docuflow-chrome-extension.lovableproject.com' 
     });
   });
 
