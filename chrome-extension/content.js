@@ -853,7 +853,7 @@ function createSingleEntryView(content) {
   // Get runsheet data or use defaults
   const runsheetData = activeRunsheet || {
     columns: ['Inst Number', 'Book/Page', 'Inst Type', 'Recording Date', 'Document Date', 'Grantor', 'Grantee', 'Legal Description', 'Notes', 'Document File Name'],
-    data: [{}]
+    data: []  // Start with no rows until user adds data
   };
   
   // Create header row with resizable columns
