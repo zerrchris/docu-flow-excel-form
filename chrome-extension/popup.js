@@ -106,9 +106,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // Open main application
-  openAppBtn.addEventListener('click', () => {
+  openAppBtn.addEventListener('click', async () => {
+    // Check if we're in development by looking at the current tab
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    const isLocalDevelopment = tabs[0] && tabs[0].url.includes('localhost');
+    
+    const appUrl = isLocalDevelopment 
+      ? 'http://localhost:5173' 
+      : 'https://docuflow-chrome-extension.lovableproject.com';
+      
     chrome.tabs.create({ 
-      url: 'https://docuflow-chrome-extension.lovableproject.com' 
+      url: appUrl 
     });
   });
 
