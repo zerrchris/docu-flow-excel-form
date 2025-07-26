@@ -125,7 +125,9 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [copiedData, setCopiedData] = useState<string[][] | null>(null);
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
+  const [rowHeights, setRowHeights] = useState<Record<number, number>>({});
   const [resizing, setResizing] = useState<{column: string, startX: number, startWidth: number} | null>(null);
+  const [resizingRow, setResizingRow] = useState<{rowIndex: number, startY: number, startHeight: number} | null>(null);
   const [showAddRowsDialog, setShowAddRowsDialog] = useState(false);
   const [rowsToAdd, setRowsToAdd] = useState<number>(1);
   const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
@@ -1956,6 +1958,11 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     return columnWidths[column] || 120; // default width
   };
 
+  // Row resizing functions
+  const getRowHeight = (rowIndex: number) => {
+    return rowHeights[rowIndex] || 60; // default height
+  };
+
   // Calculate total table width
   const getTotalTableWidth = () => {
     const dataColumnsWidth = columns.reduce((total, column) => total + getColumnWidth(column), 0);
@@ -1963,11 +1970,21 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     return dataColumnsWidth + actionsColumnWidth;
   };
 
+  // Column resize handlers
   const handleMouseDown = (e: React.MouseEvent, column: string) => {
     e.preventDefault();
     const startX = e.clientX;
     const startWidth = getColumnWidth(column);
     setResizing({ column, startX, startWidth });
+  };
+
+  // Row resize handlers
+  const handleRowMouseDown = (e: React.MouseEvent, rowIndex: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const startY = e.clientY;
+    const startHeight = getRowHeight(rowIndex);
+    setResizingRow({ rowIndex, startY, startHeight });
   };
 
   useEffect(() => {
@@ -1979,17 +1996,25 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           ...prev,
           [resizing.column]: newWidth
         }));
-        // Mark that columns have been manually resized
         setHasManuallyResizedColumns(true);
       }
       
+      if (resizingRow) {
+        const deltaY = e.clientY - resizingRow.startY;
+        const newHeight = Math.max(40, resizingRow.startHeight + deltaY);
+        setRowHeights(prev => ({
+          ...prev,
+          [resizingRow.rowIndex]: newHeight
+        }));
+      }
     };
 
     const handleMouseUp = () => {
       setResizing(null);
+      setResizingRow(null);
     };
 
-    if (resizing) {
+    if (resizing || resizingRow) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
       return () => {
@@ -1997,7 +2022,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         document.removeEventListener('mouseup', handleMouseUp);
       };
     }
-  }, [resizing]);
+  }, [resizing, resizingRow]);
 
 
   // Runsheet name editing functions
@@ -3373,7 +3398,13 @@ ${extractionFields}`
                      </TableRow>
                    )}
                    
-                   <TableRow className="hover:bg-muted/30">
+                    <TableRow 
+                      className="hover:bg-muted/30 relative"
+                      style={{ 
+                        height: `${getRowHeight(rowIndex)}px`,
+                        minHeight: `${getRowHeight(rowIndex)}px`
+                      }}
+                    >
                     {columns.map((column) => {
                      const isSelected = selectedCell?.rowIndex === rowIndex && selectedCell?.column === column;
                      const isEditing = editingCell?.rowIndex === rowIndex && editingCell?.column === column;
@@ -3384,12 +3415,12 @@ ${extractionFields}`
                        <TableCell 
                          key={`${rowIndex}-${column}`}
                          className={`border-r border-border last:border-r-0 relative ${isEditing ? 'p-0' : 'p-0'} cursor-text`}
-                         style={{ 
-                           width: `${getColumnWidth(column)}px`, 
-                           minWidth: `${getColumnWidth(column)}px`,
-                           height: isEditing ? 'fit-content' : 'auto',
-                           minHeight: isEditing ? '60px' : 'auto'
-                         }}
+                          style={{ 
+                            width: `${getColumnWidth(column)}px`, 
+                            minWidth: `${getColumnWidth(column)}px`,
+                            height: isEditing ? 'fit-content' : `${getRowHeight(rowIndex)}px`,
+                            minHeight: isEditing ? '60px' : `${getRowHeight(rowIndex)}px`
+                          }}
                          onClick={() => selectCell(rowIndex, column)}
                          onDoubleClick={() => handleCellDoubleClick(rowIndex, column)}
                          tabIndex={0}
@@ -3516,8 +3547,15 @@ ${extractionFields}`
                          isSpreadsheetUpload={true}
                          autoAnalyze={false}
                        />
-                     </TableCell>
-                   </TableRow>
+                      </TableCell>
+                      
+                      {/* Row resize handle */}
+                      <div
+                        className="absolute bottom-0 left-0 right-0 h-1 cursor-row-resize hover:bg-primary/30 bg-border/50 opacity-0 hover:opacity-100 transition-opacity"
+                        onMouseDown={(e) => handleRowMouseDown(e, rowIndex)}
+                        title="Drag to resize row height"
+                      />
+                    </TableRow>
                   </React.Fragment>
                  ))}
               </TableBody>
