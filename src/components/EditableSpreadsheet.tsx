@@ -156,6 +156,43 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [inlineViewerRow, setInlineViewerRow] = useState<number | null>(null);
   const [fullScreenWorkspace, setFullScreenWorkspace] = useState<{ runsheetId: string; rowIndex: number } | null>(null);
   
+  // Listen for document upload save requests
+  React.useEffect(() => {
+    const handleSaveRequest = async (event: CustomEvent) => {
+      try {
+        console.log('🔧 EditableSpreadsheet: Received save request before upload');
+        await saveRunsheet();
+        
+        // After save, the currentRunsheetId should be set
+        if (currentRunsheetId) {
+          // Send success response with the runsheet ID
+          const responseEvent = new CustomEvent('runsheetSaveResponse', {
+            detail: { success: true, runsheetId: currentRunsheetId }
+          });
+          window.dispatchEvent(responseEvent);
+        } else {
+          // Send error response
+          const responseEvent = new CustomEvent('runsheetSaveResponse', {
+            detail: { success: false, error: 'Failed to save runsheet - no ID available' }
+          });
+          window.dispatchEvent(responseEvent);
+        }
+      } catch (error) {
+        console.error('Error saving runsheet before upload:', error);
+        const responseEvent = new CustomEvent('runsheetSaveResponse', {
+          detail: { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+        });
+        window.dispatchEvent(responseEvent);
+      }
+    };
+
+    window.addEventListener('saveRunsheetBeforeUpload', handleSaveRequest as EventListener);
+    
+    return () => {
+      window.removeEventListener('saveRunsheetBeforeUpload', handleSaveRequest as EventListener);
+    };
+  }, [currentRunsheetId, runsheetName, data, columns, columnInstructions]);
+  
   // Ref for container width measurement
   const containerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -751,53 +788,6 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       }
 
       console.log('Save successful!');
-      
-      // Process pending documents if any exist
-      const pendingDocs = JSON.parse(sessionStorage.getItem('pendingDocuments') || '[]');
-      if (pendingDocs.length > 0) {
-        console.log('Processing pending documents:', pendingDocs.length);
-        try {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session) {
-            const response = await fetch(
-              `https://xnpmrafjjqsissbtempj.supabase.co/functions/v1/upload-pending-documents`,
-              {
-                method: 'POST',
-                headers: {
-                  'Authorization': `Bearer ${session.access_token}`,
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  runsheetId: savedRunsheet.id,
-                  pendingDocuments: pendingDocs,
-                  userId: user.id
-                }),
-              }
-            );
-
-            if (response.ok) {
-              const result = await response.json();
-              console.log('Pending documents processed:', result);
-              
-              // Clear pending documents from session storage
-              sessionStorage.removeItem('pendingDocuments');
-              
-              // Refresh document map
-              const documents = await DocumentService.getDocumentMapForRunsheet(savedRunsheet.id);
-              setDocumentMap(documents);
-              
-              toast({
-                title: "Documents uploaded",
-                description: `Successfully uploaded ${result.successCount} documents.`,
-              });
-            } else {
-              console.error('Failed to process pending documents:', await response.text());
-            }
-          }
-        } catch (error) {
-          console.error('Error processing pending documents:', error);
-        }
-      }
       
       const savedState = JSON.stringify({ data, columns, runsheetName: finalName, columnInstructions });
       setLastSavedState(savedState);

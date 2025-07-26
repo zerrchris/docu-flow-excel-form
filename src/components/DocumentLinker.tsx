@@ -126,50 +126,57 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
         return;
       }
 
-      // If no runsheet ID, store the document temporarily
+      // If no runsheet ID, we need to save the runsheet first and get the new ID
+      let actualRunsheetId = runsheetId;
       if (!runsheetId || runsheetId.trim() === '') {
-        // Store file temporarily in browser
-        const reader = new FileReader();
-        reader.onload = async () => {
-          const base64Data = reader.result as string;
-          
-          // Store in session storage for later processing
-          const pendingDocs = JSON.parse(sessionStorage.getItem('pendingDocuments') || '[]');
-          const newPendingDoc = {
-            rowIndex,
-            fileName: file.name,
-            fileData: base64Data,
-            fileType: file.type,
-            fileSize: file.size,
-            timestamp: Date.now()
+        toast({
+          title: "Saving runsheet",
+          description: "Saving runsheet to enable document upload...",
+        });
+        
+        // Emit an event asking the parent to save and return the new runsheet ID
+        const savePromise = new Promise<string>((resolve, reject) => {
+          const handleSaveResponse = (event: CustomEvent) => {
+            window.removeEventListener('runsheetSaveResponse', handleSaveResponse as EventListener);
+            if (event.detail.success) {
+              resolve(event.detail.runsheetId);
+            } else {
+              reject(new Error(event.detail.error || 'Failed to save runsheet'));
+            }
           };
           
-          pendingDocs.push(newPendingDoc);
-          sessionStorage.setItem('pendingDocuments', JSON.stringify(pendingDocs));
+          window.addEventListener('runsheetSaveResponse', handleSaveResponse as EventListener);
           
-          // Update local state to show the file is linked
-          onDocumentLinked(file.name);
-          
-          // Store file for potential analysis
-          if (isSpreadsheetUpload) {
-            setUploadedFile(file);
-          }
-          
-          toast({
-            title: "Document staged",
-            description: `${file.name} will be uploaded when you save the runsheet.`,
+          const saveEvent = new CustomEvent('saveRunsheetBeforeUpload', {
+            detail: { rowIndex, fileName: file.name }
           });
-        };
+          window.dispatchEvent(saveEvent);
+          
+          // Timeout after 10 seconds
+          setTimeout(() => {
+            window.removeEventListener('runsheetSaveResponse', handleSaveResponse as EventListener);
+            reject(new Error('Save operation timed out'));
+          }, 10000);
+        });
         
-        reader.readAsDataURL(file);
-        return;
+        try {
+          actualRunsheetId = await savePromise;
+          console.log('✅ Runsheet saved with ID:', actualRunsheetId);
+        } catch (error) {
+          toast({
+            title: "Save failed",
+            description: error instanceof Error ? error.message : "Failed to save runsheet before upload.",
+            variant: "destructive",
+          });
+          return;
+        }
       }
 
       // Normal upload flow when runsheet exists
       // Create FormData for the upload
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('runsheetId', runsheetId);
+      formData.append('runsheetId', actualRunsheetId);
       formData.append('rowIndex', rowIndex.toString());
       formData.append('originalFilename', file.name);
 
