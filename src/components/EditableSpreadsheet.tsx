@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Plus, Trash2, Check, X, ArrowUp, ArrowDown, Save, FolderOpen, Download, Upload, AlignLeft, AlignCenter, AlignRight, Cloud, ChevronDown, FileText, Archive, ExternalLink, AlertTriangle, FileStack } from 'lucide-react';
+import { Plus, Trash2, Check, X, ArrowUp, ArrowDown, Save, FolderOpen, Download, Upload, AlignLeft, AlignCenter, AlignRight, Cloud, ChevronDown, FileText, Archive, ExternalLink, AlertTriangle, FileStack, Settings } from 'lucide-react';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -98,17 +98,12 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [showNameConflictDialog, setShowNameConflictDialog] = useState(false);
   const [nameConflictData, setNameConflictData] = useState<{ originalName: string; suggestedName: string } | null>(null);
   const [pendingSaveData, setPendingSaveData] = useState<{ isUpdate: boolean; runsheetId?: string } | null>(null);
+  const [showDocumentNamingDialog, setShowDocumentNamingDialog] = useState(false);
   
   // Helper function to ensure document columns exist
   const ensureDocumentColumns = (columnsList: string[]): string[] => {
-    const documentColumns = ['Document File Name'];
-    const missingColumns = documentColumns.filter(col => !columnsList.includes(col));
-    
-    if (missingColumns.length > 0) {
-      return [...columnsList, ...missingColumns];
-    }
-    
-    return columnsList;
+    // Remove Document File Name from regular columns since we'll handle it separately
+    return columnsList.filter(col => col !== 'Document File Name');
   };
   
   const [columns, setColumns] = useState<string[]>(() => ensureDocumentColumns(initialColumns));
@@ -1945,7 +1940,9 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
   // Calculate total table width
   const getTotalTableWidth = () => {
-    return columns.reduce((total, column) => total + getColumnWidth(column), 0);
+    const dataColumnsWidth = columns.reduce((total, column) => total + getColumnWidth(column), 0);
+    const actionsColumnWidth = 200; // Fixed width for actions column
+    return dataColumnsWidth + actionsColumnWidth;
   };
 
   const handleMouseDown = (e: React.MouseEvent, column: string) => {
@@ -3285,11 +3282,6 @@ ${extractionFields}`
                            >
                               <div className="flex flex-col items-center">
                                 <span className="font-bold">{column}</span>
-                                {column === 'Document File Name' && (
-                                  <span className="text-xs text-muted-foreground mt-1">
-                                    click to configure naming preferences
-                                  </span>
-                                )}
                                 {localMissingColumns.includes(column) && (
                                   <span className="text-xs text-yellow-700 dark:text-yellow-300 mt-1 font-medium animate-pulse">
                                     Click to save
@@ -3325,6 +3317,24 @@ ${extractionFields}`
                      </ContextMenu>
                    </TableHead>
                  ))}
+                
+                {/* Actions column header - not draggable */}
+                <TableHead 
+                  className="font-bold text-center border-r border-border relative p-0 last:border-r-0 bg-muted/50"
+                  style={{ width: "200px", minWidth: "200px" }}
+                >
+                  <div className="w-full h-full px-4 py-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowDocumentNamingDialog(true)}
+                      className="text-xs"
+                    >
+                      <Settings className="h-3 w-3 mr-1" />
+                      Configure File Naming
+                    </Button>
+                  </div>
+                </TableHead>
                </TableRow>
              </TableHeader>
 
@@ -3346,152 +3356,155 @@ ${extractionFields}`
                    )}
                    
                    <TableRow className="hover:bg-muted/30">
-                   {columns.map((column) => {
-                    const isSelected = selectedCell?.rowIndex === rowIndex && selectedCell?.column === column;
-                    const isEditing = editingCell?.rowIndex === rowIndex && editingCell?.column === column;
-                    const columnIndex = columns.indexOf(column);
-                    const isInRange = isCellInRange(rowIndex, columnIndex);
-                    
-                    return (
-                      <TableCell 
-                        key={`${rowIndex}-${column}`}
-                        className={`border-r border-border last:border-r-0 relative ${isEditing ? 'p-0' : 'p-0'} ${column !== 'Document File Name' ? 'cursor-text' : 'cursor-default'}`}
-                        style={{ 
-                          width: `${getColumnWidth(column)}px`, 
-                          minWidth: `${getColumnWidth(column)}px`,
-                          height: isEditing ? 'fit-content' : 'auto',
-                          minHeight: isEditing ? '60px' : 'auto'
-                        }}
-                        onClick={() => column !== 'Document File Name' && selectCell(rowIndex, column)}
-                        onDoubleClick={() => column !== 'Document File Name' && handleCellDoubleClick(rowIndex, column)}
-                        tabIndex={column === 'Document File Name' ? -1 : 0}
-                      >
-                        {isEditing ? (
-                          <Textarea
-                            ref={textareaRef}
-                            value={cellValue}
-                            onChange={(e) => setCellValue(e.target.value)}
-                            onKeyDown={(e) => {
-                              // Allow Shift+Enter for line breaks, but handle Tab/Enter/Escape/Arrow keys
-                              if ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Tab' || e.key === 'Escape' || 
-                                  ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
-                                handleInputKeyDown(e);
-                              }
-                            }}
-                            className={`w-full border-2 border-primary rounded-none bg-background focus:ring-0 focus:outline-none resize-none p-2 ${
-                              columnAlignments[column] === 'center' ? 'text-center' : 
-                              columnAlignments[column] === 'right' ? 'text-right' : 'text-left'
-                            }`}
-                            style={{ 
-                              minHeight: '60px',
-                              width: '100%',
-                              height: 'auto'
-                            }}
-                            rows={Math.max(3, Math.ceil(cellValue.length / 50))}
-                          />
-                        ) : (
-                          <div
-                            data-cell={`${rowIndex}-${column}`}
-                             className={`w-full h-full min-h-[2rem] py-2 px-3 flex items-start transition-colors whitespace-pre-wrap select-none
-                               ${isSelected 
-                                 ? 'bg-primary/20 border-2 border-primary ring-2 ring-primary/20' 
-                                 : isInRange
-                                 ? 'bg-primary/10 border-2 border-primary/50'
-                                 : 'hover:bg-muted/50 border-2 border-transparent'
+                    {columns.map((column) => {
+                     const isSelected = selectedCell?.rowIndex === rowIndex && selectedCell?.column === column;
+                     const isEditing = editingCell?.rowIndex === rowIndex && editingCell?.column === column;
+                     const columnIndex = columns.indexOf(column);
+                     const isInRange = isCellInRange(rowIndex, columnIndex);
+                     
+                     return (
+                       <TableCell 
+                         key={`${rowIndex}-${column}`}
+                         className={`border-r border-border last:border-r-0 relative ${isEditing ? 'p-0' : 'p-0'} cursor-text`}
+                         style={{ 
+                           width: `${getColumnWidth(column)}px`, 
+                           minWidth: `${getColumnWidth(column)}px`,
+                           height: isEditing ? 'fit-content' : 'auto',
+                           minHeight: isEditing ? '60px' : 'auto'
+                         }}
+                         onClick={() => selectCell(rowIndex, column)}
+                         onDoubleClick={() => handleCellDoubleClick(rowIndex, column)}
+                         tabIndex={0}
+                       >
+                         {isEditing ? (
+                           <Textarea
+                             ref={textareaRef}
+                             value={cellValue}
+                             onChange={(e) => setCellValue(e.target.value)}
+                             onKeyDown={(e) => {
+                               // Allow Shift+Enter for line breaks, but handle Tab/Enter/Escape/Arrow keys
+                               if ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Tab' || e.key === 'Escape' || 
+                                   ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                                 handleInputKeyDown(e);
                                }
-                               ${columnAlignments[column] === 'center' ? 'text-center justify-center' : 
-                                 columnAlignments[column] === 'right' ? 'text-right justify-end' : 'text-left justify-start'}`}
-                              onMouseDown={(e) => column !== 'Document File Name' && handleCellMouseDown(e, rowIndex, column)}
-                              onMouseEnter={() => handleMouseEnter(rowIndex, column)}
-                              onMouseUp={handleMouseUp}
-                              onKeyDown={(e) => column !== 'Document File Name' && handleKeyDown(e, rowIndex, column)}
-                            >
-                              {column === 'Document File Name' ? (
-                                <DocumentLinker
-                                  key={`${rowIndex}-${row['Document File Name']}`}
-                                  runsheetId={currentRunsheetId || ''}
-                                  rowIndex={rowIndex}
-                                  currentFilename={row['Document File Name']}
-                                  documentPath={(() => {
-                                    const dbPath = documentMap.get(rowIndex)?.file_path;
-                                    const storagePath = row['Storage Path'];
-                                    return dbPath || storagePath;
-                                  })()}
-                                  existingDocumentUrl={row['Document File Name'] && row['Document File Name'].trim() !== '' ? 'exists' : undefined}
-                                   onDocumentLinked={(filename) => {
-                                      console.log('🔧 EditableSpreadsheet: onDocumentLinked called with filename:', filename);
-                                      console.log('🔧 EditableSpreadsheet: Current row data before update:', data[rowIndex]);
-                                      const newData = [...data];
-                                      newData[rowIndex] = {
-                                        ...newData[rowIndex],
-                                        'Document File Name': filename
-                                      };
-                                      console.log('🔧 EditableSpreadsheet: New row data after update:', newData[rowIndex]);
-                                      setData(newData);
-                                      onDataChange?.(newData);
-                                     
-                                      // Refresh document map after a short delay to ensure DB is updated
-                                      if (currentRunsheetId) {
-                                        setTimeout(() => {
-                                          console.log('🔧 EditableSpreadsheet: Refreshing document map');
-                                          DocumentService.getDocumentMapForRunsheet(currentRunsheetId).then(setDocumentMap);
-                                        }, 500);
-                                      }
-                                   }}
-                                   onDocumentRemoved={() => {
-                                     const newData = [...data];
-                                     newData[rowIndex] = {
-                                       ...newData[rowIndex],
-                                       'Document File Name': ''
-                                     };
-                                     setData(newData);
-                                     onDataChange?.(newData);
-                                    setDocumentMap(prev => {
-                                      const newMap = new Map(prev);
-                                      newMap.delete(rowIndex);
-                                      return newMap;
-                                    });
-                                   }}
-                                   onAnalyzeDocument={async (file, filename) => {
-                                     console.log('🔧 EditableSpreadsheet: onAnalyzeDocument called for row:', rowIndex);
-                                     
-                                     // Check if row has existing data (excluding Document File Name column)
-                                     const rowData = data[rowIndex];
-                                     const hasExistingData = columns.some(col => 
-                                       col !== 'Document File Name' && 
-                                       rowData[col] && 
-                                       rowData[col].trim() !== ''
-                                     );
+                             }}
+                             className={`w-full border-2 border-primary rounded-none bg-background focus:ring-0 focus:outline-none resize-none p-2 ${
+                               columnAlignments[column] === 'center' ? 'text-center' : 
+                               columnAlignments[column] === 'right' ? 'text-right' : 'text-left'
+                             }`}
+                             style={{ 
+                               minHeight: '60px',
+                               width: '100%',
+                               height: 'auto'
+                             }}
+                             rows={Math.max(3, Math.ceil(cellValue.length / 50))}
+                           />
+                         ) : (
+                           <div
+                             data-cell={`${rowIndex}-${column}`}
+                              className={`w-full h-full min-h-[2rem] py-2 px-3 flex items-start transition-colors whitespace-pre-wrap select-none
+                                ${isSelected 
+                                  ? 'bg-primary/20 border-2 border-primary ring-2 ring-primary/20' 
+                                  : isInRange
+                                  ? 'bg-primary/10 border-2 border-primary/50'
+                                  : 'hover:bg-muted/50 border-2 border-transparent'
+                                }
+                                ${columnAlignments[column] === 'center' ? 'text-center justify-center' : 
+                                  columnAlignments[column] === 'right' ? 'text-right justify-end' : 'text-left justify-start'}`}
+                               onMouseDown={(e) => handleCellMouseDown(e, rowIndex, column)}
+                               onMouseEnter={() => handleMouseEnter(rowIndex, column)}
+                               onMouseUp={handleMouseUp}
+                               onKeyDown={(e) => handleKeyDown(e, rowIndex, column)}
+                             >
+                               {row[column] || ''}
+                             </div>
+                         )}
+                       </TableCell>
+                     );
+                   })}
+                   
+                   {/* Actions column - Document management */}
+                   <TableCell 
+                     className="border-r border-border last:border-r-0 p-2"
+                     style={{ width: "200px", minWidth: "200px" }}
+                   >
+                     <DocumentLinker
+                       key={`${rowIndex}-${row['Document File Name']}`}
+                       runsheetId={currentRunsheetId || ''}
+                       rowIndex={rowIndex}
+                       currentFilename={row['Document File Name']}
+                       documentPath={(() => {
+                         const dbPath = documentMap.get(rowIndex)?.file_path;
+                         const storagePath = row['Storage Path'];
+                         return dbPath || storagePath;
+                       })()}
+                       existingDocumentUrl={row['Document File Name'] && row['Document File Name'].trim() !== '' ? 'exists' : undefined}
+                        onDocumentLinked={(filename) => {
+                           console.log('🔧 EditableSpreadsheet: onDocumentLinked called with filename:', filename);
+                           console.log('🔧 EditableSpreadsheet: Current row data before update:', data[rowIndex]);
+                           const newData = [...data];
+                           newData[rowIndex] = {
+                             ...newData[rowIndex],
+                             'Document File Name': filename
+                           };
+                           console.log('🔧 EditableSpreadsheet: New row data after update:', newData[rowIndex]);
+                           setData(newData);
+                           onDataChange?.(newData);
+                          
+                           // Refresh document map after a short delay to ensure DB is updated
+                           if (currentRunsheetId) {
+                             setTimeout(() => {
+                               console.log('🔧 EditableSpreadsheet: Refreshing document map');
+                               DocumentService.getDocumentMapForRunsheet(currentRunsheetId).then(setDocumentMap);
+                             }, 500);
+                           }
+                        }}
+                        onDocumentRemoved={() => {
+                          const newData = [...data];
+                          newData[rowIndex] = {
+                            ...newData[rowIndex],
+                            'Document File Name': ''
+                          };
+                          setData(newData);
+                          onDataChange?.(newData);
+                         setDocumentMap(prev => {
+                           const newMap = new Map(prev);
+                           newMap.delete(rowIndex);
+                           return newMap;
+                         });
+                        }}
+                        onAnalyzeDocument={async (file, filename) => {
+                          console.log('🔧 EditableSpreadsheet: onAnalyzeDocument called for row:', rowIndex);
+                          
+                          // Check if row has existing data (excluding Document File Name column)
+                          const rowData = data[rowIndex];
+                          const hasExistingData = columns.some(col => 
+                            rowData[col] && 
+                            rowData[col].trim() !== ''
+                          );
 
-                                     if (hasExistingData) {
-                                       // Show warning dialog
-                                       setPendingAnalysis({ file, filename, rowIndex });
-                                       setShowAnalyzeWarningDialog(true);
-                                     } else {
-                                       // Proceed with analysis
-                                       await analyzeDocumentAndPopulateRow(file, rowIndex);
-                                     }
-                                   }}
-                                    onOpenWorkspace={() => {
-                                      setFullScreenWorkspace({ runsheetId: currentRunsheetId || '', rowIndex });
-                                    }}
-                                  isSpreadsheetUpload={true}
-                                  autoAnalyze={false}
-                                />
-                               ) : (
-                                row[column] || ''
-                              )}
-                            </div>
-                        )}
+                           if (hasExistingData) {
+                             // Show warning dialog
+                             setPendingAnalysis({ file, filename, rowIndex });
+                             setShowAnalyzeWarningDialog(true);
+                           } else {
+                             // Proceed with analysis
+                             await analyzeDocumentAndPopulateRow(file, rowIndex);
+                           }
+                         }}
+                         onOpenWorkspace={() => {
+                           setFullScreenWorkspace({ runsheetId: currentRunsheetId || '', rowIndex });
+                         }}
+                         isSpreadsheetUpload={true}
+                         autoAnalyze={false}
+                       />
                      </TableCell>
-                   );
-                  })}
-                </TableRow>
-                 </React.Fragment>
-                ))}
-             </TableBody>
-          </Table>
-          </div>
+                   </TableRow>
+                  </React.Fragment>
+                 ))}
+              </TableBody>
+           </Table>
+           </div>
 
         </div>
 
@@ -3864,6 +3877,18 @@ ${extractionFields}`
             }}
           />
         )}
+
+        {/* Document Naming Settings Dialog */}
+        <Dialog open={showDocumentNamingDialog} onOpenChange={setShowDocumentNamingDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Document File Naming Preferences</DialogTitle>
+            </DialogHeader>
+            <DocumentNamingSettings 
+              availableColumns={columns}
+            />
+          </DialogContent>
+        </Dialog>
       </div>
     );
 };
