@@ -83,6 +83,7 @@ export const ScreenshotCapture: React.FC<ScreenshotCaptureProps> = ({
       onClick={handleStartDocumentCapture}
       variant="gradient"
       className={`gap-2 ${className}`}
+      tabIndex={-1}
     >
       <Target className="h-4 w-4" />
       Document Capture
