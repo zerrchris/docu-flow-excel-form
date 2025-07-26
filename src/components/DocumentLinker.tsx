@@ -86,16 +86,6 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
   const handleMultipleFiles = async (files: File[]) => {
     if (!files || files.length === 0) return;
 
-    // Check if runsheet is saved first
-    if (!runsheetId || runsheetId.trim() === '') {
-      toast({
-        title: "Save runsheet first",
-        description: "Please save your runsheet before uploading documents.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     // If multiple image files, show combination options
     const imageFiles = files.filter(file => file.type.startsWith('image/'));
     if (imageFiles.length > 1) {
@@ -123,16 +113,6 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
   const handleFileSelect = async (file: File) => {
     if (!file) return;
 
-    // Check if runsheet is saved first
-    if (!runsheetId || runsheetId.trim() === '') {
-      toast({
-        title: "Save runsheet first",
-        description: "Please save your runsheet before uploading documents.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     try {
       setIsUploading(true);
       
@@ -146,6 +126,46 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
         return;
       }
 
+      // If no runsheet ID, store the document temporarily
+      if (!runsheetId || runsheetId.trim() === '') {
+        // Store file temporarily in browser
+        const reader = new FileReader();
+        reader.onload = async () => {
+          const base64Data = reader.result as string;
+          
+          // Store in session storage for later processing
+          const pendingDocs = JSON.parse(sessionStorage.getItem('pendingDocuments') || '[]');
+          const newPendingDoc = {
+            rowIndex,
+            fileName: file.name,
+            fileData: base64Data,
+            fileType: file.type,
+            fileSize: file.size,
+            timestamp: Date.now()
+          };
+          
+          pendingDocs.push(newPendingDoc);
+          sessionStorage.setItem('pendingDocuments', JSON.stringify(pendingDocs));
+          
+          // Update local state to show the file is linked
+          onDocumentLinked(file.name);
+          
+          // Store file for potential analysis
+          if (isSpreadsheetUpload) {
+            setUploadedFile(file);
+          }
+          
+          toast({
+            title: "Document staged",
+            description: `${file.name} will be uploaded when you save the runsheet.`,
+          });
+        };
+        
+        reader.readAsDataURL(file);
+        return;
+      }
+
+      // Normal upload flow when runsheet exists
       // Create FormData for the upload
       const formData = new FormData();
       formData.append('file', file);
