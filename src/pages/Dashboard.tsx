@@ -37,7 +37,8 @@ const Dashboard: React.FC = () => {
       title: "New Runsheet",
       description: "Start with a blank runsheet",
       icon: Plus,
-      path: "/runsheet"
+      path: "/runsheet",
+      state: { forceNaming: true }
     },
     {
       title: "Open Runsheet",
@@ -170,7 +171,7 @@ const Dashboard: React.FC = () => {
                   if (option.action === "open-dialog") {
                     setShowOpenDialog(true);
                   } else if (option.path) {
-                    navigate(option.path);
+                    navigate(option.path, { state: option.state });
                   }
                 }}
               >
@@ -191,7 +192,7 @@ const Dashboard: React.FC = () => {
                         if (option.action === "open-dialog") {
                           setShowOpenDialog(true);
                         } else if (option.path) {
-                          navigate(option.path);
+                          navigate(option.path, { state: option.state });
                         }
                       }}
                     >

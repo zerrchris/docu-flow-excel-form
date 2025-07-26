@@ -182,6 +182,17 @@ const DocumentProcessor: React.FC = () => {
     }
   }, [location.state]);
 
+  // Handle force naming from Dashboard
+  useEffect(() => {
+    if (location.state?.forceNaming) {
+      // Trigger the naming dialog in the EditableSpreadsheet
+      setTimeout(() => {
+        const nameEvent = new CustomEvent('showNewRunsheetNaming');
+        window.dispatchEvent(nameEvent);
+      }, 100);
+    }
+  }, [location.state?.forceNaming]);
+
   // Handle URL parameters for actions (upload, google-drive, etc.) and runsheet ID
   useEffect(() => {
     const action = searchParams.get('action');

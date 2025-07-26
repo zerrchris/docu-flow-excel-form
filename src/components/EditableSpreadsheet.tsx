@@ -194,6 +194,19 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       window.removeEventListener('saveRunsheetBeforeUpload', handleSaveRequest as EventListener);
     };
   }, [currentRunsheetId, runsheetName, data, columns, columnInstructions]);
+
+  // Listen for forced naming dialog trigger from Dashboard
+  React.useEffect(() => {
+    const handleShowNaming = () => {
+      setShowNameNewRunsheetDialog(true);
+    };
+
+    window.addEventListener('showNewRunsheetNaming', handleShowNaming);
+    
+    return () => {
+      window.removeEventListener('showNewRunsheetNaming', handleShowNaming);
+    };
+  }, []);
   
   // Ref for container width measurement
   const containerRef = useRef<HTMLDivElement>(null);
