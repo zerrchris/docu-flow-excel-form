@@ -3239,77 +3239,9 @@ ${extractionFields}`
                               onKeyDown={(e) => column !== 'Document File Name' && handleKeyDown(e, rowIndex, column)}
                             >
                               {column === 'Document File Name' ? (
-                                <DocumentLinker
-                                  key={`${rowIndex}-${row['Document File Name']}`}
-                                  runsheetId={currentRunsheetId || ''}
-                                  rowIndex={rowIndex}
-                                  currentFilename={row['Document File Name']}
-                                  documentPath={(() => {
-                                    const dbPath = documentMap.get(rowIndex)?.file_path;
-                                    const storagePath = row['Storage Path'];
-                                    return dbPath || storagePath;
-                                  })()}
-                                  existingDocumentUrl={row['Document File Name'] && row['Document File Name'].trim() !== '' ? 'exists' : undefined}
-                                   onDocumentLinked={(filename) => {
-                                      console.log('🔧 EditableSpreadsheet: onDocumentLinked called with filename:', filename);
-                                      console.log('🔧 EditableSpreadsheet: Current row data before update:', data[rowIndex]);
-                                      const newData = [...data];
-                                      newData[rowIndex] = {
-                                        ...newData[rowIndex],
-                                        'Document File Name': filename
-                                      };
-                                      console.log('🔧 EditableSpreadsheet: New row data after update:', newData[rowIndex]);
-                                      setData(newData);
-                                      onDataChange?.(newData);
-                                     
-                                      // Refresh document map after a short delay to ensure DB is updated
-                                      if (currentRunsheetId) {
-                                        setTimeout(() => {
-                                          console.log('🔧 EditableSpreadsheet: Refreshing document map');
-                                          DocumentService.getDocumentMapForRunsheet(currentRunsheetId).then(setDocumentMap);
-                                        }, 500);
-                                      }
-                                   }}
-                                   onDocumentRemoved={() => {
-                                     const newData = [...data];
-                                     newData[rowIndex] = {
-                                       ...newData[rowIndex],
-                                       'Document File Name': ''
-                                     };
-                                     setData(newData);
-                                     onDataChange?.(newData);
-                                    setDocumentMap(prev => {
-                                      const newMap = new Map(prev);
-                                      newMap.delete(rowIndex);
-                                      return newMap;
-                                    });
-                                   }}
-                                   onAnalyzeDocument={async (file, filename) => {
-                                     console.log('🔧 EditableSpreadsheet: onAnalyzeDocument called for row:', rowIndex);
-                                     
-                                     // Check if row has existing data (excluding Document File Name column)
-                                     const rowData = data[rowIndex];
-                                     const hasExistingData = columns.some(col => 
-                                       col !== 'Document File Name' && 
-                                       rowData[col] && 
-                                       rowData[col].trim() !== ''
-                                     );
-
-                                     if (hasExistingData) {
-                                       // Show warning dialog
-                                       setPendingAnalysis({ file, filename, rowIndex });
-                                       setShowAnalyzeWarningDialog(true);
-                                     } else {
-                                       // Proceed with analysis
-                                       await analyzeDocumentAndPopulateRow(file, rowIndex);
-                                     }
-                                   }}
-                                    onOpenWorkspace={() => {
-                                      setFullScreenWorkspace({ runsheetId: currentRunsheetId || '', rowIndex });
-                                    }}
-                                  isSpreadsheetUpload={true}
-                                  autoAnalyze={false}
-                                />
+                                <div className="text-muted-foreground select-none pointer-events-none" tabIndex={-1}>
+                                  {row['Document File Name'] || 'No file'}
+                                </div>
                                ) : (
                                 row[column] || ''
                               )}
