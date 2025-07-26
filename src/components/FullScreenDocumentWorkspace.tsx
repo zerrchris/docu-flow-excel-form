@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { X, ZoomIn, ZoomOut, RotateCcw, ExternalLink, ArrowLeft, Brain } from 'lucide-react';
 import { DocumentService } from '@/services/documentService';
 import { ExtractionPreferencesService } from '@/services/extractionPreferences';
-import { useMultipleRunsheets } from '@/hooks/useMultipleRunsheets';
+import { useActiveRunsheet } from '@/hooks/useActiveRunsheet';
 import PDFViewer from './PDFViewer';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -52,7 +52,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
   const tableRef = useRef<HTMLDivElement>(null);
   
   // Get runsheet management hook for auto-saving changes
-  const { updateRunsheet, currentRunsheet } = useMultipleRunsheets();
+  const { updateRunsheet, activeRunsheet } = useActiveRunsheet();
   const { toast } = useToast();
   
   // Filter out Document File Name column for editing
@@ -107,11 +107,11 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
     onUpdateRow(rowIndex, updatedData);
     
     // Auto-save to runsheet state to prevent data loss on navigation
-    if (currentRunsheet) {
-      const updatedRunsheetData = [...currentRunsheet.data];
+    if (activeRunsheet) {
+      const updatedRunsheetData = [...(activeRunsheet.data || [])];
       updatedRunsheetData[rowIndex] = updatedData;
       
-      updateRunsheet(currentRunsheet.id, {
+      updateRunsheet(activeRunsheet.id, {
         data: updatedRunsheetData,
         hasUnsavedChanges: true
       });
@@ -330,11 +330,11 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
         onUpdateRow(rowIndex, updatedData);
         
         // Auto-save to runsheet state
-        if (currentRunsheet) {
-          const updatedRunsheetData = [...currentRunsheet.data];
+        if (activeRunsheet) {
+          const updatedRunsheetData = [...(activeRunsheet.data || [])];
           updatedRunsheetData[rowIndex] = updatedData;
           
-          updateRunsheet(currentRunsheet.id, {
+          updateRunsheet(activeRunsheet.id, {
             data: updatedRunsheetData,
             hasUnsavedChanges: true
           });

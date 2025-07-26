@@ -7,7 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Upload, X, FileText, Image, FileIcon, CheckCircle, AlertCircle } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import { DocumentService } from '@/services/documentService';
-import { useMultipleRunsheets } from '@/hooks/useMultipleRunsheets';
+import { useActiveRunsheet } from '@/hooks/useActiveRunsheet';
 import { supabase } from '@/integrations/supabase/client';
 
 interface FileUploadStatus {
@@ -32,7 +32,7 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  const { currentRunsheet } = useMultipleRunsheets();
+  const { activeRunsheet } = useActiveRunsheet();
 
   const getFileIcon = (file: File) => {
     const type = file.type;
@@ -53,7 +53,7 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
   };
 
   const handleFileSelect = useCallback((selectedFiles: FileList) => {
-    if (!currentRunsheet) {
+    if (!activeRunsheet) {
       toast({
         title: "No active runsheet",
         description: "Please select or create a runsheet first.",
@@ -71,7 +71,7 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
     }));
 
     setFiles(prev => [...prev, ...newFiles]);
-  }, [currentRunsheet]);
+  }, [activeRunsheet]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -99,11 +99,11 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
 
   const uploadFiles = async () => {
     console.log('=== UPLOAD FILES DEBUG ===');
-    console.log('currentRunsheet from MultipleFileUpload:', currentRunsheet);
-    console.log('currentRunsheet.id:', currentRunsheet?.id);
-    console.log('currentRunsheet full object:', JSON.stringify(currentRunsheet, null, 2));
+    console.log('activeRunsheet from MultipleFileUpload:', activeRunsheet);
+    console.log('activeRunsheet.id:', activeRunsheet?.id);
+    console.log('activeRunsheet full object:', JSON.stringify(activeRunsheet, null, 2));
     
-    if (!currentRunsheet?.id) {
+    if (!activeRunsheet?.id) {
       console.log('No currentRunsheet.id found');
       toast({
         title: "No active runsheet",
@@ -114,8 +114,8 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
     }
 
     // Check if runsheet exists in database by trying to fetch it
-    if (currentRunsheet.id.startsWith('legacy-')) {
-      console.log('Runsheet has legacy ID, needs to be saved first:', currentRunsheet.id);
+    if (activeRunsheet.id.startsWith('legacy-')) {
+      console.log('Runsheet has legacy ID, needs to be saved first:', activeRunsheet.id);
       toast({
         title: "Save runsheet first",
         description: "Please save your runsheet to the database before uploading documents.",
@@ -126,17 +126,17 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
 
     // Verify runsheet exists in database
     try {
-      console.log('Checking if runsheet exists in database with ID:', currentRunsheet.id);
+      console.log('Checking if runsheet exists in database with ID:', activeRunsheet.id);
       const { data: runsheetExists, error: checkError } = await supabase
         .from('runsheets')
         .select('id')
-        .eq('id', currentRunsheet.id)
+        .eq('id', activeRunsheet.id)
         .single();
 
       console.log('Database check result:', { runsheetExists, checkError });
 
       if (checkError || !runsheetExists) {
-        console.log('Runsheet not found in database:', currentRunsheet.id, 'Error:', checkError);
+        console.log('Runsheet not found in database:', activeRunsheet.id, 'Error:', checkError);
         toast({
           title: "Save runsheet first",
           description: "Please save your runsheet to the database before uploading documents.",
@@ -156,7 +156,7 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
       return;
     }
 
-    console.log('Proceeding with upload for runsheet ID:', currentRunsheet.id);
+    console.log('Proceeding with upload for runsheet ID:', activeRunsheet.id);
 
     const pendingFiles = files.filter(f => f.status === 'pending');
     if (pendingFiles.length === 0) {
@@ -171,7 +171,7 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
     setIsUploading(true);
 
     // Find the first empty row to start uploading to
-    const runsheetData = currentRunsheet.data || [];
+    const runsheetData = activeRunsheet.data || [];
     let startRowIndex = runsheetData.findIndex(row => 
       !Object.values(row).some(value => value && typeof value === 'string' && value.trim() !== '')
     );
@@ -214,7 +214,7 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
       try {
         const result = await DocumentService.uploadDocument(
           fileUpload.file,
-          currentRunsheet.id,
+          activeRunsheet.id,
           currentRowIndex,
           (progress) => {
             setFiles(prev => prev.map((f, index) => 
@@ -242,7 +242,7 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
             // Trigger a custom event to notify the parent component
             window.dispatchEvent(new CustomEvent('documentRecordCreated', {
               detail: {
-                runsheetId: currentRunsheet.id,
+                runsheetId: activeRunsheet.id,
                 rowIndex: currentRowIndex,
                 document: result.document
               }

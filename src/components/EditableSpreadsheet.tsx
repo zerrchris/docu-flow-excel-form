@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useActiveRunsheet } from '@/hooks/useActiveRunsheet';
-import { useMultipleRunsheets } from '@/hooks/useMultipleRunsheets';
+
 import * as XLSX from 'xlsx';
 import JSZip from 'jszip';
 import { Card } from '@/components/ui/card';
@@ -79,7 +79,6 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const { toast } = useToast();
   const navigate = useNavigate();
   const { setActiveRunsheet, clearActiveRunsheet, currentRunsheet, updateRunsheet } = useActiveRunsheet();
-  const { removeRunsheet, addRunsheet, switchToTab } = useMultipleRunsheets();
   const [user, setUser] = useState<User | null>(null);
   
   // Track locally which columns need configuration
@@ -416,10 +415,13 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
   // Update active runsheet when name changes
   useEffect(() => {
-    if (runsheetName && runsheetName !== 'Untitled Runsheet') {
-      setActiveRunsheet({ name: runsheetName });
+    if (runsheetName && runsheetName !== 'Untitled Runsheet' && currentRunsheet) {
+      setActiveRunsheet({ 
+        ...currentRunsheet,
+        name: runsheetName 
+      });
     }
-  }, [runsheetName]);
+  }, [runsheetName, currentRunsheet]);
 
   // Listen for external trigger events from DocumentProcessor
   useEffect(() => {
@@ -726,10 +728,16 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             lastSaveTime: new Date()
           };
           
-          // Remove the old legacy runsheet and add the new one with database ID
-          removeRunsheet(currentRunsheet.id); // Remove legacy ID runsheet
-          addRunsheet(updatedRunsheet); // Add new runsheet with database ID
-          switchToTab(updateResult.id); // Switch to the new tab
+          // Update the active runsheet with the database ID
+          setActiveRunsheet({
+            id: updateResult.id,
+            name: finalName,
+            data,
+            columns,
+            columnInstructions,
+            hasUnsavedChanges: false,
+            lastSaveTime: new Date()
+          });
         }
       } else {
         // Create new runsheet - check for name conflicts
@@ -777,10 +785,16 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             lastSaveTime: new Date()
           };
           
-          // Remove the old legacy runsheet and add the new one with database ID
-          removeRunsheet(currentRunsheet.id); // Remove legacy ID runsheet
-          addRunsheet(updatedRunsheet); // Add new runsheet with database ID
-          switchToTab(savedRunsheet.id); // Switch to the new tab
+          // Update the active runsheet with the database ID
+          setActiveRunsheet({
+            id: savedRunsheet.id,
+            name: finalName,
+            data,
+            columns,
+            columnInstructions,
+            hasUnsavedChanges: false,
+            lastSaveTime: new Date()
+          });
         }
       }
 
@@ -901,10 +915,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       setLastSaveTime(new Date());
       onUnsavedChanges?.(false);
 
-      // Clear the active runsheet status and navigate
-      if (currentRunsheet) {
-        removeRunsheet(currentRunsheet.id);
-      }
+      // Clear the active runsheet and navigate
+      clearActiveRunsheet();
       clearActiveRunsheet();
 
       toast({
@@ -994,10 +1006,16 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           hasUnsavedChanges: false,
           lastSaveTime: new Date()
         };
-        
-        removeRunsheet(currentRunsheet.id);
-        addRunsheet(updatedRunsheet);
-        switchToTab(savedRunsheet.id);
+        // Update the active runsheet with the database ID
+        setActiveRunsheet({
+          id: savedRunsheet.id,
+          name: finalName,
+          data,
+          columns,
+          columnInstructions,
+          hasUnsavedChanges: false,
+          lastSaveTime: new Date()
+        });
       }
       
       const savedState = JSON.stringify({ data, columns, runsheetName: finalName, columnInstructions });
