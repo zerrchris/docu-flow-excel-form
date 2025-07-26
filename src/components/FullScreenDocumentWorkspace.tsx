@@ -263,28 +263,36 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
       const extractionFields = extractionPrefs?.columns?.map(col => `${col}: ${extractionPrefs.column_instructions?.[col] || 'Extract this field'}`).join('\n') || 
         editableFields.map(col => `${col}: Extract this field`).join('\n');
 
-      // Convert the document URL to base64 for analysis
-      const response = await fetch(documentUrl);
-      const blob = await response.blob();
-      
       let imageData: string;
-      if (isPdf) {
-        // For PDFs, we'll need to convert to image first
-        toast({
-          title: "PDF Analysis",
-          description: "PDF analysis is currently limited. Consider converting to image first.",
-          variant: "default"
-        });
-        return;
+      
+      // Check if documentUrl is already a base64 data URL (from pending documents)
+      if (documentUrl.startsWith('data:')) {
+        console.log('🔧 Using base64 data from pending document');
+        imageData = documentUrl;
       } else {
-        // For images, convert to base64 data URL
-        const reader = new FileReader();
-        imageData = await new Promise((resolve) => {
-          reader.onloadend = () => {
-            resolve(reader.result as string); // Keep full data URL format
-          };
-          reader.readAsDataURL(blob);
-        });
+        console.log('🔧 Fetching document from storage URL');
+        // Convert the document URL to base64 for analysis
+        const response = await fetch(documentUrl);
+        const blob = await response.blob();
+        
+        if (isPdf) {
+          // For PDFs, we'll need to convert to image first
+          toast({
+            title: "PDF Analysis",
+            description: "PDF analysis is currently limited. Consider converting to image first.",
+            variant: "default"
+          });
+          return;
+        } else {
+          // For images, convert to base64 data URL
+          const reader = new FileReader();
+          imageData = await new Promise((resolve) => {
+            reader.onloadend = () => {
+              resolve(reader.result as string); // Keep full data URL format
+            };
+            reader.readAsDataURL(blob);
+          });
+        }
       }
 
       // Call the analyze-document function
