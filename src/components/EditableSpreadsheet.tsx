@@ -142,6 +142,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [selectedColumn, setSelectedColumn] = useState<string>('');
   const [columnInstructions, setColumnInstructions] = useState<Record<string, string>>({});
   const [showNewRunsheetDialog, setShowNewRunsheetDialog] = useState(false);
+  const [showNameNewRunsheetDialog, setShowNameNewRunsheetDialog] = useState(false);
+  const [newRunsheetName, setNewRunsheetName] = useState('');
   const [showAnalyzeWarningDialog, setShowAnalyzeWarningDialog] = useState(false);
   const [pendingAnalysis, setPendingAnalysis] = useState<{file: File, filename: string, rowIndex: number} | null>(null);
   const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] = useState(false);
@@ -3103,10 +3105,105 @@ ${extractionFields}`
                      </div>
                    </Button>
                     
+                     <Button
+                       onClick={() => {
+                         setShowNewRunsheetDialog(false);
+                         setNewRunsheetName('');
+                         setShowNameNewRunsheetDialog(true);
+                       }}
+                       className="h-16 flex flex-col gap-2 text-left"
+                       variant="default"
+                     >
+                       <div className="flex items-center gap-3 w-full">
+                         <Plus className="h-6 w-6" />
+                         <div className="flex flex-col text-left">
+                           <span className="font-semibold">Start New Runsheet</span>
+                           <span className="text-sm text-muted-foreground">Begin with a fresh, empty runsheet</span>
+                         </div>
+                       </div>
+                     </Button>
+                 </div>
+               </DialogContent>
+              </Dialog>
+
+              {/* Name New Runsheet Dialog */}
+              <Dialog open={showNameNewRunsheetDialog} onOpenChange={setShowNameNewRunsheetDialog}>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Name Your Runsheet</DialogTitle>
+                    <DialogDescription>
+                      Choose a descriptive name for your new runsheet. This will help you identify it later.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="runsheet-name">Runsheet Name</Label>
+                      <Input
+                        id="runsheet-name"
+                        placeholder="e.g., Property Deeds Q1 2024"
+                        value={newRunsheetName}
+                        onChange={(e) => setNewRunsheetName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && newRunsheetName.trim()) {
+                            // Create the new runsheet
+                            const finalName = newRunsheetName.trim();
+                            setRunsheetName(finalName);
+                            setData(Array.from({ length: 20 }, () => {
+                              const row: Record<string, string> = {};
+                              initialColumns.forEach(col => row[col] = '');
+                              return row;
+                            }));
+                            setColumns(initialColumns);
+                            setSelectedCell(null);
+                            setEditingCell(null);
+                            setCellValue('');
+                            setSelectedRange(null);
+                            setHasUnsavedChanges(false);
+                            setLastSavedState('');
+                            onDataChange?.(Array.from({ length: 20 }, () => {
+                              const row: Record<string, string> = {};
+                              initialColumns.forEach(col => row[col] = '');
+                              return row;
+                            }));
+                            onColumnChange(initialColumns);
+                            
+                            setShowNameNewRunsheetDialog(false);
+                            setNewRunsheetName('');
+                            
+                            toast({
+                              title: "New runsheet created",
+                              description: `"${finalName}" is ready for your data.`,
+                            });
+                          }
+                        }}
+                        autoFocus
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter className="gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setShowNameNewRunsheetDialog(false);
+                        setNewRunsheetName('');
+                      }}
+                    >
+                      Cancel
+                    </Button>
                     <Button
                       onClick={() => {
-                        // Reset all data to default state
-                        setRunsheetName('Untitled Runsheet');
+                        if (!newRunsheetName.trim()) {
+                          toast({
+                            title: "Name required",
+                            description: "Please enter a name for your runsheet.",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+                        
+                        // Create the new runsheet
+                        const finalName = newRunsheetName.trim();
+                        setRunsheetName(finalName);
                         setData(Array.from({ length: 20 }, () => {
                           const row: Record<string, string> = {};
                           initialColumns.forEach(col => row[col] = '');
@@ -3126,28 +3223,21 @@ ${extractionFields}`
                         }));
                         onColumnChange(initialColumns);
                         
-                        // Close the dialog
-                        setShowNewRunsheetDialog(false);
+                        setShowNameNewRunsheetDialog(false);
+                        setNewRunsheetName('');
                         
                         toast({
-                          title: "New runsheet started",
-                          description: "Started with a fresh, empty runsheet.",
+                          title: "New runsheet created",
+                          description: `"${finalName}" is ready for your data.`,
                         });
                       }}
-                      className="h-16 flex flex-col gap-2 text-left"
-                      variant="default"
+                      disabled={!newRunsheetName.trim()}
                     >
-                      <div className="flex items-center gap-3 w-full">
-                        <Plus className="h-6 w-6" />
-                        <div className="flex flex-col text-left">
-                          <span className="font-semibold">Start New Runsheet</span>
-                          <span className="text-sm text-muted-foreground">Begin with a fresh, empty runsheet</span>
-                        </div>
-                      </div>
+                      Create Runsheet
                     </Button>
-                 </div>
-               </DialogContent>
-             </Dialog>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
           </div>
           <div className="text-sm text-muted-foreground">
             Right-click column headers to insert or remove columns
