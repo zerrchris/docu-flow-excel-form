@@ -70,6 +70,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
         setIsLoading(true);
         setError(null);
         
+        // Try to load from database first
         const document = await DocumentService.getDocumentForRow(runsheetId, rowIndex);
         if (document) {
           const url = DocumentService.getDocumentUrl(document.file_path);
@@ -77,7 +78,17 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
           setDocumentName(document.original_filename);
           setIsPdf(document.content_type === 'application/pdf' || document.original_filename.toLowerCase().endsWith('.pdf'));
         } else {
-          setError('No document found for this row');
+          // Check for pending documents in session storage
+          const pendingDocs = JSON.parse(sessionStorage.getItem('pendingDocuments') || '[]');
+          const pendingDoc = pendingDocs.find((doc: any) => doc.rowIndex === rowIndex);
+          
+          if (pendingDoc) {
+            setDocumentUrl(pendingDoc.fileData);
+            setDocumentName(pendingDoc.fileName);
+            setIsPdf(pendingDoc.fileType === 'application/pdf' || pendingDoc.fileName.toLowerCase().endsWith('.pdf'));
+          } else {
+            setError('No document found for this row');
+          }
         }
       } catch (error) {
         console.error('Error loading document:', error);
