@@ -243,7 +243,7 @@ export const GoogleDrivePicker: React.FC<GoogleDrivePickerProps> = ({
                     Connected to Google Drive
                   </Badge>
                   <span className="text-sm text-muted-foreground">
-                    Click on any file to open it
+                    Select a spreadsheet to import
                   </span>
                 </div>
               </div>
@@ -262,15 +262,12 @@ export const GoogleDrivePicker: React.FC<GoogleDrivePickerProps> = ({
                           <TableHead className="min-w-[200px]">Name</TableHead>
                           <TableHead className="w-20">Size</TableHead>
                           <TableHead className="w-28">Modified</TableHead>
+                          <TableHead className="w-24">Action</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {files.map((file) => (
-                          <TableRow 
-                            key={file.id} 
-                            className="cursor-pointer hover:bg-muted/50"
-                            onClick={() => openFile(file.id)}
-                          >
+                          <TableRow key={file.id}>
                             <TableCell>
                               <span className="truncate">{file.name}</span>
                             </TableCell>
@@ -278,11 +275,24 @@ export const GoogleDrivePicker: React.FC<GoogleDrivePickerProps> = ({
                             <TableCell>
                               {new Date(file.modifiedTime).toLocaleDateString()}
                             </TableCell>
+                            <TableCell>
+                              <Button
+                                size="sm"
+                                onClick={() => openFile(file.id)}
+                                disabled={isProcessing}
+                              >
+                                {isProcessing ? (
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                ) : (
+                                  'Open'
+                                )}
+                              </Button>
+                            </TableCell>
                           </TableRow>
                         ))}
                         {files.length === 0 && (
                           <TableRow>
-                            <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
+                            <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
                               No spreadsheet files found in your Google Drive
                             </TableCell>
                           </TableRow>
