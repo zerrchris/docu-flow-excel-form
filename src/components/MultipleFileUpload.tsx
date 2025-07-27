@@ -312,10 +312,12 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
               }
             }));
             
-            // Also trigger a runsheet data refresh to update the UI immediately
-            window.dispatchEvent(new CustomEvent('refreshRunsheetData', {
+            // Also trigger a runsheet data refresh and update the specific row
+            window.dispatchEvent(new CustomEvent('updateDocumentFilename', {
               detail: {
-                runsheetId: runsheetId
+                runsheetId: runsheetId,
+                rowIndex: currentRowIndex,
+                filename: result.document.stored_filename
               }
             }));
           }

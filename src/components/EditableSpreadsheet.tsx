@@ -491,6 +491,45 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       }
     };
 
+    const handleUpdateDocumentFilename = async (event: CustomEvent) => {
+      const { runsheetId, rowIndex, filename } = event.detail;
+      console.log('🔧 EditableSpreadsheet: Update document filename event received:', { runsheetId, rowIndex, filename });
+      
+      if (runsheetId === currentRunsheetId) {
+        console.log('🔧 EditableSpreadsheet: Runsheet ID matches, updating row with filename');
+        
+        // Ensure Document File Name column exists
+        if (!columns.includes('Document File Name')) {
+          console.log('🔧 EditableSpreadsheet: Adding Document File Name column');
+          setColumns(prev => [...prev, 'Document File Name']);
+        }
+        
+        // Update the specific row with the filename
+        setData(prev => {
+          const newData = [...prev];
+          // Ensure the row exists
+          while (newData.length <= rowIndex) {
+            const newRow: Record<string, string> = {};
+            columns.forEach(col => newRow[col] = '');
+            newRow['Document File Name'] = '';
+            newData.push(newRow);
+          }
+          
+          // Update the Document File Name field
+          newData[rowIndex] = {
+            ...newData[rowIndex],
+            'Document File Name': filename
+          };
+          
+          console.log('🔧 EditableSpreadsheet: Updated row', rowIndex, 'with filename:', filename);
+          return newData;
+        });
+        
+        // Mark as having unsaved changes to trigger auto-save
+        setHasUnsavedChanges(true);
+      }
+    };
+
     window.addEventListener('triggerSpreadsheetUpload', handleUploadTrigger);
     window.addEventListener('triggerSpreadsheetOpen', handleOpenTrigger);
     window.addEventListener('loadSpecificRunsheet', handleLoadSpecificRunsheet as EventListener);
@@ -498,6 +537,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     window.addEventListener('importRunsheetFile', handleImportRunsheetFile as EventListener);
     window.addEventListener('openGoogleDrivePicker', handleOpenGoogleDrivePicker);
     window.addEventListener('refreshRunsheetData', handleRefreshRunsheetData as EventListener);
+    window.addEventListener('updateDocumentFilename', handleUpdateDocumentFilename as EventListener);
 
     return () => {
       window.removeEventListener('triggerSpreadsheetUpload', handleUploadTrigger);
@@ -507,6 +547,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       window.removeEventListener('importRunsheetFile', handleImportRunsheetFile as EventListener);
       window.removeEventListener('openGoogleDrivePicker', handleOpenGoogleDrivePicker);
       window.removeEventListener('refreshRunsheetData', handleRefreshRunsheetData as EventListener);
+      window.removeEventListener('updateDocumentFilename', handleUpdateDocumentFilename as EventListener);
     };
   }, []);
 
