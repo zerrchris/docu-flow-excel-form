@@ -142,7 +142,7 @@ const Home: React.FC = () => {
                   <Users className="h-6 w-6 text-primary flex-shrink-0 mt-1" />
                   <div>
                     <h4 className="font-semibold mb-2">User-Friendly</h4>
-                    <p className="text-muted-foreground">Intuitive design that makes document processing accessible to everyone.</p>
+                    <p className="text-muted-foreground">Intuitive design that makes data extraction seamless.</p>
                   </div>
                 </div>
               </div>
