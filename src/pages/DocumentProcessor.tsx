@@ -185,7 +185,7 @@ const DocumentProcessor: React.FC = () => {
   // Handle URL parameters for actions (upload, google-drive, etc.) and runsheet ID
   useEffect(() => {
     const action = searchParams.get('action');
-    const runsheetId = searchParams.get('id');
+    const runsheetId = searchParams.get('id') || searchParams.get('runsheet');
     console.log('DocumentProcessor useEffect - action from searchParams:', action);
     console.log('DocumentProcessor useEffect - runsheetId from searchParams:', runsheetId);
     
