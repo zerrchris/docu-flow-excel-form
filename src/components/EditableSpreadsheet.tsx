@@ -829,6 +829,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     const handleNavigationSave = async () => {
       console.log('🔧 EditableSpreadsheet: Received navigation save request');
       await saveRunsheet();
+      // Dispatch completion event so DocumentProcessor knows save is done
+      window.dispatchEvent(new CustomEvent('saveComplete'));
     };
 
     window.addEventListener('saveCurrentRunsheet', handleNavigationSave as EventListener);

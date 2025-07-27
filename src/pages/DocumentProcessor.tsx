@@ -1052,15 +1052,18 @@ Image: [base64 image data]`;
             <Button 
               variant="default" 
               onClick={async () => {
+                // Listen for save completion before navigating
+                const handleSaveComplete = () => {
+                  setShowNavigationDialog(false);
+                  navigate('/app');
+                  window.removeEventListener('saveComplete', handleSaveComplete);
+                };
+                
+                window.addEventListener('saveComplete', handleSaveComplete);
+                
                 // Trigger the same save function that the EditableSpreadsheet uses
                 const saveEvent = new CustomEvent('saveCurrentRunsheet');
                 window.dispatchEvent(saveEvent);
-                setShowNavigationDialog(false);
-                
-                // Wait a moment for the save to complete, then navigate
-                setTimeout(() => {
-                  navigate('/app');
-                }, 500);
               }}
               className="w-full sm:w-auto"
             >
