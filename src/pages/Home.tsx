@@ -106,9 +106,7 @@ const Home: React.FC = () => {
               <CardHeader className="text-center">
                 <FolderOpen className="h-12 w-12 mx-auto text-primary mb-4" />
                 <CardTitle>Easy Management</CardTitle>
-                <CardDescription>
-                  Organize, edit, and manage your data with powerful spreadsheet tools
-                </CardDescription>
+                <CardDescription>Organize, edit, and manage your sheets and documents </CardDescription>
               </CardHeader>
             </Card>
           </div>
