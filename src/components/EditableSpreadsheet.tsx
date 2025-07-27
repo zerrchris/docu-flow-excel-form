@@ -3406,15 +3406,15 @@ ${extractionFields}`
                 </DialogContent>
               </Dialog>
           </div>
-          <div className="text-sm text-muted-foreground">
-            Right-click column headers to insert or remove columns
-          </div>
         </div>
 
         {/* Column Instructions Info */}
-        <div className="flex justify-start mb-4">
+        <div className="flex flex-col gap-1 mb-4">
           <p className="text-sm text-muted-foreground">
             Click on column headers to configure extraction instructions for each field
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Right-click column headers to insert or remove columns
           </p>
         </div>
 
