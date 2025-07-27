@@ -107,8 +107,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   
   const [columns, setColumns] = useState<string[]>(() => ensureDocumentColumns(initialColumns));
   const [data, setData] = useState<Record<string, string>[]>(() => {
-    // Ensure we always have at least 100 rows so users rarely need to add more
-    const minRows = 100;
+    // Ensure we always have at least 20 rows
+    const minRows = 20;
     const existingRows = initialData.length;
     const emptyRows = Array.from({ length: Math.max(0, minRows - existingRows) }, () => {
       const row: Record<string, string> = {};
@@ -218,7 +218,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
   // Sync data with initialData prop changes
   useEffect(() => {
-    const minRows = 100;
+    const minRows = 20;
     const existingRows = initialData.length;
     const emptyRows = Array.from({ length: Math.max(0, minRows - existingRows) }, () => {
       const row: Record<string, string> = {};
@@ -742,16 +742,13 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
   // Save runsheet to Supabase
   const saveRunsheet = async () => {
-    console.log('🔧 [SAVE DEBUG] Save button clicked!');
-    console.log('🔧 [SAVE DEBUG] User state:', user?.id);
-    console.log('🔧 [SAVE DEBUG] Runsheet name:', runsheetName);
-    console.log('🔧 [SAVE DEBUG] Columns:', columns);
-    console.log('🔧 [SAVE DEBUG] Data before save:');
-    console.log('🔧 [SAVE DEBUG] - Data length:', data.length);
-    console.log('🔧 [SAVE DEBUG] - Non-empty rows:', data.filter(row => Object.values(row).some(val => val?.trim())).length);
-    console.log('🔧 [SAVE DEBUG] - First 3 rows:', data.slice(0, 3));
-    console.log('🔧 [SAVE DEBUG] Document map before save:', Object.keys(documentMap).length, 'documents');
-    console.log('🔧 [SAVE DEBUG] Column instructions before save:', Object.keys(columnInstructions));
+    console.log('Save button clicked!');
+    console.log('User state:', user);
+    console.log('Runsheet name:', runsheetName);
+    console.log('Columns:', columns);
+    console.log('Data before save:', JSON.stringify(data, null, 2));
+    console.log('Document map before save:', documentMap);
+    console.log('Column instructions before save:', columnInstructions);
 
     if (!user) {
       console.log('No user - showing auth required toast');
@@ -1307,12 +1304,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
   // Load a saved runsheet
   const loadRunsheet = async (runsheet: any) => {
-    console.log('🔧 [LOAD DEBUG] Loading selected runsheet:', runsheet.name);
-    console.log('🔧 [LOAD DEBUG] Runsheet data being loaded:');
-    console.log('🔧 [LOAD DEBUG] - Data type:', typeof runsheet.data);
-    console.log('🔧 [LOAD DEBUG] - Data length:', runsheet.data?.length);
-    console.log('🔧 [LOAD DEBUG] - First 3 rows:', runsheet.data?.slice(0, 3));
-    console.log('🔧 [LOAD DEBUG] - Columns:', runsheet.columns);
+    console.log('Loading selected runsheet:', runsheet);
+    console.log('Runsheet data being loaded:', JSON.stringify(runsheet.data, null, 2));
     setIsLoadingRunsheet(true);
     
     // Load column instructions first before setting columns to avoid false "missing" highlights
@@ -1340,22 +1333,10 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     
     // Now set everything together to avoid triggering missing column checks prematurely
     setRunsheetName(runsheet.name);
-    
-    // Ensure data has minimum rows like import does
-    const loadedData = runsheet.data || [];
-    const minRows = 100;
-    const emptyRows = Array.from({ length: Math.max(0, minRows - loadedData.length) }, () => {
-      const row: Record<string, string> = {};
-      runsheet.columns?.forEach((col: string) => row[col] = '');
-      return row;
-    });
-    const finalData = [...loadedData, ...emptyRows];
-    
-    console.log('🔧 [LOAD DEBUG] Setting runsheet data:');
-    console.log('🔧 [LOAD DEBUG] - Original data length:', loadedData.length);
-    console.log('🔧 [LOAD DEBUG] - Final data length:', finalData.length);
-    console.log('🔧 [LOAD DEBUG] - First row sample:', finalData[0]);
-    setData(finalData);
+    console.log('🔧 Debug: Setting runsheet data:', runsheet.data);
+    console.log('🔧 Debug: Data length:', runsheet.data?.length);
+    console.log('🔧 Debug: First row sample:', runsheet.data?.[0]);
+    setData(runsheet.data);
     setColumnInstructions(finalColumnInstructions);
     onColumnInstructionsChange?.(finalColumnInstructions);
     
@@ -1904,8 +1885,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       return newRow;
     });
     
-    // Add empty rows to reach minimum of 100 rows
-    const minRows = 100;
+    // Add empty rows to reach minimum of 20 rows
+    const minRows = 20;
     const emptyRows = Array.from({ length: Math.max(0, minRows - updatedParsedData.length) }, () => {
       const row: Record<string, string> = {};
       finalHeaders.forEach(col => row[col] = '');
