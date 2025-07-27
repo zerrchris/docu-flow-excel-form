@@ -485,6 +485,12 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             setColumns((runsheet.columns as string[]) || []);
             setRunsheetName(runsheet.name || 'Untitled Runsheet');
             setCurrentRunsheetId(runsheet.id);
+            
+            // Also refresh the document links
+            console.log('🔧 EditableSpreadsheet: Refreshing document links');
+            const documents = await DocumentService.getDocumentMapForRunsheet(runsheetId);
+            console.log('🔧 EditableSpreadsheet: Refreshed documents:', documents);
+            setDocumentMap(documents);
           }
         } catch (error) {
           console.error('Error refreshing runsheet data:', error);
