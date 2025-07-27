@@ -3940,7 +3940,7 @@ ${extractionFields}`
 
         {/* Name Conflict Dialog */}
         <AlertDialog open={showNameConflictDialog} onOpenChange={setShowNameConflictDialog}>
-          <AlertDialogContent>
+          <AlertDialogContent className="max-w-2xl">
             <AlertDialogHeader>
               <AlertDialogTitle>Runsheet Name Already Exists</AlertDialogTitle>
               <AlertDialogDescription>
