@@ -3409,7 +3409,7 @@ ${extractionFields}`
         </div>
 
         {/* Column Instructions Info */}
-        <div className="flex flex-col gap-1 mb-4">
+        <div className="flex justify-between items-center mb-4">
           <p className="text-sm text-muted-foreground">
             Click on column headers to configure extraction instructions for each field
           </p>
