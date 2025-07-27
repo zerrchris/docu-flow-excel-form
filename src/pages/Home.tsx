@@ -7,48 +7,43 @@ import { supabase } from '@/integrations/supabase/client';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import extractorLogo from '@/assets/document-extractor-logo.png';
 import AuthButton from '@/components/AuthButton';
-
 const Home: React.FC = () => {
   const [user, setUser] = useState<SupabaseUser | null>(null);
-
   useEffect(() => {
     const initAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: {
+          session
+        }
+      } = await supabase.auth.getSession();
       setUser(session?.user ?? null);
-      
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      const {
+        data: {
+          subscription
+        }
+      } = supabase.auth.onAuthStateChange((_event, session) => {
         setUser(session?.user ?? null);
       });
-
       return () => subscription.unsubscribe();
     };
-
     initAuth();
   }, []);
-
-  return (
-    <div className="min-h-screen bg-background">
+  return <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <img 
-                src={extractorLogo} 
-                alt="RunsheetPro Logo" 
-                className="h-12 w-12"
-              />
+              <img src={extractorLogo} alt="RunsheetPro Logo" className="h-12 w-12" />
               <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
                 RunsheetPro
               </h1>
             </div>
             <div className="flex items-center gap-4">
               <AuthButton />
-              {user && (
-                <Link to="/app">
+              {user && <Link to="/app">
                   <Button>Open App</Button>
-                </Link>
-              )}
+                </Link>}
             </div>
           </div>
         </div>
@@ -65,21 +60,17 @@ const Home: React.FC = () => {
             and manage everything in powerful spreadsheets that sync across all your devices.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            {user ? (
-              <Link to="/app">
+            {user ? <Link to="/app">
                 <Button size="lg" className="gap-2">
                   <FileText className="h-5 w-5" />
                   Open App
                 </Button>
-              </Link>
-            ) : (
-              <Link to="/signin">
+              </Link> : <Link to="/signin">
                 <Button size="lg" className="gap-2">
                   <LogIn className="h-5 w-5" />
                   Get Started
                 </Button>
-              </Link>
-            )}
+              </Link>}
           </div>
         </div>
       </section>
@@ -136,7 +127,7 @@ const Home: React.FC = () => {
                 <div className="flex gap-4">
                   <Zap className="h-6 w-6 text-primary flex-shrink-0 mt-1" />
                   <div>
-                    <h4 className="font-semibold mb-2">Lightning Fast</h4>
+                    <h4 className="font-semibold mb-2">Fast</h4>
                     <p className="text-muted-foreground">Process documents quickly with our streamlined interface and AI-powered extraction.</p>
                   </div>
                 </div>
@@ -165,19 +156,15 @@ const Home: React.FC = () => {
               </CardHeader>
               <CardContent className="p-0">
                 <div className="space-y-4">
-                  {user ? (
-                    <Link to="/app" className="block">
+                  {user ? <Link to="/app" className="block">
                       <Button size="lg" className="w-full">
                         Go to App
                       </Button>
-                    </Link>
-                  ) : (
-                    <Link to="/signin?mode=signup" className="block">
+                    </Link> : <Link to="/signin?mode=signup" className="block">
                       <Button size="lg" className="w-full">
                         Create Account
                       </Button>
-                    </Link>
-                  )}
+                    </Link>}
                 </div>
               </CardContent>
             </Card>
@@ -189,11 +176,7 @@ const Home: React.FC = () => {
       <footer className="border-t py-8 px-4">
         <div className="container mx-auto text-center">
           <div className="flex items-center justify-center gap-4 mb-4">
-            <img 
-              src={extractorLogo} 
-              alt="RunsheetPro Logo" 
-              className="h-8 w-8"
-            />
+            <img src={extractorLogo} alt="RunsheetPro Logo" className="h-8 w-8" />
             <span className="font-semibold">RunsheetPro</span>
           </div>
           <p className="text-sm text-muted-foreground">
@@ -201,8 +184,6 @@ const Home: React.FC = () => {
           </p>
         </div>
       </footer>
-    </div>
-  );
+    </div>;
 };
-
 export default Home;
