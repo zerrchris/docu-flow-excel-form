@@ -954,14 +954,6 @@ export const FileManager: React.FC = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => window.open(`/runsheet?runsheet=${runsheet.id}`, '_blank')}
-                        className="gap-1"
-                      >
-                        New Tab
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
                         onClick={() => openDeleteDialog(undefined, runsheet)}
                         className="gap-1 text-destructive hover:text-destructive"
                       >
