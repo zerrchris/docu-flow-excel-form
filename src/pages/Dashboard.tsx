@@ -150,7 +150,7 @@ const Dashboard: React.FC = () => {
                       </div>
                     </div>
                     <Button 
-                      onClick={() => navigate('/runsheet')}
+                      onClick={() => navigate('/runsheet', { state: { runsheet: activeRunsheet } })}
                       className="hover-scale"
                     >
                       Continue Working
