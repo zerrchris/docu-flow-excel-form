@@ -26,12 +26,14 @@ interface MultipleFileUploadProps {
     name: string;
     data: Record<string, string>[];
   };
+  onAutoSave?: () => Promise<string | null>; // Returns the saved runsheet ID or null if save failed
 }
 
 const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
   onUploadComplete,
   onClose,
-  runsheetData: propRunsheetData
+  runsheetData: propRunsheetData,
+  onAutoSave
 }) => {
   const [files, setFiles] = useState<FileUploadStatus[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -121,30 +123,13 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
       return;
     }
 
-    // Check if runsheet exists in database by trying to fetch it
-    if (currentRunsheet.id.startsWith('legacy-')) {
-      console.log('Runsheet has legacy ID, needs to be saved first:', currentRunsheet.id);
-      toast({
-        title: "Save runsheet first",
-        description: "Please save your runsheet to the database before uploading documents.",
-        variant: "destructive"
-      });
-      return;
-    }
+    let runsheetId = currentRunsheet.id;
 
-    // Verify runsheet exists in database
-    try {
-      console.log('Checking if runsheet exists in database with ID:', currentRunsheet.id);
-      const { data: runsheetExists, error: checkError } = await supabase
-        .from('runsheets')
-        .select('id')
-        .eq('id', currentRunsheet.id)
-        .single();
-
-      console.log('Database check result:', { runsheetExists, checkError });
-
-      if (checkError || !runsheetExists) {
-        console.log('Runsheet not found in database:', currentRunsheet.id, 'Error:', checkError);
+    // Check if runsheet needs to be saved first
+    if (currentRunsheet.id.startsWith('legacy-') || currentRunsheet.id === 'temp-id') {
+      console.log('Runsheet has temporary ID, auto-saving first:', currentRunsheet.id);
+      
+      if (!onAutoSave) {
         toast({
           title: "Save runsheet first",
           description: "Please save your runsheet to the database before uploading documents.",
@@ -152,16 +137,83 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
         });
         return;
       }
-      
-      console.log('Runsheet verified in database, proceeding with upload');
-    } catch (error) {
-      console.error('Error checking runsheet:', error);
+
       toast({
-        title: "Error",
-        description: "Could not verify runsheet. Please try saving it again.",
-        variant: "destructive"
+        title: "Saving runsheet",
+        description: "Auto-saving runsheet before uploading documents...",
       });
-      return;
+
+      try {
+        const savedRunsheetId = await onAutoSave();
+        if (!savedRunsheetId) {
+          toast({
+            title: "Save failed",
+            description: "Could not save runsheet. Please save manually and try again.",
+            variant: "destructive"
+          });
+          return;
+        }
+        runsheetId = savedRunsheetId;
+        console.log('Auto-save successful, new runsheet ID:', runsheetId);
+      } catch (error) {
+        console.error('Auto-save failed:', error);
+        toast({
+          title: "Save failed",
+          description: "Could not save runsheet. Please save manually and try again.",
+          variant: "destructive"
+        });
+        return;
+      }
+    } else {
+      // Verify runsheet exists in database
+      try {
+        console.log('Checking if runsheet exists in database with ID:', runsheetId);
+        const { data: runsheetExists, error: checkError } = await supabase
+          .from('runsheets')
+          .select('id')
+          .eq('id', runsheetId)
+          .maybeSingle();
+
+        console.log('Database check result:', { runsheetExists, checkError });
+
+        if (checkError && checkError.code !== 'PGRST116') {
+          throw checkError;
+        }
+
+        if (!runsheetExists) {
+          console.log('Runsheet not found in database, attempting auto-save:', runsheetId);
+          
+          if (!onAutoSave) {
+            toast({
+              title: "Save runsheet first",
+              description: "Please save your runsheet to the database before uploading documents.",
+              variant: "destructive"
+            });
+            return;
+          }
+
+          const savedRunsheetId = await onAutoSave();
+          if (!savedRunsheetId) {
+            toast({
+              title: "Save failed",
+              description: "Could not save runsheet. Please save manually and try again.",
+              variant: "destructive"
+            });
+            return;
+          }
+          runsheetId = savedRunsheetId;
+        }
+        
+        console.log('Runsheet verified/saved, proceeding with upload');
+      } catch (error) {
+        console.error('Error checking runsheet:', error);
+        toast({
+          title: "Error",
+          description: "Could not verify runsheet. Please try saving it again.",
+          variant: "destructive"
+        });
+        return;
+      }
     }
 
     console.log('Proceeding with upload for runsheet ID:', currentRunsheet.id);
@@ -222,7 +274,7 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
       try {
         const result = await DocumentService.uploadDocument(
           fileUpload.file,
-          currentRunsheet.id,
+          runsheetId,
           currentRowIndex,
           (progress) => {
             setFiles(prev => prev.map((f, index) => 
@@ -250,7 +302,7 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
             // Trigger a custom event to notify the parent component
             window.dispatchEvent(new CustomEvent('documentRecordCreated', {
               detail: {
-                runsheetId: currentRunsheet.id,
+                runsheetId: runsheetId,
                 rowIndex: currentRowIndex,
                 document: result.document
               }
@@ -296,13 +348,13 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
         const { data: documents } = await supabase
           .from('documents')
           .select('id')
-          .eq('runsheet_id', currentRunsheet.id)
+          .eq('runsheet_id', runsheetId)
           .gte('created_at', new Date(Date.now() - 60000).toISOString()); // Documents created in last minute
 
         if (documents && documents.length > 0) {
           const documentIds = documents.map(doc => doc.id);
           await DocumentService.organizeDocumentsByRunsheet(
-            currentRunsheet.id,
+            runsheetId,
             currentRunsheet.name,
             documentIds
           );

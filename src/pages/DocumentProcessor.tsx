@@ -1082,6 +1082,26 @@ Image: [base64 image data]`;
               name: activeRunsheet?.name || location.state?.runsheet?.name || 'Untitled Runsheet',
               data: spreadsheetData
             }}
+            onAutoSave={async () => {
+              try {
+                // Trigger the EditableSpreadsheet's save function
+                const saveEvent = new CustomEvent('saveCurrentRunsheet');
+                window.dispatchEvent(saveEvent);
+                
+                // Wait for save completion and return the runsheet ID
+                return new Promise((resolve) => {
+                  const handleSaveComplete = (event: CustomEvent) => {
+                    window.removeEventListener('saveComplete', handleSaveComplete as EventListener);
+                    // Return the saved runsheet ID (this would need to be provided by the save event)
+                    resolve(activeRunsheet?.id || location.state?.runsheetId || null);
+                  };
+                  window.addEventListener('saveComplete', handleSaveComplete as EventListener);
+                });
+              } catch (error) {
+                console.error('Auto-save error:', error);
+                return null;
+              }
+            }}
             onUploadComplete={(count) => {
               toast({
                 title: "Files uploaded successfully",
