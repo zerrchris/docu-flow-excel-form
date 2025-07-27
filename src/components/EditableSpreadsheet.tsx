@@ -3625,17 +3625,71 @@ ${extractionFields}`
                      );
                     })}
                     
-                    {/* Document File Name column - conditionally visible */}
-                    {showDocumentFileNameColumn && (
-                      <TableCell 
-                        className="border-r border-border p-2"
-                        style={{ width: "200px", minWidth: "200px" }}
-                      >
-                        <div className="text-sm text-muted-foreground">
-                          {row['Document File Name'] || ''}
-                        </div>
-                      </TableCell>
-                    )}
+                     {/* Document File Name column - conditionally visible */}
+                     {showDocumentFileNameColumn && (() => {
+                       const column = 'Document File Name';
+                       const isSelected = selectedCell?.rowIndex === rowIndex && selectedCell?.column === column;
+                       const isEditing = editingCell?.rowIndex === rowIndex && editingCell?.column === column;
+                       const columnIndex = columns.length; // This column comes after all regular columns
+                       const isInRange = isCellInRange(rowIndex, columnIndex);
+                       
+                       return (
+                         <TableCell 
+                           key={`${rowIndex}-${column}`}
+                           className={`border-r border-border p-0 cursor-text`}
+                           style={{ 
+                             width: "200px", 
+                             minWidth: "200px",
+                             height: isEditing ? 'fit-content' : `${getRowHeight(rowIndex)}px`,
+                             minHeight: isEditing ? '60px' : `${getRowHeight(rowIndex)}px`
+                           }}
+                           onClick={() => selectCell(rowIndex, column)}
+                           onDoubleClick={() => handleCellDoubleClick(rowIndex, column)}
+                           tabIndex={0}
+                         >
+                           {isEditing ? (
+                             <Textarea
+                               ref={textareaRef}
+                               value={cellValue}
+                               onChange={(e) => setCellValue(e.target.value)}
+                               onKeyDown={(e) => {
+                                 if (e.key === 'Enter' && !e.shiftKey) {
+                                   e.preventDefault();
+                                   saveEdit();
+                                 } else if (e.key === 'Escape') {
+                                   e.preventDefault();
+                                   cancelEdit();
+                                 } else if (e.key === 'Tab') {
+                                   e.preventDefault();
+                                   saveEdit();
+                                   // Move to actions column (no next cell for Document File Name)
+                                 }
+                               }}
+                               onBlur={saveEdit}
+                               className="w-full h-full resize-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent p-2"
+                               autoFocus
+                             />
+                           ) : (
+                             <div
+                               data-cell={`${rowIndex}-${column}`}
+                               className={`w-full h-full min-h-[2rem] py-2 px-3 flex items-start transition-colors whitespace-pre-wrap select-none
+                                 ${isSelected 
+                                   ? 'bg-primary/20 border-2 border-primary ring-2 ring-primary/20' 
+                                   : isInRange
+                                   ? 'bg-primary/10 border-2 border-primary/50'
+                                   : 'hover:bg-muted/50 border-2 border-transparent'
+                                 } text-left justify-start`}
+                               onMouseDown={(e) => handleCellMouseDown(e, rowIndex, column)}
+                               onMouseEnter={() => handleMouseEnter(rowIndex, column)}
+                               onMouseUp={handleMouseUp}
+                               onKeyDown={(e) => handleKeyDown(e, rowIndex, column)}
+                             >
+                               {row[column] || ''}
+                             </div>
+                           )}
+                         </TableCell>
+                       );
+                     })()}
                     
                     {/* Actions column - Document management */}
                    <TableCell 
