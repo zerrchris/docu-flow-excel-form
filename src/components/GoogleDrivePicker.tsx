@@ -43,14 +43,17 @@ export const GoogleDrivePicker: React.FC<GoogleDrivePickerProps> = ({
       
       // Get authorization URL from our edge function
       const { data, error } = await supabase.functions.invoke('google-drive-auth', {
-        body: { action: 'get_auth_url' }
+        body: { 
+          action: 'get_auth_url',
+          origin: window.location.origin 
+        }
       });
 
       if (error) throw error;
 
       // Open Google OAuth in a popup
       const popup = window.open(
-        data.auth_url,
+        data.authUrl,
         'google-auth',
         'width=500,height=600,scrollbars=yes,resizable=yes'
       );
@@ -65,7 +68,11 @@ export const GoogleDrivePicker: React.FC<GoogleDrivePickerProps> = ({
           
           // Exchange code for access token
           const { data: tokenData, error: tokenError } = await supabase.functions.invoke('google-drive-auth', {
-            body: { action: 'exchange_code', code }
+            body: { 
+              action: 'exchange_code', 
+              code,
+              origin: window.location.origin 
+            }
           });
 
           if (tokenError) throw tokenError;
