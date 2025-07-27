@@ -912,8 +912,6 @@ export const FileManager: React.FC = () => {
           </div>
           <div className="flex gap-4 text-sm text-muted-foreground">
             <span>{runsheets.length} total runsheets</span>
-            <span>•</span>
-            <span>Combined data from all runsheets</span>
           </div>
         </div>
       </Card>
