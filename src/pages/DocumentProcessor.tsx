@@ -1086,46 +1086,79 @@ Image: [base64 image data]`;
               try {
                 const { data: { user } } = await supabase.auth.getUser();
                 if (!user) {
+                  console.error('Auto-save failed: User not authenticated');
                   throw new Error('Not authenticated');
                 }
 
                 const runsheetName = activeRunsheet?.name || location.state?.runsheet?.name || 'Untitled Runsheet';
                 
-                // Save runsheet directly
-                const { data: insertResult, error } = await supabase
-                  .from('runsheets')
-                  .insert({
-                    name: runsheetName,
-                    columns: columns,
-                    data: spreadsheetData,
-                    column_instructions: columnInstructions,
-                    user_id: user.id,
-                  })
-                  .select('id')
-                  .single();
+                console.log('Auto-saving runsheet:', { 
+                  name: runsheetName, 
+                  columns: columns.length, 
+                  data: spreadsheetData.length 
+                });
 
-                if (error) {
-                  throw error;
+                // Check if runsheet already exists - update instead of insert if it has an ID
+                if (activeRunsheet?.id && !activeRunsheet.id.startsWith('temp-')) {
+                  console.log('Updating existing runsheet:', activeRunsheet.id);
+                  const { data: updateResult, error } = await supabase
+                    .from('runsheets')
+                    .update({
+                      name: runsheetName,
+                      columns: columns,
+                      data: spreadsheetData,
+                      column_instructions: columnInstructions,
+                      updated_at: new Date().toISOString(),
+                    })
+                    .eq('id', activeRunsheet.id)
+                    .select('id')
+                    .single();
+
+                  if (error) {
+                    console.error('Update error:', error);
+                    throw error;
+                  }
+
+                  return activeRunsheet.id;
+                } else {
+                  // Insert new runsheet
+                  console.log('Inserting new runsheet');
+                  const { data: insertResult, error } = await supabase
+                    .from('runsheets')
+                    .insert({
+                      name: runsheetName,
+                      columns: columns,
+                      data: spreadsheetData,
+                      column_instructions: columnInstructions,
+                      user_id: user.id,
+                    })
+                    .select('id')
+                    .single();
+
+                  if (error) {
+                    console.error('Insert error:', error);
+                    throw error;
+                  }
+
+                  console.log('Auto-saved runsheet with ID:', insertResult.id);
+                  
+                  // Update the active runsheet with the new ID
+                  if (setActiveRunsheet) {
+                    setActiveRunsheet({
+                      id: insertResult.id,
+                      name: runsheetName,
+                      data: spreadsheetData,
+                      columns,
+                      columnInstructions,
+                      hasUnsavedChanges: false,
+                      lastSaveTime: new Date()
+                    });
+                  }
+
+                  return insertResult.id;
                 }
-
-                console.log('Auto-saved runsheet with ID:', insertResult.id);
-                
-                // Update the active runsheet with the new ID
-                if (setActiveRunsheet) {
-                  setActiveRunsheet({
-                    id: insertResult.id,
-                    name: runsheetName,
-                    data: spreadsheetData,
-                    columns,
-                    columnInstructions,
-                    hasUnsavedChanges: false,
-                    lastSaveTime: new Date()
-                  });
-                }
-
-                return insertResult.id;
               } catch (error) {
-                console.error('Auto-save error:', error);
+                console.error('Auto-save error details:', error);
                 return null;
               }
             }}
