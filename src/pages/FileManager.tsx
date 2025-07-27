@@ -91,6 +91,7 @@ export const FileManager: React.FC = () => {
   const [showGoogleDrive, setShowGoogleDrive] = useState(false);
   const [showRunsheetDialog, setShowRunsheetDialog] = useState(false);
   const [selectedFilesForRunsheet, setSelectedFilesForRunsheet] = useState<StoredFile[]>([]);
+  const [newRunsheetName, setNewRunsheetName] = useState('');
 
   useEffect(() => {
     if (currentFolder === 'projects') {
@@ -632,6 +633,7 @@ export const FileManager: React.FC = () => {
     
     const selectedFileList = files.filter(file => selectedFiles.has(file.id));
     setSelectedFilesForRunsheet(selectedFileList);
+    setNewRunsheetName(`Files Runsheet ${new Date().toLocaleDateString()}`);
     setShowRunsheetDialog(true);
   };
 
@@ -642,7 +644,7 @@ export const FileManager: React.FC = () => {
 
       // Create a new runsheet with selected files
       const newRunsheet = {
-        name: `Files Runsheet ${new Date().toLocaleDateString()}`,
+        name: newRunsheetName.trim() || `Files Runsheet ${new Date().toLocaleDateString()}`,
         columns: ['filename', 'size', 'type', 'created_date'],
         data: selectedFilesForRunsheet.map(file => ({
           filename: file.name,
@@ -689,6 +691,7 @@ export const FileManager: React.FC = () => {
     } finally {
       setShowRunsheetDialog(false);
       setSelectedFilesForRunsheet([]);
+      setNewRunsheetName('');
     }
   };
 
@@ -1494,26 +1497,43 @@ export const FileManager: React.FC = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <div className="space-y-2">
-              <h4 className="font-medium">Selected Files:</h4>
-              <div className="max-h-40 overflow-auto space-y-1">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="runsheet-name" className="text-sm font-medium">
+                  Runsheet Name
+                </label>
+                <Input
+                  id="runsheet-name"
+                  value={newRunsheetName}
+                  onChange={(e) => setNewRunsheetName(e.target.value)}
+                  placeholder="Enter runsheet name..."
+                />
+              </div>
+              <div className="space-y-2">
+                <h4 className="font-medium">Selected Files:</h4>
+                <div className="max-h-40 overflow-auto space-y-1">
                 {selectedFilesForRunsheet.map((file) => (
                   <div key={file.id} className="flex items-center gap-2 text-sm p-2 bg-muted rounded">
                     <span className="flex-1 truncate">{file.name}</span>
                     <span className="text-muted-foreground">{formatFileSize(file.size)}</span>
                   </div>
                 ))}
-              </div>
-              <p className="text-sm text-muted-foreground">
-                The runsheet will contain file names, sizes, types, and creation dates.
-              </p>
-            </div>
+               </div>
+               <p className="text-sm text-muted-foreground">
+                 The runsheet will contain file names, sizes, types, and creation dates.
+               </p>
+               </div>
+             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowRunsheetDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={processFilesIntoRunsheet} className="gap-2">
+            <Button 
+              onClick={processFilesIntoRunsheet} 
+              className="gap-2"
+              disabled={!newRunsheetName.trim()}
+            >
               <Play className="h-4 w-4" />
               Create Runsheet
             </Button>
