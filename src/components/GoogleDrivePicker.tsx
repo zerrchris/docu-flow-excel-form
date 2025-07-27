@@ -304,7 +304,7 @@ export const GoogleDrivePicker: React.FC<GoogleDrivePickerProps> = ({
                 </Button>
               </div>
 
-              <div className="border rounded-lg max-h-[60vh] overflow-auto">
+              <div className="border rounded-lg max-h-[60vh] overflow-auto overflow-x-auto">
                 {isLoading ? (
                   <div className="text-center py-8">
                     <Loader2 className="h-8 w-8 mx-auto mb-2 animate-spin" />
