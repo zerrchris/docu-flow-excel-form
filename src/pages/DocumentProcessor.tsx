@@ -1050,12 +1050,36 @@ Image: [base64 image data]`;
             </Button>
             <Button 
               variant="default" 
-              onClick={() => {
-                // Save current runsheet and then navigate to dashboard
-                const saveEvent = new CustomEvent('saveCurrentRunsheet');
-                window.dispatchEvent(saveEvent);
+              onClick={async () => {
+                // Save current runsheet data directly to database
+                try {
+                  const { data: { user } } = await supabase.auth.getUser();
+                  if (user && hasUnsavedChanges) {
+                    await supabase
+                      .from('runsheets')
+                      .upsert({
+                        name: activeRunsheet?.name || 'Untitled Runsheet',
+                        columns: columns,
+                        data: spreadsheetData,
+                        column_instructions: columnInstructions,
+                        user_id: user.id
+                      });
+                    setHasUnsavedChanges(false);
+                    toast({
+                      title: "Runsheet saved",
+                      description: "Your runsheet has been saved successfully."
+                    });
+                  }
+                } catch (error) {
+                  console.error('Save error:', error);
+                  toast({
+                    title: "Save failed",
+                    description: "Failed to save the runsheet. Please try again.",
+                    variant: "destructive"
+                  });
+                }
                 setShowNavigationDialog(false);
-                setTimeout(() => navigate('/app'), 500);
+                navigate('/app');
               }}
               className="w-full sm:w-auto"
             >
