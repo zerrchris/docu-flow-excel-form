@@ -37,7 +37,7 @@ const DEFAULT_EXTRACTION_INSTRUCTIONS: Record<string, string> = {
 
 const DocumentProcessor: React.FC = () => {
   // Hook to get active runsheet data  
-  const { activeRunsheet } = useActiveRunsheet();
+  const { activeRunsheet, setActiveRunsheet } = useActiveRunsheet();
   
   // Document state
   const [file, setFile] = useState<File | null>(null);
@@ -1084,19 +1084,46 @@ Image: [base64 image data]`;
             }}
             onAutoSave={async () => {
               try {
-                // Trigger the EditableSpreadsheet's save function
-                const saveEvent = new CustomEvent('saveCurrentRunsheet');
-                window.dispatchEvent(saveEvent);
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) {
+                  throw new Error('Not authenticated');
+                }
+
+                const runsheetName = activeRunsheet?.name || location.state?.runsheet?.name || 'Untitled Runsheet';
                 
-                // Wait for save completion and return the runsheet ID
-                return new Promise((resolve) => {
-                  const handleSaveComplete = (event: CustomEvent) => {
-                    window.removeEventListener('saveComplete', handleSaveComplete as EventListener);
-                    // Return the saved runsheet ID (this would need to be provided by the save event)
-                    resolve(activeRunsheet?.id || location.state?.runsheetId || null);
-                  };
-                  window.addEventListener('saveComplete', handleSaveComplete as EventListener);
-                });
+                // Save runsheet directly
+                const { data: insertResult, error } = await supabase
+                  .from('runsheets')
+                  .insert({
+                    name: runsheetName,
+                    columns: columns,
+                    data: spreadsheetData,
+                    column_instructions: columnInstructions,
+                    user_id: user.id,
+                  })
+                  .select('id')
+                  .single();
+
+                if (error) {
+                  throw error;
+                }
+
+                console.log('Auto-saved runsheet with ID:', insertResult.id);
+                
+                // Update the active runsheet with the new ID
+                if (setActiveRunsheet) {
+                  setActiveRunsheet({
+                    id: insertResult.id,
+                    name: runsheetName,
+                    data: spreadsheetData,
+                    columns,
+                    columnInstructions,
+                    hasUnsavedChanges: false,
+                    lastSaveTime: new Date()
+                  });
+                }
+
+                return insertResult.id;
               } catch (error) {
                 console.error('Auto-save error:', error);
                 return null;
