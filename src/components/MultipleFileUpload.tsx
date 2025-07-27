@@ -303,7 +303,7 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
 
           // Update the runsheet data to show the linked document
           if (result.document) {
-            // Trigger a custom event to notify the parent component to refresh data
+          // Trigger a custom event to notify the parent component to refresh data
             window.dispatchEvent(new CustomEvent('documentRecordCreated', {
               detail: {
                 runsheetId: runsheetId,
@@ -311,6 +311,12 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
                 document: result.document
               }
             }));
+            
+            console.log('🔥 DISPATCHING updateDocumentFilename event:', {
+              runsheetId: runsheetId,
+              rowIndex: currentRowIndex,
+              filename: result.document.stored_filename
+            });
             
             // Also trigger a runsheet data refresh and update the specific row
             window.dispatchEvent(new CustomEvent('updateDocumentFilename', {

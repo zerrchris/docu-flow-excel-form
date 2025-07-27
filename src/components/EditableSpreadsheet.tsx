@@ -494,6 +494,9 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     const handleUpdateDocumentFilename = async (event: CustomEvent) => {
       const { runsheetId, rowIndex, filename } = event.detail;
       console.log('🔧 EditableSpreadsheet: Update document filename event received:', { runsheetId, rowIndex, filename });
+      console.log('🔧 EditableSpreadsheet: Current runsheet ID:', currentRunsheetId);
+      console.log('🔧 EditableSpreadsheet: Current columns:', columns);
+      console.log('🔧 EditableSpreadsheet: Current data length:', data.length);
       
       if (runsheetId === currentRunsheetId) {
         console.log('🔧 EditableSpreadsheet: Runsheet ID matches, updating row with filename');
@@ -501,18 +504,24 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         // Ensure Document File Name column exists
         if (!columns.includes('Document File Name')) {
           console.log('🔧 EditableSpreadsheet: Adding Document File Name column');
-          setColumns(prev => [...prev, 'Document File Name']);
+          setColumns(prev => {
+            const newColumns = [...prev, 'Document File Name'];
+            console.log('🔧 EditableSpreadsheet: New columns:', newColumns);
+            return newColumns;
+          });
         }
         
         // Update the specific row with the filename
         setData(prev => {
           const newData = [...prev];
+          console.log('🔧 EditableSpreadsheet: Current data before update:', newData);
+          
           // Ensure the row exists
           while (newData.length <= rowIndex) {
             const newRow: Record<string, string> = {};
-            columns.forEach(col => newRow[col] = '');
-            newRow['Document File Name'] = '';
+            [...columns, 'Document File Name'].forEach(col => newRow[col] = '');
             newData.push(newRow);
+            console.log('🔧 EditableSpreadsheet: Added new row:', newRow);
           }
           
           // Update the Document File Name field
@@ -522,11 +531,15 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           };
           
           console.log('🔧 EditableSpreadsheet: Updated row', rowIndex, 'with filename:', filename);
+          console.log('🔧 EditableSpreadsheet: Updated data:', newData);
           return newData;
         });
         
         // Mark as having unsaved changes to trigger auto-save
         setHasUnsavedChanges(true);
+        console.log('🔧 EditableSpreadsheet: Marked as having unsaved changes');
+      } else {
+        console.log('🔧 EditableSpreadsheet: Runsheet ID does not match, ignoring event');
       }
     };
 
