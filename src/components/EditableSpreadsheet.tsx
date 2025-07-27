@@ -458,12 +458,46 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       setShowGoogleDrivePicker(true);
     };
 
+    const handleRefreshRunsheetData = async (event: CustomEvent) => {
+      const { runsheetId } = event.detail;
+      console.log('🔧 EditableSpreadsheet: Refresh runsheet data event received for:', runsheetId);
+      
+      if (runsheetId === currentRunsheetId && user) {
+        console.log('🔧 EditableSpreadsheet: Runsheet ID matches, refreshing data from database');
+        try {
+          // Reload the runsheet data from the database
+          const { data: runsheet, error } = await supabase
+            .from('runsheets')
+            .select('*')
+            .eq('id', runsheetId)
+            .single();
+
+          if (error) {
+            console.error('Error refreshing runsheet data:', error);
+            return;
+          }
+
+          if (runsheet) {
+            console.log('🔧 EditableSpreadsheet: Successfully refreshed runsheet data');
+            // Properly type-cast the data from JSON to the expected format
+            setData((runsheet.data as Record<string, string>[]) || []);
+            setColumns((runsheet.columns as string[]) || []);
+            setRunsheetName(runsheet.name || 'Untitled Runsheet');
+            setCurrentRunsheetId(runsheet.id);
+          }
+        } catch (error) {
+          console.error('Error refreshing runsheet data:', error);
+        }
+      }
+    };
+
     window.addEventListener('triggerSpreadsheetUpload', handleUploadTrigger);
     window.addEventListener('triggerSpreadsheetOpen', handleOpenTrigger);
     window.addEventListener('loadSpecificRunsheet', handleLoadSpecificRunsheet as EventListener);
     window.addEventListener('autoRestoreLastRunsheet', handleAutoRestoreLastRunsheet);
     window.addEventListener('importRunsheetFile', handleImportRunsheetFile as EventListener);
     window.addEventListener('openGoogleDrivePicker', handleOpenGoogleDrivePicker);
+    window.addEventListener('refreshRunsheetData', handleRefreshRunsheetData as EventListener);
 
     return () => {
       window.removeEventListener('triggerSpreadsheetUpload', handleUploadTrigger);
@@ -472,6 +506,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       window.removeEventListener('autoRestoreLastRunsheet', handleAutoRestoreLastRunsheet);
       window.removeEventListener('importRunsheetFile', handleImportRunsheetFile as EventListener);
       window.removeEventListener('openGoogleDrivePicker', handleOpenGoogleDrivePicker);
+      window.removeEventListener('refreshRunsheetData', handleRefreshRunsheetData as EventListener);
     };
   }, []);
 
