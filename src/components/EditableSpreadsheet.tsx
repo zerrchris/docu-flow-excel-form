@@ -1840,6 +1840,11 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     const fileNameWithoutExt = fileName.replace(/\.[^/.]+$/, ""); // Remove extension
     setRunsheetName(fileNameWithoutExt || 'Imported Runsheet');
 
+    // Auto-save the runsheet with imported data
+    setTimeout(() => {
+      autoSaveRunsheet(); // Auto-save with the imported data
+    }, 100); // Small delay to ensure state updates are complete
+
     toast({
       title: "Spreadsheet uploaded",
       description: `Successfully imported ${updatedParsedData.length} rows with ${finalHeaders.length} columns from ${fileName}.`,
