@@ -20,6 +20,7 @@ interface NamingPreferences {
   include_extension: boolean;
   fallback_pattern: string;
   is_active: boolean;
+  use_smart_naming: boolean;
 }
 
 interface DocumentNamingSettingsProps {
@@ -37,6 +38,7 @@ const DocumentNamingSettings: React.FC<DocumentNamingSettingsProps> = ({ availab
     include_extension: true,
     fallback_pattern: 'document_{row_index}_{timestamp}',
     is_active: true,
+    use_smart_naming: true,
   });
   const [newColumn, setNewColumn] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -96,6 +98,7 @@ const DocumentNamingSettings: React.FC<DocumentNamingSettingsProps> = ({ availab
         include_extension: preferences.include_extension,
         fallback_pattern: preferences.fallback_pattern,
         is_active: preferences.is_active,
+        use_smart_naming: preferences.use_smart_naming,
       };
 
       if (preferences.id) {
@@ -143,6 +146,7 @@ const DocumentNamingSettings: React.FC<DocumentNamingSettingsProps> = ({ availab
       include_extension: true,
       fallback_pattern: 'document_{row_index}_{timestamp}',
       is_active: true,
+      use_smart_naming: true,
     });
   };
 
@@ -188,115 +192,166 @@ const DocumentNamingSettings: React.FC<DocumentNamingSettingsProps> = ({ availab
       </CardHeader>
       
       <CardContent className="space-y-6">
-        {/* Priority Columns */}
+        {/* Smart Naming Toggle */}
         <div className="space-y-3">
-          <Label className="text-base font-semibold">Priority Columns</Label>
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="use-smart-naming"
+              checked={preferences.use_smart_naming}
+              onCheckedChange={(checked) => setPreferences(prev => ({
+                ...prev,
+                use_smart_naming: checked
+              }))}
+            />
+            <Label htmlFor="use-smart-naming" className="text-base font-semibold">Enable Smart Naming</Label>
+          </div>
           <p className="text-sm text-muted-foreground">
-            Columns to use for naming, in order of priority. Documents will be named using data from these columns.
+            {preferences.use_smart_naming 
+              ? "Documents will be automatically named using data from your spreadsheet columns." 
+              : "Documents will keep their original uploaded filenames without any modification."}
           </p>
-          
-          <div className="flex flex-wrap gap-2">
-            {preferences.priority_columns.map((column, index) => (
-              <Badge key={column} variant="secondary" className="flex items-center gap-2">
-                <span>{index + 1}. {column}</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground"
-                  onClick={() => removePriorityColumn(column)}
-                >
-                  <X className="h-3 w-3" />
+        </div>
+
+        {preferences.use_smart_naming && (
+          <>
+            <Separator />
+
+            {/* Priority Columns */}
+            <div className="space-y-3">
+              <Label className="text-base font-semibold">Priority Columns</Label>
+              <p className="text-sm text-muted-foreground">
+                Columns to use for naming, in order of priority. Documents will be named using data from these columns.
+              </p>
+              
+              <div className="flex flex-wrap gap-2">
+                {preferences.priority_columns.map((column, index) => (
+                  <Badge key={column} variant="secondary" className="flex items-center gap-2">
+                    <span>{index + 1}. {column}</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                      onClick={() => removePriorityColumn(column)}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </Badge>
+                ))}
+              </div>
+              
+              <div className="flex gap-2">
+                <Select value={newColumn} onValueChange={setNewColumn}>
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Select column to add..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableColumns
+                      .filter(col => col && col.trim() !== '' && !preferences.priority_columns.includes(col))
+                      .map(column => (
+                        <SelectItem key={column} value={column}>
+                          {column}
+                        </SelectItem>
+                      ))}
+                    {availableColumns.filter(col => col && col.trim() !== '' && !preferences.priority_columns.includes(col)).length === 0 && (
+                      <SelectItem value="no-columns" disabled>
+                        No available columns
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+                <Button onClick={addPriorityColumn} size="sm" disabled={!newColumn}>
+                  <Plus className="h-4 w-4" />
                 </Button>
-              </Badge>
-            ))}
-          </div>
-          
-          <div className="flex gap-2">
-            <Select value={newColumn} onValueChange={setNewColumn}>
-              <SelectTrigger className="flex-1">
-                <SelectValue placeholder="Select column to add..." />
-              </SelectTrigger>
-              <SelectContent>
-                {availableColumns
-                  .filter(col => col && col.trim() !== '' && !preferences.priority_columns.includes(col))
-                  .map(column => (
-                    <SelectItem key={column} value={column}>
-                      {column}
-                    </SelectItem>
-                  ))}
-                {availableColumns.filter(col => col && col.trim() !== '' && !preferences.priority_columns.includes(col)).length === 0 && (
-                  <SelectItem value="no-columns" disabled>
-                    No available columns
-                  </SelectItem>
-                )}
-              </SelectContent>
-            </Select>
-            <Button onClick={addPriorityColumn} size="sm" disabled={!newColumn}>
-              <Plus className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
+              </div>
+            </div>
 
-        <Separator />
+            <Separator />
 
-        {/* Settings */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="max-parts">Max Filename Parts</Label>
-            <Input
-              id="max-parts"
-              type="number"
-              min="1"
-              max="5"
-              value={preferences.max_filename_parts}
-              onChange={(e) => setPreferences(prev => ({
-                ...prev,
-                max_filename_parts: parseInt(e.target.value) || 3
-              }))}
-            />
-          </div>
+            {/* Settings */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="max-parts">Max Filename Parts</Label>
+                <Input
+                  id="max-parts"
+                  type="number"
+                  min="1"
+                  max="5"
+                  value={preferences.max_filename_parts}
+                  onChange={(e) => setPreferences(prev => ({
+                    ...prev,
+                    max_filename_parts: parseInt(e.target.value) || 3
+                  }))}
+                />
+              </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="separator">Separator</Label>
-            <Input
-              id="separator"
-              value={preferences.separator}
-              onChange={(e) => setPreferences(prev => ({
-                ...prev,
-                separator: e.target.value || '_'
-              }))}
-              placeholder="_"
-            />
-          </div>
-        </div>
+              <div className="space-y-2">
+                <Label htmlFor="separator">Separator</Label>
+                <Input
+                  id="separator"
+                  value={preferences.separator}
+                  onChange={(e) => setPreferences(prev => ({
+                    ...prev,
+                    separator: e.target.value || '_'
+                  }))}
+                  placeholder="_"
+                />
+              </div>
+            </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="fallback">Fallback Pattern</Label>
-          <Input
-            id="fallback"
-            value={preferences.fallback_pattern}
-            onChange={(e) => setPreferences(prev => ({
-              ...prev,
-              fallback_pattern: e.target.value
-            }))}
-            placeholder="document_{row_index}_{timestamp}"
-          />
-          <p className="text-sm text-muted-foreground">
-            Used when no data is available. Variables: {'{row_index}'}, {'{timestamp}'}
-          </p>
-        </div>
+            <div className="space-y-2">
+              <Label htmlFor="fallback">Fallback Pattern</Label>
+              <Input
+                id="fallback"
+                value={preferences.fallback_pattern}
+                onChange={(e) => setPreferences(prev => ({
+                  ...prev,
+                  fallback_pattern: e.target.value
+                }))}
+                placeholder="document_{row_index}_{timestamp}"
+              />
+              <p className="text-sm text-muted-foreground">
+                Used when no data is available. Variables: {'{row_index}'}, {'{timestamp}'}
+              </p>
+            </div>
 
-        <div className="flex items-center space-x-2">
-          <Switch
-            id="include-extension"
-            checked={preferences.include_extension}
-            onCheckedChange={(checked) => setPreferences(prev => ({
-              ...prev,
-              include_extension: checked
-            }))}
-          />
-          <Label htmlFor="include-extension">Include file extension</Label>
-        </div>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="include-extension"
+                checked={preferences.include_extension}
+                onCheckedChange={(checked) => setPreferences(prev => ({
+                  ...prev,
+                  include_extension: checked
+                }))}
+              />
+              <Label htmlFor="include-extension">Include file extension</Label>
+            </div>
+
+            <Separator />
+
+            {/* Preview */}
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold">Preview</Label>
+              <div className="bg-muted p-3 rounded text-sm space-y-3">
+                <div>
+                  <strong>Basic Example:</strong> If your spreadsheet has data like "Acme Corp" in name column and "Invoice 2024" in title column:<br />
+                  <code className="bg-background px-2 py-1 rounded mt-1 inline-block">
+                    Acme_Corp{preferences.separator}Invoice_2024{preferences.separator}[third_column]{preferences.include_extension ? '.pdf' : ''}
+                  </code>
+                </div>
+                
+                <div className="pt-2 border-t">
+                  <strong>Real Estate Example:</strong> For instrument number, book, and page data:<br />
+                  <div className="text-xs text-muted-foreground mt-1 mb-2">
+                    Priority columns: instrument_number, book, page | Data: "202400123", "150", "75"
+                  </div>
+                  <code className="bg-background px-2 py-1 rounded inline-block">
+                    202400123{preferences.separator}150{preferences.separator}75{preferences.include_extension ? '.pdf' : ''}
+                  </code>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
 
         <Separator />
 
@@ -311,29 +366,6 @@ const DocumentNamingSettings: React.FC<DocumentNamingSettingsProps> = ({ availab
             <Save className="h-4 w-4 mr-2" />
             {isSaving ? 'Saving...' : 'Save Settings'}
           </Button>
-        </div>
-
-        {/* Preview */}
-        <div className="space-y-2">
-          <Label className="text-sm font-semibold">Preview</Label>
-          <div className="bg-muted p-3 rounded text-sm space-y-3">
-            <div>
-              <strong>Basic Example:</strong> If your spreadsheet has data like "Acme Corp" in name column and "Invoice 2024" in title column:<br />
-              <code className="bg-background px-2 py-1 rounded mt-1 inline-block">
-                Acme_Corp{preferences.separator}Invoice_2024{preferences.separator}[third_column]{preferences.include_extension ? '.pdf' : ''}
-              </code>
-            </div>
-            
-            <div className="pt-2 border-t">
-              <strong>Real Estate Example:</strong> For instrument number, book, and page data:<br />
-              <div className="text-xs text-muted-foreground mt-1 mb-2">
-                Priority columns: instrument_number, book, page | Data: "202400123", "150", "75"
-              </div>
-              <code className="bg-background px-2 py-1 rounded inline-block">
-                202400123{preferences.separator}150{preferences.separator}75{preferences.include_extension ? '.pdf' : ''}
-              </code>
-            </div>
-          </div>
         </div>
       </CardContent>
     </Card>

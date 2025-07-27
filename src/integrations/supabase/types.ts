@@ -211,6 +211,7 @@ export type Database = {
           priority_columns: string[]
           separator: string
           updated_at: string
+          use_smart_naming: boolean
           user_id: string
         }
         Insert: {
@@ -224,6 +225,7 @@ export type Database = {
           priority_columns?: string[]
           separator?: string
           updated_at?: string
+          use_smart_naming?: boolean
           user_id: string
         }
         Update: {
@@ -237,6 +239,7 @@ export type Database = {
           priority_columns?: string[]
           separator?: string
           updated_at?: string
+          use_smart_naming?: boolean
           user_id?: string
         }
         Relationships: []
