@@ -57,6 +57,7 @@ const DocumentProcessor: React.FC = () => {
   const [highlightMissingColumns, setHighlightMissingColumns] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showNavigationDialog, setShowNavigationDialog] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<{path: string, state?: any} | null>(null);
   const [showMultipleFileUpload, setShowMultipleFileUpload] = useState(false);
   
   // Note: Navigation blocking removed since runsheet auto-saves
@@ -373,7 +374,32 @@ const DocumentProcessor: React.FC = () => {
     };
   }, []);
 
-  // Note: Navigation blocking removed since runsheet now auto-saves
+  // Listen for unsaved changes navigation checks
+  useEffect(() => {
+    const handleCheckUnsavedChanges = (event: CustomEvent) => {
+      const { targetPath, targetState } = event.detail;
+      console.log('Navigation requested to:', targetPath, 'with state:', targetState);
+      
+      if (hasUnsavedChanges) {
+        console.log('Has unsaved changes, storing pending navigation and showing dialog');
+        setPendingNavigation({ path: targetPath, state: targetState });
+        setShowNavigationDialog(true);
+      } else {
+        console.log('No unsaved changes, navigating directly');
+        if (targetState) {
+          navigate(targetPath, { state: targetState });
+        } else {
+          navigate(targetPath);
+        }
+      }
+    };
+
+    window.addEventListener('checkUnsavedChanges', handleCheckUnsavedChanges as EventListener);
+    
+    return () => {
+      window.removeEventListener('checkUnsavedChanges', handleCheckUnsavedChanges as EventListener);
+    };
+  }, [hasUnsavedChanges, navigate]);
 
   // Handle navigation - no longer blocked since runsheet auto-saves
   const handleNavigation = useCallback((path: string) => {
@@ -867,6 +893,7 @@ Image: [base64 image data]`;
   // Handle starting a new runsheet
   const handleStartNew = () => {
     if (hasUnsavedChanges) {
+      setPendingNavigation({ path: 'new-runsheet' });
       setShowNavigationDialog(true);
     } else {
       startNewRunsheet();
@@ -924,6 +951,7 @@ Image: [base64 image data]`;
                 size="sm"
                 onClick={() => {
                   if (hasUnsavedChanges) {
+                    setPendingNavigation({ path: '/app' });
                     setShowNavigationDialog(true);
                   } else {
                     navigate('/app');
@@ -1044,7 +1072,10 @@ Image: [base64 image data]`;
           <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-3">
             <Button 
               variant="outline" 
-              onClick={() => setShowNavigationDialog(false)}
+              onClick={() => {
+                setShowNavigationDialog(false);
+                setPendingNavigation(null);
+              }}
               className="w-full sm:w-auto"
             >
               Go Back and Save
@@ -1053,7 +1084,16 @@ Image: [base64 image data]`;
               variant="destructive" 
               onClick={() => {
                 setShowNavigationDialog(false);
-                navigate('/app');
+                if (pendingNavigation) {
+                  if (pendingNavigation.path === 'new-runsheet') {
+                    startNewRunsheet();
+                  } else if (pendingNavigation.state) {
+                    navigate(pendingNavigation.path, { state: pendingNavigation.state });
+                  } else {
+                    navigate(pendingNavigation.path);
+                  }
+                  setPendingNavigation(null);
+                }
               }}
               className="w-full sm:w-auto"
             >
