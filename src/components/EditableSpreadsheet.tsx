@@ -3886,7 +3886,7 @@ ${extractionFields}`
               <Button 
                 onClick={async () => {
                   setShowUnsavedChangesDialog(false);
-                  await saveRunsheet();
+                  await autoSaveRunsheet();
                   setShowNewRunsheetDialog(true);
                 }}
                 className="w-full sm:w-auto"
