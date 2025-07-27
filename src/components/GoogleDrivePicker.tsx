@@ -260,7 +260,6 @@ export const GoogleDrivePicker: React.FC<GoogleDrivePickerProps> = ({
                       <TableHeader>
                         <TableRow>
                           <TableHead className="min-w-[200px]">Name</TableHead>
-                          <TableHead className="w-24">Type</TableHead>
                           <TableHead className="w-20">Size</TableHead>
                           <TableHead className="w-28">Modified</TableHead>
                         </TableRow>
@@ -275,13 +274,6 @@ export const GoogleDrivePicker: React.FC<GoogleDrivePickerProps> = ({
                             <TableCell>
                               <span className="truncate">{file.name}</span>
                             </TableCell>
-                            <TableCell>
-                              <Badge variant="outline">
-                                {file.mimeType.includes('spreadsheet') ? 'SPREADSHEET' : 
-                                 file.mimeType.includes('excel') ? 'EXCEL' :
-                                 file.mimeType.includes('csv') ? 'CSV' : 'SPREADSHEET'}
-                              </Badge>
-                            </TableCell>
                             <TableCell>{formatFileSize(file.size)}</TableCell>
                             <TableCell>
                               {new Date(file.modifiedTime).toLocaleDateString()}
@@ -290,7 +282,7 @@ export const GoogleDrivePicker: React.FC<GoogleDrivePickerProps> = ({
                         ))}
                         {files.length === 0 && (
                           <TableRow>
-                            <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                            <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
                               No spreadsheet files found in your Google Drive
                             </TableCell>
                           </TableRow>
