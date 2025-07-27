@@ -623,6 +623,10 @@ export const FileManager: React.FC = () => {
     setShowPreview(true);
   };
 
+  const openRunsheet = (runsheet: Runsheet) => {
+    navigate(`/runsheet?runsheet=${runsheet.id}`);
+  };
+
   const handleFilesForRunsheet = () => {
     if (selectedFiles.size === 0) return;
     
@@ -1187,27 +1191,36 @@ export const FileManager: React.FC = () => {
                   </TableCell>
                   <TableCell>{runsheet.data.length}</TableCell>
                   <TableCell>{formatDate(runsheet.updated_at)}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
+                   <TableCell className="text-right">
+                     <div className="flex justify-end gap-2">
                        <Button
-                         variant="outline"
+                         variant="default"
                          size="sm"
-                         onClick={() => openRenameRunsheetDialog(runsheet)}
+                         onClick={() => openRunsheet(runsheet)}
                          className="gap-1"
                        >
-                         <Edit2 className="h-3 w-3" />
-                         Rename
+                         <Eye className="h-3 w-3" />
+                         Open
                        </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openDeleteDialog(undefined, runsheet)}
-                        className="gap-1 text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </TableCell>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openRenameRunsheetDialog(runsheet)}
+                          className="gap-1"
+                        >
+                          <Edit2 className="h-3 w-3" />
+                          Rename
+                        </Button>
+                       <Button
+                         variant="ghost"
+                         size="sm"
+                         onClick={() => openDeleteDialog(undefined, runsheet)}
+                         className="gap-1 text-destructive hover:text-destructive"
+                       >
+                         <Trash2 className="h-3 w-3" />
+                       </Button>
+                     </div>
+                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
