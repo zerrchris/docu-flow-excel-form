@@ -747,6 +747,9 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     console.log('Runsheet name:', runsheetName);
     console.log('Columns:', columns);
     console.log('Data before save:', JSON.stringify(data, null, 2));
+    console.log('Data array length:', data.length);
+    console.log('Data type:', typeof data);
+    console.log('Is data array?', Array.isArray(data));
     console.log('Document map before save:', documentMap);
     console.log('Column instructions before save:', columnInstructions);
 
@@ -772,6 +775,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       if (currentRunsheetId) {
         // Update existing runsheet
         console.log('Updating existing runsheet with ID:', currentRunsheetId);
+        console.log('UPDATE - Data being sent to database:', JSON.stringify(data, null, 2));
+        console.log('UPDATE - Data length:', data.length);
         const { data: updateResult, error } = await supabase
           .from('runsheets')
           .update({
@@ -830,6 +835,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         
         finalName = runsheetName;
         
+        console.log('INSERT - Data being sent to database:', JSON.stringify(data, null, 2));
+        console.log('INSERT - Data length:', data.length);
         const { data: insertResult, error } = await supabase
           .from('runsheets')
           .insert({
@@ -1051,6 +1058,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       
       if (pendingSaveData.isUpdate && pendingSaveData.runsheetId) {
         // Update existing runsheet
+        console.log('OVERWRITE UPDATE - Data being sent to database:', JSON.stringify(data, null, 2));
+        console.log('OVERWRITE UPDATE - Data length:', data.length);
         const { data: updateResult, error } = await supabase
           .from('runsheets')
           .update({
@@ -1080,6 +1089,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         }
         
         // Create new runsheet
+        console.log('OVERWRITE - Data being sent to database:', JSON.stringify(data, null, 2));
+        console.log('OVERWRITE - Data length:', data.length);
         const { data: insertResult, error } = await supabase
           .from('runsheets')
           .insert({
