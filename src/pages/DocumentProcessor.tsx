@@ -1137,6 +1137,68 @@ Image: [base64 image data]`;
 
                   if (error) {
                     console.error('Insert error:', error);
+                    // Check if it's a duplicate name error
+                    if (error.code === '23505' && error.message.includes('runsheets_user_id_name_key')) {
+                      // Show dialog asking user what to do
+                      return new Promise((resolve) => {
+                        const handleOverwrite = async () => {
+                          try {
+                            // Find and update the existing runsheet
+                            const { data: existingRunsheet, error: findError } = await supabase
+                              .from('runsheets')
+                              .select('id')
+                              .eq('user_id', user.id)
+                              .eq('name', runsheetName)
+                              .single();
+
+                            if (findError) throw findError;
+
+                            const { data: updateResult, error: updateError } = await supabase
+                              .from('runsheets')
+                              .update({
+                                columns: columns,
+                                data: spreadsheetData,
+                                column_instructions: columnInstructions,
+                                updated_at: new Date().toISOString(),
+                              })
+                              .eq('id', existingRunsheet.id)
+                              .select('id')
+                              .single();
+
+                            if (updateError) throw updateError;
+
+                            // Update the active runsheet with the existing ID
+                            if (setActiveRunsheet) {
+                              setActiveRunsheet({
+                                id: existingRunsheet.id,
+                                name: runsheetName,
+                                data: spreadsheetData,
+                                columns,
+                                columnInstructions,
+                                hasUnsavedChanges: false,
+                                lastSaveTime: new Date()
+                              });
+                            }
+
+                            resolve(existingRunsheet.id);
+                          } catch (overwriteError) {
+                            console.error('Overwrite error:', overwriteError);
+                            resolve(null);
+                          }
+                        };
+
+                        // Show confirmation dialog
+                        const confirmed = window.confirm(
+                          `A runsheet named "${runsheetName}" already exists. Would you like to overwrite it?\n\nClick OK to overwrite, or Cancel to stop the upload.`
+                        );
+
+                        if (confirmed) {
+                          handleOverwrite();
+                        } else {
+                          resolve(null);
+                        }
+                      });
+                    }
                     throw error;
                   }
 
