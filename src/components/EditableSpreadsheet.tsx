@@ -1867,20 +1867,14 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
   // Helper function to update spreadsheet data
   const updateSpreadsheetData = (headers: string[], parsedData: Record<string, string>[], fileName: string) => {
-    // Ensure "Document File Name" column is always present
-    const REQUIRED_COLUMN = 'Document File Name';
+    // Document File Name column is no longer automatically added - users can toggle it if needed
     let finalHeaders = [...headers];
     
-    if (!finalHeaders.includes(REQUIRED_COLUMN)) {
-      finalHeaders.push(REQUIRED_COLUMN);
-      console.log(`Added missing "${REQUIRED_COLUMN}" column to imported spreadsheet`);
-    }
-    
-    // Update parsed data to include the new column if it was added
+    // Update parsed data - ensure all data has Document File Name field for background storage
     const updatedParsedData = parsedData.map(row => {
       const newRow = { ...row };
-      if (!newRow[REQUIRED_COLUMN]) {
-        newRow[REQUIRED_COLUMN] = ''; // Initialize with empty string
+      if (!newRow['Document File Name']) {
+        newRow['Document File Name'] = ''; // Initialize with empty string for background storage
       }
       return newRow;
     });
@@ -1890,6 +1884,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     const emptyRows = Array.from({ length: Math.max(0, minRows - updatedParsedData.length) }, () => {
       const row: Record<string, string> = {};
       finalHeaders.forEach(col => row[col] = '');
+      row['Document File Name'] = ''; // Always include for background storage
       return row;
     });
 
