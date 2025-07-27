@@ -13,7 +13,7 @@ serve(async (req) => {
 
   try {
     const requestBody = await req.json()
-    const { action, code, fileId, origin, access_token } = requestBody
+    const { action, code, file_id, origin, access_token } = requestBody
 
     const clientId = Deno.env.get('GOOGLE_OAUTH_CLIENT_ID')
     const clientSecret = Deno.env.get('GOOGLE_OAUTH_CLIENT_SECRET')
@@ -76,19 +76,19 @@ serve(async (req) => {
     }
 
     if (action === 'get_file') {
-      console.log('Getting file with ID:', fileId, 'and token:', access_token ? 'present' : 'missing')
+      console.log('Getting file with ID:', file_id, 'and token:', access_token ? 'present' : 'missing')
       
       if (!access_token) {
         throw new Error('Access token is required')
       }
       
-      if (!fileId) {
+      if (!file_id) {
         throw new Error('File ID is required')
       }
       
       // Get file metadata
       const metadataResponse = await fetch(
-        `https://www.googleapis.com/drive/v3/files/${fileId}?fields=name,mimeType,size`,
+        `https://www.googleapis.com/drive/v3/files/${file_id}?fields=name,mimeType,size`,
         {
           headers: {
             'Authorization': `Bearer ${access_token}`,
@@ -108,18 +108,18 @@ serve(async (req) => {
       console.log('File metadata:', metadata)
       
       // Determine the correct API endpoint and export format for Google Workspace files
-      let downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`
+      let downloadUrl = `https://www.googleapis.com/drive/v3/files/${file_id}?alt=media`
       
       // Handle Google Workspace files that need to be exported
       if (metadata.mimeType === 'application/vnd.google-apps.spreadsheet') {
         // Export Google Sheets as Excel format
-        downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}/export?mimeType=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`
+        downloadUrl = `https://www.googleapis.com/drive/v3/files/${file_id}/export?mimeType=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`
       } else if (metadata.mimeType === 'application/vnd.google-apps.document') {
         // Export Google Docs as Word format
-        downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}/export?mimeType=application/vnd.openxmlformats-officedocument.wordprocessingml.document`
+        downloadUrl = `https://www.googleapis.com/drive/v3/files/${file_id}/export?mimeType=application/vnd.openxmlformats-officedocument.wordprocessingml.document`
       } else if (metadata.mimeType === 'application/vnd.google-apps.presentation') {
         // Export Google Slides as PowerPoint format
-        downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}/export?mimeType=application/vnd.openxmlformats-officedocument.presentationml.presentation`
+        downloadUrl = `https://www.googleapis.com/drive/v3/files/${file_id}/export?mimeType=application/vnd.openxmlformats-officedocument.presentationml.presentation`
       }
       
       console.log('Download URL:', downloadUrl)
