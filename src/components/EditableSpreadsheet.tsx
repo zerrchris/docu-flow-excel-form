@@ -3518,7 +3518,7 @@ ${extractionFields}`
                        className="text-xs"
                      >
                        {showDocumentFileNameColumn ? <EyeOff className="h-3 w-3 mr-1" /> : <Eye className="h-3 w-3 mr-1" />}
-                       {showDocumentFileNameColumn ? 'Hide' : 'Show'} File Names
+                       {showDocumentFileNameColumn ? 'Hide' : 'Show'} File Name Column
                      </Button>
                      <Button
                        variant="outline"
