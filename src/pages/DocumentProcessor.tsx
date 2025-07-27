@@ -1077,6 +1077,11 @@ Image: [base64 image data]`;
       <Dialog open={showMultipleFileUpload} onOpenChange={setShowMultipleFileUpload}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden p-0">
           <MultipleFileUpload
+            runsheetData={{
+              id: activeRunsheet?.id || location.state?.runsheetId || 'temp-id',
+              name: activeRunsheet?.name || location.state?.runsheet?.name || 'Untitled Runsheet',
+              data: spreadsheetData
+            }}
             onUploadComplete={(count) => {
               toast({
                 title: "Files uploaded successfully",

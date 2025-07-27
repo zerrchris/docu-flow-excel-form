@@ -21,11 +21,17 @@ interface FileUploadStatus {
 interface MultipleFileUploadProps {
   onUploadComplete?: (uploadedCount: number) => void;
   onClose?: () => void;
+  runsheetData?: {
+    id: string;
+    name: string;
+    data: Record<string, string>[];
+  };
 }
 
 const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
   onUploadComplete,
-  onClose
+  onClose,
+  runsheetData: propRunsheetData
 }) => {
   const [files, setFiles] = useState<FileUploadStatus[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -33,6 +39,8 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const { activeRunsheet } = useActiveRunsheet();
+  // Use prop data if provided, otherwise fall back to hook
+  const currentRunsheet = propRunsheetData || activeRunsheet;
 
   const getFileIcon = (file: File) => {
     const type = file.type;
@@ -53,7 +61,7 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
   };
 
   const handleFileSelect = useCallback((selectedFiles: FileList) => {
-    if (!activeRunsheet) {
+    if (!currentRunsheet) {
       toast({
         title: "No active runsheet",
         description: "Please select or create a runsheet first.",
@@ -71,7 +79,7 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
     }));
 
     setFiles(prev => [...prev, ...newFiles]);
-  }, [activeRunsheet]);
+  }, [currentRunsheet]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -99,11 +107,11 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
 
   const uploadFiles = async () => {
     console.log('=== UPLOAD FILES DEBUG ===');
-    console.log('activeRunsheet from MultipleFileUpload:', activeRunsheet);
-    console.log('activeRunsheet.id:', activeRunsheet?.id);
-    console.log('activeRunsheet full object:', JSON.stringify(activeRunsheet, null, 2));
+    console.log('currentRunsheet from MultipleFileUpload:', currentRunsheet);
+    console.log('currentRunsheet.id:', currentRunsheet?.id);
+    console.log('currentRunsheet full object:', JSON.stringify(currentRunsheet, null, 2));
     
-    if (!activeRunsheet?.id) {
+    if (!currentRunsheet?.id) {
       console.log('No currentRunsheet.id found');
       toast({
         title: "No active runsheet",
@@ -114,8 +122,8 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
     }
 
     // Check if runsheet exists in database by trying to fetch it
-    if (activeRunsheet.id.startsWith('legacy-')) {
-      console.log('Runsheet has legacy ID, needs to be saved first:', activeRunsheet.id);
+    if (currentRunsheet.id.startsWith('legacy-')) {
+      console.log('Runsheet has legacy ID, needs to be saved first:', currentRunsheet.id);
       toast({
         title: "Save runsheet first",
         description: "Please save your runsheet to the database before uploading documents.",
@@ -126,17 +134,17 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
 
     // Verify runsheet exists in database
     try {
-      console.log('Checking if runsheet exists in database with ID:', activeRunsheet.id);
+      console.log('Checking if runsheet exists in database with ID:', currentRunsheet.id);
       const { data: runsheetExists, error: checkError } = await supabase
         .from('runsheets')
         .select('id')
-        .eq('id', activeRunsheet.id)
+        .eq('id', currentRunsheet.id)
         .single();
 
       console.log('Database check result:', { runsheetExists, checkError });
 
       if (checkError || !runsheetExists) {
-        console.log('Runsheet not found in database:', activeRunsheet.id, 'Error:', checkError);
+        console.log('Runsheet not found in database:', currentRunsheet.id, 'Error:', checkError);
         toast({
           title: "Save runsheet first",
           description: "Please save your runsheet to the database before uploading documents.",
@@ -156,7 +164,7 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
       return;
     }
 
-    console.log('Proceeding with upload for runsheet ID:', activeRunsheet.id);
+    console.log('Proceeding with upload for runsheet ID:', currentRunsheet.id);
 
     const pendingFiles = files.filter(f => f.status === 'pending');
     if (pendingFiles.length === 0) {
@@ -171,8 +179,8 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
     setIsUploading(true);
 
     // Find the first empty row to start uploading to
-    const runsheetData = activeRunsheet.data || [];
-    let startRowIndex = runsheetData.findIndex(row => 
+    const runsheetData = currentRunsheet.data || [];
+    let startRowIndex = runsheetData.findIndex(row =>
       !Object.values(row).some(value => value && typeof value === 'string' && value.trim() !== '')
     );
 
@@ -214,7 +222,7 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
       try {
         const result = await DocumentService.uploadDocument(
           fileUpload.file,
-          activeRunsheet.id,
+          currentRunsheet.id,
           currentRowIndex,
           (progress) => {
             setFiles(prev => prev.map((f, index) => 
@@ -242,7 +250,7 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
             // Trigger a custom event to notify the parent component
             window.dispatchEvent(new CustomEvent('documentRecordCreated', {
               detail: {
-                runsheetId: activeRunsheet.id,
+                runsheetId: currentRunsheet.id,
                 rowIndex: currentRowIndex,
                 document: result.document
               }
@@ -272,7 +280,7 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
 
     // Organize uploaded documents into runsheet folder
     const successfulFiles = files.filter(f => f.status === 'success');
-    if (successfulFiles.length > 0 && activeRunsheet) {
+    if (successfulFiles.length > 0 && currentRunsheet) {
       try {
         // Get document IDs from successful uploads
         const documentIds: string[] = [];
@@ -288,18 +296,18 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
         const { data: documents } = await supabase
           .from('documents')
           .select('id')
-          .eq('runsheet_id', activeRunsheet.id)
+          .eq('runsheet_id', currentRunsheet.id)
           .gte('created_at', new Date(Date.now() - 60000).toISOString()); // Documents created in last minute
 
         if (documents && documents.length > 0) {
           const documentIds = documents.map(doc => doc.id);
           await DocumentService.organizeDocumentsByRunsheet(
-            activeRunsheet.id,
-            activeRunsheet.name,
+            currentRunsheet.id,
+            currentRunsheet.name,
             documentIds
           );
           
-          console.log(`Organized ${documentIds.length} documents into folder: ${activeRunsheet.name}`);
+          console.log(`Organized ${documentIds.length} documents into folder: ${currentRunsheet.name}`);
         }
       } catch (error) {
         console.error('Error organizing documents by runsheet:', error);
