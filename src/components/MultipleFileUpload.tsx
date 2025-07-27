@@ -303,23 +303,31 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
 
           // Update the runsheet data to show the linked document
           if (result.document) {
-          // Trigger a custom event to notify the parent component to refresh data
-            window.dispatchEvent(new CustomEvent('documentRecordCreated', {
-              detail: {
-                runsheetId: runsheetId,
-                rowIndex: currentRowIndex,
-                document: result.document
-              }
-            }));
-            
-            // Also trigger a runsheet data refresh and update the specific row
-            window.dispatchEvent(new CustomEvent('updateDocumentFilename', {
-              detail: {
-                runsheetId: runsheetId,
-                rowIndex: currentRowIndex,
-                filename: result.document.stored_filename
-              }
-            }));
+            // Wait a moment for the database transaction to complete
+            setTimeout(() => {
+              // Trigger a custom event to notify the parent component to refresh data
+              window.dispatchEvent(new CustomEvent('documentRecordCreated', {
+                detail: {
+                  runsheetId: runsheetId,
+                  rowIndex: currentRowIndex,
+                  document: result.document
+                }
+              }));
+              
+              // Also trigger a runsheet data refresh and update the specific row
+              window.dispatchEvent(new CustomEvent('updateDocumentFilename', {
+                detail: {
+                  runsheetId: runsheetId,
+                  rowIndex: currentRowIndex,
+                  filename: result.document.stored_filename
+                }
+              }));
+
+              // Force a refresh of the entire runsheet data to show linked documents
+              window.dispatchEvent(new CustomEvent('refreshRunsheetData', {
+                detail: { runsheetId: runsheetId }
+              }));
+            }, 500); // Give database time to process
           }
         } else {
           // Update status to error
