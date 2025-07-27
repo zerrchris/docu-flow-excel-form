@@ -841,35 +841,57 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     
     try {
       // First save the runsheet
-      // Check for name conflicts
-      const conflictCheck = await checkRunsheetNameConflict(runsheetName, user.id);
+      let savedRunsheet;
+      let finalName = runsheetName;
       
-      if (conflictCheck.hasConflict) {
-        // Show conflict dialog and return early
-        setNameConflictData({ originalName: runsheetName, suggestedName: conflictCheck.suggestedName! });
-        setPendingSaveData({ isUpdate: false });
-        setShowNameConflictDialog(true);
-        setIsSaving(false);
-        return;
-      }
-      
-      const finalName = runsheetName;
-      
-      const { data: savedRunsheet, error } = await supabase
-        .from('runsheets')
-        .insert({
-          name: finalName,
-          columns: columns,
-          data: data,
-          column_instructions: columnInstructions,
-          user_id: user.id,
-          updated_at: new Date().toISOString(),
-        })
-        .select('id')
-        .single();
+      if (currentRunsheetId) {
+        // Update existing runsheet
+        console.log('Updating existing runsheet with ID:', currentRunsheetId);
+        const { data: updateResult, error } = await supabase
+          .from('runsheets')
+          .update({
+            name: runsheetName,
+            columns: columns,
+            data: data,
+            column_instructions: columnInstructions,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', currentRunsheetId)
+          .eq('user_id', user.id)
+          .select('id')
+          .single();
+        
+        if (error) throw error;
+        savedRunsheet = updateResult;
+      } else {
+        // Check for name conflicts when creating new runsheet
+        const conflictCheck = await checkRunsheetNameConflict(runsheetName, user.id);
+        
+        if (conflictCheck.hasConflict) {
+          // Show conflict dialog and return early
+          setNameConflictData({ originalName: runsheetName, suggestedName: conflictCheck.suggestedName! });
+          setPendingSaveData({ isUpdate: false });
+          setShowNameConflictDialog(true);
+          setIsSaving(false);
+          return;
+        }
+        
+        // Create new runsheet
+        const { data: insertResult, error } = await supabase
+          .from('runsheets')
+          .insert({
+            name: finalName,
+            columns: columns,
+            data: data,
+            column_instructions: columnInstructions,
+            user_id: user.id,
+            updated_at: new Date().toISOString(),
+          })
+          .select('id')
+          .single();
 
-      if (error) {
-        throw error;
+        if (error) throw error;
+        savedRunsheet = insertResult;
       }
 
       // Process pending documents if any exist
