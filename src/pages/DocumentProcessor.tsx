@@ -133,8 +133,16 @@ const DocumentProcessor: React.FC = () => {
       loadedRunsheetRef.current = selectedRunsheet.id;
       
       // Load runsheet data
+      console.log('🔧 LOAD: Loading runsheet data:', selectedRunsheet);
+      console.log('🔧 LOAD: selectedRunsheet.data:', JSON.stringify(selectedRunsheet.data, null, 2));
+      console.log('🔧 LOAD: Is data array?', Array.isArray(selectedRunsheet.data));
+      console.log('🔧 LOAD: Data length:', selectedRunsheet.data?.length);
+      
       if (selectedRunsheet.data && Array.isArray(selectedRunsheet.data)) {
+        console.log('🔧 LOAD: Setting spreadsheet data to:', JSON.stringify(selectedRunsheet.data, null, 2));
         setSpreadsheetData(selectedRunsheet.data);
+      } else {
+        console.log('🔧 LOAD: No valid data found in runsheet');
       }
       
       // Load runsheet columns if available - these should take priority over user preferences
