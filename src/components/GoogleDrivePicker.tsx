@@ -33,8 +33,8 @@ export const GoogleDrivePicker: React.FC<GoogleDrivePickerProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [files, setFiles] = useState<GoogleDriveFile[]>([]);
   const [accessToken, setAccessToken] = useState<string>('');
-  const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
-  const [isImporting, setIsImporting] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<string>('');
+  const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
 
   const connectToDrive = async () => {
@@ -142,86 +142,54 @@ export const GoogleDrivePicker: React.FC<GoogleDrivePickerProps> = ({
     }
   };
 
-  const importSelectedFiles = async () => {
-    if (selectedFiles.size === 0) return;
+  const openSelectedFile = async () => {
+    if (!selectedFile) return;
 
     try {
-      setIsImporting(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
+      setIsProcessing(true);
+      const file = files.find(f => f.id === selectedFile);
+      if (!file) return;
 
-      const selectedFileList = files.filter(file => selectedFiles.has(file.id));
-      let successCount = 0;
-
-      for (const file of selectedFileList) {
-        try {
-          // Get file content from our edge function
-          const { data: fileData, error } = await supabase.functions.invoke('google-drive-auth', {
-            body: { 
-              action: 'get_file', 
-              file_id: file.id,
-              access_token: accessToken
-            }
-          });
-
-          if (error) throw error;
-
-          // Convert base64 to blob
-          const binaryString = atob(fileData.content);
-          const bytes = new Uint8Array(binaryString.length);
-          for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-          }
-          const blob = new Blob([bytes], { type: fileData.mimeType });
-
-          // Upload to Supabase storage
-          const fileName = file.name;
-          const filePath = `${user.id}/google_drive/${fileName}`;
-
-          const { error: uploadError } = await supabase.storage
-            .from('documents')
-            .upload(filePath, blob, {
-              cacheControl: '3600',
-              upsert: false
-            });
-
-          if (uploadError) throw uploadError;
-
-          successCount++;
-        } catch (error) {
-          console.error(`Error importing ${file.name}:`, error);
+      // Get file content from our edge function
+      const { data: fileData, error } = await supabase.functions.invoke('google-drive-auth', {
+        body: { 
+          action: 'get_file', 
+          file_id: file.id,
+          access_token: accessToken
         }
-      }
-
-      toast({
-        title: "Import Complete",
-        description: `Successfully imported ${successCount} of ${selectedFiles.size} files`,
       });
 
-      if (onFilesImported) {
-        await onFilesImported();
+      if (error) throw error;
+
+      // Convert base64 to blob
+      const binaryString = atob(fileData.content);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
       }
+      const blob = new Blob([bytes], { type: fileData.mimeType });
+      const fileObject = new File([blob], file.name, { type: fileData.mimeType });
+
+      // Pass file to parent component
+      if (onFileSelect) {
+        onFileSelect(fileObject, file.name);
+      }
+      
       onClose();
     } catch (error: any) {
-      console.error('Import error:', error);
+      console.error('Error opening file:', error);
       toast({
-        title: "Import Failed",
-        description: error.message || "Failed to import files",
+        title: "Error",
+        description: error.message || "Failed to open file",
         variant: "destructive",
       });
     } finally {
-      setIsImporting(false);
+      setIsProcessing(false);
     }
   };
 
-  const toggleFileSelection = (fileId: string) => {
-    const newSelection = new Set(selectedFiles);
-    if (newSelection.has(fileId)) {
-      newSelection.delete(fileId);
-    } else {
-      newSelection.add(fileId);
-    }
-    setSelectedFiles(newSelection);
+  const selectFile = (fileId: string) => {
+    setSelectedFile(fileId);
   };
 
   const formatFileSize = (bytes?: string) => {
@@ -232,15 +200,6 @@ export const GoogleDrivePicker: React.FC<GoogleDrivePickerProps> = ({
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(size) / Math.log(k));
     return parseFloat((size / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  const getFileIcon = (mimeType: string) => {
-    if (mimeType.startsWith('image/')) return '🖼️';
-    if (mimeType.includes('pdf')) return '📄';
-    if (mimeType.includes('document')) return '📝';
-    if (mimeType.includes('spreadsheet')) return '📊';
-    if (mimeType.includes('folder')) return '📁';
-    return '📎';
   };
 
   return (
@@ -286,22 +245,22 @@ export const GoogleDrivePicker: React.FC<GoogleDrivePickerProps> = ({
                     Connected to Google Drive
                   </Badge>
                   <span className="text-sm text-muted-foreground">
-                    {selectedFiles.size} file(s) selected
+                    {selectedFile ? '1 file selected' : 'Select a file to open'}
                   </span>
                 </div>
                 <Button
-                  onClick={importSelectedFiles}
-                  disabled={selectedFiles.size === 0 || isImporting}
+                  onClick={openSelectedFile}
+                  disabled={!selectedFile || isProcessing}
                 >
-                  {isImporting ? (
+                  {isProcessing ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Importing...
+                      Processing...
                     </>
                   ) : (
                     <>
-                      <Download className="h-4 w-4 mr-2" />
-                      Import Selected ({selectedFiles.size})
+                      <FileText className="h-4 w-4 mr-2" />
+                      Open File
                     </>
                   )}
                 </Button>
@@ -327,17 +286,20 @@ export const GoogleDrivePicker: React.FC<GoogleDrivePickerProps> = ({
                       </TableHeader>
                       <TableBody>
                         {files.map((file) => (
-                          <TableRow key={file.id}>
+                          <TableRow 
+                            key={file.id} 
+                            className={`cursor-pointer hover:bg-muted/50 ${selectedFile === file.id ? 'bg-muted' : ''}`}
+                            onClick={() => selectFile(file.id)}
+                          >
                             <TableCell>
                               <input
-                                type="checkbox"
-                                checked={selectedFiles.has(file.id)}
-                                onChange={() => toggleFileSelection(file.id)}
+                                type="radio"
+                                checked={selectedFile === file.id}
+                                onChange={() => selectFile(file.id)}
                                 className="rounded"
                               />
                             </TableCell>
-                            <TableCell className="flex items-center gap-2">
-                              <span>{getFileIcon(file.mimeType)}</span>
+                            <TableCell>
                               <span className="truncate">{file.name}</span>
                             </TableCell>
                             <TableCell>
