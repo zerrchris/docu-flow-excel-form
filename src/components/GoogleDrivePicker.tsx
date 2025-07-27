@@ -114,8 +114,11 @@ export const GoogleDrivePicker: React.FC<GoogleDrivePickerProps> = ({
     try {
       setIsLoading(true);
       
+      // Filter query to only include spreadsheet files
+      const query = 'trashed=false and (mimeType="application/vnd.google-apps.spreadsheet" or mimeType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" or mimeType="application/vnd.ms-excel" or mimeType="text/csv")';
+      
       const response = await fetch(
-        'https://www.googleapis.com/drive/v3/files?q=trashed=false&fields=files(id,name,mimeType,size,modifiedTime,webViewLink)&pageSize=50',
+        `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name,mimeType,size,modifiedTime,webViewLink)&pageSize=50`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -304,58 +307,62 @@ export const GoogleDrivePicker: React.FC<GoogleDrivePickerProps> = ({
                 </Button>
               </div>
 
-              <div className="border rounded-lg max-h-[60vh] overflow-auto overflow-x-auto">
+              <div className="border rounded-lg max-h-[60vh] overflow-auto">
                 {isLoading ? (
                   <div className="text-center py-8">
                     <Loader2 className="h-8 w-8 mx-auto mb-2 animate-spin" />
-                    <p>Loading files...</p>
+                    <p>Loading spreadsheets...</p>
                   </div>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-16">Select</TableHead>
-                        <TableHead className="min-w-[200px]">Name</TableHead>
-                        <TableHead className="w-24">Type</TableHead>
-                        <TableHead className="w-20">Size</TableHead>
-                        <TableHead className="w-28">Modified</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {files.map((file) => (
-                        <TableRow key={file.id}>
-                          <TableCell>
-                            <input
-                              type="checkbox"
-                              checked={selectedFiles.has(file.id)}
-                              onChange={() => toggleFileSelection(file.id)}
-                              className="rounded"
-                            />
-                          </TableCell>
-                          <TableCell className="flex items-center gap-2">
-                            <span>{getFileIcon(file.mimeType)}</span>
-                            <span className="truncate">{file.name}</span>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline">
-                              {file.mimeType.split('/').pop()?.toUpperCase() || 'Unknown'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{formatFileSize(file.size)}</TableCell>
-                          <TableCell>
-                            {new Date(file.modifiedTime).toLocaleDateString()}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                      {files.length === 0 && (
+                  <div className="min-w-full overflow-x-auto">
+                    <Table className="w-full min-w-[600px]">
+                      <TableHeader>
                         <TableRow>
-                          <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                            No files found in your Google Drive
-                          </TableCell>
+                          <TableHead className="w-16">Select</TableHead>
+                          <TableHead className="min-w-[200px]">Name</TableHead>
+                          <TableHead className="w-24">Type</TableHead>
+                          <TableHead className="w-20">Size</TableHead>
+                          <TableHead className="w-28">Modified</TableHead>
                         </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {files.map((file) => (
+                          <TableRow key={file.id}>
+                            <TableCell>
+                              <input
+                                type="checkbox"
+                                checked={selectedFiles.has(file.id)}
+                                onChange={() => toggleFileSelection(file.id)}
+                                className="rounded"
+                              />
+                            </TableCell>
+                            <TableCell className="flex items-center gap-2">
+                              <span>{getFileIcon(file.mimeType)}</span>
+                              <span className="truncate">{file.name}</span>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline">
+                                {file.mimeType.includes('spreadsheet') ? 'SPREADSHEET' : 
+                                 file.mimeType.includes('excel') ? 'EXCEL' :
+                                 file.mimeType.includes('csv') ? 'CSV' : 'SPREADSHEET'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>{formatFileSize(file.size)}</TableCell>
+                            <TableCell>
+                              {new Date(file.modifiedTime).toLocaleDateString()}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        {files.length === 0 && (
+                          <TableRow>
+                            <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                              No spreadsheet files found in your Google Drive
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
                 )}
               </div>
             </>
