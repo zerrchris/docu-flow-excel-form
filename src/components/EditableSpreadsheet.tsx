@@ -1275,12 +1275,15 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     }
 
     try {
+      console.log('Loading runsheet with ID:', runsheetId);
       const { data: runsheet, error } = await supabase
         .from('runsheets')
         .select('*')
         .eq('id', runsheetId)
         .eq('user_id', currentUser.id)
-        .single();
+        .maybeSingle();
+      
+      console.log('Supabase query result:', { runsheet, error });
 
       if (error) {
         console.error('Error loading runsheet:', error);
@@ -1291,15 +1294,28 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         });
         return;
       }
+      
+      if (!runsheet) {
+        console.error('No runsheet found with ID:', runsheetId);
+        toast({
+          title: "Runsheet not found",
+          description: "The runsheet could not be found or you don't have access to it.",
+          variant: "destructive",
+        });
+        return;
+      }
 
       if (runsheet) {
         console.log('🔧 Debug: Loading runsheet from URL:', runsheet);
         console.log('🔧 Debug: Runsheet ID:', runsheet.id);
         console.log('🔧 Debug: Runsheet name:', runsheet.name);
-        console.log('🔧 Debug: Runsheet data:', runsheet.data);
+        console.log('🔧 Debug: Runsheet data length:', Array.isArray(runsheet.data) ? runsheet.data.length : 0);
         console.log('🔧 Debug: Runsheet columns:', runsheet.columns);
+        console.log('🔧 Debug: About to call setIsLoadingRunsheet(true)');
         setIsLoadingRunsheet(true);
+        console.log('🔧 Debug: About to call loadRunsheet()');
         await loadRunsheet(runsheet);
+        console.log('🔧 Debug: loadRunsheet() completed');
       }
     } catch (error: any) {
       console.error('Error loading runsheet:', error);
