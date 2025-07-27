@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useActiveRunsheet } from '@/hooks/useActiveRunsheet';
+import { cn } from '@/lib/utils';
 
 import * as XLSX from 'xlsx';
 import JSZip from 'jszip';
@@ -3578,162 +3579,15 @@ ${extractionFields}`
                        </TableRow>
                      )}
 
-                     <TableRow 
-                       className={cn(
-                         "group relative transition-colors",
-                         rowHeights[rowIndex] && `h-[${rowHeights[rowIndex]}px]`,
-                         editingCell?.rowIndex === rowIndex && editingCell?.columnIndex >= 0 ? "bg-muted/50" : "",
-                         highlightedRows.includes(rowIndex) ? "bg-yellow-100 dark:bg-yellow-900/20" : "",
-                         // Make row clickable if we have a runsheet ID (for document viewing)
-                         currentRunsheetId ? "cursor-pointer hover:bg-muted/30" : ""
-                       )}
-                       onDoubleClick={() => {
-                         if (currentRunsheetId) {
-                           setInlineViewerRow(inlineViewerRow === rowIndex ? null : rowIndex);
-                         }
-                       }}
-                       style={{
-                         height: rowHeights[rowIndex] ? `${rowHeights[rowIndex]}px` : 'auto',
-                         minHeight: rowHeights[rowIndex] ? `${rowHeights[rowIndex]}px` : 'auto'
-                       }}
-                     >
-                       {columns.map((column, columnIndex) => {
-                         const cellKey = `${rowIndex}-${columnIndex}`;
-                         const isEditing = editingCell?.rowIndex === rowIndex && editingCell?.columnIndex === columnIndex;
-                         const cellValue = row[column] || '';
-                         const isMissingColumn = missingColumns.includes(column);
-                         
-                         return (
-                           <TableCell 
-                             key={cellKey}
-                             className={cn(
-                               "relative transition-colors border-r min-w-0",
-                               columnWidths[columnIndex] && `w-[${columnWidths[columnIndex]}px]`,
-                               isMissingColumn && highlightMissingColumns ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800" : "",
-                               isEditing ? "bg-primary/5 ring-1 ring-primary/20" : "",
-                               // Add background based on fill patterns
-                               fillPatterns[rowIndex]?.[column] === 'down' && !isEditing && !isMissingColumn ? "bg-blue-50 dark:bg-blue-900/20" : "",
-                               fillPatterns[rowIndex]?.[column] === 'right' && !isEditing && !isMissingColumn ? "bg-green-50 dark:bg-green-900/20" : "",
-                               fillPatterns[rowIndex]?.[column] === 'both' && !isEditing && !isMissingColumn ? "bg-purple-50 dark:bg-purple-900/20" : ""
-                             )}
-                             style={{
-                               width: columnWidths[columnIndex] ? `${columnWidths[columnIndex]}px` : 'auto',
-                               minWidth: columnWidths[columnIndex] ? `${columnWidths[columnIndex]}px` : '120px',
-                               maxWidth: columnWidths[columnIndex] ? `${columnWidths[columnIndex]}px` : 'none'
-                             }}
-                             onClick={() => handleCellClick(rowIndex, columnIndex)}
-                           >
-                             {/* Column resize handle */}
-                             <div
-                               className="absolute top-0 right-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/30 bg-border/50 opacity-0 hover:opacity-100 transition-opacity"
-                               onMouseDown={(e) => handleColumnMouseDown(e, columnIndex)}
-                               title="Drag to resize column width"
-                             />
-                             
-                             {isEditing ? (
-                               <Textarea
-                                 ref={textareaRef}
-                                 value={editValue}
-                                 onChange={(e) => setEditValue(e.target.value)}
-                                 onBlur={handleCellBlur}
-                                 onKeyDown={handleCellKeyDown}
-                                 className="w-full h-full min-h-[2rem] resize-none border-0 p-0 focus:ring-0 bg-transparent"
-                                 autoFocus
-                                 style={{
-                                   fontSize: 'inherit',
-                                   lineHeight: 'inherit'
-                                 }}
-                               />
-                             ) : (
-                               <div 
-                                 className="w-full h-full p-1 break-words whitespace-pre-wrap overflow-hidden"
-                                 style={{
-                                   fontSize: 'inherit',
-                                   lineHeight: 'inherit',
-                                   minHeight: '1.5rem'
-                                 }}
-                               >
-                                 {cellValue}
-                               </div>
-                             )}
-                           </TableCell>
-                         );
-                       })}
-
-                       {/* Document File Name Column */}
-                       {showDocumentFileNameColumn && (
-                         <TableCell className="min-w-[200px] relative border-r">
-                           <div className="flex items-center gap-2">
-                             <div className="flex-1 min-w-0">
-                               {row['Document File Name'] || `Row ${rowIndex + 1} Document`}
-                             </div>
-                             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                               {/* Upload document button */}
-                               <Button
-                                 variant="ghost"
-                                 size="sm"
-                                 className="h-6 w-6 p-0"
-                                 onClick={(e) => {
-                                   e.stopPropagation();
-                                   handleDocumentUpload(rowIndex);
-                                 }}
-                                 title="Upload document for this row"
-                               >
-                                 <Upload className="h-3 w-3" />
-                               </Button>
-                               
-                               {/* View document button - only show if document exists */}
-                               {documentMap.get(rowIndex) && (
-                                 <Button
-                                   variant="ghost"
-                                   size="sm"
-                                   className="h-6 w-6 p-0"
-                                   onClick={(e) => {
-                                     e.stopPropagation();
-                                     const doc = documentMap.get(rowIndex);
-                                     if (doc) {
-                                       window.open(DocumentService.getDocumentUrl(doc.file_path), '_blank');
-                                     }
-                                   }}
-                                   title="View document"
-                                 >
-                                   <FileText className="h-3 w-3" />
-                                 </Button>
-                               )}
-                               
-                               {/* Link existing document button */}
-                               <Button
-                                 variant="ghost"
-                                 size="sm"
-                                 className="h-6 w-6 p-0"
-                                 onClick={(e) => {
-                                   e.stopPropagation();
-                                   setLinkingRow(rowIndex);
-                                   setShowDocumentLinker(true);
-                                 }}
-                                 title="Link existing document"
-                               >
-                                 <Link className="h-3 w-3" />
-                               </Button>
-                             </div>
-                           </div>
+                     <TableRow className="border-b hover:bg-muted/50">
+                       {columns.map((column, columnIndex) => (
+                         <TableCell key={`${rowIndex}-${columnIndex}`} className="border-r p-2">
+                           {row[column] || ''}
                          </TableCell>
-                       )}
-
-                       {/* Row number column */}
+                       ))}
                        <TableCell className="w-12 text-center bg-muted/30 border-r font-mono text-xs text-muted-foreground">
                          {rowIndex + 1}
-                         {documentMap.get(rowIndex) && (
-                           <div className="w-2 h-2 bg-green-500 rounded-full mx-auto mt-0.5" title="Document attached" />
-                         )}
                        </TableCell>
-                       
-                       {/* Row resize handle */}
-                       <div
-                         className="absolute bottom-0 left-0 right-0 h-1 cursor-row-resize hover:bg-primary/30 bg-border/50 opacity-0 hover:opacity-100 transition-opacity"
-                         onMouseDown={(e) => handleRowMouseDown(e, rowIndex)}
-                         title="Drag to resize row height"
-                       />
                      </TableRow>
                    </React.Fragment>
                  ))}
