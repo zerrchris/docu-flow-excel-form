@@ -3527,7 +3527,7 @@ ${extractionFields}`
                        className="text-xs"
                      >
                        <Settings className="h-3 w-3 mr-1" />
-                       File Naming
+                        Smart File Name Settings
                      </Button>
                    </div>
                  </TableHead>
