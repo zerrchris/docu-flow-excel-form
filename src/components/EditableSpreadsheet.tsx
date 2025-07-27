@@ -3539,9 +3539,9 @@ ${extractionFields}`
 
               {/* Table Body */}
               <TableBody>
-                {data.map((row, rowIndex) => (
-                 <React.Fragment key={rowIndex}>
-                    {/* Show inline document viewer above this row if it's selected */}
+                 {data.map((row, rowIndex) => (
+                  <React.Fragment key={rowIndex}>
+                     {/* Show inline document viewer above this row if it's selected */}
                     {inlineViewerRow === rowIndex && (
                       <TableRow>
                         <TableCell colSpan={columns.length + (showDocumentFileNameColumn ? 1 : 0) + 1} className="p-0 border-0">
@@ -3777,9 +3777,9 @@ ${extractionFields}`
                         onMouseDown={(e) => handleRowMouseDown(e, rowIndex)}
                         title="Drag to resize row height"
                       />
-                    </TableRow>
-                  </React.Fragment>
-                 ))}
+                     </TableRow>
+                   </React.Fragment>
+                  ))}
               </TableBody>
            </Table>
            </div>
