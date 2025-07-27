@@ -552,7 +552,14 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
   // Enhanced auto-save functionality with immediate saving
   const autoSaveRunsheet = useCallback(async () => {
-    if (!user || !hasUnsavedChanges) return;
+    if (!user || !hasUnsavedChanges) {
+      console.log('🔧 AUTOSAVE: Skipping auto-save - user:', !!user, 'hasUnsavedChanges:', hasUnsavedChanges);
+      return;
+    }
+    
+    console.log('🔧 AUTOSAVE: Starting auto-save');
+    console.log('🔧 AUTOSAVE: Data being auto-saved:', JSON.stringify(data, null, 2));
+    console.log('🔧 AUTOSAVE: Data length:', data.length);
     
     try {
       const { error } = await supabase
@@ -1908,12 +1915,16 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     const newData = [...updatedParsedData, ...emptyRows];
 
     // Update spreadsheet
+    console.log('🔧 UPLOAD: Setting columns to:', finalHeaders);
+    console.log('🔧 UPLOAD: Setting data to:', JSON.stringify(newData, null, 2));
+    console.log('🔧 UPLOAD: New data length:', newData.length);
     setColumns(finalHeaders);
     onColumnChange(finalHeaders);
     setData(newData);
     
     // Update parent component's data
     if (onDataChange) {
+      console.log('🔧 UPLOAD: Calling onDataChange with:', JSON.stringify(updatedParsedData, null, 2));
       onDataChange(updatedParsedData); // Only pass the actual data, not the empty rows
     }
     
@@ -1923,6 +1934,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
     // Auto-save the runsheet with imported data
     setTimeout(() => {
+      console.log('🔧 UPLOAD: About to call autoSaveRunsheet');
+      console.log('🔧 UPLOAD: Current data state before auto-save:', JSON.stringify(data, null, 2));
       autoSaveRunsheet(); // Auto-save with the imported data
     }, 100); // Small delay to ensure state updates are complete
 
