@@ -549,7 +549,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       window.removeEventListener('refreshRunsheetData', handleRefreshRunsheetData as EventListener);
       window.removeEventListener('updateDocumentFilename', handleUpdateDocumentFilename as EventListener);
     };
-  }, []);
+  }, [columns, currentRunsheetId]);
 
 
   // Enhanced auto-save functionality with immediate saving

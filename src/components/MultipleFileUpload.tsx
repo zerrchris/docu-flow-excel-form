@@ -216,7 +216,7 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
       }
     }
 
-    console.log('Proceeding with upload for runsheet ID:', currentRunsheet.id);
+    console.log('Proceeding with upload for runsheet ID:', runsheetId);
 
     const pendingFiles = files.filter(f => f.status === 'pending');
     if (pendingFiles.length === 0) {
