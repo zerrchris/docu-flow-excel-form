@@ -242,7 +242,7 @@ export const GoogleDrivePicker: React.FC<GoogleDrivePickerProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[80vh]">
+      <DialogContent className="max-w-6xl max-h-[90vh] w-[95vw]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Cloud className="h-5 w-5" />
@@ -304,7 +304,7 @@ export const GoogleDrivePicker: React.FC<GoogleDrivePickerProps> = ({
                 </Button>
               </div>
 
-              <div className="border rounded-lg max-h-96 overflow-auto">
+              <div className="border rounded-lg max-h-[60vh] overflow-auto">
                 {isLoading ? (
                   <div className="text-center py-8">
                     <Loader2 className="h-8 w-8 mx-auto mb-2 animate-spin" />
@@ -314,11 +314,11 @@ export const GoogleDrivePicker: React.FC<GoogleDrivePickerProps> = ({
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-12">Select</TableHead>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Size</TableHead>
-                        <TableHead>Modified</TableHead>
+                        <TableHead className="w-16">Select</TableHead>
+                        <TableHead className="min-w-[200px]">Name</TableHead>
+                        <TableHead className="w-24">Type</TableHead>
+                        <TableHead className="w-20">Size</TableHead>
+                        <TableHead className="w-28">Modified</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
