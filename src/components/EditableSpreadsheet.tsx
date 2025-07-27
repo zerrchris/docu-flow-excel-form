@@ -107,8 +107,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   
   const [columns, setColumns] = useState<string[]>(() => ensureDocumentColumns(initialColumns));
   const [data, setData] = useState<Record<string, string>[]>(() => {
-    // Ensure we always have at least 20 rows
-    const minRows = 20;
+    // Ensure we always have at least 100 rows so users rarely need to add more
+    const minRows = 100;
     const existingRows = initialData.length;
     const emptyRows = Array.from({ length: Math.max(0, minRows - existingRows) }, () => {
       const row: Record<string, string> = {};
@@ -218,7 +218,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
   // Sync data with initialData prop changes
   useEffect(() => {
-    const minRows = 20;
+    const minRows = 100;
     const existingRows = initialData.length;
     const emptyRows = Array.from({ length: Math.max(0, minRows - existingRows) }, () => {
       const row: Record<string, string> = {};
@@ -1343,7 +1343,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     
     // Ensure data has minimum rows like import does
     const loadedData = runsheet.data || [];
-    const minRows = 20;
+    const minRows = 100;
     const emptyRows = Array.from({ length: Math.max(0, minRows - loadedData.length) }, () => {
       const row: Record<string, string> = {};
       runsheet.columns?.forEach((col: string) => row[col] = '');
@@ -1904,8 +1904,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       return newRow;
     });
     
-    // Add empty rows to reach minimum of 20 rows
-    const minRows = 20;
+    // Add empty rows to reach minimum of 100 rows
+    const minRows = 100;
     const emptyRows = Array.from({ length: Math.max(0, minRows - updatedParsedData.length) }, () => {
       const row: Record<string, string> = {};
       finalHeaders.forEach(col => row[col] = '');
