@@ -142,12 +142,10 @@ export const GoogleDrivePicker: React.FC<GoogleDrivePickerProps> = ({
     }
   };
 
-  const openSelectedFile = async () => {
-    if (!selectedFile) return;
-
+  const openFile = async (fileId: string) => {
     try {
       setIsProcessing(true);
-      const file = files.find(f => f.id === selectedFile);
+      const file = files.find(f => f.id === fileId);
       if (!file) return;
 
       // Get file content from our edge function
@@ -245,39 +243,22 @@ export const GoogleDrivePicker: React.FC<GoogleDrivePickerProps> = ({
                     Connected to Google Drive
                   </Badge>
                   <span className="text-sm text-muted-foreground">
-                    {selectedFile ? '1 file selected' : 'Select a file to open'}
+                    Click on any file to open it
                   </span>
                 </div>
-                <Button
-                  onClick={openSelectedFile}
-                  disabled={!selectedFile || isProcessing}
-                >
-                  {isProcessing ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <FileText className="h-4 w-4 mr-2" />
-                      Open File
-                    </>
-                  )}
-                </Button>
               </div>
 
               <div className="border rounded-lg max-h-[60vh] overflow-auto">
-                {isLoading ? (
+                {isLoading || isProcessing ? (
                   <div className="text-center py-8">
                     <Loader2 className="h-8 w-8 mx-auto mb-2 animate-spin" />
-                    <p>Loading spreadsheets...</p>
+                    <p>{isLoading ? 'Loading spreadsheets...' : 'Opening file...'}</p>
                   </div>
                 ) : (
                   <div className="min-w-full overflow-x-auto">
                     <Table className="w-full min-w-[600px]">
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="w-16">Select</TableHead>
                           <TableHead className="min-w-[200px]">Name</TableHead>
                           <TableHead className="w-24">Type</TableHead>
                           <TableHead className="w-20">Size</TableHead>
@@ -288,17 +269,9 @@ export const GoogleDrivePicker: React.FC<GoogleDrivePickerProps> = ({
                         {files.map((file) => (
                           <TableRow 
                             key={file.id} 
-                            className={`cursor-pointer hover:bg-muted/50 ${selectedFile === file.id ? 'bg-muted' : ''}`}
-                            onClick={() => selectFile(file.id)}
+                            className="cursor-pointer hover:bg-muted/50"
+                            onClick={() => openFile(file.id)}
                           >
-                            <TableCell>
-                              <input
-                                type="radio"
-                                checked={selectedFile === file.id}
-                                onChange={() => selectFile(file.id)}
-                                className="rounded"
-                              />
-                            </TableCell>
                             <TableCell>
                               <span className="truncate">{file.name}</span>
                             </TableCell>
@@ -317,7 +290,7 @@ export const GoogleDrivePicker: React.FC<GoogleDrivePickerProps> = ({
                         ))}
                         {files.length === 0 && (
                           <TableRow>
-                            <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                            <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
                               No spreadsheet files found in your Google Drive
                             </TableCell>
                           </TableRow>
