@@ -675,7 +675,12 @@ export const FileManager: React.FC = () => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => navigate(`/runsheet?runsheet=${runsheet.id}`)}
+                onClick={() => {
+                  // Use the same approach as the dashboard's "Open File" button
+                  const event = new CustomEvent('triggerSpreadsheetOpen');
+                  window.dispatchEvent(event);
+                  navigate('/runsheet');
+                }}
                 className="flex-1 gap-2"
               >
                 <Eye className="h-3 w-3" />
@@ -942,12 +947,17 @@ export const FileManager: React.FC = () => {
                   <TableCell>{formatDate(runsheet.updated_at)}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => navigate(`/runsheet?runsheet=${runsheet.id}`)}
-                        className="gap-1"
-                      >
+                       <Button
+                         variant="outline"
+                         size="sm"
+                         onClick={() => {
+                           // Use the same approach as the dashboard's "Open File" button
+                           const event = new CustomEvent('triggerSpreadsheetOpen');
+                           window.dispatchEvent(event);
+                           navigate('/runsheet');
+                         }}
+                         className="gap-1"
+                       >
                         <Eye className="h-3 w-3" />
                         Open
                       </Button>
