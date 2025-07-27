@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ArrowLeft, Eye, Edit2, Trash2, Search, Calendar, FileImage, Smartphone, Upload as UploadIcon, Download, CheckSquare, X, ChevronDown, ChevronRight, Folder, FolderOpen, FileSpreadsheet, ArrowUp, Home } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -862,17 +863,14 @@ export const FileManager: React.FC = () => {
 
       {/* Runsheets Content */}
       {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1, 2, 3, 4, 5, 6].map(i => (
-            <Card key={i} className="p-4 animate-pulse">
-              <div className="space-y-3">
-                <div className="w-full h-32 bg-muted rounded"></div>
-                <div className="h-4 bg-muted rounded w-3/4"></div>
-                <div className="h-3 bg-muted rounded w-1/2"></div>
-              </div>
-            </Card>
-          ))}
-        </div>
+        <Card className="p-4">
+          <div className="animate-pulse space-y-4">
+            <div className="h-10 bg-muted rounded"></div>
+            {[1, 2, 3, 4, 5].map(i => (
+              <div key={i} className="h-12 bg-muted rounded"></div>
+            ))}
+          </div>
+        </Card>
       ) : filteredRunsheets.length === 0 ? (
         <Card className="p-8 text-center">
           <FileSpreadsheet className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
@@ -893,9 +891,89 @@ export const FileManager: React.FC = () => {
           )}
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredRunsheets.map(renderRunsheetCard)}
-        </div>
+        <Card>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {isSelectMode && (
+                  <TableHead className="w-12">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={selectAllItems}
+                      className="p-0 h-6 w-6"
+                    >
+                      <CheckSquare className="h-4 w-4" />
+                    </Button>
+                  </TableHead>
+                )}
+                <TableHead>Name</TableHead>
+                <TableHead>Rows</TableHead>
+                <TableHead>Last Modified</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredRunsheets.map((runsheet) => (
+                <TableRow key={runsheet.id}>
+                  {isSelectMode && (
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => toggleFileSelection(runsheet.id)}
+                        className="p-0 h-6 w-6"
+                      >
+                        {selectedFiles.has(runsheet.id) ? (
+                          <CheckSquare className="h-4 w-4 text-primary" />
+                        ) : (
+                          <div className="h-4 w-4 border rounded" />
+                        )}
+                      </Button>
+                    </TableCell>
+                  )}
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <FileSpreadsheet className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">{runsheet.name}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>{runsheet.data.length}</TableCell>
+                  <TableCell>{formatDate(runsheet.updated_at)}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate(`/runsheet?runsheet=${runsheet.id}`)}
+                        className="gap-1"
+                      >
+                        <Eye className="h-3 w-3" />
+                        Open
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => window.open(`/runsheet?runsheet=${runsheet.id}`, '_blank')}
+                        className="gap-1"
+                      >
+                        New Tab
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openDeleteDialog(undefined, runsheet)}
+                        className="gap-1 text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
       )}
     </div>
   );
