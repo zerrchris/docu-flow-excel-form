@@ -4097,7 +4097,7 @@ ${extractionFields}`
 
         {/* Name Conflict Dialog */}
         <AlertDialog open={showNameConflictDialog} onOpenChange={setShowNameConflictDialog}>
-          <AlertDialogContent className="max-w-2xl">
+          <AlertDialogContent className="max-w-4xl w-[90vw] max-h-[90vh] overflow-auto">
             <AlertDialogHeader>
               <AlertDialogTitle>Saving Runsheet but File Name Already Exists</AlertDialogTitle>
               <AlertDialogDescription>
