@@ -197,6 +197,16 @@ export const FileManager: React.FC = () => {
   };
 
   const handleRename = async () => {
+    if (!newFileName.trim()) return;
+    
+    if (selectedFile) {
+      await handleRenameFile();
+    } else if (selectedRunsheet) {
+      await handleRenameRunsheet();
+    }
+  };
+
+  const handleRenameFile = async () => {
     if (!selectedFile || !newFileName.trim()) return;
 
     setIsRenaming(true);
@@ -230,6 +240,46 @@ export const FileManager: React.FC = () => {
       toast({
         title: "Rename Failed",
         description: error.message || "Failed to rename file.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRenaming(false);
+    }
+  };
+
+  const handleRenameRunsheet = async () => {
+    if (!selectedRunsheet || !newFileName.trim()) return;
+
+    setIsRenaming(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      const cleanNewName = newFileName.trim();
+
+      // Update the runsheet name in the database
+      const { error } = await supabase
+        .from('runsheets')
+        .update({ name: cleanNewName })
+        .eq('id', selectedRunsheet.id)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Runsheet Renamed",
+        description: `Runsheet renamed to "${cleanNewName}" successfully.`,
+      });
+
+      setShowRenameDialog(false);
+      setSelectedRunsheet(null);
+      setNewFileName('');
+      loadRunsheets(); // Refresh the list
+    } catch (error: any) {
+      console.error('Error renaming runsheet:', error);
+      toast({
+        title: "Rename Failed",
+        description: error.message || "Failed to rename runsheet.",
         variant: "destructive",
       });
     } finally {
@@ -500,6 +550,13 @@ export const FileManager: React.FC = () => {
     setShowRenameDialog(true);
   };
 
+  const openRenameRunsheetDialog = (runsheet: Runsheet) => {
+    setSelectedRunsheet(runsheet);
+    setSelectedFile(null);
+    setNewFileName(runsheet.name);
+    setShowRenameDialog(true);
+  };
+
   const openDeleteDialog = (file?: StoredFile, runsheet?: Runsheet) => {
     if (file) {
       setSelectedFile(file);
@@ -675,16 +732,11 @@ export const FileManager: React.FC = () => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => {
-                  // Use the same approach as the dashboard's "Open File" button
-                  const event = new CustomEvent('triggerSpreadsheetOpen');
-                  window.dispatchEvent(event);
-                  navigate('/runsheet');
-                }}
+                onClick={() => openRenameRunsheetDialog(runsheet)}
                 className="flex-1 gap-2"
               >
-                <Eye className="h-3 w-3" />
-                Open
+                <Edit2 className="h-3 w-3" />
+                Rename
               </Button>
               <Button
                 variant="ghost"
@@ -950,17 +1002,12 @@ export const FileManager: React.FC = () => {
                        <Button
                          variant="outline"
                          size="sm"
-                         onClick={() => {
-                           // Use the same approach as the dashboard's "Open File" button
-                           const event = new CustomEvent('triggerSpreadsheetOpen');
-                           window.dispatchEvent(event);
-                           navigate('/runsheet');
-                         }}
+                         onClick={() => openRenameRunsheetDialog(runsheet)}
                          className="gap-1"
                        >
-                        <Eye className="h-3 w-3" />
-                        Open
-                      </Button>
+                         <Edit2 className="h-3 w-3" />
+                         Rename
+                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -1146,9 +1193,9 @@ export const FileManager: React.FC = () => {
       <Dialog open={showRenameDialog} onOpenChange={setShowRenameDialog}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Rename File</DialogTitle>
+            <DialogTitle>Rename {selectedFile ? 'File' : 'Runsheet'}</DialogTitle>
             <DialogDescription>
-              Enter a new name for "{selectedFile?.name}"
+              Enter a new name for "{selectedFile?.name || selectedRunsheet?.name}"
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
