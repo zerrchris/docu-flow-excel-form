@@ -223,6 +223,50 @@ export class DocumentService {
   }
 
   /**
+   * Organize documents into runsheet-named folders
+   */
+  static async organizeDocumentsByRunsheet(
+    runsheetId: string, 
+    runsheetName: string, 
+    documentIds: string[]
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        return { success: false, error: 'Not authenticated' };
+      }
+
+      const response = await supabase.functions.invoke('organize-documents-by-runsheet', {
+        body: {
+          runsheetId,
+          runsheetName,
+          documentIds
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        }
+      });
+
+      if (response.error) {
+        console.error('Organization error:', response.error);
+        return { success: false, error: response.error.message };
+      }
+
+      if (!response.data.success) {
+        return { success: false, error: response.data.error || 'Organization failed' };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error organizing documents:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Organization failed' 
+      };
+    }
+  }
+
+  /**
    * Get documents mapped by row index for easy lookup
    */
   static async getDocumentMapForRunsheet(runsheetId: string): Promise<Map<number, DocumentRecord>> {
