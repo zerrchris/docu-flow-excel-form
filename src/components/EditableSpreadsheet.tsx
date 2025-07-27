@@ -96,7 +96,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showNameConflictDialog, setShowNameConflictDialog] = useState(false);
   const [nameConflictData, setNameConflictData] = useState<{ originalName: string; suggestedName: string } | null>(null);
-  const [pendingSaveData, setPendingSaveData] = useState<{ isUpdate: boolean; runsheetId?: string } | null>(null);
+  const [pendingSaveData, setPendingSaveData] = useState<{ isUpdate: boolean; runsheetId?: string; shouldClose?: boolean } | null>(null);
   const [showDocumentNamingDialog, setShowDocumentNamingDialog] = useState(false);
   
   // Helper function to ensure document columns exist
@@ -748,7 +748,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         if (conflictCheck.hasConflict) {
           // Show conflict dialog and return early
           setNameConflictData({ originalName: runsheetName, suggestedName: conflictCheck.suggestedName! });
-          setPendingSaveData({ isUpdate: false });
+          setPendingSaveData({ isUpdate: false, shouldClose: false });
           setShowNameConflictDialog(true);
           setIsSaving(false);
           return;
@@ -870,7 +870,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         if (conflictCheck.hasConflict) {
           // Show conflict dialog and return early
           setNameConflictData({ originalName: runsheetName, suggestedName: conflictCheck.suggestedName! });
-          setPendingSaveData({ isUpdate: false });
+          setPendingSaveData({ isUpdate: false, shouldClose: true });
           setShowNameConflictDialog(true);
           setIsSaving(false);
           return;
@@ -1052,10 +1052,25 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       setLastSaveTime(new Date());
       onUnsavedChanges?.(false);
       
-      toast({
-        title: "Runsheet saved",
-        description: `"${finalName}" has been overwritten successfully.`,
-      });
+      const isCloseOperation = pendingSaveData.shouldClose;
+      
+      if (isCloseOperation) {
+        // Clear the active runsheet and navigate to dashboard
+        clearActiveRunsheet();
+        
+        toast({
+          title: "Runsheet saved and closed",
+          description: `"${finalName}" has been overwritten successfully.`,
+        });
+        
+        // Navigate back to dashboard
+        navigate('/app');
+      } else {
+        toast({
+          title: "Runsheet saved",
+          description: `"${finalName}" has been overwritten successfully.`,
+        });
+      }
     } catch (error: any) {
       console.error('Save failed:', error);
       toast({
