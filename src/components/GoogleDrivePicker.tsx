@@ -1,348 +1,357 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FolderOpen, FileSpreadsheet, Loader2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Cloud, Download, FileText, FolderOpen, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { useToast } from '@/hooks/use-toast';
 
-interface GoogleDrivePickerProps {
-  onFileSelect: (file: File, fileName: string) => void;
-  isOpen: boolean;
-  onClose: () => void;
-}
-
-interface DriveFile {
+interface GoogleDriveFile {
   id: string;
   name: string;
   mimeType: string;
   size?: string;
+  modifiedTime: string;
+  webViewLink: string;
+}
+
+interface GoogleDrivePickerProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onFilesImported?: () => Promise<void>;
+  onFileSelect?: (file?: File, fileName?: string) => void;
 }
 
 export const GoogleDrivePicker: React.FC<GoogleDrivePickerProps> = ({
-  onFileSelect,
   isOpen,
   onClose,
+  onFilesImported,
+  onFileSelect
 }) => {
-  const [isAuthenticating, setIsAuthenticating] = useState(false);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [files, setFiles] = useState<DriveFile[]>([]);
-  const [isLoadingFiles, setIsLoadingFiles] = useState(false);
-  const [isDownloading, setIsDownloading] = useState<string | null>(null);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [files, setFiles] = useState<GoogleDriveFile[]>([]);
+  const [accessToken, setAccessToken] = useState<string>('');
+  const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
+  const [isImporting, setIsImporting] = useState(false);
+  const { toast } = useToast();
 
-  const authenticateWithGoogle = async () => {
-    setIsAuthenticating(true);
-    
+  const connectToDrive = async () => {
     try {
-      console.log('Starting Google authentication...');
-      console.log('Origin:', window.location.origin);
+      setIsConnecting(true);
       
-      // Get OAuth URL from our edge function
-      const { data: authData, error: authError } = await supabase.functions.invoke('google-drive-auth', {
-        body: { action: 'get_auth_url', origin: window.location.origin }
+      // Get authorization URL from our edge function
+      const { data, error } = await supabase.functions.invoke('google-drive-auth', {
+        body: { action: 'get_auth_url' }
       });
 
-      console.log('Auth response:', { authData, authError });
+      if (error) throw error;
 
-      if (authError) {
-        console.error('Auth error:', authError);
-        toast.error(`Failed to get auth URL: ${authError.message || JSON.stringify(authError)}`);
-        throw authError;
-      }
+      // Open Google OAuth in a popup
+      const popup = window.open(
+        data.auth_url,
+        'google-auth',
+        'width=500,height=600,scrollbars=yes,resizable=yes'
+      );
 
-      if (!authData || !authData.authUrl) {
-        console.error('No auth URL received:', authData);
-        toast.error('No authorization URL received from server');
-        throw new Error('No auth URL received from server');
-      }
-
-      console.log('Generated auth URL:', authData.authUrl);
-
-      // Try to open popup with better detection
-      const popup = window.open(authData.authUrl, 'google-auth', 'width=600,height=700,scrollbars=yes,resizable=yes');
-      
-      if (!popup || popup.closed || typeof popup.closed == 'undefined') {
-        // Popup was blocked, redirect to new tab instead
-        setIsAuthenticating(false);
-        toast.error('Popup blocked! Opening Google authentication in a new tab...', {
-          duration: 3000,
-        });
-        // Open in new tab as fallback
-        window.open(authData.authUrl, '_blank');
-        return;
-      }
-
-      // Listen for messages from the popup
-      const messageListener = (event: MessageEvent) => {
-        console.log('Received message:', event.data, 'from origin:', event.origin);
-        
-        if (event.origin !== window.location.origin) {
-          console.log('Origin mismatch, ignoring message');
-          return;
-        }
+      // Listen for the authorization code
+      const messageListener = async (event: MessageEvent) => {
+        if (event.origin !== window.location.origin) return;
         
         if (event.data.type === 'GOOGLE_AUTH_SUCCESS') {
-          console.log('Authentication successful, closing popup and handling auth');
-          popup.close();
+          const { code } = event.data;
+          popup?.close();
+          
+          // Exchange code for access token
+          const { data: tokenData, error: tokenError } = await supabase.functions.invoke('google-drive-auth', {
+            body: { action: 'exchange_code', code }
+          });
+
+          if (tokenError) throw tokenError;
+
+          setAccessToken(tokenData.access_token);
+          await loadDriveFiles(tokenData.access_token);
+          
           window.removeEventListener('message', messageListener);
-          clearInterval(checkClosed);
-          setIsAuthenticating(false);
-          handleAuthCompletion(event.data.code);
         } else if (event.data.type === 'GOOGLE_AUTH_ERROR') {
-          console.log('Authentication error:', event.data.error);
-          popup.close();
-          window.removeEventListener('message', messageListener);
-          clearInterval(checkClosed);
-          setIsAuthenticating(false);
-          toast.error('Google authentication failed: ' + event.data.error);
+          popup?.close();
+          throw new Error(event.data.error);
         }
       };
 
       window.addEventListener('message', messageListener);
 
-      // Check if popup is closed manually
+      // Handle popup closed without completion
       const checkClosed = setInterval(() => {
-        if (popup.closed) {
-          console.log('Popup was closed manually');
+        if (popup?.closed) {
           clearInterval(checkClosed);
           window.removeEventListener('message', messageListener);
-          setIsAuthenticating(false);
-          
-          // Check for fallback localStorage method
-          const savedCode = localStorage.getItem('google_auth_code');
-          if (savedCode) {
-            console.log('Found saved auth code, proceeding with authentication');
-            localStorage.removeItem('google_auth_code');
-            handleAuthCompletion(savedCode);
-          }
+          setIsConnecting(false);
         }
       }, 1000);
 
-    } catch (error) {
-      setIsAuthenticating(false);
-      toast.error('Failed to start Google authentication');
-      console.error('Auth error:', error);
-    }
-  };
-
-  const handleAuthCompletion = async (code: string) => {
-    try {
-      // Exchange code for access token
-      const { data: tokenData, error: tokenError } = await supabase.functions.invoke('google-drive-auth', {
-        body: { 
-          action: 'exchange_code', 
-          code,
-          origin: window.location.origin 
-        }
+    } catch (error: any) {
+      console.error('Drive connection error:', error);
+      toast({
+        title: "Connection Failed",
+        description: error.message || "Failed to connect to Google Drive",
+        variant: "destructive",
       });
-
-      if (tokenError) throw tokenError;
-
-      if (tokenData.access_token) {
-        toast.success('Successfully connected to Google Drive');
-        setAccessToken(tokenData.access_token);
-        loadDriveFiles(tokenData.access_token);
-      } else {
-        throw new Error('No access token received');
-      }
-    } catch (error) {
-      toast.error('Failed to authenticate with Google Drive');
-      console.error('Auth error:', error);
+    } finally {
+      setIsConnecting(false);
     }
   };
 
   const loadDriveFiles = async (token: string) => {
-    setIsLoadingFiles(true);
     try {
-      console.log('🔧 Loading Google Drive files with token:', token ? 'present' : 'missing');
+      setIsLoading(true);
       
-      // Query for spreadsheet files
-      const query = "mimeType='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' or " +
-                   "mimeType='application/vnd.ms-excel' or " +
-                   "mimeType='application/vnd.google-apps.spreadsheet' or " +
-                   "mimeType='text/csv'";
-      
-      console.log('🔧 Query:', query);
-      const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name,mimeType,size)`;
-      console.log('🔧 Request URL:', url);
-      
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      
-      console.log('🔧 Response status:', response.status);
-      console.log('🔧 Response ok:', response.ok);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('🔧 API Error:', errorText);
-        throw new Error(`API request failed: ${response.status} ${errorText}`);
-      }
-      
+      const response = await fetch(
+        'https://www.googleapis.com/drive/v3/files?q=trashed=false&fields=files(id,name,mimeType,size,modifiedTime,webViewLink)&pageSize=50',
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) throw new Error('Failed to fetch files');
+
       const data = await response.json();
-      console.log('🔧 API Response data:', data);
-      console.log('🔧 Files found:', data.files?.length || 0);
-      
       setFiles(data.files || []);
-    } catch (error) {
-      console.error('🔧 Error loading files:', error);
-      toast.error('Failed to load Google Drive files: ' + error.message);
+    } catch (error: any) {
+      console.error('Error loading Drive files:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load Google Drive files",
+        variant: "destructive",
+      });
     } finally {
-      setIsLoadingFiles(false);
+      setIsLoading(false);
     }
   };
 
-  const downloadFile = async (file: DriveFile) => {
-    if (!accessToken) return;
-    
-    setIsDownloading(file.id);
+  const importSelectedFiles = async () => {
+    if (selectedFiles.size === 0) return;
+
     try {
-      const { data, error } = await supabase.functions.invoke('google-drive-auth', {
-        body: {
-          action: 'get_file',
-          fileId: file.id,
-          access_token: accessToken,
-        },
+      setIsImporting(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      const selectedFileList = files.filter(file => selectedFiles.has(file.id));
+      let successCount = 0;
+
+      for (const file of selectedFileList) {
+        try {
+          // Get file content from our edge function
+          const { data: fileData, error } = await supabase.functions.invoke('google-drive-auth', {
+            body: { 
+              action: 'get_file', 
+              file_id: file.id,
+              access_token: accessToken
+            }
+          });
+
+          if (error) throw error;
+
+          // Convert base64 to blob
+          const binaryString = atob(fileData.content);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          const blob = new Blob([bytes], { type: fileData.mimeType });
+
+          // Upload to Supabase storage
+          const fileName = file.name;
+          const filePath = `${user.id}/google_drive/${fileName}`;
+
+          const { error: uploadError } = await supabase.storage
+            .from('documents')
+            .upload(filePath, blob, {
+              cacheControl: '3600',
+              upsert: false
+            });
+
+          if (uploadError) throw uploadError;
+
+          successCount++;
+        } catch (error) {
+          console.error(`Error importing ${file.name}:`, error);
+        }
+      }
+
+      toast({
+        title: "Import Complete",
+        description: `Successfully imported ${successCount} of ${selectedFiles.size} files`,
       });
 
-      if (error) throw error;
-
-      // Convert base64 to blob
-      const binaryString = atob(data.content);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
+      if (onFilesImported) {
+        await onFilesImported();
       }
-      
-      const blob = new Blob([bytes], { type: data.mimeType });
-      const fileObj = new File([blob], data.name, { type: data.mimeType });
-      
-      onFileSelect(fileObj, data.name);
       onClose();
-      toast.success(`Successfully loaded ${data.name}`);
-    } catch (error) {
-      toast.error('Failed to download file from Google Drive');
-      console.error('Download error:', error);
+    } catch (error: any) {
+      console.error('Import error:', error);
+      toast({
+        title: "Import Failed",
+        description: error.message || "Failed to import files",
+        variant: "destructive",
+      });
     } finally {
-      setIsDownloading(null);
+      setIsImporting(false);
     }
+  };
+
+  const toggleFileSelection = (fileId: string) => {
+    const newSelection = new Set(selectedFiles);
+    if (newSelection.has(fileId)) {
+      newSelection.delete(fileId);
+    } else {
+      newSelection.add(fileId);
+    }
+    setSelectedFiles(newSelection);
+  };
+
+  const formatFileSize = (bytes?: string) => {
+    if (!bytes) return 'Unknown';
+    const size = parseInt(bytes);
+    if (size === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(size) / Math.log(k));
+    return parseFloat((size / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   const getFileIcon = (mimeType: string) => {
-    if (mimeType.includes('spreadsheet') || mimeType.includes('excel') || mimeType.includes('csv')) {
-      return <FileSpreadsheet className="h-4 w-4" />;
-    }
-    return <FolderOpen className="h-4 w-4" />;
-  };
-
-  const formatFileSize = (size?: string) => {
-    if (!size) return '';
-    const bytes = parseInt(size);
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    if (mimeType.startsWith('image/')) return '🖼️';
+    if (mimeType.includes('pdf')) return '📄';
+    if (mimeType.includes('document')) return '📝';
+    if (mimeType.includes('spreadsheet')) return '📊';
+    if (mimeType.includes('folder')) return '📁';
+    return '📎';
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
-        <DialogHeader className="flex-shrink-0">
-          <DialogTitle>Import from Google Drive</DialogTitle>
+      <DialogContent className="max-w-4xl max-h-[80vh]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Cloud className="h-5 w-5" />
+            Import from Google Drive
+          </DialogTitle>
+          <DialogDescription>
+            Connect to your Google Drive and import files directly to your document manager.
+          </DialogDescription>
         </DialogHeader>
-        
-        <div className="flex flex-col gap-4 flex-1 min-h-0">
+
+        <div className="space-y-4">
           {!accessToken ? (
-            <Card>
-              <CardHeader className="text-center">
-                <CardTitle>Connect to Google Drive</CardTitle>
-                <CardDescription>
-                  Authorize access to import spreadsheets from your Google Drive
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="text-center">
-                <div className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    Access your Google Drive spreadsheets to import them directly into your runsheet.
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Note: If you see a popup blocker warning, please allow popups for this site or use the new tab that opens.
-                  </p>
-                  <Button 
-                    onClick={authenticateWithGoogle}
-                    disabled={isAuthenticating}
-                    className="w-full"
-                  >
-                    {isAuthenticating ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Connecting...
-                      </>
-                    ) : (
-                      <>
-                        <FolderOpen className="mr-2 h-4 w-4" />
-                        Connect Google Drive
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="text-center py-8">
+              <Cloud className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="text-lg font-medium mb-2">Connect to Google Drive</h3>
+              <p className="text-muted-foreground mb-4">
+                Authorize access to import files from your Google Drive account.
+              </p>
+              <Button onClick={connectToDrive} disabled={isConnecting}>
+                {isConnecting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Connecting...
+                  </>
+                ) : (
+                  <>
+                    <Cloud className="h-4 w-4 mr-2" />
+                    Connect to Google Drive
+                  </>
+                )}
+              </Button>
+            </div>
           ) : (
-            <div className="flex flex-col gap-4 flex-1 min-h-0">
-              <div className="flex items-center justify-between flex-shrink-0">
-                <h3 className="text-lg font-semibold">Select a spreadsheet</h3>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => loadDriveFiles(accessToken)}
-                  disabled={isLoadingFiles}
+            <>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="text-green-600">
+                    Connected to Google Drive
+                  </Badge>
+                  <span className="text-sm text-muted-foreground">
+                    {selectedFiles.size} file(s) selected
+                  </span>
+                </div>
+                <Button
+                  onClick={importSelectedFiles}
+                  disabled={selectedFiles.size === 0 || isImporting}
                 >
-                  {isLoadingFiles ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                  {isImporting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Importing...
+                    </>
                   ) : (
-                    'Refresh'
+                    <>
+                      <Download className="h-4 w-4 mr-2" />
+                      Import Selected ({selectedFiles.size})
+                    </>
                   )}
                 </Button>
               </div>
-              
-              <div className="flex-1 overflow-y-auto space-y-2 min-h-0 max-h-[50vh]">
-                {isLoadingFiles ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin" />
-                    <span className="ml-2">Loading files...</span>
-                  </div>
-                ) : files.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    No spreadsheet files found in your Google Drive
+
+              <div className="border rounded-lg max-h-96 overflow-auto">
+                {isLoading ? (
+                  <div className="text-center py-8">
+                    <Loader2 className="h-8 w-8 mx-auto mb-2 animate-spin" />
+                    <p>Loading files...</p>
                   </div>
                 ) : (
-                  files.map((file) => (
-                    <Card 
-                      key={file.id} 
-                      className="cursor-pointer hover:bg-accent/50 transition-colors flex-shrink-0"
-                      onClick={() => downloadFile(file)}
-                    >
-                      <CardContent className="flex items-center justify-between p-4">
-                        <div className="flex items-center gap-3">
-                          {getFileIcon(file.mimeType)}
-                          <div>
-                            <div className="font-medium">{file.name}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {formatFileSize(file.size)}
-                            </div>
-                          </div>
-                        </div>
-                        {isDownloading === file.id && (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        )}
-                      </CardContent>
-                    </Card>
-                  ))
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-12">Select</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Size</TableHead>
+                        <TableHead>Modified</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {files.map((file) => (
+                        <TableRow key={file.id}>
+                          <TableCell>
+                            <input
+                              type="checkbox"
+                              checked={selectedFiles.has(file.id)}
+                              onChange={() => toggleFileSelection(file.id)}
+                              className="rounded"
+                            />
+                          </TableCell>
+                          <TableCell className="flex items-center gap-2">
+                            <span>{getFileIcon(file.mimeType)}</span>
+                            <span className="truncate">{file.name}</span>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline">
+                              {file.mimeType.split('/').pop()?.toUpperCase() || 'Unknown'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{formatFileSize(file.size)}</TableCell>
+                          <TableCell>
+                            {new Date(file.modifiedTime).toLocaleDateString()}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {files.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                            No files found in your Google Drive
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
                 )}
               </div>
-            </div>
+            </>
           )}
         </div>
       </DialogContent>

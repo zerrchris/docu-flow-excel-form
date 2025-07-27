@@ -3,16 +3,19 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowLeft, Eye, Edit2, Trash2, Search, Calendar, FileImage, Smartphone, Upload as UploadIcon, Download, CheckSquare, X, ChevronDown, ChevronRight, Folder, FolderOpen, FileSpreadsheet, ArrowUp, Home, Plus, FolderPlus, Move } from 'lucide-react';
+import { ArrowLeft, Eye, Edit2, Trash2, Search, Calendar, FileImage, Smartphone, Upload as UploadIcon, Download, CheckSquare, X, ChevronDown, ChevronRight, Folder, FolderOpen, FileSpreadsheet, ArrowUp, Home, Plus, FolderPlus, Move, Cloud, SortAsc, SortDesc, Play, Zap } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import AuthButton from '@/components/AuthButton';
 import ActiveRunsheetButton from '@/components/ActiveRunsheetButton';
+import { FilePreview } from '@/components/FilePreview';
+import { GoogleDrivePicker } from '@/components/GoogleDrivePicker';
 import extractorLogo from '@/assets/document-extractor-logo.png';
 
 interface StoredFile {
@@ -81,6 +84,13 @@ export const FileManager: React.FC = () => {
   const [showViewChoiceDialog, setShowViewChoiceDialog] = useState(false);
   const [pendingViewItem, setPendingViewItem] = useState<{ type: 'file', item: StoredFile } | { type: 'runsheet', item: Runsheet } | null>(null);
   const [draggedFile, setDraggedFile] = useState<StoredFile | null>(null);
+  const [sortBy, setSortBy] = useState<'name' | 'date' | 'size'>('date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewFile, setPreviewFile] = useState<StoredFile | null>(null);
+  const [showGoogleDrive, setShowGoogleDrive] = useState(false);
+  const [showRunsheetDialog, setShowRunsheetDialog] = useState(false);
+  const [selectedFilesForRunsheet, setSelectedFilesForRunsheet] = useState<StoredFile[]>([]);
 
   useEffect(() => {
     if (currentFolder === 'projects') {
@@ -522,13 +532,34 @@ export const FileManager: React.FC = () => {
     setExpandedProjects(newExpanded);
   };
 
-  const filteredFiles = files.filter(file =>
-    file.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Sorting function
+  const sortItems = <T extends { name: string; created_at: string; size?: number }>(items: T[]): T[] => {
+    return [...items].sort((a, b) => {
+      let comparison = 0;
+      
+      switch (sortBy) {
+        case 'name':
+          comparison = a.name.localeCompare(b.name);
+          break;
+        case 'date':
+          comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          break;
+        case 'size':
+          comparison = (a.size || 0) - (b.size || 0);
+          break;
+      }
+      
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+  };
 
-  const filteredRunsheets = runsheets.filter(sheet =>
+  const filteredFiles = sortItems(files.filter(file =>
+    file.name.toLowerCase().includes(searchTerm.toLowerCase())
+  ));
+
+  const filteredRunsheets = sortItems(runsheets.filter(sheet =>
     sheet.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  ));
 
   // Group files by project
   const groupedFiles = React.useMemo(() => {
@@ -585,6 +616,76 @@ export const FileManager: React.FC = () => {
       setSelectedFile(null);
     }
     setShowDeleteDialog(true);
+  };
+
+  const handlePreview = (file: StoredFile) => {
+    setPreviewFile(file);
+    setShowPreview(true);
+  };
+
+  const handleFilesForRunsheet = () => {
+    if (selectedFiles.size === 0) return;
+    
+    const selectedFileList = files.filter(file => selectedFiles.has(file.id));
+    setSelectedFilesForRunsheet(selectedFileList);
+    setShowRunsheetDialog(true);
+  };
+
+  const processFilesIntoRunsheet = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      // Create a new runsheet with selected files
+      const newRunsheet = {
+        name: `Files Runsheet ${new Date().toLocaleDateString()}`,
+        columns: ['filename', 'size', 'type', 'created_date'],
+        data: selectedFilesForRunsheet.map(file => ({
+          filename: file.name,
+          size: formatFileSize(file.size),
+          type: file.type,
+          created_date: formatDate(file.created_at)
+        })),
+        column_instructions: {
+          filename: 'Original file name',
+          size: 'File size in bytes',
+          type: 'Source type (mobile or uploaded)',
+          created_date: 'Date the file was created'
+        }
+      };
+
+      const { data, error } = await supabase
+        .from('runsheets')
+        .insert({
+          user_id: user.id,
+          name: newRunsheet.name,
+          columns: newRunsheet.columns,
+          data: newRunsheet.data,
+          column_instructions: newRunsheet.column_instructions
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast({
+        title: "Runsheet Created",
+        description: `Created runsheet with ${selectedFilesForRunsheet.length} files`,
+      });
+
+      // Navigate to the new runsheet
+      navigate(`/runsheet?runsheet=${data.id}`);
+    } catch (error: any) {
+      console.error('Error creating runsheet:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create runsheet from files",
+        variant: "destructive",
+      });
+    } finally {
+      setShowRunsheetDialog(false);
+      setSelectedFilesForRunsheet([]);
+    }
   };
 
   const handleViewChoice = (item: StoredFile | Runsheet, type: 'file' | 'runsheet') => {
@@ -678,11 +779,11 @@ export const FileManager: React.FC = () => {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => handleViewChoice(file, 'file')}
+                onClick={() => handlePreview(file)}
                 className="flex-1 gap-2"
               >
                 <Eye className="h-3 w-3" />
-                View
+                Preview
               </Button>
               <Button
                 variant="outline"
@@ -816,24 +917,72 @@ export const FileManager: React.FC = () => {
 
   const renderProjectsView = () => (
     <div className="space-y-6">
-      {/* Search and Stats */}
+      {/* Search, Sort and Stats */}
       <Card className="p-4">
-        <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search files..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search files..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <div className="flex gap-4 text-sm text-muted-foreground">
+              <span>{files.length} total files</span>
+              <span>•</span>
+              <span>{files.filter(f => f.type === 'mobile').length} mobile captured</span>
+              <span>•</span>
+              <span>{files.filter(f => f.type === 'uploaded').length} uploaded</span>
+            </div>
           </div>
-          <div className="flex gap-4 text-sm text-muted-foreground">
-            <span>{files.length} total files</span>
-            <span>•</span>
-            <span>{files.filter(f => f.type === 'mobile').length} mobile captured</span>
-            <span>•</span>
-            <span>{files.filter(f => f.type === 'uploaded').length} uploaded</span>
+
+          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+            <div className="flex gap-2 items-center">
+              <span className="text-sm font-medium">Sort by:</span>
+              <Select value={sortBy} onValueChange={(value: 'name' | 'date' | 'size') => setSortBy(value)}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name">Name</SelectItem>
+                  <SelectItem value="date">Date</SelectItem>
+                  <SelectItem value="size">Size</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+              >
+                {sortOrder === 'asc' ? <SortAsc className="h-4 w-4" /> : <SortDesc className="h-4 w-4" />}
+              </Button>
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowGoogleDrive(true)}
+                className="gap-2"
+              >
+                <Cloud className="h-4 w-4" />
+                Import from Google Drive
+              </Button>
+              {isSelectMode && selectedFiles.size > 0 && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={handleFilesForRunsheet}
+                  className="gap-2"
+                >
+                  <Zap className="h-4 w-4" />
+                  Create Runsheet ({selectedFiles.size})
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </Card>
@@ -917,20 +1066,44 @@ export const FileManager: React.FC = () => {
 
   const renderRunsheetsView = () => (
     <div className="space-y-6">
-      {/* Search and Stats */}
+      {/* Search, Sort and Stats */}
       <Card className="p-4">
-        <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search runsheets..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search runsheets..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <div className="flex gap-4 text-sm text-muted-foreground">
+              <span>{runsheets.length} total runsheets</span>
+            </div>
           </div>
-          <div className="flex gap-4 text-sm text-muted-foreground">
-            <span>{runsheets.length} total runsheets</span>
+
+          <div className="flex items-center justify-between">
+            <div className="flex gap-2 items-center">
+              <span className="text-sm font-medium">Sort by:</span>
+              <Select value={sortBy} onValueChange={(value: 'name' | 'date' | 'size') => setSortBy(value)}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name">Name</SelectItem>
+                  <SelectItem value="date">Date</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+              >
+                {sortOrder === 'asc' ? <SortAsc className="h-4 w-4" /> : <SortDesc className="h-4 w-4" />}
+              </Button>
+            </div>
           </div>
         </div>
       </Card>
@@ -1283,6 +1456,57 @@ export const FileManager: React.FC = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* File Preview Dialog */}
+      <FilePreview
+        file={previewFile}
+        isOpen={showPreview}
+        onClose={() => setShowPreview(false)}
+      />
+
+      {/* Google Drive Picker */}
+      <GoogleDrivePicker
+        isOpen={showGoogleDrive}
+        onClose={() => setShowGoogleDrive(false)}
+        onFilesImported={loadStoredFiles}
+      />
+
+      {/* Create Runsheet from Files Dialog */}
+      <Dialog open={showRunsheetDialog} onOpenChange={setShowRunsheetDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Create Runsheet from Files</DialogTitle>
+            <DialogDescription>
+              Create a new runsheet with information from {selectedFilesForRunsheet.length} selected files.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="space-y-2">
+              <h4 className="font-medium">Selected Files:</h4>
+              <div className="max-h-40 overflow-auto space-y-1">
+                {selectedFilesForRunsheet.map((file) => (
+                  <div key={file.id} className="flex items-center gap-2 text-sm p-2 bg-muted rounded">
+                    <span className="flex-1 truncate">{file.name}</span>
+                    <span className="text-muted-foreground">{formatFileSize(file.size)}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-sm text-muted-foreground">
+                The runsheet will contain file names, sizes, types, and creation dates.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRunsheetDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={processFilesIntoRunsheet} className="gap-2">
+              <Play className="h-4 w-4" />
+              Create Runsheet
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
