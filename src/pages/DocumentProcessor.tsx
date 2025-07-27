@@ -1189,7 +1189,7 @@ Image: [base64 image data]`;
 
                         // Show confirmation dialog
                         const confirmed = window.confirm(
-                          `A runsheet named "${runsheetName}" already exists. Would you like to overwrite it?\n\nClick OK to overwrite, or Cancel to stop the upload.`
+                          `Runsheet needs to be saved before uploading.\n\nA runsheet named "${runsheetName}" already exists. Would you like to overwrite it?\n\nClick OK to overwrite, or Cancel to stop the upload.`
                         );
 
                         if (confirmed) {
