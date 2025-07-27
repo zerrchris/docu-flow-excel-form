@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Plus, Trash2, Check, X, ArrowUp, ArrowDown, Save, FolderOpen, Download, Upload, AlignLeft, AlignCenter, AlignRight, Cloud, ChevronDown, FileText, Archive, ExternalLink, AlertTriangle, FileStack, Settings } from 'lucide-react';
+import { Plus, Trash2, Check, X, ArrowUp, ArrowDown, Save, FolderOpen, Download, Upload, AlignLeft, AlignCenter, AlignRight, Cloud, ChevronDown, FileText, Archive, ExternalLink, AlertTriangle, FileStack, Settings, Eye, EyeOff } from 'lucide-react';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -153,6 +153,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [showNamingSettings, setShowNamingSettings] = useState(false);
   const [inlineViewerRow, setInlineViewerRow] = useState<number | null>(null);
   const [fullScreenWorkspace, setFullScreenWorkspace] = useState<{ runsheetId: string; rowIndex: number } | null>(null);
+  const [showDocumentFileNameColumn, setShowDocumentFileNameColumn] = useState(false);
   
   // Listen for document upload save requests
   React.useEffect(() => {
@@ -493,35 +494,18 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
     const handleUpdateDocumentFilename = async (event: CustomEvent) => {
       const { runsheetId, rowIndex, filename } = event.detail;
-      console.log('🔧 EditableSpreadsheet: Update document filename event received:', { runsheetId, rowIndex, filename });
-      console.log('🔧 EditableSpreadsheet: Current runsheet ID:', currentRunsheetId);
-      console.log('🔧 EditableSpreadsheet: Current columns:', columns);
-      console.log('🔧 EditableSpreadsheet: Current data length:', data.length);
       
       if (runsheetId === currentRunsheetId) {
-        console.log('🔧 EditableSpreadsheet: Runsheet ID matches, updating row with filename');
-        
-        // Ensure Document File Name column exists
-        if (!columns.includes('Document File Name')) {
-          console.log('🔧 EditableSpreadsheet: Adding Document File Name column');
-          setColumns(prev => {
-            const newColumns = [...prev, 'Document File Name'];
-            console.log('🔧 EditableSpreadsheet: New columns:', newColumns);
-            return newColumns;
-          });
-        }
-        
-        // Update the specific row with the filename
+        // Update the specific row with the filename (stored in background)
         setData(prev => {
           const newData = [...prev];
-          console.log('🔧 EditableSpreadsheet: Current data before update:', newData);
           
           // Ensure the row exists
           while (newData.length <= rowIndex) {
             const newRow: Record<string, string> = {};
-            [...columns, 'Document File Name'].forEach(col => newRow[col] = '');
+            columns.forEach(col => newRow[col] = '');
+            newRow['Document File Name'] = ''; // Always maintain document filename data in background
             newData.push(newRow);
-            console.log('🔧 EditableSpreadsheet: Added new row:', newRow);
           }
           
           // Update the Document File Name field
@@ -530,16 +514,11 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             'Document File Name': filename
           };
           
-          console.log('🔧 EditableSpreadsheet: Updated row', rowIndex, 'with filename:', filename);
-          console.log('🔧 EditableSpreadsheet: Updated data:', newData);
           return newData;
         });
         
         // Mark as having unsaved changes to trigger auto-save
         setHasUnsavedChanges(true);
-        console.log('🔧 EditableSpreadsheet: Marked as having unsaved changes');
-      } else {
-        console.log('🔧 EditableSpreadsheet: Runsheet ID does not match, ignoring event');
       }
     };
 
@@ -2118,8 +2097,9 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   // Calculate total table width
   const getTotalTableWidth = () => {
     const dataColumnsWidth = columns.reduce((total, column) => total + getColumnWidth(column), 0);
+    const documentFileNameWidth = showDocumentFileNameColumn ? 200 : 0;
     const actionsColumnWidth = 200; // Fixed width for actions column
-    return dataColumnsWidth + actionsColumnWidth;
+    return dataColumnsWidth + documentFileNameWidth + actionsColumnWidth;
   };
 
   // Column resize handlers
@@ -3513,23 +3493,44 @@ ${extractionFields}`
                    </TableHead>
                  ))}
                 
-                {/* Actions column header - not draggable */}
-                <TableHead 
-                  className="font-bold text-center border-r border-border relative p-0 last:border-r-0 bg-muted/50"
-                  style={{ width: "200px", minWidth: "200px" }}
-                >
-                  <div className="w-full h-full px-4 py-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowDocumentNamingDialog(true)}
-                      className="text-xs"
-                    >
-                      <Settings className="h-3 w-3 mr-1" />
-                      Configure File Naming
-                    </Button>
-                  </div>
-                </TableHead>
+                 {/* Document File Name column header - conditionally visible */}
+                 {showDocumentFileNameColumn && (
+                   <TableHead 
+                     className="font-bold text-center border-r border-border relative p-0 bg-muted/50"
+                     style={{ width: "200px", minWidth: "200px" }}
+                   >
+                     <div className="w-full h-full px-4 py-2 flex flex-col items-center">
+                       <span className="font-bold">Document File Name</span>
+                     </div>
+                   </TableHead>
+                 )}
+                 
+                 {/* Actions column header - not draggable */}
+                 <TableHead 
+                   className="font-bold text-center border-r border-border relative p-0 last:border-r-0 bg-muted/50"
+                   style={{ width: "200px", minWidth: "200px" }}
+                 >
+                   <div className="w-full h-full px-4 py-2 flex flex-col gap-1">
+                     <Button
+                       variant="outline"
+                       size="sm"
+                       onClick={() => setShowDocumentFileNameColumn(!showDocumentFileNameColumn)}
+                       className="text-xs"
+                     >
+                       {showDocumentFileNameColumn ? <EyeOff className="h-3 w-3 mr-1" /> : <Eye className="h-3 w-3 mr-1" />}
+                       {showDocumentFileNameColumn ? 'Hide' : 'Show'} File Names
+                     </Button>
+                     <Button
+                       variant="outline"
+                       size="sm"
+                       onClick={() => setShowDocumentNamingDialog(true)}
+                       className="text-xs"
+                     >
+                       <Settings className="h-3 w-3 mr-1" />
+                       File Naming
+                     </Button>
+                   </div>
+                 </TableHead>
                </TableRow>
              </TableHeader>
 
@@ -3537,18 +3538,18 @@ ${extractionFields}`
               <TableBody>
                 {data.map((row, rowIndex) => (
                  <React.Fragment key={rowIndex}>
-                   {/* Show inline document viewer above this row if it's selected */}
-                   {inlineViewerRow === rowIndex && (
-                     <TableRow>
-                       <TableCell colSpan={columns.length} className="p-0 border-0">
-                         <InlineDocumentViewer
-                           runsheetId={currentRunsheetId || ''}
-                           rowIndex={rowIndex}
-                           onClose={() => setInlineViewerRow(null)}
-                         />
-                       </TableCell>
-                     </TableRow>
-                   )}
+                    {/* Show inline document viewer above this row if it's selected */}
+                    {inlineViewerRow === rowIndex && (
+                      <TableRow>
+                        <TableCell colSpan={columns.length + (showDocumentFileNameColumn ? 1 : 0) + 1} className="p-0 border-0">
+                          <InlineDocumentViewer
+                            runsheetId={currentRunsheetId || ''}
+                            rowIndex={rowIndex}
+                            onClose={() => setInlineViewerRow(null)}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    )}
                    
                     <TableRow 
                       className="hover:bg-muted/30 relative"
@@ -3622,9 +3623,21 @@ ${extractionFields}`
                          )}
                        </TableCell>
                      );
-                   })}
-                   
-                   {/* Actions column - Document management */}
+                    })}
+                    
+                    {/* Document File Name column - conditionally visible */}
+                    {showDocumentFileNameColumn && (
+                      <TableCell 
+                        className="border-r border-border p-2"
+                        style={{ width: "200px", minWidth: "200px" }}
+                      >
+                        <div className="text-sm text-muted-foreground">
+                          {row['Document File Name'] || ''}
+                        </div>
+                      </TableCell>
+                    )}
+                    
+                    {/* Actions column - Document management */}
                    <TableCell 
                      className="border-r border-border last:border-r-0 p-2"
                      style={{ width: "200px", minWidth: "200px" }}

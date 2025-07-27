@@ -312,12 +312,6 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
               }
             }));
             
-            console.log('🔥 DISPATCHING updateDocumentFilename event:', {
-              runsheetId: runsheetId,
-              rowIndex: currentRowIndex,
-              filename: result.document.stored_filename
-            });
-            
             // Also trigger a runsheet data refresh and update the specific row
             window.dispatchEvent(new CustomEvent('updateDocumentFilename', {
               detail: {
