@@ -1055,15 +1055,22 @@ Image: [base64 image data]`;
                 try {
                   const { data: { user } } = await supabase.auth.getUser();
                   if (user && hasUnsavedChanges) {
+                    const runsheetData: any = {
+                      name: activeRunsheet?.name || 'Untitled Runsheet',
+                      columns: columns,
+                      data: spreadsheetData,
+                      column_instructions: columnInstructions,
+                      user_id: user.id
+                    };
+                    
+                    // Include ID if updating existing runsheet
+                    if (activeRunsheet?.id || location.state?.runsheetId) {
+                      runsheetData.id = activeRunsheet?.id || location.state?.runsheetId;
+                    }
+                    
                     await supabase
                       .from('runsheets')
-                      .upsert({
-                        name: activeRunsheet?.name || 'Untitled Runsheet',
-                        columns: columns,
-                        data: spreadsheetData,
-                        column_instructions: columnInstructions,
-                        user_id: user.id
-                      });
+                      .upsert(runsheetData);
                     setHasUnsavedChanges(false);
                     toast({
                       title: "Runsheet saved",
