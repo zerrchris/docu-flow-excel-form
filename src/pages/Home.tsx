@@ -150,9 +150,7 @@ const Home: React.FC = () => {
             <Card className="p-8">
               <CardHeader className="text-center p-0 mb-6">
                 <CardTitle className="text-2xl">Ready to get started?</CardTitle>
-                <CardDescription>
-                  Create your account today and start processing documents more efficiently.
-                </CardDescription>
+                <CardDescription>Create your account today and start runsheets like a pro.</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
                 <div className="space-y-4">
