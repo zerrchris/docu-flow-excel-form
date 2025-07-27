@@ -209,7 +209,7 @@ export const GoogleDrivePicker: React.FC<GoogleDrivePickerProps> = ({
             Import from Google Drive
           </DialogTitle>
           <DialogDescription>
-            Connect to your Google Drive and import files directly to your document manager.
+            Connect to your Google Drive and import file directly into a new runsheet.
           </DialogDescription>
         </DialogHeader>
 
