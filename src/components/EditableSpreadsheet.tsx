@@ -972,11 +972,15 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         savedRunsheet = updateResult;
       } else {
         // Overwrite/create new runsheet - delete existing one first
-        await supabase
+        const { error: deleteError } = await supabase
           .from('runsheets')
           .delete()
           .eq('user_id', user.id)
           .eq('name', finalName);
+        
+        if (deleteError) {
+          console.warn('Delete operation failed, but continuing with insert:', deleteError);
+        }
         
         // Create new runsheet
         const { data: insertResult, error } = await supabase
