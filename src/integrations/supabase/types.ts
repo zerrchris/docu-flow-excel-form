@@ -47,6 +47,7 @@ export type Database = {
           created_at: string
           file_path: string
           file_size: number | null
+          folder_id: string | null
           id: string
           original_filename: string
           row_index: number
@@ -60,6 +61,7 @@ export type Database = {
           created_at?: string
           file_path: string
           file_size?: number | null
+          folder_id?: string | null
           id?: string
           original_filename: string
           row_index: number
@@ -73,6 +75,7 @@ export type Database = {
           created_at?: string
           file_path?: string
           file_size?: number | null
+          folder_id?: string | null
           id?: string
           original_filename?: string
           row_index?: number
@@ -83,10 +86,52 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "documents_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "documents_runsheet_id_fkey"
             columns: ["runsheet_id"]
             isOneToOne: false
             referencedRelation: "runsheets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      folders: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          parent_folder_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          parent_folder_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          parent_folder_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "folders_parent_folder_id_fkey"
+            columns: ["parent_folder_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
             referencedColumns: ["id"]
           },
         ]

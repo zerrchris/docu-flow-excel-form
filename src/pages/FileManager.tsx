@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowLeft, Eye, Edit2, Trash2, Search, Calendar, FileImage, Smartphone, Upload as UploadIcon, Download, CheckSquare, X, ChevronDown, ChevronRight, Folder, FolderOpen, FileSpreadsheet, ArrowUp, Home } from 'lucide-react';
+import { ArrowLeft, Eye, Edit2, Trash2, Search, Calendar, FileImage, Smartphone, Upload as UploadIcon, Download, CheckSquare, X, ChevronDown, ChevronRight, Folder, FolderOpen, FileSpreadsheet, ArrowUp, Home, Plus, FolderPlus, Move } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -24,6 +24,16 @@ interface StoredFile {
   type: 'mobile' | 'uploaded';
   project?: string;
   fullPath: string;
+  folder_id?: string;
+}
+
+interface Folder {
+  id: string;
+  name: string;
+  parent_folder_id?: string;
+  created_at: string;
+  updated_at: string;
+  user_id: string;
 }
 
 interface Runsheet {
@@ -46,22 +56,31 @@ export const FileManager: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [files, setFiles] = useState<StoredFile[]>([]);
+  const [folders, setFolders] = useState<Folder[]>([]);
   const [runsheets, setRunsheets] = useState<Runsheet[]>([]);
+  const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFile, setSelectedFile] = useState<StoredFile | null>(null);
   const [selectedRunsheet, setSelectedRunsheet] = useState<Runsheet | null>(null);
+  const [selectedFolder, setSelectedFolder] = useState<Folder | null>(null);
   const [showRenameDialog, setShowRenameDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showCreateFolderDialog, setShowCreateFolderDialog] = useState(false);
+  const [showMoveDialog, setShowMoveDialog] = useState(false);
   const [newFileName, setNewFileName] = useState('');
+  const [newFolderName, setNewFolderName] = useState('');
   const [isRenaming, setIsRenaming] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isCreatingFolder, setIsCreatingFolder] = useState(false);
+  const [isMoving, setIsMoving] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [currentFolder, setCurrentFolder] = useState<'root' | 'projects' | 'runsheets'>('root');
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   const [showViewChoiceDialog, setShowViewChoiceDialog] = useState(false);
   const [pendingViewItem, setPendingViewItem] = useState<{ type: 'file', item: StoredFile } | { type: 'runsheet', item: Runsheet } | null>(null);
+  const [draggedFile, setDraggedFile] = useState<StoredFile | null>(null);
 
   useEffect(() => {
     if (currentFolder === 'projects') {
