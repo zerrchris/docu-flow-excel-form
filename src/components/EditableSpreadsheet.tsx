@@ -824,6 +824,20 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     }
   };
 
+  // Listen for navigation save requests from DocumentProcessor
+  React.useEffect(() => {
+    const handleNavigationSave = async () => {
+      console.log('🔧 EditableSpreadsheet: Received navigation save request');
+      await saveRunsheet();
+    };
+
+    window.addEventListener('saveCurrentRunsheet', handleNavigationSave as EventListener);
+    
+    return () => {
+      window.removeEventListener('saveCurrentRunsheet', handleNavigationSave as EventListener);
+    };
+  }, [saveRunsheet]);
+
   // Save and close runsheet - saves the data, clears active status, and navigates back to dashboard
   const saveAndCloseRunsheet = async () => {
     console.log('Save and Close button clicked!');
