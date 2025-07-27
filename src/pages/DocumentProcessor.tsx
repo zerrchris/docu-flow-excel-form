@@ -383,6 +383,7 @@ const DocumentProcessor: React.FC = () => {
   // Handle spreadsheet data changes
   const handleSpreadsheetDataChange = (data: Record<string, string>[]) => {
     setSpreadsheetData(data);
+    setHasUnsavedChanges(true); // Mark as unsaved when data changes
   };
 
   // Handle columns change
