@@ -2973,16 +2973,18 @@ ${extractionFields}`
       console.log('🔍 Available columns:', columns);
 
       // Create mapping from extracted keys to column names
+      // Since the AI returns keys that match the column names exactly, we mostly use direct mapping
       const keyMapping: Record<string, string> = {
-        "Instrument Number": "Inst Number",
-        "Book and Page": "Book/Page", 
-        "Instrument Type": "Inst Type",
-        "Recorded": "Recording Date",
-        "Dated": "Document Date",
-        "Grantor(s)": "Grantor",
-        "Grantee(s)": "Grantee", 
-        "Description": "Legal Description",
-        "Comments": "Notes",
+        // Direct mappings for exact matches
+        "Book and Page": "Book and Page",
+        "Instrument Number": "Instrument Number", 
+        "Instrument Type": "Instrument Type",
+        "Recorded": "Recorded",
+        "Dated": "Dated",
+        "Grantor(s)": "Grantor(s)",
+        "Grantee(s)": "Grantee(s)", 
+        "Description": "Description",
+        "Comments": "Comments",
         "Document File Name": "Document File Name"
       };
 
