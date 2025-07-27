@@ -1038,7 +1038,7 @@ Image: [base64 image data]`;
           <DialogHeader>
             <DialogTitle>Unsaved Changes</DialogTitle>
             <DialogDescription>
-              You have unsaved changes in your runsheet. What would you like to do?
+              You have unsaved changes in your runsheet. Please save your work before leaving this page.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-3">
@@ -1047,37 +1047,17 @@ Image: [base64 image data]`;
               onClick={() => setShowNavigationDialog(false)}
               className="w-full sm:w-auto"
             >
-              Cancel
+              Go Back and Save
             </Button>
             <Button 
-              variant="default" 
-              onClick={async () => {
-                // Listen for save completion before navigating
-                const handleSaveComplete = () => {
-                  setShowNavigationDialog(false);
-                  navigate('/app');
-                  window.removeEventListener('saveComplete', handleSaveComplete);
-                };
-                
-                window.addEventListener('saveComplete', handleSaveComplete);
-                
-                // Trigger the same save function that the EditableSpreadsheet uses
-                const saveEvent = new CustomEvent('saveCurrentRunsheet');
-                window.dispatchEvent(saveEvent);
-              }}
-              className="w-full sm:w-auto"
-            >
-              Save
-            </Button>
-            <Button 
-              variant="secondary" 
+              variant="destructive" 
               onClick={() => {
                 setShowNavigationDialog(false);
                 navigate('/app');
               }}
               className="w-full sm:w-auto"
             >
-              Continue without saving
+              Leave Without Saving
             </Button>
           </DialogFooter>
         </DialogContent>
