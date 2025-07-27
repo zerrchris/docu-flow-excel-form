@@ -289,7 +289,8 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
             setFiles(prev => prev.map((f, index) => 
               index === fileIndex ? { ...f, progress } : f
             ));
-          }
+          },
+          false // Use original filename by default, not smart naming
         );
 
         if (result.success) {

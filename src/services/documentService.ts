@@ -178,7 +178,8 @@ export class DocumentService {
     file: File, 
     runsheetId: string, 
     rowIndex: number, 
-    onProgress?: (progress: number) => void
+    onProgress?: (progress: number) => void,
+    useSmartNaming?: boolean
   ): Promise<{ success: boolean; document?: DocumentRecord; error?: string }> {
     try {
       const formData = new FormData();
@@ -186,6 +187,7 @@ export class DocumentService {
       formData.append('runsheetId', runsheetId);
       formData.append('rowIndex', rowIndex.toString());
       formData.append('originalFilename', file.name);
+      formData.append('useSmartNaming', useSmartNaming ? 'true' : 'false');
 
       // Get auth token for the request
       const { data: { session } } = await supabase.auth.getSession();

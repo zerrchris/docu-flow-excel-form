@@ -55,6 +55,7 @@ serve(async (req) => {
     const runsheetId = formData.get('runsheetId') as string;
     const rowIndex = parseInt(formData.get('rowIndex') as string);
     const originalFilename = formData.get('originalFilename') as string || file.name;
+    const useSmartNaming = formData.get('useSmartNaming') === 'true';
 
     if (!file || !runsheetId || rowIndex === undefined) {
       return new Response(
@@ -80,26 +81,33 @@ serve(async (req) => {
       );
     }
 
-    // Generate filename based on spreadsheet data with user preferences
-    const { data: generatedFilename, error: filenameError } = await supabase
-      .rpc('generate_document_filename_with_preferences', {
-        runsheet_data: runsheet.data,
-        row_index: rowIndex,
-        original_filename: originalFilename,
-        user_id: user.id
-      });
+    let storedFilename;
+    
+    if (useSmartNaming) {
+      // Generate filename based on spreadsheet data with user preferences
+      const { data: generatedFilename, error: filenameError } = await supabase
+        .rpc('generate_document_filename_with_preferences', {
+          runsheet_data: runsheet.data,
+          row_index: rowIndex,
+          original_filename: originalFilename,
+          user_id: user.id
+        });
 
-    console.log('Filename generation result:', { generatedFilename, filenameError, runsheetData: runsheet.data });
+      console.log('Filename generation result:', { generatedFilename, filenameError, runsheetData: runsheet.data });
 
-    if (filenameError) {
-      console.error('Error generating filename:', filenameError);
-      return new Response(
-        JSON.stringify({ error: 'Failed to generate filename' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      if (filenameError) {
+        console.error('Error generating filename:', filenameError);
+        return new Response(
+          JSON.stringify({ error: 'Failed to generate filename' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      storedFilename = generatedFilename || `document_${rowIndex}_${Date.now()}.${originalFilename.split('.').pop()}`;
+    } else {
+      // Use original filename by default
+      storedFilename = originalFilename;
     }
-
-    const storedFilename = generatedFilename || `document_${rowIndex}_${Date.now()}.${originalFilename.split('.').pop()}`;
     const filePath = `${user.id}/${runsheetId}/${storedFilename}`;
 
     console.log(`Generated filename: ${storedFilename}, path: ${filePath}`);
