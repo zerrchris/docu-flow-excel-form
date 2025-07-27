@@ -828,9 +828,19 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   React.useEffect(() => {
     const handleNavigationSave = async () => {
       console.log('🔧 EditableSpreadsheet: Received navigation save request');
-      await saveRunsheet();
-      // Dispatch completion event so DocumentProcessor knows save is done
-      window.dispatchEvent(new CustomEvent('saveComplete'));
+      
+      try {
+        await saveRunsheet();
+        // Only dispatch completion if save completed normally (no conflict dialog shown)
+        if (!showNameConflictDialog && !isSaving) {
+          window.dispatchEvent(new CustomEvent('saveComplete'));
+        }
+        // If conflict dialog is shown, the resolution handlers will dispatch the event
+      } catch (error) {
+        // Even if save failed, we should dispatch completion
+        console.error('Save failed during navigation:', error);
+        window.dispatchEvent(new CustomEvent('saveComplete'));
+      }
     };
 
     window.addEventListener('saveCurrentRunsheet', handleNavigationSave as EventListener);
@@ -838,7 +848,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     return () => {
       window.removeEventListener('saveCurrentRunsheet', handleNavigationSave as EventListener);
     };
-  }, [saveRunsheet]);
+  }, [saveRunsheet, showNameConflictDialog, isSaving]);
 
   // Save and close runsheet - saves the data, clears active status, and navigates back to dashboard
   const saveAndCloseRunsheet = async () => {
@@ -1098,6 +1108,9 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       setIsSaving(false);
       setNameConflictData(null);
       setPendingSaveData(null);
+      
+      // Dispatch completion event for navigation saves
+      window.dispatchEvent(new CustomEvent('saveComplete'));
     }
   };
 
@@ -1114,6 +1127,11 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       } else {
         saveRunsheet();
       }
+      
+      // Dispatch completion event for navigation saves after suggested name save
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('saveComplete'));
+      }, 200);
     }, 100);
   };
 
@@ -1122,6 +1140,9 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     setNameConflictData(null);
     setPendingSaveData(null);
     setIsSaving(false);
+    
+    // Dispatch completion event even for cancelled saves
+    window.dispatchEvent(new CustomEvent('saveComplete'));
   };
 
   // Save current configuration as default
