@@ -55,10 +55,7 @@ const Home: React.FC = () => {
           <h2 className="text-5xl font-bold tracking-tight mb-6">
             Document Data Extraction
           </h2>
-          <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Turn messy documents into organized data in minutes. Upload any document, let AI extract the key information, 
-            and manage everything in powerful spreadsheets that sync across all your devices.
-          </p>
+          <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">Turn messy documents into organized data in minutes. Upload any document, let AI extract the key information, and instantly add it to your runsheet.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             {user ? <Link to="/app">
                 <Button size="lg" className="gap-2">
