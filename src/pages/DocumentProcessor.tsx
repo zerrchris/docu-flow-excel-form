@@ -1052,42 +1052,15 @@ Image: [base64 image data]`;
             <Button 
               variant="default" 
               onClick={async () => {
-                // Save current runsheet data directly to database
-                try {
-                  const { data: { user } } = await supabase.auth.getUser();
-                  if (user && hasUnsavedChanges) {
-                    const runsheetData: any = {
-                      name: activeRunsheet?.name || 'Untitled Runsheet',
-                      columns: columns,
-                      data: spreadsheetData,
-                      column_instructions: columnInstructions,
-                      user_id: user.id
-                    };
-                    
-                    // Include ID if updating existing runsheet
-                    if (activeRunsheet?.id || location.state?.runsheetId) {
-                      runsheetData.id = activeRunsheet?.id || location.state?.runsheetId;
-                    }
-                    
-                    await supabase
-                      .from('runsheets')
-                      .upsert(runsheetData);
-                    setHasUnsavedChanges(false);
-                    toast({
-                      title: "Runsheet saved",
-                      description: "Your runsheet has been saved successfully."
-                    });
-                  }
-                } catch (error) {
-                  console.error('Save error:', error);
-                  toast({
-                    title: "Save failed",
-                    description: "Failed to save the runsheet. Please try again.",
-                    variant: "destructive"
-                  });
-                }
+                // Trigger the same save function that the EditableSpreadsheet uses
+                const saveEvent = new CustomEvent('saveCurrentRunsheet');
+                window.dispatchEvent(saveEvent);
                 setShowNavigationDialog(false);
-                navigate('/app');
+                
+                // Wait a moment for the save to complete, then navigate
+                setTimeout(() => {
+                  navigate('/app');
+                }, 500);
               }}
               className="w-full sm:w-auto"
             >
