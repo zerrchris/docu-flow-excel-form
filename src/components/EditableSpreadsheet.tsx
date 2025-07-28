@@ -3911,17 +3911,24 @@ ${extractionFields}`
                      className="border-r border-border last:border-r-0 p-2"
                      style={{ width: "200px", minWidth: "200px" }}
                    >
-                     <DocumentLinker
-                       key={`${rowIndex}-${row['Document File Name']}`}
-                       runsheetId={currentRunsheetId || ''}
-                       rowIndex={rowIndex}
-                       currentFilename={row['Document File Name']}
-                       documentPath={(() => {
-                         const dbPath = documentMap.get(rowIndex)?.file_path;
-                         const storagePath = row['Storage Path'];
-                         return dbPath || storagePath;
-                       })()}
-                       existingDocumentUrl={row['Document File Name'] && row['Document File Name'].trim() !== '' ? 'exists' : undefined}
+                      <DocumentLinker
+                        key={`${rowIndex}-${row['Document File Name']}`}
+                        runsheetId={currentRunsheetId || ''}
+                        rowIndex={rowIndex}
+                        currentFilename={(() => {
+                          const filename = row['Document File Name'];
+                          console.log('🔍 DocumentLinker render - Row', rowIndex, 'Document File Name:', filename);
+                          console.log('🔍 DocumentLinker render - Full row data:', row);
+                          console.log('🔍 DocumentLinker render - Storage Path:', row['Storage Path']);
+                          return filename;
+                        })()}
+                        documentPath={(() => {
+                          const dbPath = documentMap.get(rowIndex)?.file_path;
+                          const storagePath = row['Storage Path'];
+                          console.log('🔍 DocumentLinker render - dbPath:', dbPath, 'storagePath:', storagePath);
+                          return dbPath || storagePath;
+                        })()}
+                        existingDocumentUrl={row['Document File Name'] && row['Document File Name'].trim() !== '' ? 'exists' : undefined}
                         onDocumentLinked={(filename) => {
                            console.log('🔧 EditableSpreadsheet: onDocumentLinked called with filename:', filename);
                            console.log('🔧 EditableSpreadsheet: Current row data before update:', data[rowIndex]);
