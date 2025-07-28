@@ -43,17 +43,52 @@ const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
       } else {
         // Use default columns if no preferences exist
         const defaultColumns = ['Inst Number', 'Book/Page', 'Inst Type', 'Recording Date', 'Document Date', 'Grantor', 'Grantee', 'Legal Description', 'Notes'];
-        const defaultInstructions = {
-          'Inst Number': 'Extract the instrument number or recording number as it appears on the document',
-          'Book/Page': 'Extract the book and page reference (format: Book XXX, Page XXX or XXX/XXX)',
-          'Inst Type': 'Extract the document type (e.g., Deed, Mortgage, Lien, Assignment, etc.)',
-          'Recording Date': 'Extract the official recording date in MM/DD/YYYY format',
-          'Document Date': 'Extract the date the document was signed or executed in MM/DD/YYYY format',
-          'Grantor': 'Extract the full name(s) of the grantor(s) - the party transferring or granting rights',
-          'Grantee': 'Extract the full name(s) of the grantee(s) - the party receiving rights',
-          'Legal Description': 'Extract the complete legal property description including lot, block, subdivision, and any metes and bounds',
-          'Notes': 'Extract any special conditions, considerations, or additional relevant information'
+        
+        // Generate instructions using the same function used in EditableSpreadsheet
+        const generateDefaultInstruction = (columnName: string): string => {
+          const name = columnName.toLowerCase();
+          
+          const suggestions: Record<string, string> = {
+            'grantor': "Extract the Grantor's name as it appears on the document and include the address if there is one",
+            'grantee': "Extract the Grantee's name as it appears on the document and include the address if there is one",
+            'inst number': "Extract the instrument number exactly as it appears on the document",
+            'instrument number': "Extract the instrument number exactly as it appears on the document",
+            'book': "Extract the book number from the book/page reference",
+            'page': "Extract the page number from the book/page reference",
+            'book/page': "Extract the complete book and page reference (e.g., Book 123, Page 456)",
+            'inst type': "Extract the type of instrument (e.g., Deed, Mortgage, Lien, etc.)",
+            'instrument type': "Extract the type of instrument (e.g., Deed, Mortgage, Lien, etc.)",
+            'recording date': "Extract the date when the document was recorded at the courthouse",
+            'record date': "Extract the date when the document was recorded at the courthouse",
+            'document date': "Extract the date the document was signed or executed",
+            'execution date': "Extract the date the document was signed or executed",
+            'legal description': "Extract the complete legal description of the property including lot, block, subdivision, and metes and bounds if present",
+            'property description': "Extract the complete legal description of the property including lot, block, subdivision, and metes and bounds if present",
+            'notes': "Extract any additional relevant information, special conditions, or remarks",
+            'comments': "Extract any additional relevant information, special conditions, or remarks"
+          };
+          
+          // Find exact match first
+          if (suggestions[name]) {
+            return suggestions[name];
+          }
+          
+          // Find partial matches
+          for (const [key, suggestion] of Object.entries(suggestions)) {
+            if (name.includes(key) || key.includes(name)) {
+              return suggestion;
+            }
+          }
+          
+          // Default suggestion
+          return `Extract the ${columnName} information exactly as it appears on the document`;
         };
+        
+        const defaultInstructions: Record<string, string> = {};
+        defaultColumns.forEach(column => {
+          defaultInstructions[column] = generateDefaultInstruction(column);
+        });
+        
         setColumns(defaultColumns);
         setColumnInstructions(defaultInstructions);
       }
