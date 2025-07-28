@@ -258,9 +258,19 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
     window.addEventListener('createNewRunsheetFromDashboard', handleDashboardNewRunsheet as EventListener);
     
+    // Handle Ctrl+S save event from DocumentProcessor
+    const handleSaveEvent = () => {
+      if (user && hasUnsavedChanges) {
+        forceSave();
+      }
+    };
+    
+    window.addEventListener('saveRunsheet', handleSaveEvent);
+    
     return () => {
       window.removeEventListener('saveRunsheetBeforeUpload', handleSaveRequest as EventListener);
       window.removeEventListener('createNewRunsheetFromDashboard', handleDashboardNewRunsheet as EventListener);
+      window.removeEventListener('saveRunsheet', handleSaveEvent);
     };
   }, [currentRunsheetId, runsheetName, data, columns, columnInstructions]);
   

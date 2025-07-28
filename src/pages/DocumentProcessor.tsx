@@ -395,10 +395,21 @@ const DocumentProcessor: React.FC = () => {
       }
     };
 
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.ctrlKey && event.key === 's') {
+        event.preventDefault();
+        // Trigger save by dispatching save event to the spreadsheet
+        const saveEvent = new CustomEvent('saveRunsheet');
+        window.dispatchEvent(saveEvent);
+      }
+    };
+
     window.addEventListener('checkUnsavedChanges', handleCheckUnsavedChanges as EventListener);
+    window.addEventListener('keydown', handleKeyDown);
     
     return () => {
       window.removeEventListener('checkUnsavedChanges', handleCheckUnsavedChanges as EventListener);
+      window.removeEventListener('keydown', handleKeyDown);
     };
   }, [hasUnsavedChanges, navigate]);
 
