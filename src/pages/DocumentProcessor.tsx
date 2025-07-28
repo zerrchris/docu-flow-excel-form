@@ -883,6 +883,8 @@ Image: [base64 image data]`;
       return;
     }
     
+    console.log('🚀 SUCCESS: Found runsheet ID, continuing with add...');
+    
     const targetData = dataToAdd || formData;
     console.log('🔧 ADD_TO_SPREADSHEET: targetData:', targetData);
     console.log('🔧 ADD_TO_SPREADSHEET: targetData Storage Path:', targetData['Storage Path']);
