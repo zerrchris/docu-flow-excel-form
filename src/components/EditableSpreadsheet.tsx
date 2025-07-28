@@ -4030,20 +4030,22 @@ ${extractionFields}`
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full justify-start">
-                <Button variant="outline" onClick={() => setShowUnsavedChangesDialog(false)} className="w-full sm:w-auto">
-                  Cancel
-                </Button>
-                <Button 
-                  variant="destructive" 
-                  onClick={() => {
-                    setShowUnsavedChangesDialog(false);
-                    setShowNewRunsheetDialog(true);
-                  }}
-                  className="w-full sm:w-auto"
-                >
-                  Continue Without Saving
-                </Button>
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full justify-between">
+                <div className="flex gap-2 sm:gap-3">
+                  <Button variant="outline" onClick={() => setShowUnsavedChangesDialog(false)} className="w-full sm:w-auto">
+                    Cancel
+                  </Button>
+                  <Button 
+                    variant="destructive" 
+                    onClick={() => {
+                      setShowUnsavedChangesDialog(false);
+                      setShowNewRunsheetDialog(true);
+                    }}
+                    className="w-full sm:w-auto"
+                  >
+                    Continue Without Saving
+                  </Button>
+                </div>
                 <Button 
                   onClick={async () => {
                     setShowUnsavedChangesDialog(false);
