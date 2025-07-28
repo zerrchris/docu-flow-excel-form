@@ -50,16 +50,12 @@ const Home: React.FC = () => {
                   {subscriptionTier} Plan
                 </Badge>
               )}
-              <AuthButton />
-              {user && subscribed && (
-                <Link to="/app">
-                  <Button>Open App</Button>
-                </Link>
-              )}
-              {user && !subscribed && (
+              {user ? (
                 <Link to="/pricing">
                   <Button>Get Subscription</Button>
                 </Link>
+              ) : (
+                <AuthButton />
               )}
             </div>
           </div>
