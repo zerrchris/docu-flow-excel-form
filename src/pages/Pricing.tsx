@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Check, ArrowLeft } from 'lucide-react';
+import { Check, ArrowLeft, FileText, Save, FolderOpen, Camera, Mic, Download, Smartphone, Settings, Layers } from 'lucide-react';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { toast } from '@/hooks/use-toast';
 import extractorLogo from '@/assets/document-extractor-logo.png';
@@ -41,14 +41,7 @@ const Pricing = () => {
       name: 'Daily Access',
       price: '$9.99',
       period: 'per day',
-      description: 'Perfect for short-term projects',
-      features: [
-        'Unlimited document analysis',
-        'AI-powered data extraction',
-        'Runsheet management',
-        'Cloud storage',
-        'Voice input support'
-      ]
+      description: 'Perfect for short-term projects'
     },
     {
       id: 'weekly', 
@@ -56,31 +49,14 @@ const Pricing = () => {
       price: '$29.99',
       period: 'per week',
       description: 'Great for ongoing work',
-      popular: true,
-      features: [
-        'Unlimited document analysis',
-        'AI-powered data extraction', 
-        'Runsheet management',
-        'Cloud storage',
-        'Voice input support',
-        'Priority support'
-      ]
+      popular: true
     },
     {
       id: 'monthly',
       name: 'Monthly Access',
       price: '$79.00',
       period: 'per month',
-      description: 'Best value for regular users',
-      features: [
-        'Unlimited document analysis',
-        'AI-powered data extraction',
-        'Runsheet management', 
-        'Cloud storage',
-        'Voice input support',
-        'Priority support',
-        'Advanced analytics'
-      ]
+      description: 'Best value for regular users'
     }
   ];
 
@@ -166,14 +142,11 @@ const Pricing = () => {
               </CardHeader>
 
               <CardContent>
-                <ul className="space-y-3">
-                  {plan.features.map((feature, index) => (
-                    <li key={index} className="flex items-start gap-3">
-                      <Check className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                      <span className="text-sm">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
+                <div className="text-center">
+                  <p className="text-sm text-muted-foreground">
+                    Full access to all RunsheetPro features
+                  </p>
+                </div>
               </CardContent>
 
               <CardFooter>
@@ -192,6 +165,110 @@ const Pricing = () => {
             </Card>
           ))}
         </div>
+
+        {/* Features Section */}
+        <section className="py-16">
+          <div className="text-center mb-12">
+            <h3 className="text-3xl font-bold mb-4">
+              Everything included with your subscription
+            </h3>
+            <p className="text-muted-foreground text-lg">
+              All features are available regardless of your billing frequency
+            </p>
+          </div>
+          
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+            <Card>
+              <CardContent className="p-6">
+                <FileText className="h-8 w-8 text-primary mb-4" />
+                <h4 className="font-semibold mb-2">AI Document Analysis</h4>
+                <p className="text-sm text-muted-foreground">
+                  Upload any document and let AI extract key information automatically
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-6">
+                <Save className="h-8 w-8 text-primary mb-4" />
+                <h4 className="font-semibold mb-2">Cloud Storage</h4>
+                <p className="text-sm text-muted-foreground">
+                  Secure cloud storage for all your documents and runsheets
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-6">
+                <FolderOpen className="h-8 w-8 text-primary mb-4" />
+                <h4 className="font-semibold mb-2">Runsheet Management</h4>
+                <p className="text-sm text-muted-foreground">
+                  Create, organize, and manage unlimited runsheets
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-6">
+                <Camera className="h-8 w-8 text-primary mb-4" />
+                <h4 className="font-semibold mb-2">Screenshot Capture</h4>
+                <p className="text-sm text-muted-foreground">
+                  Capture screenshots directly from web pages and process them
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-6">
+                <Mic className="h-8 w-8 text-primary mb-4" />
+                <h4 className="font-semibold mb-2">Voice Input</h4>
+                <p className="text-sm text-muted-foreground">
+                  Voice-to-text transcription for hands-free data entry
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-6">
+                <Download className="h-8 w-8 text-primary mb-4" />
+                <h4 className="font-semibold mb-2">Export Options</h4>
+                <p className="text-sm text-muted-foreground">
+                  Export your data to various formats including Excel and PDF
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-6">
+                <Smartphone className="h-8 w-8 text-primary mb-4" />
+                <h4 className="font-semibold mb-2">Mobile Support</h4>
+                <p className="text-sm text-muted-foreground">
+                  Full mobile camera integration and responsive interface
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-6">
+                <Settings className="h-8 w-8 text-primary mb-4" />
+                <h4 className="font-semibold mb-2">Custom Preferences</h4>
+                <p className="text-sm text-muted-foreground">
+                  Customize extraction preferences and document naming
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-6">
+                <Layers className="h-8 w-8 text-primary mb-4" />
+                <h4 className="font-semibold mb-2">Batch Processing</h4>
+                <p className="text-sm text-muted-foreground">
+                  Process multiple documents at once for efficiency
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
 
         <div className="text-center mt-12">
           <p className="text-muted-foreground">
