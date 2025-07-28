@@ -846,38 +846,24 @@ Image: [base64 image data]`;
 
   // Add current form data to spreadsheet
   const addToSpreadsheet = (dataToAdd?: Record<string, string>) => {
-    console.log('🚀 === ADD TO SPREADSHEET START ===');
-    console.log('🚀 ADD_TO_SPREADSHEET: Function called!', { dataToAdd, activeRunsheet, hasUnsavedChanges });
-    console.log('🚀 ADD_TO_SPREADSHEET: location.state:', location.state);
-    console.log('🚀 ADD_TO_SPREADSHEET: location.state?.runsheet?.id:', location.state?.runsheet?.id);
-    
     // Check localStorage for active runsheet as fallback
     let runsheetId = activeRunsheet?.id || location.state?.runsheet?.id;
     
     if (!runsheetId) {
-      console.log('🚀 No activeRunsheet or location.state, checking localStorage...');
       try {
         const storedRunsheet = localStorage.getItem('activeRunsheet');
         if (storedRunsheet) {
           const parsed = JSON.parse(storedRunsheet);
           runsheetId = parsed.id;
-          console.log('🚀 Found runsheet in localStorage:', runsheetId);
-          
-          // Restore the active runsheet
           setActiveRunsheet(parsed);
         }
       } catch (error) {
-        console.log('🚀 Error reading localStorage:', error);
+        // Silent error handling
       }
     }
     
-    console.log('🚀 Final calculated runsheetId:', runsheetId);
-    
     if (!runsheetId) {
-      console.log('🚀 ERROR: No runsheet ID found anywhere!');
-      
-      // Instead of failing, create a temporary runsheet automatically
-      console.log('🚀 Creating temporary runsheet...');
+      // Create temporary runsheet automatically
       const tempRunsheet = {
         id: 'temp-' + Date.now(),
         name: 'Quick Runsheet',
@@ -894,8 +880,6 @@ Image: [base64 image data]`;
         description: "A quick runsheet was created so you can add documents. Save it when ready.",
       });
     }
-    
-    console.log('🚀 SUCCESS: Found runsheet ID, continuing with add...');
     
     const targetData = dataToAdd || formData;
     console.log('🔧 ADD_TO_SPREADSHEET: targetData:', targetData);

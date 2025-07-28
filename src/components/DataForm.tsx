@@ -420,19 +420,10 @@ const DataForm: React.FC<DataFormProps> = ({
           <Button
             variant="success"
             onClick={() => {
-              console.log('🔥 ADD TO RUNSHEET BUTTON CLICKED!');
-              console.log('🔥 visibleFieldsList.length:', visibleFieldsList.length);
-              console.log('🔥 visibleFieldsList:', visibleFieldsList);
-              console.log('🔥 fields:', fields);
-              console.log('🔥 visibleFields:', visibleFields);
-              
               if (visibleFieldsList.length === 0) {
-                console.log('🔥 No visible fields - showing alert');
                 alert('No fields are visible. Please use the "Hide/Display Fields" button above to show fields first.');
                 return;
               }
-              
-              console.log('🔥 Calling onAddToSpreadsheet()');
               onAddToSpreadsheet();
             }}
             className="w-full sm:w-auto"

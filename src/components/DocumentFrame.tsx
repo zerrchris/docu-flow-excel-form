@@ -89,11 +89,8 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
 
     setIsUploading(true);
     try {
-      // Upload file to storage
       const fileResult = await uploadFileToStorage(file, 'documents', 'single-processed');
-      console.log('📁 File uploaded - Storage Path:', fileResult.path);
       
-      // Create enhanced data with file information
       const userSpecifiedFilename = formData['Document File Name'];
       const finalFilename = userSpecifiedFilename && userSpecifiedFilename.trim() 
         ? userSpecifiedFilename.trim() 
@@ -105,9 +102,6 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
         'Storage Path': fileResult.path
       };
       
-      console.log('📁 Adding to spreadsheet with Storage Path:', dataWithFile['Storage Path']);
-      
-      // Call onAddToSpreadsheet with the enhanced data
       onAddToSpreadsheet(dataWithFile);
       
       // Mark as added to spreadsheet to show upload button
