@@ -13,6 +13,7 @@ interface DataFormProps {
   formData: Record<string, string>;
   onChange: (field: string, value: string) => void;
   onAnalyze: () => void;
+  onCancelAnalysis?: () => void;
   onAddToSpreadsheet: () => void;
   onResetDocument?: () => void;
   isAnalyzing: boolean;
@@ -25,6 +26,7 @@ const DataForm: React.FC<DataFormProps> = ({
   formData, 
   onChange,
   onAnalyze,
+  onCancelAnalysis,
   onAddToSpreadsheet,
   onResetDocument,
   isAnalyzing,
@@ -410,6 +412,16 @@ const DataForm: React.FC<DataFormProps> = ({
               'Analyze Document'
             )}
           </Button>
+          
+          {isAnalyzing && onCancelAnalysis && (
+            <Button
+              variant="outline"
+              onClick={onCancelAnalysis}
+              className="w-full sm:w-auto"
+            >
+              Cancel Analysis
+            </Button>
+          )}
           
           <Button
             variant="success"

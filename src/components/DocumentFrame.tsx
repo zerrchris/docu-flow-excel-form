@@ -21,6 +21,7 @@ interface DocumentFrameProps {
   columnInstructions?: Record<string, string>;
   onChange: (field: string, value: string) => void;
   onAnalyze: () => void;
+  onCancelAnalysis?: () => void;
   onAddToSpreadsheet: (data?: Record<string, string>) => void;
   onFileSelect: (file: File) => void;
   onMultipleFilesSelect?: (files: File[]) => void;
@@ -29,14 +30,15 @@ interface DocumentFrameProps {
   
 }
 
-const DocumentFrame: React.FC<DocumentFrameProps> = ({
-  file,
-  previewUrl,
+const DocumentFrame: React.FC<DocumentFrameProps> = ({ 
+  file, 
+  previewUrl, 
   fields,
   formData,
   columnInstructions,
   onChange,
   onAnalyze,
+  onCancelAnalysis,
   onAddToSpreadsheet,
   onFileSelect,
   onMultipleFilesSelect,
@@ -193,6 +195,7 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
                           formData={formData}
                           onChange={onChange}
                           onAnalyze={handleAnalyze}
+                          onCancelAnalysis={onCancelAnalysis}
                           onAddToSpreadsheet={handleAddToSpreadsheet}
                           onResetDocument={() => {
                             setHasAddedToSpreadsheet(false);  // Reset state for new upload

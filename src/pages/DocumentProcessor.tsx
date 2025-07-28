@@ -50,6 +50,7 @@ const DocumentProcessor: React.FC = () => {
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [spreadsheetData, setSpreadsheetData] = useState<Record<string, string>[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisAbortController, setAnalysisAbortController] = useState<AbortController | null>(null);
   const [columnInstructions, setColumnInstructions] = useState<Record<string, string>>({});
   const [showValidationDialog, setShowValidationDialog] = useState(false);
   const [missingColumns, setMissingColumns] = useState<string[]>([]);
@@ -574,6 +575,20 @@ const DocumentProcessor: React.FC = () => {
     }));
   };
 
+  // Cancel document analysis
+  const cancelAnalysis = () => {
+    if (analysisAbortController) {
+      analysisAbortController.abort();
+      setAnalysisAbortController(null);
+      setIsAnalyzing(false);
+      toast({
+        title: "Analysis cancelled",
+        description: "Document analysis has been cancelled.",
+        variant: "default",
+      });
+    }
+  };
+
   // Extract document information using OpenAI API
   const analyzeDocument = async (fileToAnalyze?: File) => {
     console.log('analyzeDocument called with fileToAnalyze:', fileToAnalyze);
@@ -606,6 +621,10 @@ const DocumentProcessor: React.FC = () => {
 
     setIsAnalyzing(true);
     console.log('Starting analysis...');
+    
+    // Create abort controller for this analysis
+    const abortController = new AbortController();
+    setAnalysisAbortController(abortController);
     
     try {
       // Convert file to base64 for OpenAI API
@@ -672,7 +691,8 @@ Image: [base64 image data]`;
           prompt: extractionPrompt,
           imageData: `data:${targetFile.type};base64,${fileBase64}`,
           systemMessage: systemMessage
-        })
+        }),
+        signal: abortController.signal // Add abort signal to the fetch request
       });
 
       if (!response.ok) {
@@ -762,6 +782,12 @@ Image: [base64 image data]`;
       return extractedData;
       
     } catch (error: any) {
+      // Handle cancellation gracefully
+      if (error.name === 'AbortError') {
+        console.log('Analysis was cancelled by user');
+        return {};
+      }
+      
       console.error('Analysis error:', error);
       toast({
         title: "Analysis failed",
@@ -771,6 +797,7 @@ Image: [base64 image data]`;
       return {};
     } finally {
       setIsAnalyzing(false);
+      setAnalysisAbortController(null);
       console.log('Analysis completed');
     }
   };
@@ -1059,6 +1086,7 @@ Image: [base64 image data]`;
           columnInstructions={columnInstructions}
           onChange={handleFieldChange}
           onAnalyze={analyzeDocument}
+          onCancelAnalysis={cancelAnalysis}
           onAddToSpreadsheet={addToSpreadsheet}
           onFileSelect={handleFileSelect}
           onMultipleFilesSelect={handleMultipleFilesSelect}
