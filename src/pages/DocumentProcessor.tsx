@@ -1507,15 +1507,15 @@ Image: [base64 image data]`;
       <Dialog open={confirmAddFileDialog} onOpenChange={setConfirmAddFileDialog}>
         <DialogContent className="sm:max-w-[450px]">
           <DialogHeader>
-            <DialogTitle>Add File to Runsheet</DialogTitle>
+            <DialogTitle>Link File to Runsheet</DialogTitle>
             <DialogDescription>
-              You can analyze the document to extract data, or add the file without any extracted data.
+              You can analyze the document to extract data, or link the file without any extracted data.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
             <div className="space-y-2 text-sm text-muted-foreground">
               <p><strong>Analyze Document:</strong> Extract data from the document automatically</p>
-              <p><strong>Add File Only:</strong> Add the file with just the filename</p>
+              <p><strong>Link File Only:</strong> Link the file with just the filename</p>
             </div>
           </div>
           <div className="flex justify-end gap-3">
@@ -1529,7 +1529,7 @@ Image: [base64 image data]`;
                 continueAddToSpreadsheet();
               }}
             >
-              Add File Only
+              Link File Only
             </Button>
             <Button 
               onClick={() => {
