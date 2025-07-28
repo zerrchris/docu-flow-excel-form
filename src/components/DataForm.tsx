@@ -425,9 +425,16 @@ const DataForm: React.FC<DataFormProps> = ({
           
           <Button
             variant="success"
-            onClick={() => onAddToSpreadsheet()}
+            onClick={() => {
+              if (visibleFieldsList.length === 0) {
+                alert('No fields are visible. Please use the "Hide/Display Fields" button above to show fields first.');
+                return;
+              }
+              onAddToSpreadsheet();
+            }}
             className="w-full sm:w-auto"
-            disabled={visibleFieldsList.length === 0 || isUploading}
+            disabled={isUploading}
+            title={visibleFieldsList.length === 0 ? "Please enable some fields first using 'Hide/Display Fields'" : ""}
           >
             {isUploading ? (
               <>
