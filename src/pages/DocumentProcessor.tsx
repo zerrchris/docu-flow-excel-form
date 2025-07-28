@@ -956,12 +956,37 @@ Image: [base64 image data]`;
       });
     }
     
-      const targetData = dataToAdd || formData;
+    const targetData = dataToAdd || formData;
     
-    // Generate smart filename if Document File Name is not provided
+    // Generate smart filename if Document File Name is not provided and user has smart naming enabled
     if (!targetData['Document File Name'] || targetData['Document File Name'].trim() === '') {
-      const smartFilename = await generateSmartFilename(targetData);
-      targetData['Document File Name'] = smartFilename;
+      // Check if user has smart naming enabled
+      const { data: { user } } = await supabase.auth.getUser();
+      let useSmartNaming = false;
+      
+      if (user) {
+        const { data: preferences } = await supabase
+          .from('user_document_naming_preferences')
+          .select('use_smart_naming')
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        
+        useSmartNaming = preferences?.use_smart_naming ?? true; // Default to true if no preferences
+      } else {
+        useSmartNaming = true; // Default to true for anonymous users
+      }
+      
+      if (useSmartNaming) {
+        const smartFilename = await generateSmartFilename(targetData);
+        targetData['Document File Name'] = smartFilename;
+      } else {
+        // Use original filename if available, otherwise use a simple fallback
+        const originalFilename = file?.name || `document_${Date.now()}.pdf`;
+        targetData['Document File Name'] = originalFilename;
+      }
     }
     
     // Check if any field has data
