@@ -841,17 +841,13 @@ Image: [base64 image data]`;
   const addToSpreadsheet = (dataToAdd?: Record<string, string>) => {
     console.log('🔧 ADD_TO_SPREADSHEET: addToSpreadsheet called with dataToAdd:', dataToAdd);
     
-    // Check if runsheet is saved before adding data
+    // Only check if runsheet exists, remove the hasUnsavedChanges check as it's too strict
     const runsheetId = activeRunsheet?.id || location.state?.runsheetId;
-    console.log('🔍 ADD CHECK - activeRunsheet:', activeRunsheet);
-    console.log('🔍 ADD CHECK - location.state:', location.state);
-    console.log('🔍 ADD CHECK - runsheetId:', runsheetId);
-    console.log('🔍 ADD CHECK - hasUnsavedChanges:', hasUnsavedChanges);
     
-    if (!runsheetId || hasUnsavedChanges) {
+    if (!runsheetId) {
       toast({
-        title: "Save Required",
-        description: "Please save your runsheet before adding documents. You can save by pressing Ctrl+S or clicking the Save button.",
+        title: "No Runsheet Selected",
+        description: "Please select or create a runsheet first.",
         variant: "destructive",
       });
       return;
