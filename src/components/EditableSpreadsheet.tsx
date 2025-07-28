@@ -4029,7 +4029,7 @@ ${extractionFields}`
                 You have unsaved changes in your current runsheet. What would you like to do?
               </DialogDescription>
             </DialogHeader>
-            <DialogFooter className="flex flex-col sm:flex-row justify-start gap-2 sm:gap-3">
+            <DialogFooter className="flex flex-col sm:flex-row justify-start items-start gap-2 sm:gap-3 text-left">
               <Button variant="outline" onClick={() => setShowUnsavedChangesDialog(false)} className="w-full sm:w-auto">
                 Cancel
               </Button>
