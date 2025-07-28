@@ -965,6 +965,7 @@ Image: [base64 image data]`;
           console.log('Document record created successfully for row', rowIndex);
           
           // Dispatch a custom event to notify the spreadsheet to refresh documents
+          console.log('🚨 DocumentProcessor: DISPATCHING EVENT! runsheetId:', runsheetId, 'rowIndex:', rowIndex);
           console.log('🔧 DocumentProcessor: Dispatching documentRecordCreated event with runsheetId:', runsheetId, 'rowIndex:', rowIndex);
           console.log('🔧 DocumentProcessor: Also including all possible IDs - activeRunsheet?.id:', activeRunsheet?.id, 'location.state?.runsheetId:', location.state?.runsheetId);
           window.dispatchEvent(new CustomEvent('documentRecordCreated', {

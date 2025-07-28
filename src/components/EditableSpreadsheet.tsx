@@ -398,6 +398,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   // Listen for document record creation events to refresh the document map
   useEffect(() => {
     const handleDocumentRecordCreated = async (event: CustomEvent) => {
+      console.log('🚨 EditableSpreadsheet: EVENT RECEIVED! Document record created event:', event.detail);
       console.log('🔧 EditableSpreadsheet: Document record created event received:', event.detail);
       const { runsheetId, rowIndex, allPossibleIds } = event.detail;
       
@@ -419,7 +420,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       console.log('🔧 EditableSpreadsheet: IDs to check:', idsToCheck, 'activeRunsheetId:', activeRunsheetId, 'hasMatch:', hasMatch);
       
       if (hasMatch) {
-        console.log('🔧 EditableSpreadsheet: Runsheet ID matches, refreshing document map');
+        console.log('🔍 EditableSpreadsheet: Runsheet ID matches, refreshing document map AND data');
         
         // Refresh the entire document map
         if (user && activeRunsheetId) {
@@ -428,6 +429,19 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             const documents = await DocumentService.getDocumentMapForRunsheet(activeRunsheetId);
             console.log('🔧 EditableSpreadsheet: New document map:', documents);
             setDocumentMap(documents);
+            
+            // ALSO refresh the runsheet data to get updated Document File Name fields
+            console.log('🔍 EditableSpreadsheet: Fetching updated runsheet data');
+            const { data: runsheetData, error } = await supabase
+              .from('runsheets')
+              .select('data, columns')
+              .eq('id', activeRunsheetId)
+              .single();
+              
+            if (!error && runsheetData) {
+              console.log('🔍 EditableSpreadsheet: Refreshing row data with updated spreadsheet data');
+              setData((runsheetData.data as Record<string, string>[]) || []);
+            }
           } catch (error) {
             console.error('Error refreshing documents:', error);
           }
