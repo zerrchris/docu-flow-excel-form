@@ -439,8 +439,27 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
               .single();
               
             if (!error && runsheetData) {
-              console.log('🔍 EditableSpreadsheet: Refreshing row data with updated spreadsheet data');
-              setData((runsheetData.data as Record<string, string>[]) || []);
+              console.log('🔍 EditableSpreadsheet: Current data length before refresh:', data.length);
+              console.log('🔍 EditableSpreadsheet: New data from database:', runsheetData.data);
+              const newData = (runsheetData.data as Record<string, string>[]) || [];
+              
+              // Check if the new data actually contains the document we just processed
+              const hasDocumentAtRow = newData[rowIndex] && (
+                newData[rowIndex]['Document File Name'] || 
+                newData[rowIndex]['Storage Path']
+              );
+              
+              console.log('🔍 EditableSpreadsheet: Row', rowIndex, 'has document data:', hasDocumentAtRow);
+              console.log('🔍 EditableSpreadsheet: Row data:', newData[rowIndex]);
+              
+              if (hasDocumentAtRow) {
+                console.log('🔍 EditableSpreadsheet: Setting new data with document info');
+                setData(newData);
+              } else {
+                console.log('🔍 EditableSpreadsheet: New data missing document info, keeping current data');
+              }
+            } else {
+              console.error('🔍 EditableSpreadsheet: Error fetching runsheet data:', error);
             }
           } catch (error) {
             console.error('Error refreshing documents:', error);
@@ -578,6 +597,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
           if (runsheet) {
             console.log('🔧 EditableSpreadsheet: Successfully refreshed runsheet data');
+            console.log('🔧 EditableSpreadsheet: refreshRunsheetData - Current data length:', data.length);
+            console.log('🔧 EditableSpreadsheet: refreshRunsheetData - New data from DB:', runsheet.data);
             // Properly type-cast the data from JSON to the expected format
             setData((runsheet.data as Record<string, string>[]) || []);
             setColumns((runsheet.columns as string[]) || []);
