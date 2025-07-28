@@ -3732,12 +3732,15 @@ ${extractionFields}`
         {/* Single scrollable table container */}
         <div 
           ref={containerRef}
-          className="border rounded-md bg-background relative overflow-auto h-[750px] mx-6"
+          className="border rounded-md bg-background relative h-[750px] mx-6"
+          style={{ overflow: 'auto' }}
         >
           <div className="min-w-fit">
             <Table className="border-collapse w-full" style={{ minWidth: `${getTotalTableWidth()}px` }}>
             {/* Sticky Header */}
-            <TableHeader className="sticky top-0 z-30 bg-muted/95 backdrop-blur-sm">
+            <TableHeader className="sticky top-0 z-40 bg-background border-b-2 shadow-sm"
+              style={{ boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
+            >
               <TableRow className="hover:bg-muted/50 transition-colors">
                 {columns.map((column) => (
                    <TableHead 
