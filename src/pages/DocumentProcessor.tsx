@@ -906,6 +906,7 @@ Image: [base64 image data]`;
     
     
     setSpreadsheetData(prev => {
+      console.log('🔧 setSpreadsheetData called with prev:', prev);
       // Find the first row that is both empty in spreadsheet data AND has no linked document
       const firstEmptyRowIndex = prev.findIndex((row, index) => {
         const isDataEmpty = Object.values(row).every(value => value.trim() === '');
@@ -928,6 +929,8 @@ Image: [base64 image data]`;
         console.log('Appended data to end of spreadsheet at index:', targetRowIndex);
       }
       
+      console.log('🔧 New spreadsheetData will be:', newData);
+      
       // If data contains a storage path, create a document record
       if (finalData['Storage Path']) {
         console.log('🔧 ADD_TO_SPREADSHEET: Creating document record for Storage Path:', finalData['Storage Path']);
@@ -939,7 +942,6 @@ Image: [base64 image data]`;
         console.log('🔧 ADD_TO_SPREADSHEET: Available keys in finalData:', Object.keys(finalData));
       }
       
-      console.log('New spreadsheetData after adding:', newData);
       return newData;
     });
     
