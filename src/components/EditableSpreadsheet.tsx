@@ -3657,7 +3657,7 @@ ${extractionFields}`
                  ))}
                 
                  {/* Document File Name column header - conditionally visible */}
-                 {showDocumentFileNameColumn && (
+                  {showDocumentFileNameColumn && showDocumentLinker && (
                    <TableHead 
                      className="font-bold text-center border-r border-border relative p-0 bg-muted/50"
                      style={{ width: "200px", minWidth: "200px" }}
@@ -3815,7 +3815,7 @@ ${extractionFields}`
                     })}
                     
                      {/* Document File Name column - conditionally visible */}
-                     {showDocumentFileNameColumn && (() => {
+                     {showDocumentFileNameColumn && showDocumentLinker && (() => {
                        const column = 'Document File Name';
                        const isSelected = selectedCell?.rowIndex === rowIndex && selectedCell?.column === column;
                        const isEditing = editingCell?.rowIndex === rowIndex && editingCell?.column === column;
