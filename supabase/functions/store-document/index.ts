@@ -64,7 +64,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Storing document: ${originalFilename} for runsheet ${runsheetId}, row ${rowIndex}`);
+    console.log(`Storing document: ${originalFilename} for runsheet ${runsheetId}, row ${rowIndex}, useSmartNaming: ${useSmartNaming}`);
 
     // Get runsheet data to generate filename
     const { data: runsheet, error: runsheetError } = await supabase
@@ -81,22 +81,9 @@ serve(async (req) => {
       );
     }
 
-    // Check user's smart naming preferences
-    const { data: preferences, error: prefError } = await supabase
-      .from('user_document_naming_preferences')
-      .select('use_smart_naming')
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    // Default to smart naming if no preferences found or if preference is true
-    const shouldUseSmartNaming = preferences?.use_smart_naming ?? true;
-
     let storedFilename;
     
-    if (shouldUseSmartNaming) {
+    if (useSmartNaming) {
       // Generate filename based on spreadsheet data with user preferences
       const { data: generatedFilename, error: filenameError } = await supabase
         .rpc('generate_document_filename_with_preferences', {
