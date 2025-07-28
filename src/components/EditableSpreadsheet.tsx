@@ -554,9 +554,13 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       console.log('🔧 EditableSpreadsheet: IDs to check:', idsToCheck, 'activeRunsheetId:', activeRunsheetId, 'hasMatch:', hasMatch);
       
       if (hasMatch) {
-        console.log('🔍 EditableSpreadsheet: Runsheet ID matches, refreshing document map AND data');
+        console.log('🔍 EditableSpreadsheet: Runsheet ID matches, saving current data and refreshing document map');
         
-        // Refresh the entire document map
+        // FIRST: Save current data to database before refreshing
+        console.log('🔍 EditableSpreadsheet: Saving current data before refresh');
+        await forceSave();
+        
+        // THEN: Refresh the entire document map
         if (user && activeRunsheetId) {
           try {
             console.log('🔍 EditableSpreadsheet: Fetching updated document map for runsheet:', activeRunsheetId);
