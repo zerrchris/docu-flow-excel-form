@@ -976,6 +976,14 @@ Image: [base64 image data]`;
       key !== 'Document File Name' && value && value.trim() !== ''
     );
     
+    console.log('🔧 ADD_TO_SPREADSHEET: Validation check:', {
+      hasFile,
+      hasFormData,
+      targetData,
+      formDataKeys: Object.keys(targetData),
+      formDataValues: Object.values(targetData)
+    });
+    
     if (!hasFile && !hasFormData) {
       // No file and no data - show the missing data dialog
       setMissingDataDialog(true);
@@ -1495,20 +1503,30 @@ Image: [base64 image data]`;
 
       {/* Confirm Add File Without Data Dialog */}
       <Dialog open={confirmAddFileDialog} onOpenChange={setConfirmAddFileDialog}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[550px]">
           <DialogHeader>
-            <DialogTitle>Add File Without Extracted Data?</DialogTitle>
+            <DialogTitle>Maximize Document Value - Extract Data First?</DialogTitle>
             <DialogDescription>
-              You have uploaded a file but haven't extracted any data from it yet.
+              You uploaded a document but haven't extracted the valuable data from it yet. 
+              Document analysis automatically reads and extracts key information to populate your runsheet.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <div className="space-y-3 text-sm text-muted-foreground">
-              <p>You can:</p>
-              <ul className="list-disc list-inside space-y-1 ml-4">
-                <li><strong>Add file only:</strong> The file will be added to the runsheet with just the filename</li>
-                <li><strong>Extract data first:</strong> Click "Analyze Document" to automatically extract data, then add to runsheet</li>
-              </ul>
+            <div className="space-y-4 text-sm">
+              <div className="bg-blue-50 dark:bg-blue-950 p-3 rounded-md border border-blue-200 dark:border-blue-800">
+                <p className="font-medium text-blue-900 dark:text-blue-100 mb-2">💡 Recommended: Extract Data First</p>
+                <p className="text-blue-800 dark:text-blue-200">
+                  Let AI analyze your document to automatically extract instrument numbers, dates, parties, and other key information. 
+                  This saves time and ensures accuracy.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <p className="font-medium">Your options:</p>
+                <ul className="list-disc list-inside space-y-1 ml-4 text-muted-foreground">
+                  <li><strong>Extract Data First:</strong> AI analyzes the document and fills in all relevant fields automatically</li>
+                  <li><strong>Add File Only:</strong> Just the filename is added - you'll miss valuable document data</li>
+                </ul>
+              </div>
             </div>
           </div>
           <div className="flex justify-end gap-3">
@@ -1519,20 +1537,21 @@ Image: [base64 image data]`;
               variant="secondary" 
               onClick={() => {
                 setConfirmAddFileDialog(false);
-                // Trigger analysis first
-                analyzeDocument();
-              }}
-            >
-              Extract Data First
-            </Button>
-            <Button 
-              onClick={() => {
-                setConfirmAddFileDialog(false);
                 // Continue with adding just the file
                 continueAddToSpreadsheet();
               }}
             >
               Add File Only
+            </Button>
+            <Button 
+              onClick={() => {
+                setConfirmAddFileDialog(false);
+                // Trigger analysis first
+                analyzeDocument();
+              }}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              Extract Data First ✨
             </Button>
           </div>
         </DialogContent>
