@@ -164,9 +164,9 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
           console.log('✅ Runsheet saved with ID:', actualRunsheetId);
         } catch (error) {
           toast({
-            title: "Save failed",
-            description: error instanceof Error ? error.message : "Failed to save runsheet before upload.",
-            variant: "destructive",
+            title: "Runsheet must be saved first",
+            description: "Please add some data to your runsheet and save it before uploading documents. Documents need to be linked to saved runsheet rows.",
+            variant: "default",
           });
           return;
         }
