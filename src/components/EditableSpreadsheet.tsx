@@ -3970,19 +3970,32 @@ ${extractionFields}`
                                ref={textareaRef}
                                value={cellValue}
                                onChange={(e) => setCellValue(e.target.value)}
-                               onKeyDown={(e) => {
-                                 if (e.key === 'Enter' && !e.shiftKey) {
-                                   e.preventDefault();
-                                   saveEdit();
-                                 } else if (e.key === 'Escape') {
-                                   e.preventDefault();
-                                   cancelEdit();
-                                 } else if (e.key === 'Tab') {
-                                   e.preventDefault();
-                                   saveEdit();
-                                   // Move to actions column (no next cell for Document File Name)
-                                 }
-                               }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    saveEdit();
+                                    
+                                    // For Document File Name column, move to the next row in the same column
+                                    const nextRowIndex = rowIndex + 1;
+                                    if (nextRowIndex < data.length) {
+                                      setTimeout(() => {
+                                        selectCell(nextRowIndex, 'Document File Name');
+                                        setTimeout(() => {
+                                          const nextRowData = data[nextRowIndex];
+                                          const nextCellValue = documentMap.get(nextRowIndex)?.stored_filename || nextRowData['Document File Name'] || '';
+                                          startEditing(nextRowIndex, 'Document File Name', nextCellValue);
+                                        }, 10);
+                                      }, 10);
+                                    }
+                                  } else if (e.key === 'Escape') {
+                                    e.preventDefault();
+                                    cancelEdit();
+                                  } else if (e.key === 'Tab') {
+                                    e.preventDefault();
+                                    saveEdit();
+                                    // Move to actions column (no next cell for Document File Name)
+                                  }
+                                }}
                                onBlur={saveEdit}
                                className="w-full h-full resize-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent p-2"
                                autoFocus
