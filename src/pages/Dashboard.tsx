@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, Camera, FolderOpen, Upload, Users, Settings, Plus, Cloud } from 'lucide-react';
+import { FileText, Camera, FolderOpen, Upload, Users, Settings, Plus, Cloud, Columns } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
@@ -10,10 +10,12 @@ import AuthButton from '@/components/AuthButton';
 
 import { useActiveRunsheet } from '@/hooks/useActiveRunsheet';
 import OpenRunsheetDialog from '@/components/OpenRunsheetDialog';
+import ColumnPreferencesDialog from '@/components/ColumnPreferencesDialog';
 
 const Dashboard: React.FC = () => {
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [showOpenDialog, setShowOpenDialog] = useState(false);
+  const [showColumnPreferences, setShowColumnPreferences] = useState(false);
   const navigate = useNavigate();
   const { activeRunsheet } = useActiveRunsheet();
 
@@ -68,6 +70,12 @@ const Dashboard: React.FC = () => {
       description: "Capture documents on the go with your mobile device",
       icon: Camera,
       path: "/mobile-capture"
+    },
+    {
+      title: "Column Preferences",
+      description: "Customize your default columns for new runsheets",
+      icon: Columns,
+      action: "column-preferences"
     }
   ];
 
@@ -169,6 +177,8 @@ const Dashboard: React.FC = () => {
                 onClick={() => {
                   if (option.action === "open-dialog") {
                     setShowOpenDialog(true);
+                  } else if (option.action === "column-preferences") {
+                    setShowColumnPreferences(true);
                   } else if (option.path) {
                     navigate(option.path);
                   }
@@ -190,6 +200,8 @@ const Dashboard: React.FC = () => {
                         e.stopPropagation();
                         if (option.action === "open-dialog") {
                           setShowOpenDialog(true);
+                        } else if (option.action === "column-preferences") {
+                          setShowColumnPreferences(true);
                         } else if (option.path) {
                           navigate(option.path);
                         }
@@ -216,6 +228,12 @@ const Dashboard: React.FC = () => {
       <OpenRunsheetDialog 
         open={showOpenDialog} 
         onOpenChange={setShowOpenDialog} 
+      />
+      
+      {/* Column Preferences Dialog */}
+      <ColumnPreferencesDialog 
+        open={showColumnPreferences} 
+        onOpenChange={setShowColumnPreferences} 
       />
     </div>
   );
