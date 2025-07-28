@@ -1031,6 +1031,12 @@ Image: [base64 image data]`;
       return newData;
     });
     
+    // Auto-save the runsheet after adding data to show filename options
+    setTimeout(() => {
+      const saveEvent = new CustomEvent('saveRunsheet');
+      window.dispatchEvent(saveEvent);
+    }, 100);
+    
     toast({
       title: "Data added to spreadsheet",
       description: "The current data has been added as a new row.",
