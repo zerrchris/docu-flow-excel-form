@@ -3573,35 +3573,40 @@ ${extractionFields}`
                  </DialogHeader>
                  
                  <div className="grid gap-4 py-6">
-                   <Button
-                      onClick={() => {
-                        // Trigger runsheet file upload using the same mechanism as dashboard
-                        const fileInput = document.createElement('input');
-                        fileInput.type = 'file';
-                        fileInput.accept = '.xlsx,.xls,.csv';
-                        fileInput.multiple = false;
-                        fileInput.style.display = 'none';
-                        
-                         fileInput.onchange = (e) => {
-                           const files = (e.target as HTMLInputElement).files;
-                           if (files && files.length > 0) {
-                             const importEvent = new CustomEvent('importRunsheetFile', {
-                               detail: { file: files[0] }
-                             });
-                             window.dispatchEvent(importEvent);
-                             setShowNewRunsheetDialog(false);
+                    <Button
+                       onClick={() => {
+                         // Trigger runsheet file upload using the same mechanism as dashboard
+                         const fileInput = document.createElement('input');
+                         fileInput.type = 'file';
+                         fileInput.accept = '.xlsx,.xls,.csv';
+                         fileInput.multiple = false;
+                         fileInput.style.display = 'none';
+                         
+                          fileInput.onchange = (e) => {
+                            const files = (e.target as HTMLInputElement).files;
+                            if (files && files.length > 0) {
+                              const importEvent = new CustomEvent('importRunsheetFile', {
+                                detail: { file: files[0] }
+                              });
+                              window.dispatchEvent(importEvent);
+                              setShowNewRunsheetDialog(false);
+                            }
+                            // Clean up immediately after handling
+                            if (document.body.contains(fileInput)) {
+                              document.body.removeChild(fileInput);
+                            }
+                          };
+                         
+                         // Add event listener for cancel case
+                         fileInput.oncancel = () => {
+                           if (document.body.contains(fileInput)) {
+                             document.body.removeChild(fileInput);
                            }
                          };
-                        
-                        document.body.appendChild(fileInput);
-                        fileInput.click();
-                        
-                        setTimeout(() => {
-                          if (document.body.contains(fileInput)) {
-                            document.body.removeChild(fileInput);
-                          }
-                        }, 1000);
-                      }}
+                         
+                         document.body.appendChild(fileInput);
+                         fileInput.click();
+                       }}
                      className="h-16 flex flex-col gap-2 text-left"
                      variant="outline"
                    >
