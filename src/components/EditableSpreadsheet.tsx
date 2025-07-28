@@ -478,7 +478,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     };
 
     loadDocuments();
-  }, [user, currentRunsheetId, isSaving]);
+  }, [user, currentRunsheetId]); // Removed isSaving from dependency array
 
   // Listen for document record creation events to refresh the document map
   useEffect(() => {
