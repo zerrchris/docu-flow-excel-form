@@ -174,7 +174,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [showNamingSettings, setShowNamingSettings] = useState(false);
   const [inlineViewerRow, setInlineViewerRow] = useState<number | null>(null);
   const [fullScreenWorkspace, setFullScreenWorkspace] = useState<{ runsheetId: string; rowIndex: number } | null>(null);
-  const [showDocumentFileNameColumn, setShowDocumentFileNameColumn] = useState(false);
+  const [showDocumentFileNameColumn, setShowDocumentFileNameColumn] = useState(true);
   
   // Listen for document upload save requests
   React.useEffect(() => {
