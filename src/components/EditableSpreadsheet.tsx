@@ -589,7 +589,18 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
               
               if (hasDocumentAtRow) {
                 console.log('🔍 EditableSpreadsheet: Setting new data with document info');
-                setData(dataWithMinRows);
+                // Preserve current row count if larger
+                const targetRowCount = Math.max(dataWithMinRows.length, data.length);
+                if (targetRowCount > dataWithMinRows.length) {
+                  const additionalRows = Array.from({ length: targetRowCount - dataWithMinRows.length }, () => {
+                    const row: Record<string, string> = {};
+                    columns.forEach(col => row[col] = '');
+                    return row;
+                  });
+                  setData([...dataWithMinRows, ...additionalRows]);
+                } else {
+                  setData(dataWithMinRows);
+                }
               } else {
                 console.log('🔍 EditableSpreadsheet: New data missing document info, keeping current data');
               }
@@ -735,8 +746,22 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             console.log('🔧 EditableSpreadsheet: refreshRunsheetData - Current data length:', data.length);
             console.log('🔧 EditableSpreadsheet: refreshRunsheetData - New data from DB:', runsheet.data);
             // Properly type-cast the data from JSON to the expected format
-            const dataWithMinRows = ensureMinimumRows((runsheet.data as Record<string, string>[]) || [], (runsheet.columns as string[]) || []);
-            setData(dataWithMinRows);
+            // Preserve the current row count if it's larger than what's in the database
+            const newData = (runsheet.data as Record<string, string>[]) || [];
+            const targetRowCount = Math.max(newData.length, data.length, 20); // Keep current count if larger
+            const dataWithMinRows = ensureMinimumRows(newData, (runsheet.columns as string[]) || []);
+            
+            // If we had more rows locally, preserve that count
+            if (targetRowCount > dataWithMinRows.length) {
+              const additionalRows = Array.from({ length: targetRowCount - dataWithMinRows.length }, () => {
+                const row: Record<string, string> = {};
+                ((runsheet.columns as string[]) || []).forEach(col => row[col] = '');
+                return row;
+              });
+              setData([...dataWithMinRows, ...additionalRows]);
+            } else {
+              setData(dataWithMinRows);
+            }
             setColumns((runsheet.columns as string[]) || []);
             setRunsheetName(runsheet.name || 'Untitled Runsheet');
             setCurrentRunsheetId(runsheet.id);
@@ -1688,7 +1713,18 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     console.log('🔧 Debug: Data length:', runsheet.data?.length);
     console.log('🔧 Debug: First row sample:', runsheet.data?.[0]);
     const dataWithMinRows = ensureMinimumRows(runsheet.data || [], runsheet.columns || []);
-    setData(dataWithMinRows);
+    // Preserve current row count if larger when loading saved runsheet
+    const targetRowCount = Math.max(dataWithMinRows.length, data.length);
+    if (targetRowCount > dataWithMinRows.length) {
+      const additionalRows = Array.from({ length: targetRowCount - dataWithMinRows.length }, () => {
+        const row: Record<string, string> = {};
+        (runsheet.columns || []).forEach(col => row[col] = '');
+        return row;
+      });
+      setData([...dataWithMinRows, ...additionalRows]);
+    } else {
+      setData(dataWithMinRows);
+    }
     setColumnInstructions(finalColumnInstructions);
     onColumnInstructionsChange?.(finalColumnInstructions);
     
