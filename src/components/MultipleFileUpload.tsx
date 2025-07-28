@@ -306,39 +306,30 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
             console.log('🔧 MultipleFileUpload: Dispatching events for document upload');
             console.log('🔧 RunsheetId:', runsheetId, 'RowIndex:', currentRowIndex, 'Document:', result.document);
             
-            // Wait a moment for the database transaction to complete, then dispatch events in correct order
+            // Wait a moment for the database transaction to complete, then update document links
             setTimeout(() => {
-              // Force a refresh of the entire runsheet data FIRST to show linked documents
-              console.log('🔧 Dispatching refreshRunsheetData event (priority)');
-              window.dispatchEvent(new CustomEvent('refreshRunsheetData', {
-                detail: { runsheetId: runsheetId }
+              // Only refresh the document map, don't refresh the entire runsheet data
+              console.log('🔧 Dispatching updateDocumentFilename event');
+              window.dispatchEvent(new CustomEvent('updateDocumentFilename', {
+                detail: {
+                  runsheetId: runsheetId,
+                  rowIndex: currentRowIndex,
+                  filename: result.document.stored_filename
+                }
               }));
               
-              // Add a small delay between events to ensure proper processing
+              // Also dispatch document record created event for other components
               setTimeout(() => {
-                // Then trigger specific row update event
-                console.log('🔧 Dispatching updateDocumentFilename event');
-                window.dispatchEvent(new CustomEvent('updateDocumentFilename', {
+                console.log('🔧 Dispatching documentRecordCreated event');
+                window.dispatchEvent(new CustomEvent('documentRecordCreated', {
                   detail: {
                     runsheetId: runsheetId,
                     rowIndex: currentRowIndex,
-                    filename: result.document.stored_filename
+                    document: result.document
                   }
                 }));
-                
-                // Finally trigger a custom event to notify the parent component
-                setTimeout(() => {
-                  console.log('🔧 Dispatching documentRecordCreated event');
-                  window.dispatchEvent(new CustomEvent('documentRecordCreated', {
-                    detail: {
-                      runsheetId: runsheetId,
-                      rowIndex: currentRowIndex,
-                      document: result.document
-                    }
-                  }));
-                }, 100); // Small delay between events
-              }, 100);
-            }, 300); // Reduced timeout but with staggered events
+              }, 50);
+            }, 200);
           }
         } else {
           // Update status to error
