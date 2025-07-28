@@ -4086,10 +4086,11 @@ ${extractionFields}`
                          }}
                          onOpenWorkspace={() => {
                            setFullScreenWorkspace({ runsheetId: currentRunsheetId || '', rowIndex });
-                         }}
-                         isSpreadsheetUpload={true}
-                         autoAnalyze={false}
-                       />
+                          }}
+                          isSpreadsheetUpload={true}
+                          autoAnalyze={false}
+                          rowData={row}
+                        />
                       </TableCell>
                       
                       {/* Row resize handle */}

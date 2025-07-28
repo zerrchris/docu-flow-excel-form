@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { Upload, File, ExternalLink, Trash2, Download, Edit2, Brain, Maximize2 } from 'lucide-react';
+import { Upload, File, ExternalLink, Trash2, Download, Edit2, Brain, Maximize2, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { ScreenshotCapture } from './ScreenshotCapture';
@@ -20,6 +20,7 @@ interface DocumentLinkerProps {
   onOpenWorkspace?: () => void;
   isSpreadsheetUpload?: boolean; // Flag to distinguish spreadsheet uploads from processor uploads
   autoAnalyze?: boolean; // Setting to control auto-analysis
+  rowData?: Record<string, string>; // Current row data for smart filename generation
 }
 
 const DocumentLinker: React.FC<DocumentLinkerProps> = ({
@@ -33,7 +34,8 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
   onAnalyzeDocument,
   onOpenWorkspace,
   isSpreadsheetUpload = false,
-  autoAnalyze = false
+  autoAnalyze = false,
+  rowData
 }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
@@ -444,6 +446,183 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
     }
   };
 
+  const generateSmartFilename = async () => {
+    if (!rowData || !currentFilename) {
+      toast({
+        title: "Cannot generate smart filename",
+        description: "No row data available or no document filename to work with.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Extract the file extension from current filename
+      const lastDotIndex = currentFilename.lastIndexOf('.');
+      const extension = lastDotIndex > 0 ? currentFilename.substring(lastDotIndex) : '';
+
+      // Generate smart filename using the database function
+      const { data: smartFilename, error } = await supabase
+        .rpc('generate_document_filename_with_preferences', {
+          runsheet_data: [rowData],
+          row_index: 0, // Since we're passing single row data
+          original_filename: currentFilename,
+          user_id: user.id
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      if (smartFilename && smartFilename !== currentFilename) {
+        // Update the filename using the existing rename function
+        setEditedFilename(smartFilename);
+        // Trigger rename immediately
+        await handleRenameWithFilename(smartFilename);
+        
+        toast({
+          title: "Smart filename generated",
+          description: `Filename updated to: ${smartFilename}`,
+        });
+      } else {
+        toast({
+          title: "No changes needed",
+          description: "The generated smart filename is the same as the current filename.",
+        });
+      }
+
+    } catch (error) {
+      toast({
+        title: "Failed to generate smart filename",
+        description: error instanceof Error ? error.message : "Could not generate smart filename.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRenameWithFilename = async (newFilename: string) => {
+    if (!newFilename.trim()) {
+      return;
+    }
+
+    if (!runsheetId || runsheetId.trim() === '') {
+      toast({
+        title: "Error",
+        description: "Invalid runsheet ID. Please save the runsheet first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const findDocumentWithRetry = async (maxRetries = 3) => {
+        for (let attempt = 0; attempt <= maxRetries; attempt++) {
+          let document = null;
+          
+          if (documentId) {
+            const { data: doc, error: fetchError } = await supabase
+              .from('documents')
+              .select('*')
+              .eq('id', documentId)
+              .eq('user_id', user.id)
+              .maybeSingle();
+            
+            if (fetchError) {
+              throw new Error(`Database error: ${fetchError.message}`);
+            }
+            
+            document = doc;
+          }
+          
+          if (!document) {
+            const { data: doc, error: fetchError } = await supabase
+              .from('documents')
+              .select('*')
+              .eq('runsheet_id', runsheetId)
+              .eq('row_index', rowIndex)
+              .eq('user_id', user.id)
+              .maybeSingle();
+
+            if (fetchError) {
+              throw new Error(`Database error: ${fetchError.message}`);
+            }
+
+            document = doc;
+            
+            if (document) {
+              setDocumentId(document.id);
+            }
+          }
+          
+          if (document) {
+            return document;
+          }
+          
+          if (attempt < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, (attempt + 1) * 500));
+          }
+        }
+        
+        return null;
+      };
+
+      const document = await findDocumentWithRetry();
+
+      if (!document) {
+        throw new Error('Document not found. The document may still be processing. Please wait a moment and try again.');
+      }
+
+      const pathParts = document.file_path.split('/');
+      const sanitizedNewFilename = sanitizeFilenameForStorage(newFilename);
+      const newFilePath = `${pathParts[0]}/${pathParts[1]}/${sanitizedNewFilename}`;
+      
+      const { data: existingFile, error: checkError } = await supabase.storage
+        .from('documents')
+        .list(pathParts.slice(0, -1).join('/'), {
+          search: pathParts[pathParts.length - 1]
+        });
+      
+      if (existingFile && existingFile.length > 0) {
+        const { error: moveError } = await supabase.storage
+          .from('documents')
+          .move(document.file_path, newFilePath);
+
+        if (moveError) {
+          throw moveError;
+        }
+      }
+
+      const { error: updateError } = await supabase
+        .from('documents')
+        .update({
+          stored_filename: newFilename,
+          file_path: newFilePath,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', document.id);
+
+      if (updateError) {
+        if (existingFile && existingFile.length > 0) {
+          await supabase.storage.from('documents').move(newFilePath, document.file_path);
+        }
+        throw updateError;
+      }
+
+      setLocalFilename(newFilename);
+      setHasLocalChanges(true);
+      onDocumentLinked(newFilename);
+
+    } catch (error) {
+      throw error;
+    }
+  };
+
   if (localFilename && localFilename.trim() !== '') {
     // Use the local filename (updated immediately) or fallback to prop
     const filename = localFilename || currentFilename || 'document';
@@ -533,7 +712,23 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                  title="Edit filename"
                >
                  <Edit2 className="w-3 h-3" />
-               </Button>
+                </Button>
+                {/* Smart Filename Generation Button - Only show if we have row data */}
+                {rowData && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    tabIndex={-1}
+                    onClick={(e) => {
+                      e.stopPropagation(); // Prevent cell edit mode
+                      generateSmartFilename();
+                    }}
+                    className="h-6 w-6 p-0 text-purple-600 hover:text-purple-700"
+                    title="Generate smart filename from row data"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                  </Button>
+                )}
                <Button
                  variant="ghost"
                  size="sm"
