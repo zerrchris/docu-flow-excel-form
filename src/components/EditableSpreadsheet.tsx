@@ -165,6 +165,20 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         // Store the pending upload request for after save completes
         setPendingUploadRequest(event.detail);
         
+        // Check if runsheet needs to be saved first
+        if (!currentRunsheetId) {
+          // This is a new, unsaved runsheet - prompt user to save first
+          const responseEvent = new CustomEvent('runsheetSaveResponse', {
+            detail: { 
+              success: false, 
+              error: 'Please save your runsheet first before adding documents to rows. Click the Save button to create your runsheet.' 
+            }
+          });
+          window.dispatchEvent(responseEvent);
+          console.log('🔧 EditableSpreadsheet: Sent error response - runsheet needs to be saved first');
+          return;
+        }
+        
         // Save the runsheet and get the actual saved runsheet ID
         const savedRunsheetResult = await saveRunsheet();
         
