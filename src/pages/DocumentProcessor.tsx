@@ -746,7 +746,9 @@ Image: [base64 image data]`;
       
       // Only update the main form data if no specific file was passed (main document)
       if (!fileToAnalyze) {
-        console.log('Updating main formData with extracted data');
+        console.log('🔧 ANALYSIS: Updating main formData with extracted data');
+        console.log('🔧 ANALYSIS: extractedData contains Storage Path:', extractedData['Storage Path']);
+        console.log('🔧 ANALYSIS: extractedData contains Document File Name:', extractedData['Document File Name']);
         setFormData(extractedData);
         
         toast({
@@ -775,9 +777,11 @@ Image: [base64 image data]`;
 
   // Add current form data to spreadsheet
   const addToSpreadsheet = (dataToAdd?: Record<string, string>) => {
-    console.log('addToSpreadsheet called with dataToAdd:', dataToAdd);
+    console.log('🔧 ADD_TO_SPREADSHEET: addToSpreadsheet called with dataToAdd:', dataToAdd);
     const targetData = dataToAdd || formData;
-    console.log('targetData:', targetData);
+    console.log('🔧 ADD_TO_SPREADSHEET: targetData:', targetData);
+    console.log('🔧 ADD_TO_SPREADSHEET: targetData Storage Path:', targetData['Storage Path']);
+    console.log('🔧 ADD_TO_SPREADSHEET: targetData Document File Name:', targetData['Document File Name']);
     
     // Check if any field has data
     const hasData = Object.values(targetData).some(value => value.trim() !== '');
@@ -847,12 +851,13 @@ Image: [base64 image data]`;
       
       // If data contains a storage path, create a document record
       if (finalData['Storage Path']) {
-        console.log('🔧 DocumentProcessor: Creating document record for Storage Path:', finalData['Storage Path']);
-        console.log('🔧 DocumentProcessor: Target row index:', targetRowIndex);
-        console.log('🔧 DocumentProcessor: Full data:', finalData);
+        console.log('🔧 ADD_TO_SPREADSHEET: Creating document record for Storage Path:', finalData['Storage Path']);
+        console.log('🔧 ADD_TO_SPREADSHEET: Target row index:', targetRowIndex);
+        console.log('🔧 ADD_TO_SPREADSHEET: Full finalData:', finalData);
         createDocumentRecord(finalData, targetRowIndex);
       } else {
-        console.log('🔧 DocumentProcessor: No Storage Path found in finalData:', finalData);
+        console.log('🔧 ADD_TO_SPREADSHEET: No Storage Path found in finalData:', finalData);
+        console.log('🔧 ADD_TO_SPREADSHEET: Available keys in finalData:', Object.keys(finalData));
       }
       
       console.log('New spreadsheetData after adding:', newData);
@@ -874,12 +879,22 @@ Image: [base64 image data]`;
 
   // Helper function to create a document record in the database
   const createDocumentRecord = async (data: Record<string, string>, rowIndex: number) => {
+    console.log('🔧 CREATE_DOC_RECORD: createDocumentRecord called');
+    console.log('🔧 CREATE_DOC_RECORD: data:', data);
+    console.log('🔧 CREATE_DOC_RECORD: rowIndex:', rowIndex);
+    
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        console.log('🔧 CREATE_DOC_RECORD: No user found, returning');
+        return;
+      }
 
       // Get the current runsheet ID from active runsheet or location state
       const runsheetId = activeRunsheet?.id || location.state?.runsheetId;
+      console.log('🔧 CREATE_DOC_RECORD: activeRunsheet?.id:', activeRunsheet?.id);
+      console.log('🔧 CREATE_DOC_RECORD: location.state?.runsheetId:', location.state?.runsheetId);
+      console.log('🔧 CREATE_DOC_RECORD: Final runsheetId:', runsheetId);
       if (!runsheetId) {
         console.log('🔧 DocumentProcessor: No runsheet ID available, document record will be created when runsheet is saved');
         
