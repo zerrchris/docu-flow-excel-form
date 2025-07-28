@@ -505,6 +505,8 @@ const DocumentProcessor: React.FC = () => {
 
   // Handle single file selection
   const handleFileSelect = (selectedFile: File) => {
+    console.log('🔧 DocumentProcessor: handleFileSelect called with file:', selectedFile.name, 'Size:', selectedFile.size, 'Type:', selectedFile.type);
+    
     // Revoke any previous object URL to avoid memory leaks
     if (previewUrl) {
       URL.revokeObjectURL(previewUrl);
@@ -515,6 +517,8 @@ const DocumentProcessor: React.FC = () => {
     // Create preview URL for the file
     const url = URL.createObjectURL(selectedFile);
     setPreviewUrl(url);
+    
+    console.log('🔧 DocumentProcessor: File set and preview URL created:', url);
     
     // Reset form data
     const emptyFormData: Record<string, string> = {};

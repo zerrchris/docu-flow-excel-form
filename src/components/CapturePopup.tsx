@@ -94,12 +94,17 @@ export const CapturePopup: React.FC = () => {
         data: Array.from(new Uint8Array(arrayBuffer))
       };
 
+      console.log('🔧 CapturePopup: Sending captured document to parent:', fileData.name, 'Size:', fileData.data.length, 'Type:', fileData.type);
+
       // Send the file back to the parent window
       if (window.opener) {
         window.opener.postMessage({
           type: 'DOCUMENT_CAPTURED',
           file: fileData
         }, window.location.origin);
+        console.log('🔧 CapturePopup: Message sent to parent window');
+      } else {
+        console.error('🔧 CapturePopup: No window.opener available');
       }
       
       // Cleanup

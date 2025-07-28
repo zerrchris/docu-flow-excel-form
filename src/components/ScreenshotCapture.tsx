@@ -43,13 +43,22 @@ export const ScreenshotCapture: React.FC<ScreenshotCaptureProps> = ({
 
     // Listen for messages from the popup
     const handleMessage = (event: MessageEvent) => {
-      if (event.origin !== window.location.origin) return;
+      console.log('🔧 ScreenshotCapture: Received message from popup:', event.data);
+      
+      if (event.origin !== window.location.origin) {
+        console.log('🔧 ScreenshotCapture: Message origin mismatch, ignoring:', event.origin);
+        return;
+      }
       
       if (event.data.type === 'DOCUMENT_CAPTURED' && event.data.file) {
+        console.log('🔧 ScreenshotCapture: Processing captured document:', event.data.file);
+        
         // Convert the file data back to a File object
         const { name, type, data } = event.data.file;
         const byteArray = new Uint8Array(data);
         const file = new File([byteArray], name, { type });
+        
+        console.log('🔧 ScreenshotCapture: Created file object:', file.name, 'Size:', file.size, 'Type:', file.type);
         
         onFileSelect(file);
         popup.close();
