@@ -3610,11 +3610,14 @@ ${extractionFields}`
                      </div>
                    </Button>
                    
-                    <Button
-                      onClick={() => {
-                        fetchSavedRunsheets();
-                        setShowNewRunsheetDialog(false);
-                      }}
+                     <Button
+                       onClick={async () => {
+                         setShowNewRunsheetDialog(false);
+                         // Wait a moment for the dialog to close, then fetch runsheets
+                         setTimeout(() => {
+                           fetchSavedRunsheets();
+                         }, 100);
+                       }}
                       className="h-16 flex flex-col gap-2 text-left"
                       variant="outline"
                     >
