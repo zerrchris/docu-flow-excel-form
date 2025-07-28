@@ -3975,18 +3975,23 @@ ${extractionFields}`
                                     e.preventDefault();
                                     saveEdit();
                                     
-                                    // For Document File Name column, move to the next row in the same column
+                                    // For Document File Name column, only auto-advance if there are documents in both current and next row
+                                    const currentDocument = documentMap.get(rowIndex);
                                     const nextRowIndex = rowIndex + 1;
-                                    if (nextRowIndex < data.length) {
+                                    const nextDocument = documentMap.get(nextRowIndex);
+                                    
+                                    if (currentDocument && nextDocument && nextRowIndex < data.length) {
+                                      // Both current and next row have documents - auto-advance
                                       setTimeout(() => {
                                         selectCell(nextRowIndex, 'Document File Name');
                                         setTimeout(() => {
                                           const nextRowData = data[nextRowIndex];
-                                          const nextCellValue = documentMap.get(nextRowIndex)?.stored_filename || nextRowData['Document File Name'] || '';
+                                          const nextCellValue = nextDocument.stored_filename || nextRowData['Document File Name'] || '';
                                           startEditing(nextRowIndex, 'Document File Name', nextCellValue);
                                         }, 10);
                                       }, 10);
                                     }
+                                    // If no documents in current/next row, just save and stop editing
                                   } else if (e.key === 'Escape') {
                                     e.preventDefault();
                                     cancelEdit();
