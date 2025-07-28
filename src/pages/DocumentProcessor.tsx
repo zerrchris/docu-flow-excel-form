@@ -844,8 +844,83 @@ Image: [base64 image data]`;
     }
   };
 
+  // Generate smart filename using user's naming preferences
+  const generateSmartFilename = async (formData: Record<string, string>): Promise<string> => {
+    try {
+      let namingPrefs = {
+        priority_columns: ['name', 'title', 'invoice_number', 'document_number', 'reference', 'id'],
+        max_filename_parts: 3,
+        separator: '_',
+        include_extension: true,
+        fallback_pattern: 'document_{row_index}_{timestamp}'
+      };
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        // Get user's naming preferences if logged in
+        const { data: preferences } = await supabase
+          .from('user_document_naming_preferences')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (preferences) {
+          namingPrefs = preferences;
+        }
+      }
+
+      // Build filename from available form data using priority columns
+      const filenameParts: string[] = [];
+      
+      for (const column of namingPrefs.priority_columns) {
+        const value = formData[column];
+        if (value && value.trim() && value.trim() !== 'N/A') {
+          // Clean the value: remove special characters, limit length
+          let cleanValue = value.trim()
+            .replace(/[^a-zA-Z0-9\-_\s]/g, '')
+            .replace(/\s+/g, namingPrefs.separator)
+            .substring(0, 30);
+          
+          if (cleanValue) {
+            filenameParts.push(cleanValue);
+          }
+          
+          // Stop when we have enough parts
+          if (filenameParts.length >= namingPrefs.max_filename_parts) {
+            break;
+          }
+        }
+      }
+
+      // Generate filename
+      let filename;
+      if (filenameParts.length > 0) {
+        filename = filenameParts.join(namingPrefs.separator);
+      } else {
+        // Use fallback pattern
+        filename = namingPrefs.fallback_pattern
+          .replace('{row_index}', '1')
+          .replace('{timestamp}', Date.now().toString());
+      }
+
+      // Add extension if preferences say so
+      if (namingPrefs.include_extension) {
+        filename += '.pdf';
+      }
+
+      return filename;
+      
+    } catch (error) {
+      console.error('Error generating smart filename:', error);
+      return `document_${Date.now()}.pdf`;
+    }
+  };
+
   // Add current form data to spreadsheet
-  const addToSpreadsheet = (dataToAdd?: Record<string, string>) => {
+  const addToSpreadsheet = async (dataToAdd?: Record<string, string>) => {
     // Check localStorage for active runsheet as fallback
     let runsheetId = activeRunsheet?.id || location.state?.runsheet?.id;
     
@@ -881,7 +956,13 @@ Image: [base64 image data]`;
       });
     }
     
-    const targetData = dataToAdd || formData;
+      const targetData = dataToAdd || formData;
+    
+    // Generate smart filename if Document File Name is not provided
+    if (!targetData['Document File Name'] || targetData['Document File Name'].trim() === '') {
+      const smartFilename = await generateSmartFilename(targetData);
+      targetData['Document File Name'] = smartFilename;
+    }
     
     // Check if any field has data
     const hasData = Object.values(targetData).some(value => value.trim() !== '');

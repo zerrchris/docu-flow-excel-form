@@ -14,7 +14,7 @@ interface BatchDocument {
 
 interface BatchProcessingProps {
   fields: string[];
-  onAddToSpreadsheet: (data: Record<string, string>) => void;
+  onAddToSpreadsheet: (data: Record<string, string>) => Promise<void>;
   onAnalyze: (file: File) => Promise<Record<string, string>>;
   isAnalyzing: boolean;
 }

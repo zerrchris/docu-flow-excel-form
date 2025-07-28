@@ -12,7 +12,7 @@ interface BatchDocumentRowProps {
   file: File;
   fields: string[];
   onRemove: () => void;
-  onAddToSpreadsheet: (data: Record<string, string>) => void;
+  onAddToSpreadsheet: (data: Record<string, string>) => Promise<void>;
   isAnalyzing: boolean;
   onAnalyze: (file: File) => Promise<Record<string, string>>;
   isActive?: boolean;
@@ -94,7 +94,7 @@ const BatchDocumentRow: React.FC<BatchDocumentRowProps> = ({
         'Storage Path': fileResult.path
       };
       
-      onAddToSpreadsheet(dataWithFile);
+      await onAddToSpreadsheet(dataWithFile);
       onRemove(); // Remove this row after adding to spreadsheet
       
       toast({
@@ -109,7 +109,7 @@ const BatchDocumentRow: React.FC<BatchDocumentRowProps> = ({
         variant: "destructive",
       });
       // Still add to spreadsheet but without file data
-      onAddToSpreadsheet(formData);
+      await onAddToSpreadsheet(formData);
       onRemove();
     } finally {
       setIsUploading(false);

@@ -22,7 +22,7 @@ interface DocumentFrameProps {
   onChange: (field: string, value: string) => void;
   onAnalyze: () => void;
   onCancelAnalysis?: () => void;
-  onAddToSpreadsheet: (data?: Record<string, string>) => void;
+  onAddToSpreadsheet: (data?: Record<string, string>) => Promise<void>;
   onFileSelect: (file: File) => void;
   onMultipleFilesSelect?: (files: File[]) => void;
   onResetDocument: () => void;
@@ -83,7 +83,7 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
   // Handle adding to spreadsheet with file upload
   const handleAddToSpreadsheet = async () => {
     if (!file) {
-      onAddToSpreadsheet();
+      await onAddToSpreadsheet();
       return;
     }
 
@@ -119,7 +119,7 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
         variant: "destructive",
       });
       // Still add to spreadsheet but without file data
-      onAddToSpreadsheet();
+      await onAddToSpreadsheet();
       
       // Mark as added to spreadsheet to show upload button
       setHasAddedToSpreadsheet(true);

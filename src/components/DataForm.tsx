@@ -14,7 +14,7 @@ interface DataFormProps {
   onChange: (field: string, value: string) => void;
   onAnalyze: () => void;
   onCancelAnalysis?: () => void;
-  onAddToSpreadsheet: () => void;
+  onAddToSpreadsheet: () => Promise<void>;
   onResetDocument?: () => void;
   isAnalyzing: boolean;
   isUploading?: boolean;
@@ -419,12 +419,12 @@ const DataForm: React.FC<DataFormProps> = ({
           
           <Button
             variant="success"
-            onClick={() => {
+            onClick={async () => {
               if (visibleFieldsList.length === 0) {
                 alert('No fields are visible. Please use the "Hide/Display Fields" button above to show fields first.');
                 return;
               }
-              onAddToSpreadsheet();
+              await onAddToSpreadsheet();
             }}
             className="w-full sm:w-auto"
             disabled={isUploading}
