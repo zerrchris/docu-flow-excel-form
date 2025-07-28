@@ -401,6 +401,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       console.log('🔧 EditableSpreadsheet: Document record created event received:', event.detail);
       const { runsheetId, rowIndex } = event.detail;
       
+      console.log('🔧 EditableSpreadsheet: Comparing runsheetId:', runsheetId, 'vs currentRunsheetId:', currentRunsheetId);
+      
       if (runsheetId === currentRunsheetId) {
         console.log('🔧 EditableSpreadsheet: Runsheet ID matches, refreshing document map');
         
