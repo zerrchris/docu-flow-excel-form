@@ -82,22 +82,18 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
 
   // Handle adding to spreadsheet with file upload
   const handleAddToSpreadsheet = async () => {
-    console.log('🔥 DocumentFrame: handleAddToSpreadsheet called, file:', file);
     if (!file) {
-      console.log('🔥 DocumentFrame: No file, calling onAddToSpreadsheet without file');
       onAddToSpreadsheet();
       return;
     }
 
     setIsUploading(true);
     try {
-      console.log('🔥 DocumentFrame: Attempting to upload file to storage:', file.name);
       // Upload file to storage
       const fileResult = await uploadFileToStorage(file, 'documents', 'single-processed');
-      console.log('🔥 DocumentFrame: Upload result:', fileResult);
+      console.log('📁 File uploaded - Storage Path:', fileResult.path);
       
       // Create enhanced data with file information
-      // Use user-specified filename if provided, otherwise use uploaded filename
       const userSpecifiedFilename = formData['Document File Name'];
       const finalFilename = userSpecifiedFilename && userSpecifiedFilename.trim() 
         ? userSpecifiedFilename.trim() 
@@ -109,8 +105,7 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
         'Storage Path': fileResult.path
       };
       
-      console.log('🔥 DocumentFrame: Final dataWithFile:', dataWithFile);
-      console.log('🔥 DocumentFrame: Storage Path in dataWithFile:', dataWithFile['Storage Path']);
+      console.log('📁 Adding to spreadsheet with Storage Path:', dataWithFile['Storage Path']);
       
       // Call onAddToSpreadsheet with the enhanced data
       onAddToSpreadsheet(dataWithFile);
