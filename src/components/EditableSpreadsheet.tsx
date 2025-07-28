@@ -4029,30 +4029,32 @@ ${extractionFields}`
                 You have unsaved changes in your current runsheet. What would you like to do?
               </DialogDescription>
             </DialogHeader>
-            <DialogFooter className="flex flex-col sm:flex-row justify-start items-start gap-2 sm:gap-3 text-left">
-              <Button variant="outline" onClick={() => setShowUnsavedChangesDialog(false)} className="w-full sm:w-auto">
-                Cancel
-              </Button>
-              <Button 
-                variant="destructive" 
-                onClick={() => {
-                  setShowUnsavedChangesDialog(false);
-                  setShowNewRunsheetDialog(true);
-                }}
-                className="w-full sm:w-auto"
-              >
-                Continue Without Saving
-              </Button>
-              <Button 
-                onClick={async () => {
-                  setShowUnsavedChangesDialog(false);
-                  await autoSaveRunsheet();
-                  setShowNewRunsheetDialog(true);
-                }}
-                className="w-full sm:w-auto"
-              >
-                Save & Continue
-              </Button>
+            <DialogFooter>
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full justify-start">
+                <Button variant="outline" onClick={() => setShowUnsavedChangesDialog(false)} className="w-full sm:w-auto">
+                  Cancel
+                </Button>
+                <Button 
+                  variant="destructive" 
+                  onClick={() => {
+                    setShowUnsavedChangesDialog(false);
+                    setShowNewRunsheetDialog(true);
+                  }}
+                  className="w-full sm:w-auto"
+                >
+                  Continue Without Saving
+                </Button>
+                <Button 
+                  onClick={async () => {
+                    setShowUnsavedChangesDialog(false);
+                    await autoSaveRunsheet();
+                    setShowNewRunsheetDialog(true);
+                  }}
+                  className="w-full sm:w-auto"
+                >
+                  Save & Continue
+                </Button>
+              </div>
             </DialogFooter>
           </DialogContent>
         </Dialog>
