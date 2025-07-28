@@ -740,6 +740,9 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       setLastSavedState(savedState);
       setHasUnsavedChanges(false);
       onUnsavedChanges?.(false);
+      
+      // Dispatch event to notify DocumentProcessor that save completed
+      window.dispatchEvent(new CustomEvent('runsheetSaved'));
       console.log('Force save completed');
     } catch (error) {
       console.error('Force save failed:', error);

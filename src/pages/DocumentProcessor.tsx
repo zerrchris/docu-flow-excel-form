@@ -413,6 +413,20 @@ const DocumentProcessor: React.FC = () => {
     };
   }, [hasUnsavedChanges, navigate]);
 
+  // Listen for save completion events to clear unsaved changes flag
+  useEffect(() => {
+    const handleSaveComplete = () => {
+      console.log('🔍 Runsheet save completed, clearing hasUnsavedChanges flag');
+      setHasUnsavedChanges(false);
+    };
+
+    window.addEventListener('runsheetSaved', handleSaveComplete);
+    
+    return () => {
+      window.removeEventListener('runsheetSaved', handleSaveComplete);
+    };
+  }, []);
+
   // Handle navigation - no longer blocked since runsheet auto-saves
   const handleNavigation = useCallback((path: string) => {
     navigate(path);
@@ -642,7 +656,12 @@ const DocumentProcessor: React.FC = () => {
     
     // Check if runsheet is saved before analyzing
     const runsheetId = activeRunsheet?.id || location.state?.runsheetId;
-    if (!runsheetId) {
+    console.log('🔍 ANALYZE CHECK - activeRunsheet:', activeRunsheet);
+    console.log('🔍 ANALYZE CHECK - location.state:', location.state);
+    console.log('🔍 ANALYZE CHECK - runsheetId:', runsheetId);
+    console.log('🔍 ANALYZE CHECK - hasUnsavedChanges:', hasUnsavedChanges);
+    
+    if (!runsheetId || hasUnsavedChanges) {
       setIsAnalyzing(false);
       toast({
         title: "Save Required",
