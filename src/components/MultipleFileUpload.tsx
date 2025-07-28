@@ -254,14 +254,14 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
     };
 
     // Helper function to find next empty row starting from a given index
-    const findNextEmptyRow = (startIndex: number, runsheetData: Record<string, string>[]): number => {
-      for (let i = startIndex; i < runsheetData.length; i++) {
-        if (isRowEmpty(runsheetData[i], i)) {
+    const findNextEmptyRow = (startIndex: number, searchData: Record<string, string>[]): number => {
+      for (let i = startIndex; i < searchData.length; i++) {
+        if (isRowEmpty(searchData[i], i)) {
           return i;
         }
       }
       // No empty row found, return the end of the array to extend it
-      return runsheetData.length;
+      return searchData.length;
     };
 
     const runsheetData = currentRunsheet.data || [];
@@ -275,13 +275,55 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
     // If we don't have enough empty rows, we'll extend the runsheet
     const availableEmptyRows = emptyRows.length;
     const needsExtension = pendingFiles.length > availableEmptyRows;
-
+    
+    // Actually extend the runsheet data with new empty rows if needed
+    let extendedRunsheetData = [...runsheetData];
     if (needsExtension) {
+      const rowsToAdd = pendingFiles.length - availableEmptyRows;
       toast({
         title: "Extending runsheet",
-        description: `Found ${availableEmptyRows} empty rows. Will add ${pendingFiles.length - availableEmptyRows} new rows to accommodate all files.`,
+        description: `Found ${availableEmptyRows} empty rows. Adding ${rowsToAdd} new rows to accommodate all files.`,
         variant: "default"
       });
+      
+      // Create empty rows based on current columns
+      const columnNames = Object.keys(runsheetData[0] || {});
+      if (columnNames.length === 0) {
+        console.error('No columns found in runsheet data - cannot extend');
+        return;
+      }
+      
+      for (let i = 0; i < rowsToAdd; i++) {
+        const newRow: Record<string, string> = {};
+        columnNames.forEach(col => newRow[col] = '');
+        extendedRunsheetData.push(newRow);
+      }
+      
+      console.log(`🔧 Extended runsheet data from ${runsheetData.length} to ${extendedRunsheetData.length} rows`);
+      
+      // Save the extended runsheet data to the database
+      try {
+        const { error: updateError } = await supabase
+          .from('runsheets')
+          .update({ 
+            data: extendedRunsheetData,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', runsheetId);
+        
+        if (updateError) {
+          console.error('Error saving extended runsheet data:', updateError);
+          toast({
+            title: "Warning",
+            description: "Could not save extended rows to database. Files may upload but rows won't persist.",
+            variant: "default"
+          });
+        } else {
+          console.log('🔧 Successfully saved extended runsheet data to database');
+        }
+      } catch (error) {
+        console.error('Error updating runsheet with extended data:', error);
+      }
     }
 
     // Start from the first empty row, or the end if no empty rows exist
@@ -366,9 +408,9 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
         ));
       }
 
-      // Find the next empty row for the next file
+      // Find the next empty row for the next file (use extended data for search)
       if (i < pendingFiles.length - 1) { // Don't search for next row if this is the last file
-        currentRowIndex = findNextEmptyRow(currentRowIndex + 1, runsheetData);
+        currentRowIndex = findNextEmptyRow(currentRowIndex + 1, extendedRunsheetData);
       }
     }
 
