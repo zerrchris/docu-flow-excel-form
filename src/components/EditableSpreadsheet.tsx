@@ -122,8 +122,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       console.error('Error loading emergency draft:', error);
     }
     
-    // Ensure we always have at least 100 rows for bulk operations
-    const minRows = 100;
+    // Start with a reasonable number of rows, users can add more as needed
+    const minRows = 20;
     const existingRows = initialData.length;
     const emptyRows = Array.from({ length: Math.max(0, minRows - existingRows) }, () => {
       const row: Record<string, string> = {};
@@ -135,7 +135,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
   // Helper function to ensure data has minimum number of rows
   const ensureMinimumRows = useCallback((data: Record<string, string>[], columns: string[]): Record<string, string>[] => {
-    const minRows = 100;
+    const minRows = 20; // Smaller starting point
     const existingRows = data.length;
     
     if (existingRows >= minRows) return data;
@@ -148,6 +148,39 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     
     return [...data, ...emptyRows];
   }, []);
+
+  // Function to manually add more rows
+  const addMoreRows = useCallback((count: number) => {
+    setData(prev => {
+      const newRows = Array.from({ length: count }, () => {
+        const row: Record<string, string> = {};
+        columns.forEach(col => row[col] = '');
+        return row;
+      });
+      return [...prev, ...newRows];
+    });
+    
+    toast({
+      title: "Rows added",
+      description: `Added ${count} new rows to the runsheet.`,
+      variant: "default"
+    });
+  }, [columns, toast]);
+
+  // Function to add rows to reach a specific total
+  const ensureRowCount = useCallback((targetCount: number) => {
+    setData(prev => {
+      if (prev.length >= targetCount) return prev;
+      
+      const rowsToAdd = targetCount - prev.length;
+      const newRows = Array.from({ length: rowsToAdd }, () => {
+        const row: Record<string, string> = {};
+        columns.forEach(col => row[col] = '');
+        return row;
+      });
+      return [...prev, ...newRows];
+    });
+  }, [columns]);
   const [editingCell, setEditingCell] = useState<{rowIndex: number, column: string} | null>(null);
   const [cellValue, setCellValue] = useState<string>('');
   const [selectedCell, setSelectedCell] = useState<{rowIndex: number, column: string} | null>(null);
@@ -3588,6 +3621,11 @@ ${extractionFields}`
                     <span>Not saved yet</span>
                   </div>
                 )}
+                
+                {/* Row count indicator */}
+                <div className="flex items-center gap-1 ml-2 px-2 py-1 bg-muted rounded text-xs">
+                  <span>{data.length} rows</span>
+                </div>
               </div>
             )}
           </div>
@@ -3653,6 +3691,39 @@ ${extractionFields}`
                 Multiple Files
               </Button>
             )}
+            
+            {/* Add Rows Button */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Rows
+                  <ChevronDown className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => addMoreRows(10)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add 10 rows
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => addMoreRows(25)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add 25 rows
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => addMoreRows(50)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add 50 rows
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => addMoreRows(100)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add 100 rows
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             
               {/* New Runsheet Button */}
               <Dialog open={showNewRunsheetDialog} onOpenChange={setShowNewRunsheetDialog}>
