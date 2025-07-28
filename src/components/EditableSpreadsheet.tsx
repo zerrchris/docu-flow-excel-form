@@ -171,7 +171,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           const responseEvent = new CustomEvent('runsheetSaveResponse', {
             detail: { 
               success: false, 
-              error: 'Please save your runsheet first before adding documents to rows. Click the Save button to create your runsheet.' 
+              error: 'You must save runsheet before adding docs to rows.' 
             }
           });
           window.dispatchEvent(responseEvent);
