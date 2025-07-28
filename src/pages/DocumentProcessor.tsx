@@ -875,12 +875,24 @@ Image: [base64 image data]`;
     
     if (!runsheetId) {
       console.log('🚀 ERROR: No runsheet ID found anywhere!');
+      
+      // Instead of failing, create a temporary runsheet automatically
+      console.log('🚀 Creating temporary runsheet...');
+      const tempRunsheet = {
+        id: 'temp-' + Date.now(),
+        name: 'Quick Runsheet',
+        data: spreadsheetData,
+        columns: columns,
+        columnInstructions: columnInstructions
+      };
+      
+      setActiveRunsheet(tempRunsheet);
+      runsheetId = tempRunsheet.id;
+      
       toast({
-        title: "No Runsheet Selected",
-        description: "Please select or create a runsheet first.",
-        variant: "destructive",
+        title: "Created Temporary Runsheet",
+        description: "A quick runsheet was created so you can add documents. Save it when ready.",
       });
-      return;
     }
     
     console.log('🚀 SUCCESS: Found runsheet ID, continuing with add...');
