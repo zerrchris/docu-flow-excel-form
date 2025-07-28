@@ -3709,8 +3709,8 @@ ${extractionFields}`
                   {/* Show Documents tab - button-like header when hidden */}
                   {!showDocumentLinker && (
                     <TableHead 
-                      className="border-0 relative p-0 cursor-pointer"
-                      style={{ width: "32px", minWidth: "32px" }}
+                      className="border-0 relative p-0 cursor-pointer last:border-r-0"
+                      style={{ width: "32px", minWidth: "32px", maxWidth: "32px" }}
                       onClick={() => setShowDocumentLinker(true)}
                     >
                        <div className="w-full h-full flex items-center justify-center">
@@ -3730,7 +3730,7 @@ ${extractionFields}`
                      {/* Show inline document viewer above this row if it's selected */}
                     {inlineViewerRow === rowIndex && (
                       <TableRow>
-                        <TableCell colSpan={columns.length + (showDocumentFileNameColumn ? 1 : 0) + 1} className="p-0 border-0">
+                        <TableCell colSpan={columns.length + (showDocumentFileNameColumn && showDocumentLinker ? 1 : 0) + (showDocumentLinker ? 1 : 1)} className="p-0 border-0">
                           <InlineDocumentViewer
                             runsheetId={currentRunsheetId || ''}
                             rowIndex={rowIndex}
@@ -3962,8 +3962,8 @@ ${extractionFields}`
                        {/* Hidden cell for Docs tab structure */}
                        {!showDocumentLinker && (
                          <TableCell 
-                           className="border-0 p-0 w-0"
-                           style={{ width: "32px", minWidth: "32px", visibility: "hidden" }}
+                           className="border-0 p-0 w-0 last:border-r-0"
+                           style={{ width: "32px", minWidth: "32px", maxWidth: "32px", visibility: "hidden" }}
                          >
                          </TableCell>
                        )}
