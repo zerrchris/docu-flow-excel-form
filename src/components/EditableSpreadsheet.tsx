@@ -3910,39 +3910,49 @@ ${extractionFields}`
                         value={newRunsheetName}
                         onChange={(e) => setNewRunsheetName(e.target.value)}
                         onKeyDown={(e) => {
-                          if (e.key === 'Enter' && newRunsheetName.trim()) {
-                            // Create the new runsheet
-                            const finalName = newRunsheetName.trim();
-                            setRunsheetName(finalName);
-                            setData(Array.from({ length: 20 }, () => {
-                              const row: Record<string, string> = {};
-                              initialColumns.forEach(col => row[col] = '');
-                              return row;
-                            }));
-                            setColumns(initialColumns);
+                           if (e.key === 'Enter' && newRunsheetName.trim()) {
+                             // Define default columns for new runsheet
+                             const DEFAULT_COLUMNS = ['Inst Number', 'Book/Page', 'Inst Type', 'Recording Date', 'Document Date', 'Grantor', 'Grantee', 'Legal Description', 'Notes'];
+                             
+                             // Create the new runsheet
+                             const finalName = newRunsheetName.trim();
+                             
+                             // Clear active runsheet and current state
+                             clearActiveRunsheet();
+                             setCurrentRunsheetId(null);
+                             updateDocumentMap(new Map());
+                             
+                             // Set up new runsheet
+                             setRunsheetName(finalName);
+                             setData(Array.from({ length: 20 }, () => {
+                               const row: Record<string, string> = {};
+                               DEFAULT_COLUMNS.forEach(col => row[col] = '');
+                               return row;
+                             }));
+                             setColumns(DEFAULT_COLUMNS);
                              setSelectedCell(null);
                              setEditingCell(null);
                              setCellValue('');
                              setSelectedRange(null);
                              setHasUnsavedChanges(false);
                              setLastSavedState('');
-                             // CRITICAL: Clear document map and runsheet ID for new runsheet
-                              updateDocumentMap(new Map());
-                              setCurrentRunsheetId(null);
-                            onDataChange?.(Array.from({ length: 20 }, () => {
-                              const row: Record<string, string> = {};
-                              initialColumns.forEach(col => row[col] = '');
-                              return row;
-                            }));
-                            onColumnChange(initialColumns);
-                            
-                            setShowNameNewRunsheetDialog(false);
-                            setNewRunsheetName('');
-                            
-                            toast({
-                              title: "New runsheet created",
-                              description: `"${finalName}" is ready for your data.`,
-                            });
+                             setLastSaveTime(null);
+                             
+                             // Update parent components
+                             onDataChange?.(Array.from({ length: 20 }, () => {
+                               const row: Record<string, string> = {};
+                               DEFAULT_COLUMNS.forEach(col => row[col] = '');
+                               return row;
+                             }));
+                             onColumnChange(DEFAULT_COLUMNS);
+                             
+                             setShowNameNewRunsheetDialog(false);
+                             setNewRunsheetName('');
+                             
+                             toast({
+                               title: "New runsheet created",
+                               description: `"${finalName}" is ready for your data.`,
+                             });
                           }
                         }}
                         autoFocus
@@ -3969,39 +3979,49 @@ ${extractionFields}`
                           });
                           return;
                         }
-                        
-                        // Create the new runsheet
-                        const finalName = newRunsheetName.trim();
-                        setRunsheetName(finalName);
-                        setData(Array.from({ length: 20 }, () => {
-                          const row: Record<string, string> = {};
-                          initialColumns.forEach(col => row[col] = '');
-                          return row;
-                        }));
-                        setColumns(initialColumns);
+                         
+                         // Define default columns for new runsheet
+                         const DEFAULT_COLUMNS = ['Inst Number', 'Book/Page', 'Inst Type', 'Recording Date', 'Document Date', 'Grantor', 'Grantee', 'Legal Description', 'Notes'];
+                         
+                         // Create the new runsheet
+                         const finalName = newRunsheetName.trim();
+                         
+                         // Clear active runsheet and current state
+                         clearActiveRunsheet();
+                         setCurrentRunsheetId(null);
+                         updateDocumentMap(new Map());
+                         
+                         // Set up new runsheet
+                         setRunsheetName(finalName);
+                         setData(Array.from({ length: 20 }, () => {
+                           const row: Record<string, string> = {};
+                           DEFAULT_COLUMNS.forEach(col => row[col] = '');
+                           return row;
+                         }));
+                         setColumns(DEFAULT_COLUMNS);
                          setSelectedCell(null);
                          setEditingCell(null);
                          setCellValue('');
                          setSelectedRange(null);
                          setHasUnsavedChanges(false);
                          setLastSavedState('');
-                         // CRITICAL: Clear document map and runsheet ID for new runsheet
-                          updateDocumentMap(new Map());
-                          setCurrentRunsheetId(null);
-                        onDataChange?.(Array.from({ length: 20 }, () => {
-                          const row: Record<string, string> = {};
-                          initialColumns.forEach(col => row[col] = '');
-                          return row;
-                        }));
-                        onColumnChange(initialColumns);
-                        
-                        setShowNameNewRunsheetDialog(false);
-                        setNewRunsheetName('');
-                        
-                        toast({
-                          title: "New runsheet created",
-                          description: `"${finalName}" is ready for your data.`,
-                        });
+                         setLastSaveTime(null);
+                         
+                         // Update parent components
+                         onDataChange?.(Array.from({ length: 20 }, () => {
+                           const row: Record<string, string> = {};
+                           DEFAULT_COLUMNS.forEach(col => row[col] = '');
+                           return row;
+                         }));
+                         onColumnChange(DEFAULT_COLUMNS);
+                         
+                         setShowNameNewRunsheetDialog(false);
+                         setNewRunsheetName('');
+                         
+                         toast({
+                           title: "New runsheet created",
+                           description: `"${finalName}" is ready for your data.`,
+                         });
                       }}
                       disabled={!newRunsheetName.trim()}
                     >
