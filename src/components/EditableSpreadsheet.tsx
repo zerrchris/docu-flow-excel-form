@@ -4022,7 +4022,7 @@ ${extractionFields}`
 
         {/* Unsaved Changes Dialog for New Runsheet */}
         <Dialog open={showUnsavedChangesDialog} onOpenChange={setShowUnsavedChangesDialog}>
-          <DialogContent className="sm:max-w-[700px]">
+          <DialogContent className="w-auto max-w-fit">
             <DialogHeader>
               <DialogTitle>Unsaved Changes</DialogTitle>
               <DialogDescription>
