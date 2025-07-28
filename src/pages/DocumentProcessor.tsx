@@ -839,7 +839,7 @@ Image: [base64 image data]`;
 
   // Add current form data to spreadsheet
   const addToSpreadsheet = (dataToAdd?: Record<string, string>) => {
-    console.log('🔧 ADD_TO_SPREADSHEET: addToSpreadsheet called with dataToAdd:', dataToAdd);
+    console.log('🚀 ADD_TO_SPREADSHEET: Function called!', { dataToAdd, activeRunsheet, hasUnsavedChanges });
     
     // Only check if runsheet exists, remove the hasUnsavedChanges check as it's too strict
     const runsheetId = activeRunsheet?.id || location.state?.runsheetId;
