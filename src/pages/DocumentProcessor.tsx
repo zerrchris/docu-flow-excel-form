@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Upload, FolderOpen, Plus, AlertTriangle, Smartphone, Files, Home, FileStack, RefreshCw } from 'lucide-react';
@@ -60,6 +60,7 @@ const DocumentProcessor: React.FC = () => {
   const [showNavigationDialog, setShowNavigationDialog] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<{path: string, state?: any} | null>(null);
   const [showMultipleFileUpload, setShowMultipleFileUpload] = useState(false);
+  const [missingDataDialog, setMissingDataDialog] = useState(false);
   
   // Note: Navigation blocking removed since runsheet auto-saves
   const navigate = useNavigate();
@@ -968,15 +969,14 @@ Image: [base64 image data]`;
       console.log('📄 FILENAME: Document File Name already set:', targetData['Document File Name']);
     }
     
-    // Check if any field has data
-    const hasData = Object.values(targetData).some(value => value.trim() !== '');
+    // Check if there's a file uploaded or meaningful data to add
+    const hasFile = !!file;
+    const hasFormData = Object.entries(targetData).some(([key, value]) => 
+      key !== 'Document File Name' && value && value.trim() !== ''
+    );
     
-    if (!hasData) {
-      toast({
-        title: "No data to add",
-        description: "Please fill in some fields or analyze the document first.",
-        variant: "destructive",
-      });
+    if (!hasFile && !hasFormData) {
+      setMissingDataDialog(true);
       return;
     }
 
@@ -1394,6 +1394,32 @@ Image: [base64 image data]`;
               Save & Continue
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Missing Data Dialog */}
+      <Dialog open={missingDataDialog} onOpenChange={setMissingDataDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>No Data to Add</DialogTitle>
+            <DialogDescription>
+              Please upload a document or enter data in the form fields before adding to the runsheet.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="space-y-3 text-sm text-muted-foreground">
+              <p>To add data to your runsheet, you need to:</p>
+              <ul className="list-disc list-inside space-y-1 ml-4">
+                <li>Upload a document and click "Analyze Document" to extract data automatically, OR</li>
+                <li>Manually enter data in the form fields above</li>
+              </ul>
+            </div>
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setMissingDataDialog(false)}>
+              Understood
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
