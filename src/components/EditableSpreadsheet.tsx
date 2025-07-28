@@ -863,6 +863,32 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         // Set the current runsheet ID for document linking
         setCurrentRunsheetId(savedRunsheet.id);
         
+        // Migrate any documents from the old temporary runsheet to the new permanent one
+        if (currentRunsheetId && currentRunsheetId !== savedRunsheet.id) {
+          try {
+            const { error: updateError } = await supabase
+              .from('documents')
+              .update({ runsheet_id: savedRunsheet.id })
+              .eq('runsheet_id', currentRunsheetId)
+              .eq('user_id', user.id);
+            
+            if (updateError) {
+              console.warn('Failed to migrate documents to new runsheet:', updateError);
+            } else {
+              console.log('✅ Successfully migrated documents to new runsheet ID:', savedRunsheet.id);
+              // Refresh document map after migration
+              try {
+                const documents = await DocumentService.getDocumentMapForRunsheet(savedRunsheet.id);
+                setDocumentMap(documents);
+              } catch (docError) {
+                console.error('Error refreshing documents after migration:', docError);
+              }
+            }
+          } catch (error) {
+            console.warn('Error migrating documents:', error);
+          }
+        }
+        
         // Update the runsheet in the global state with the new ID
         if (currentRunsheet) {
           const updatedRunsheet = {
@@ -1110,6 +1136,32 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         if (error) throw error;
         savedRunsheet = insertResult;
         setCurrentRunsheetId(savedRunsheet.id);
+        
+        // Migrate any documents from the old temporary runsheet to the new permanent one
+        if (currentRunsheetId && currentRunsheetId !== savedRunsheet.id) {
+          try {
+            const { error: updateError } = await supabase
+              .from('documents')
+              .update({ runsheet_id: savedRunsheet.id })
+              .eq('runsheet_id', currentRunsheetId)
+              .eq('user_id', user.id);
+            
+            if (updateError) {
+              console.warn('Failed to migrate documents to new runsheet:', updateError);
+            } else {
+              console.log('✅ Successfully migrated documents to new runsheet ID:', savedRunsheet.id);
+              // Refresh document map after migration
+              try {
+                const documents = await DocumentService.getDocumentMapForRunsheet(savedRunsheet.id);
+                setDocumentMap(documents);
+              } catch (docError) {
+                console.error('Error refreshing documents after migration:', docError);
+              }
+            }
+          } catch (error) {
+            console.warn('Error migrating documents:', error);
+          }
+        }
       }
       
       // Update global state
