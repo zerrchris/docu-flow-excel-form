@@ -51,7 +51,11 @@ const Home: React.FC = () => {
                 </Badge>
               )}
               {user ? (
-                !subscribed && (
+                subscribed ? (
+                  <Link to="/pricing">
+                    <Button variant="outline">Manage Subscription</Button>
+                  </Link>
+                ) : (
                   <Link to="/pricing">
                     <Button>Get Subscription</Button>
                   </Link>
