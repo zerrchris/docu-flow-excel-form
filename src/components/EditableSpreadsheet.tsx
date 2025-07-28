@@ -3911,8 +3911,19 @@ ${extractionFields}`
                         onChange={(e) => setNewRunsheetName(e.target.value)}
                         onKeyDown={(e) => {
                            if (e.key === 'Enter' && newRunsheetName.trim()) {
-                             // Define default columns for new runsheet
+                             // Define default columns and instructions for new runsheet
                              const DEFAULT_COLUMNS = ['Inst Number', 'Book/Page', 'Inst Type', 'Recording Date', 'Document Date', 'Grantor', 'Grantee', 'Legal Description', 'Notes'];
+                             const DEFAULT_EXTRACTION_INSTRUCTIONS: Record<string, string> = {
+                               'Inst Number': 'Extract the instrument number or recording number as it appears on the document',
+                               'Book/Page': 'Extract the book and page reference (format: Book XXX, Page XXX or XXX/XXX)',
+                               'Inst Type': 'Extract the document type (e.g., Deed, Mortgage, Lien, Assignment, etc.)',
+                               'Recording Date': 'Extract the official recording date in MM/DD/YYYY format',
+                               'Document Date': 'Extract the date the document was signed or executed in MM/DD/YYYY format',
+                               'Grantor': 'Extract the full name(s) of the grantor(s) - the party transferring or granting rights',
+                               'Grantee': 'Extract the full name(s) of the grantee(s) - the party receiving rights',
+                               'Legal Description': 'Extract the complete legal property description including lot, block, subdivision, and any metes and bounds',
+                               'Notes': 'Extract any special conditions, considerations, or additional relevant information'
+                             };
                              
                              // Create the new runsheet
                              const finalName = newRunsheetName.trim();
@@ -3930,6 +3941,7 @@ ${extractionFields}`
                                return row;
                              }));
                              setColumns(DEFAULT_COLUMNS);
+                             setColumnInstructions(DEFAULT_EXTRACTION_INSTRUCTIONS);
                              setSelectedCell(null);
                              setEditingCell(null);
                              setCellValue('');
@@ -3945,6 +3957,7 @@ ${extractionFields}`
                                return row;
                              }));
                              onColumnChange(DEFAULT_COLUMNS);
+                             onColumnInstructionsChange?.(DEFAULT_EXTRACTION_INSTRUCTIONS);
                              
                              setShowNameNewRunsheetDialog(false);
                              setNewRunsheetName('');
@@ -3980,8 +3993,19 @@ ${extractionFields}`
                           return;
                         }
                          
-                         // Define default columns for new runsheet
+                         // Define default columns and instructions for new runsheet
                          const DEFAULT_COLUMNS = ['Inst Number', 'Book/Page', 'Inst Type', 'Recording Date', 'Document Date', 'Grantor', 'Grantee', 'Legal Description', 'Notes'];
+                         const DEFAULT_EXTRACTION_INSTRUCTIONS: Record<string, string> = {
+                           'Inst Number': 'Extract the instrument number or recording number as it appears on the document',
+                           'Book/Page': 'Extract the book and page reference (format: Book XXX, Page XXX or XXX/XXX)',
+                           'Inst Type': 'Extract the document type (e.g., Deed, Mortgage, Lien, Assignment, etc.)',
+                           'Recording Date': 'Extract the official recording date in MM/DD/YYYY format',
+                           'Document Date': 'Extract the date the document was signed or executed in MM/DD/YYYY format',
+                           'Grantor': 'Extract the full name(s) of the grantor(s) - the party transferring or granting rights',
+                           'Grantee': 'Extract the full name(s) of the grantee(s) - the party receiving rights',
+                           'Legal Description': 'Extract the complete legal property description including lot, block, subdivision, and any metes and bounds',
+                           'Notes': 'Extract any special conditions, considerations, or additional relevant information'
+                         };
                          
                          // Create the new runsheet
                          const finalName = newRunsheetName.trim();
@@ -3999,6 +4023,7 @@ ${extractionFields}`
                            return row;
                          }));
                          setColumns(DEFAULT_COLUMNS);
+                         setColumnInstructions(DEFAULT_EXTRACTION_INSTRUCTIONS);
                          setSelectedCell(null);
                          setEditingCell(null);
                          setCellValue('');
@@ -4014,6 +4039,7 @@ ${extractionFields}`
                            return row;
                          }));
                          onColumnChange(DEFAULT_COLUMNS);
+                         onColumnInstructionsChange?.(DEFAULT_EXTRACTION_INSTRUCTIONS);
                          
                          setShowNameNewRunsheetDialog(false);
                          setNewRunsheetName('');
