@@ -61,6 +61,7 @@ const DocumentProcessor: React.FC = () => {
   const [pendingNavigation, setPendingNavigation] = useState<{path: string, state?: any} | null>(null);
   const [showMultipleFileUpload, setShowMultipleFileUpload] = useState(false);
   const [missingDataDialog, setMissingDataDialog] = useState(false);
+  const [confirmAddFileDialog, setConfirmAddFileDialog] = useState(false);
   
   // Note: Navigation blocking removed since runsheet auto-saves
   const navigate = useNavigate();
@@ -976,7 +977,14 @@ Image: [base64 image data]`;
     );
     
     if (!hasFile && !hasFormData) {
+      // No file and no data - show the missing data dialog
       setMissingDataDialog(true);
+      return;
+    }
+    
+    if (hasFile && !hasFormData) {
+      // Has file but no extracted data - ask if they want to proceed
+      setConfirmAddFileDialog(true);
       return;
     }
 
@@ -1043,6 +1051,68 @@ Image: [base64 image data]`;
     });
 
     // Reset form data for next entry - use current columns (which may have been updated)
+    const emptyFormData: Record<string, string> = {};
+    columns.forEach(column => {
+      emptyFormData[column] = '';
+    });
+    setFormData(emptyFormData);
+  };
+
+  // Continue adding to spreadsheet without validation (used after user confirms)
+  const continueAddToSpreadsheet = () => {
+    const targetData = formData;
+    
+    // Use original filename if available
+    if (!targetData['Document File Name'] || targetData['Document File Name'].trim() === '') {
+      const originalFilename = file?.name || `document_${Date.now()}.pdf`;
+      targetData['Document File Name'] = originalFilename;
+    }
+    
+    // Continue with the rest of the addToSpreadsheet logic
+    const filteredData: Record<string, string> = {};
+    columns.forEach(column => {
+      filteredData[column] = targetData[column] || '';
+    });
+    
+    if (targetData['Storage Path']) {
+      filteredData['Storage Path'] = targetData['Storage Path'];
+    }
+    
+    setSpreadsheetData(prev => {
+      const firstEmptyRowIndex = prev.findIndex((row, index) => {
+        const isDataEmpty = Object.values(row).every(value => value.trim() === '');
+        const hasLinkedDocument = documentMap.has(index);
+        return isDataEmpty && !hasLinkedDocument;
+      });
+      
+      let newData;
+      let targetRowIndex;
+      if (firstEmptyRowIndex >= 0) {
+        newData = [...prev];
+        newData[firstEmptyRowIndex] = { ...filteredData };
+        targetRowIndex = firstEmptyRowIndex;
+      } else {
+        newData = [...prev, { ...filteredData }];
+        targetRowIndex = prev.length;
+      }
+      
+      if (filteredData['Storage Path']) {
+        createDocumentRecord(filteredData, targetRowIndex);
+      }
+      
+      return newData;
+    });
+    
+    setTimeout(() => {
+      const saveEvent = new CustomEvent('saveRunsheet');
+      window.dispatchEvent(saveEvent);
+    }, 100);
+    
+    toast({
+      title: "File added to spreadsheet",
+      description: "The file has been added with just the filename.",
+    });
+
     const emptyFormData: Record<string, string> = {};
     columns.forEach(column => {
       emptyFormData[column] = '';
@@ -1418,6 +1488,51 @@ Image: [base64 image data]`;
           <div className="flex justify-end gap-3">
             <Button variant="outline" onClick={() => setMissingDataDialog(false)}>
               Understood
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm Add File Without Data Dialog */}
+      <Dialog open={confirmAddFileDialog} onOpenChange={setConfirmAddFileDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Add File Without Extracted Data?</DialogTitle>
+            <DialogDescription>
+              You have uploaded a file but haven't extracted any data from it yet.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="space-y-3 text-sm text-muted-foreground">
+              <p>You can:</p>
+              <ul className="list-disc list-inside space-y-1 ml-4">
+                <li><strong>Add file only:</strong> The file will be added to the runsheet with just the filename</li>
+                <li><strong>Extract data first:</strong> Click "Analyze Document" to automatically extract data, then add to runsheet</li>
+              </ul>
+            </div>
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setConfirmAddFileDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              variant="secondary" 
+              onClick={() => {
+                setConfirmAddFileDialog(false);
+                // Trigger analysis first
+                analyzeDocument();
+              }}
+            >
+              Extract Data First
+            </Button>
+            <Button 
+              onClick={() => {
+                setConfirmAddFileDialog(false);
+                // Continue with adding just the file
+                continueAddToSpreadsheet();
+              }}
+            >
+              Add File Only
             </Button>
           </div>
         </DialogContent>
