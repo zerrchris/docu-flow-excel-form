@@ -839,14 +839,17 @@ Image: [base64 image data]`;
 
   // Add current form data to spreadsheet
   const addToSpreadsheet = (dataToAdd?: Record<string, string>) => {
+    console.log('🚀 === ADD TO SPREADSHEET START ===');
     console.log('🚀 ADD_TO_SPREADSHEET: Function called!', { dataToAdd, activeRunsheet, hasUnsavedChanges });
     console.log('🚀 ADD_TO_SPREADSHEET: location.state:', location.state);
-    console.log('🚀 ADD_TO_SPREADSHEET: location.state?.runsheetId:', location.state?.runsheetId);
+    console.log('🚀 ADD_TO_SPREADSHEET: location.state?.runsheet?.id:', location.state?.runsheet?.id);
     
     // Only check if runsheet exists, remove the hasUnsavedChanges check as it's too strict
     const runsheetId = activeRunsheet?.id || location.state?.runsheet?.id;
+    console.log('🚀 Calculated runsheetId:', runsheetId);
     
     if (!runsheetId) {
+      console.log('🚀 ERROR: No runsheet ID found!');
       toast({
         title: "No Runsheet Selected",
         description: "Please select or create a runsheet first.",

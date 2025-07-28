@@ -300,6 +300,10 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
   // Sync data with initialData prop changes
   useEffect(() => {
+    console.log('🔄 EditableSpreadsheet: initialData changed!');
+    console.log('🔄 new initialData:', initialData);
+    console.log('🔄 current data state:', data);
+    
     const minRows = 20;
     const existingRows = initialData.length;
     const emptyRows = Array.from({ length: Math.max(0, minRows - existingRows) }, () => {
@@ -309,11 +313,17 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     });
     const newData = [...initialData, ...emptyRows];
     
+    console.log('🔄 calculated newData:', newData);
+    
     // Only update if the data actually changed
     setData(prevData => {
+      console.log('🔄 setData callback: prevData:', prevData);
+      console.log('🔄 setData callback: newData:', newData);
       if (JSON.stringify(prevData) !== JSON.stringify(newData)) {
+        console.log('🔄 Data has changed - updating state');
         return newData;
       }
+      console.log('🔄 Data unchanged - keeping existing state');
       return prevData;
     });
   }, [initialData, initialColumns]);
