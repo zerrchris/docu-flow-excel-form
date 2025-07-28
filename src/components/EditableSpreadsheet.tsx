@@ -1839,21 +1839,24 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       const csvContent = [csvHeaders, ...csvRows].join('\n');
       zip.file(`${runsheetName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.csv`, csvContent);
 
-      // Add documents from storage to ZIP
+      // Add documents from storage to ZIP - fetch all documents for this runsheet
       const documentsFolder = zip.folder("documents");
       
-      for (const [rowIndex, document] of documentMap) {
+      // Get all documents for this runsheet (not just those in documentMap)
+      const allDocuments = await DocumentService.getDocumentsForRunsheet(currentRunsheetId);
+      
+      for (const document of allDocuments) {
         try {
           const { data: fileData } = await supabase.storage
             .from('documents')
             .download(document.file_path);
           
           if (fileData) {
-            const filename = `Row_${rowIndex + 1}_${document.original_filename}`;
+            const filename = `Row_${document.row_index + 1}_${document.original_filename}`;
             documentsFolder?.file(filename, fileData);
           }
         } catch (error) {
-          console.error(`Error downloading document for row ${rowIndex}:`, error);
+          console.error(`Error downloading document for row ${document.row_index}:`, error);
         }
       }
 
@@ -1872,7 +1875,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       
       toast({
         title: "Download complete",
-        description: `Runsheet and ${documentMap.size} documents downloaded as ZIP.`,
+        description: `Runsheet and ${allDocuments.length} documents downloaded as ZIP.`,
       });
       
     } catch (error) {
