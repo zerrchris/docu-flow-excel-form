@@ -1,10 +1,10 @@
 import * as pdfjsLib from 'pdfjs-dist';
 import 'pdfjs-dist/web/pdf_viewer.css';
 
-// Disable worker for now to avoid configuration issues
-pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+// Configure PDF.js worker - use CDN worker for better compatibility
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
-console.log('PDF.js configured without worker for compatibility');
+console.log('PDF.js configured with worker:', pdfjsLib.GlobalWorkerOptions.workerSrc);
 
 export interface PDFPage {
   canvas: HTMLCanvasElement;
