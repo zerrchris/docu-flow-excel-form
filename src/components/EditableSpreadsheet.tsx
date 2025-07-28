@@ -62,6 +62,7 @@ interface SpreadsheetProps {
   initialRunsheetName?: string;
   initialRunsheetId?: string;
   onShowMultipleUpload?: () => void;
+  onDocumentMapChange?: (documentMap: Map<number, DocumentRecord>) => void;
 }
 
 const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({ 
@@ -74,7 +75,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   missingColumns = [],
   initialRunsheetName,
   initialRunsheetId,
-  onShowMultipleUpload
+  onShowMultipleUpload,
+  onDocumentMapChange
 }) => {
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -151,6 +153,12 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [hasManuallyResizedColumns, setHasManuallyResizedColumns] = useState(false);
   const [documentMap, setDocumentMap] = useState<Map<number, DocumentRecord>>(new Map());
   const [currentRunsheetId, setCurrentRunsheetId] = useState<string | null>(null);
+
+  // Helper function to update document map and notify parent
+  const updateDocumentMap = (newMap: Map<number, DocumentRecord>) => {
+    setDocumentMap(newMap);
+    onDocumentMapChange?.(newMap);
+  };
   const [showNamingSettings, setShowNamingSettings] = useState(false);
   const [inlineViewerRow, setInlineViewerRow] = useState<number | null>(null);
   const [fullScreenWorkspace, setFullScreenWorkspace] = useState<{ runsheetId: string; rowIndex: number } | null>(null);
@@ -386,7 +394,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         console.log('Loading documents for runsheet:', currentRunsheetId);
         const documents = await DocumentService.getDocumentMapForRunsheet(currentRunsheetId);
         console.log('Loaded documents:', documents);
-        setDocumentMap(documents);
+        updateDocumentMap(documents);
       } catch (error) {
         console.error('Error loading documents:', error);
       }
@@ -428,7 +436,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             console.log('🔍 EditableSpreadsheet: Fetching updated document map for runsheet:', activeRunsheetId);
             const documents = await DocumentService.getDocumentMapForRunsheet(activeRunsheetId);
             console.log('🔧 EditableSpreadsheet: New document map:', documents);
-            setDocumentMap(documents);
+            updateDocumentMap(documents);
             
             // ALSO refresh the runsheet data to get updated Document File Name fields
             console.log('🔍 EditableSpreadsheet: Fetching updated runsheet data');
@@ -516,7 +524,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         
         // Refresh document map
         const documents = await DocumentService.getDocumentMapForRunsheet(currentRunsheetId);
-        setDocumentMap(documents);
+        updateDocumentMap(documents);
         
         console.log('🔧 EditableSpreadsheet: Processed all pending documents and refreshed map');
         
@@ -609,7 +617,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             console.log('🔧 EditableSpreadsheet: Refreshing document links');
             const documents = await DocumentService.getDocumentMapForRunsheet(runsheetId);
             console.log('🔧 EditableSpreadsheet: Refreshed documents:', documents);
-            setDocumentMap(documents);
+            updateDocumentMap(documents);
           }
         } catch (error) {
           console.error('Error refreshing runsheet data:', error);
@@ -993,7 +1001,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
               // Refresh document map after migration
               try {
                 const documents = await DocumentService.getDocumentMapForRunsheet(savedRunsheet.id);
-                setDocumentMap(documents);
+                updateDocumentMap(documents);
               } catch (docError) {
                 console.error('Error refreshing documents after migration:', docError);
               }
@@ -1271,7 +1279,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
               // Refresh document map after migration
               try {
                 const documents = await DocumentService.getDocumentMapForRunsheet(savedRunsheet.id);
-                setDocumentMap(documents);
+                updateDocumentMap(documents);
               } catch (docError) {
                 console.error('Error refreshing documents after migration:', docError);
               }
@@ -3548,8 +3556,8 @@ ${extractionFields}`
                              setHasUnsavedChanges(false);
                              setLastSavedState('');
                              // CRITICAL: Clear document map and runsheet ID for new runsheet
-                             setDocumentMap(new Map());
-                             setCurrentRunsheetId(null);
+                              updateDocumentMap(new Map());
+                              setCurrentRunsheetId(null);
                             onDataChange?.(Array.from({ length: 20 }, () => {
                               const row: Record<string, string> = {};
                               initialColumns.forEach(col => row[col] = '');
@@ -3607,8 +3615,8 @@ ${extractionFields}`
                          setHasUnsavedChanges(false);
                          setLastSavedState('');
                          // CRITICAL: Clear document map and runsheet ID for new runsheet
-                         setDocumentMap(new Map());
-                         setCurrentRunsheetId(null);
+                          updateDocumentMap(new Map());
+                          setCurrentRunsheetId(null);
                         onDataChange?.(Array.from({ length: 20 }, () => {
                           const row: Record<string, string> = {};
                           initialColumns.forEach(col => row[col] = '');
@@ -3944,7 +3952,7 @@ ${extractionFields}`
                            if (currentRunsheetId) {
                              setTimeout(() => {
                                console.log('🔧 EditableSpreadsheet: Refreshing document map');
-                               DocumentService.getDocumentMapForRunsheet(currentRunsheetId).then(setDocumentMap);
+                               DocumentService.getDocumentMapForRunsheet(currentRunsheetId).then(updateDocumentMap);
                              }, 500);
                            }
                         }}
@@ -3956,11 +3964,11 @@ ${extractionFields}`
                           };
                           setData(newData);
                           onDataChange?.(newData);
-                         setDocumentMap(prev => {
-                           const newMap = new Map(prev);
-                           newMap.delete(rowIndex);
-                           return newMap;
-                         });
+                          updateDocumentMap((() => {
+                            const newMap = new Map(documentMap);
+                            newMap.delete(rowIndex);
+                            return newMap;
+                          })());
                         }}
                         onAnalyzeDocument={async (file, filename) => {
                           console.log('🔧 EditableSpreadsheet: onAnalyzeDocument called for row:', rowIndex);

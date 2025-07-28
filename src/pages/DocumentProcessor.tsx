@@ -52,6 +52,7 @@ const DocumentProcessor: React.FC = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisAbortController, setAnalysisAbortController] = useState<AbortController | null>(null);
   const [columnInstructions, setColumnInstructions] = useState<Record<string, string>>({});
+  const [documentMap, setDocumentMap] = useState<Map<number, any>>(new Map());
   const [showValidationDialog, setShowValidationDialog] = useState(false);
   const [missingColumns, setMissingColumns] = useState<string[]>([]);
   const [highlightMissingColumns, setHighlightMissingColumns] = useState(false);
@@ -410,6 +411,12 @@ const DocumentProcessor: React.FC = () => {
   const handleSpreadsheetDataChange = (data: Record<string, string>[]) => {
     setSpreadsheetData(data);
     setHasUnsavedChanges(true); // Mark as unsaved when data changes
+  };
+
+  // Handle document map changes from EditableSpreadsheet
+  const handleDocumentMapChange = (newDocumentMap: Map<number, any>) => {
+    console.log('Document map updated in DocumentProcessor:', newDocumentMap);
+    setDocumentMap(newDocumentMap);
   };
 
   // Handle columns change
@@ -868,10 +875,12 @@ Image: [base64 image data]`;
     
     
     setSpreadsheetData(prev => {
-      // Find the first completely empty row
-      const firstEmptyRowIndex = prev.findIndex(row => 
-        Object.values(row).every(value => value.trim() === '')
-      );
+      // Find the first row that is both empty in spreadsheet data AND has no linked document
+      const firstEmptyRowIndex = prev.findIndex((row, index) => {
+        const isDataEmpty = Object.values(row).every(value => value.trim() === '');
+        const hasLinkedDocument = documentMap.has(index);
+        return isDataEmpty && !hasLinkedDocument;
+      });
       
       let newData;
       let targetRowIndex;
@@ -880,7 +889,7 @@ Image: [base64 image data]`;
         newData = [...prev];
         newData[firstEmptyRowIndex] = { ...finalData };
         targetRowIndex = firstEmptyRowIndex;
-        console.log('Inserted data at row index:', firstEmptyRowIndex);
+        console.log('Inserted data at row index:', firstEmptyRowIndex, '(considering both data and document links)');
       } else {
         // If no empty row found, append to the end
         newData = [...prev, { ...finalData }];
@@ -1136,6 +1145,7 @@ Image: [base64 image data]`;
           initialRunsheetName={location.state?.runsheet?.name}
           initialRunsheetId={location.state?.runsheetId}
           onShowMultipleUpload={() => setShowMultipleFileUpload(true)}
+          onDocumentMapChange={handleDocumentMapChange}
         />
         </div>
       </div>
