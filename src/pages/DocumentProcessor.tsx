@@ -700,18 +700,47 @@ Image: [base64 image data]`;
 
       console.log('Extracted data:', extractedData);
       
-      // If we have a file being analyzed, add the file storage information for document linking
+      // If we have a file being analyzed, we need to upload it to storage first to get a real storage path
       if (file || fileToAnalyze) {
         const targetFile = fileToAnalyze || file;
         if (targetFile) {
-          // Add storage path and filename information to the extracted data
-          // This is needed for document linking when the data is added to the runsheet
-          extractedData['Storage Path'] = previewUrl || targetFile.name; // Use preview URL if available, otherwise filename
-          extractedData['Document File Name'] = targetFile.name;
-          console.log('Added file storage info to extracted data:', {
-            'Storage Path': extractedData['Storage Path'],
-            'Document File Name': extractedData['Document File Name']
-          });
+          console.log('Uploading analyzed document to storage for linking...');
+          
+          try {
+            // Upload the file to storage to get a real storage path
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+              // Generate a unique filename
+              const timestamp = Date.now();
+              const fileExtension = targetFile.name.split('.').pop() || '';
+              const fileName = `analyzed_${timestamp}.${fileExtension}`;
+              const filePath = `${user.id}/analyzed/${fileName}`;
+              
+              // Upload to storage
+              const { data: uploadData, error: uploadError } = await supabase.storage
+                .from('documents')
+                .upload(filePath, targetFile, {
+                  cacheControl: '3600',
+                  upsert: false
+                });
+              
+              if (uploadError) {
+                console.error('Error uploading analyzed document:', uploadError);
+              } else {
+                // Add the real storage path to extracted data
+                extractedData['Storage Path'] = filePath;
+                extractedData['Document File Name'] = targetFile.name;
+                console.log('Successfully uploaded analyzed document, added storage info:', {
+                  'Storage Path': extractedData['Storage Path'],
+                  'Document File Name': extractedData['Document File Name']
+                });
+              }
+            }
+          } catch (error) {
+            console.error('Error uploading analyzed document:', error);
+            // Fall back to just the filename if upload fails
+            extractedData['Document File Name'] = targetFile.name;
+          }
         }
       }
       
