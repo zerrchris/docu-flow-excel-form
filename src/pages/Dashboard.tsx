@@ -52,9 +52,12 @@ const Dashboard: React.FC = () => {
     }
 
     try {
+      // Use the same default columns as DocumentProcessor
+      const DEFAULT_COLUMNS = ['Inst Number', 'Book/Page', 'Inst Type', 'Recording Date', 'Document Date', 'Grantor', 'Grantee', 'Legal Description', 'Notes'];
+      
       // Get user preferences for initial columns  
       const preferences = await ExtractionPreferencesService.getDefaultPreferences();
-      const initialColumns = preferences?.columns || ['Item Description', 'Category', 'Model/Part Number', 'Serial Number', 'Quantity', 'Unit Price', 'Total Price', 'Notes'];
+      const initialColumns = preferences?.columns || DEFAULT_COLUMNS;
 
       const finalName = newRunsheetName.trim();
       
