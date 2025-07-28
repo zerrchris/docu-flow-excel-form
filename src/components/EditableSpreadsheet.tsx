@@ -1964,11 +1964,11 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const data = e.target?.result;
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: 'array' });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
 
         if (jsonData.length === 0) {
           toast({
@@ -1979,14 +1979,17 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           return;
         }
 
-        const headers = (jsonData[0] as string[]).map(h => h?.toString() || '');
-        const parsedData = jsonData.slice(1).map((row: any) => {
-          const rowData: Record<string, string> = {};
-          headers.forEach((header, index) => {
-            rowData[header] = (row[index] || '').toString();
+        const headers = (jsonData[0] as string[]).map(h => (h?.toString() || '').trim()).filter(h => h);
+        const parsedData = jsonData.slice(1)
+          .filter(row => row.some(cell => cell !== null && cell !== undefined && String(cell).trim() !== ''))
+          .map((row: any[]) => {
+            const rowData: Record<string, string> = {};
+            headers.forEach((header, index) => {
+              const cellValue = row[index];
+              rowData[header] = cellValue !== null && cellValue !== undefined ? String(cellValue) : '';
+            });
+            return rowData;
           });
-          return rowData;
-        });
 
         updateSpreadsheetData(headers, parsedData, fileName);
       } catch (error) {
@@ -1998,6 +2001,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         });
       }
     };
+    reader.readAsArrayBuffer(file);
     reader.readAsArrayBuffer(file);
   };
 
