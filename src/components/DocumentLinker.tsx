@@ -478,9 +478,7 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
       }
 
       if (smartFilename && smartFilename !== currentFilename) {
-        // Update the filename using the existing rename function
-        setEditedFilename(smartFilename);
-        // Trigger rename immediately
+        // Trigger rename directly with the smart filename
         await handleRenameWithFilename(smartFilename);
         
         toast({
