@@ -1062,14 +1062,14 @@ Image: [base64 image data]`;
 
       {/* Navigation Confirmation Dialog */}
       <Dialog open={showNavigationDialog} onOpenChange={setShowNavigationDialog}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>Unsaved Changes</DialogTitle>
             <DialogDescription>
-              You have unsaved changes in your runsheet. Please save your work before leaving this page.
+              You have unsaved changes in your current runsheet. What would you like to do?
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+          <DialogFooter className="flex flex-col sm:flex-row gap-3 sm:gap-3">
             <Button 
               variant="outline" 
               onClick={() => {
@@ -1078,7 +1078,7 @@ Image: [base64 image data]`;
               }}
               className="w-full sm:w-auto"
             >
-              Go Back and Save
+              Cancel
             </Button>
             <Button 
               variant="destructive" 
@@ -1097,7 +1097,33 @@ Image: [base64 image data]`;
               }}
               className="w-full sm:w-auto"
             >
-              Leave Without Saving
+              Continue Without Saving
+            </Button>
+            <Button 
+              variant="default" 
+              onClick={async () => {
+                // Save the runsheet first, then navigate
+                const saveEvent = new CustomEvent('forceSaveRunsheet');
+                window.dispatchEvent(saveEvent);
+                
+                // Small delay to allow save to complete
+                setTimeout(() => {
+                  setShowNavigationDialog(false);
+                  if (pendingNavigation) {
+                    if (pendingNavigation.path === 'new-runsheet') {
+                      startNewRunsheet();
+                    } else if (pendingNavigation.state) {
+                      navigate(pendingNavigation.path, { state: pendingNavigation.state });
+                    } else {
+                      navigate(pendingNavigation.path);
+                    }
+                    setPendingNavigation(null);
+                  }
+                }, 500);
+              }}
+              className="w-full sm:w-auto"
+            >
+              Save & Continue
             </Button>
           </DialogFooter>
         </DialogContent>
