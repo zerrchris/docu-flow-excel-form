@@ -399,14 +399,26 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   useEffect(() => {
     const handleDocumentRecordCreated = async (event: CustomEvent) => {
       console.log('🔧 EditableSpreadsheet: Document record created event received:', event.detail);
-      const { runsheetId, rowIndex } = event.detail;
+      const { runsheetId, rowIndex, allPossibleIds } = event.detail;
       
-      console.log('🔧 EditableSpreadsheet: Comparing runsheetId:', runsheetId, 'vs currentRunsheet.id:', currentRunsheet?.id, 'vs currentRunsheetId:', currentRunsheetId);
+      console.log('🔧 EditableSpreadsheet: Event received with runsheetId:', runsheetId, 'allPossibleIds:', allPossibleIds);
+      console.log('🔧 EditableSpreadsheet: Comparing against currentRunsheet.id:', currentRunsheet?.id, 'currentRunsheetId:', currentRunsheetId);
       
       // Use currentRunsheet.id (global state) instead of currentRunsheetId (local state)
       const activeRunsheetId = currentRunsheet?.id || currentRunsheetId;
       
-      if (runsheetId === activeRunsheetId) {
+      // Check if any of the IDs match our current runsheet
+      const idsToCheck = [
+        runsheetId,
+        allPossibleIds?.activeRunsheetId,
+        allPossibleIds?.locationStateId,
+        allPossibleIds?.finalRunsheetId
+      ].filter(Boolean);
+      
+      const hasMatch = idsToCheck.includes(activeRunsheetId);
+      console.log('🔧 EditableSpreadsheet: IDs to check:', idsToCheck, 'activeRunsheetId:', activeRunsheetId, 'hasMatch:', hasMatch);
+      
+      if (hasMatch) {
         console.log('🔧 EditableSpreadsheet: Runsheet ID matches, refreshing document map');
         
         // Refresh the entire document map
@@ -425,8 +437,9 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       }
     };
 
-    console.log('🔧 EditableSpreadsheet: Setting up document record created event listener');
+    console.log('🔧 EditableSpreadsheet: Setting up document record created event listener for activeRunsheetId:', currentRunsheet?.id || currentRunsheetId);
     window.addEventListener('documentRecordCreated', handleDocumentRecordCreated as EventListener);
+    
     
     return () => {
       console.log('🔧 EditableSpreadsheet: Removing document record created event listener');

@@ -965,8 +965,18 @@ Image: [base64 image data]`;
           console.log('Document record created successfully for row', rowIndex);
           
           // Dispatch a custom event to notify the spreadsheet to refresh documents
+          console.log('🔧 DocumentProcessor: Dispatching documentRecordCreated event with runsheetId:', runsheetId, 'rowIndex:', rowIndex);
+          console.log('🔧 DocumentProcessor: Also including all possible IDs - activeRunsheet?.id:', activeRunsheet?.id, 'location.state?.runsheetId:', location.state?.runsheetId);
           window.dispatchEvent(new CustomEvent('documentRecordCreated', {
-            detail: { runsheetId, rowIndex }
+            detail: { 
+              runsheetId, 
+              rowIndex,
+              allPossibleIds: {
+                activeRunsheetId: activeRunsheet?.id,
+                locationStateId: location.state?.runsheetId,
+                finalRunsheetId: runsheetId
+              }
+            }
           }));
         }
       }
