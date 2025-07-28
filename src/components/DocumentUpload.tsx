@@ -26,22 +26,76 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
 
-  // Handle PDF to image conversion - temporarily disabled due to technical issues
+  // Handle PDF to image conversion
   const handlePDFConversion = async (file: File) => {
     if (!isPDF(file)) {
       return file; // Not a PDF, return as-is
     }
 
-    // For now, show a helpful message about PDFs
-    toast({
-      title: "PDF Upload Detected",
-      description: "For best results with data extraction, please convert your PDF to an image (PNG/JPG) and upload the image instead. Most PDF readers have an 'Export as Image' option.",
-      variant: "default",
-    });
+    try {
+      setIsProcessing(true);
+      
+      toast({
+        title: "Converting PDF to images",
+        description: "Processing PDF pages for better data extraction...",
+      });
 
-    // Return the PDF file as-is for now
-    // The analyze function can still try to process it
-    return file;
+      // Convert PDF to images
+      const pdfPages = await convertPDFToImages(file, 2); // Scale factor of 2 for good quality
+      
+      if (pdfPages.length === 1) {
+        // Single page PDF - return as single image file
+        const imageFileName = file.name.replace(/\.pdf$/i, '_page1.png');
+        const imageFile = createFileFromBlob(pdfPages[0].blob, imageFileName);
+        
+        toast({
+          title: "PDF converted successfully",
+          description: `Converted to ${imageFileName}`,
+        });
+        
+        return imageFile;
+      } else {
+        // Multi-page PDF - handle if multiple file selection is enabled
+        if (allowMultiple && onMultipleFilesSelect) {
+          const imageFiles = pdfPages.map(page => {
+            const imageFileName = file.name.replace(/\.pdf$/i, `_page${page.pageNumber}.png`);
+            return createFileFromBlob(page.blob, imageFileName);
+          });
+          
+          toast({
+            title: "PDF converted successfully",
+            description: `Converted to ${imageFiles.length} image files`,
+          });
+          
+          // Use the multiple file callback
+          onMultipleFilesSelect(imageFiles);
+          return null; // Don't return a single file since we're handling multiple
+        } else {
+          // Single file mode but multi-page PDF - use first page
+          const imageFileName = file.name.replace(/\.pdf$/i, '_page1.png');
+          const imageFile = createFileFromBlob(pdfPages[0].blob, imageFileName);
+          
+          toast({
+            title: "PDF converted successfully",
+            description: `Using first page: ${imageFileName}`,
+          });
+          
+          return imageFile;
+        }
+      }
+    } catch (error) {
+      console.error('PDF conversion failed:', error);
+      toast({
+        title: "PDF conversion failed",
+        description: "Unable to convert PDF. Please try converting to image manually.",
+        variant: "destructive",
+      });
+      
+      // Return original PDF file as fallback
+      return file;
+    } finally {
+      setIsProcessing(false);
+    }
   };
   const handleDrop = useCallback(async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -52,7 +106,9 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
         onMultipleFilesSelect(files);
       } else {
         const processedFile = await handlePDFConversion(files[0]);
-        onFileSelect(processedFile);
+        if (processedFile) {
+          onFileSelect(processedFile);
+        }
       }
     }
   }, [onFileSelect, onMultipleFilesSelect, allowMultiple, handlePDFConversion]);
@@ -68,7 +124,9 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
         onMultipleFilesSelect(Array.from(files));
       } else {
         const processedFile = await handlePDFConversion(files[0]);
-        onFileSelect(processedFile);
+        if (processedFile) {
+          onFileSelect(processedFile);
+        }
       }
     }
   }, [onFileSelect, onMultipleFilesSelect, allowMultiple, handlePDFConversion]);
@@ -153,8 +211,8 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
                         Supports: Images, PDF, Word documents{allowMultiple ? ' - Multiple images can be combined' : ''}
                       </p>
                       <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
-                        <AlertCircle className="h-3 w-3" />
-                        For PDFs: Convert to image first for best data extraction results
+                        <FileImage className="h-3 w-3" />
+                        PDFs are automatically converted to images for better data extraction
                       </p>
                     </div>
                   </>
