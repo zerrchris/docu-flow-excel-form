@@ -654,22 +654,8 @@ const DocumentProcessor: React.FC = () => {
     setIsAnalyzing(true);
     console.log('Starting analysis...');
     
-    // Check if runsheet is saved before analyzing
-    const runsheetId = activeRunsheet?.id || location.state?.runsheetId;
-    console.log('🔍 ANALYZE CHECK - activeRunsheet:', activeRunsheet);
-    console.log('🔍 ANALYZE CHECK - location.state:', location.state);
-    console.log('🔍 ANALYZE CHECK - runsheetId:', runsheetId);
-    console.log('🔍 ANALYZE CHECK - hasUnsavedChanges:', hasUnsavedChanges);
-    
-    if (!runsheetId || hasUnsavedChanges) {
-      setIsAnalyzing(false);
-      toast({
-        title: "Save Required",
-        description: "Please save your runsheet before analyzing documents. You can save by pressing Ctrl+S or clicking the Save button.",
-        variant: "destructive",
-      });
-      return {};
-    }
+    // Remove save check from analysis - analysis can happen without saving
+    // The save check will be moved to addToSpreadsheet function instead
     
     // Create abort controller for this analysis
     const abortController = new AbortController();
@@ -854,6 +840,23 @@ Image: [base64 image data]`;
   // Add current form data to spreadsheet
   const addToSpreadsheet = (dataToAdd?: Record<string, string>) => {
     console.log('🔧 ADD_TO_SPREADSHEET: addToSpreadsheet called with dataToAdd:', dataToAdd);
+    
+    // Check if runsheet is saved before adding data
+    const runsheetId = activeRunsheet?.id || location.state?.runsheetId;
+    console.log('🔍 ADD CHECK - activeRunsheet:', activeRunsheet);
+    console.log('🔍 ADD CHECK - location.state:', location.state);
+    console.log('🔍 ADD CHECK - runsheetId:', runsheetId);
+    console.log('🔍 ADD CHECK - hasUnsavedChanges:', hasUnsavedChanges);
+    
+    if (!runsheetId || hasUnsavedChanges) {
+      toast({
+        title: "Save Required",
+        description: "Please save your runsheet before adding documents. You can save by pressing Ctrl+S or clicking the Save button.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     const targetData = dataToAdd || formData;
     console.log('🔧 ADD_TO_SPREADSHEET: targetData:', targetData);
     console.log('🔧 ADD_TO_SPREADSHEET: targetData Storage Path:', targetData['Storage Path']);
