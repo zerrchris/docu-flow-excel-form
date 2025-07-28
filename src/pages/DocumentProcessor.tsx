@@ -1202,7 +1202,7 @@ Image: [base64 image data]`;
   };
 
   // Helper function to create a document record in the database
-  const createDocumentRecord = async (data: Record<string, string>, rowIndex: number) => {
+   const createDocumentRecord = async (data: Record<string, string>, rowIndex: number) => {
     console.log('🔧 CREATE_DOC_RECORD: createDocumentRecord called');
     console.log('🔧 CREATE_DOC_RECORD: data:', data);
     console.log('🔧 CREATE_DOC_RECORD: rowIndex:', rowIndex);
@@ -1218,9 +1218,13 @@ Image: [base64 image data]`;
       const runsheetId = activeRunsheet?.id || location.state?.runsheetId;
       console.log('🔧 CREATE_DOC_RECORD: activeRunsheet?.id:', activeRunsheet?.id);
       console.log('🔧 CREATE_DOC_RECORD: location.state?.runsheetId:', location.state?.runsheetId);
+      console.log('🔧 CREATE_DOC_RECORD: location.state full object:', location.state);
+      console.log('🔧 CREATE_DOC_RECORD: activeRunsheet full object:', activeRunsheet);
       console.log('🔧 CREATE_DOC_RECORD: Final runsheetId:', runsheetId);
-      if (!runsheetId) {
-        console.log('🔧 DocumentProcessor: No runsheet ID available, document record will be created when runsheet is saved');
+      
+      if (!runsheetId || runsheetId.startsWith('temp-')) {
+        console.log('🔧 DocumentProcessor: No valid runsheet ID available (is null or temp), document record will be created when runsheet is saved');
+        console.log('🔧 DocumentProcessor: Consider this a pending document that needs to be processed after runsheet save');
         
         // Store the document info for later creation when the runsheet is saved
         const documentInfo = {
