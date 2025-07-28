@@ -882,13 +882,9 @@ Image: [base64 image data]`;
     }
     
     const targetData = dataToAdd || formData;
-    console.log('🔧 ADD_TO_SPREADSHEET: targetData:', targetData);
-    console.log('🔧 ADD_TO_SPREADSHEET: targetData Storage Path:', targetData['Storage Path']);
-    console.log('🔧 ADD_TO_SPREADSHEET: targetData Document File Name:', targetData['Document File Name']);
     
     // Check if any field has data
     const hasData = Object.values(targetData).some(value => value.trim() !== '');
-    console.log('hasData:', hasData);
     
     if (!hasData) {
       toast({
@@ -906,16 +902,10 @@ Image: [base64 image data]`;
       filteredData[column] = targetData[column] || '';
     });
     
-    console.log('🔧 DEBUG: filteredData after column filtering:', filteredData);
-    console.log('🔧 DEBUG: targetData Storage Path:', targetData['Storage Path']);
-    
     // Always preserve Storage Path if it exists, even if not in current columns
     // This is needed for document record creation
     if (targetData['Storage Path']) {
       filteredData['Storage Path'] = targetData['Storage Path'];
-      console.log('🔧 DEBUG: Added Storage Path to filteredData:', filteredData['Storage Path']);
-    } else {
-      console.log('🔧 DEBUG: No Storage Path found in targetData');
     }
     
     // Use filtered data instead of allowing new columns to persist
@@ -926,13 +916,8 @@ Image: [base64 image data]`;
     console.log('Original analyzed data:', targetData);
     console.log('Filtered data to match current columns:', finalData);
     console.log('Current columns (unchanged):', columns);
-
-    console.log('Adding filtered data to spreadsheet:', finalData);
-    console.log('Current spreadsheetData before adding:', spreadsheetData);
-    
     
     setSpreadsheetData(prev => {
-      console.log('🔧 setSpreadsheetData called with prev:', prev);
       // Find the first row that is both empty in spreadsheet data AND has no linked document
       const firstEmptyRowIndex = prev.findIndex((row, index) => {
         const isDataEmpty = Object.values(row).every(value => value.trim() === '');
@@ -947,25 +932,15 @@ Image: [base64 image data]`;
         newData = [...prev];
         newData[firstEmptyRowIndex] = { ...finalData };
         targetRowIndex = firstEmptyRowIndex;
-        console.log('Inserted data at row index:', firstEmptyRowIndex, '(considering both data and document links)');
       } else {
         // If no empty row found, append to the end
         newData = [...prev, { ...finalData }];
         targetRowIndex = prev.length; // New row index is the current length
-        console.log('Appended data to end of spreadsheet at index:', targetRowIndex);
       }
-      
-      console.log('🔧 New spreadsheetData will be:', newData);
       
       // If data contains a storage path, create a document record
       if (finalData['Storage Path']) {
-        console.log('🔧 ADD_TO_SPREADSHEET: Creating document record for Storage Path:', finalData['Storage Path']);
-        console.log('🔧 ADD_TO_SPREADSHEET: Target row index:', targetRowIndex);
-        console.log('🔧 ADD_TO_SPREADSHEET: Full finalData:', finalData);
         createDocumentRecord(finalData, targetRowIndex);
-      } else {
-        console.log('🔧 ADD_TO_SPREADSHEET: No Storage Path found in finalData:', finalData);
-        console.log('🔧 ADD_TO_SPREADSHEET: Available keys in finalData:', Object.keys(finalData));
       }
       
       return newData;
