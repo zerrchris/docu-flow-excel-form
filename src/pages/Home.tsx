@@ -51,9 +51,11 @@ const Home: React.FC = () => {
                 </Badge>
               )}
               {user ? (
-                <Link to="/pricing">
-                  <Button>Get Subscription</Button>
-                </Link>
+                !subscribed && (
+                  <Link to="/pricing">
+                    <Button>Get Subscription</Button>
+                  </Link>
+                )
               ) : (
                 <AuthButton />
               )}
