@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Users, Shield, UserCheck, Settings, Home } from 'lucide-react';
+import { ArrowLeft, Users, Shield, UserCheck, Settings, Home, CreditCard, Calendar, CheckCircle, XCircle } from 'lucide-react';
 import extractorLogo from '@/assets/document-extractor-logo.png';
 import AuthButton from '@/components/AuthButton';
 
@@ -32,6 +32,11 @@ interface UserRole {
 
 interface UserWithRole extends Profile {
   role: 'admin' | 'user';
+  subscription?: {
+    subscribed: boolean;
+    subscription_tier: string | null;
+    subscription_end: string | null;
+  };
 }
 
 const Admin: React.FC = () => {
@@ -43,6 +48,115 @@ const Admin: React.FC = () => {
   const [isSavingInstructions, setIsSavingInstructions] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const loadUsersWithSubscriptions = async () => {
+    try {
+      // Get all subscriptions
+      const { data: subscriptionsData, error: subscriptionsError } = await supabase.functions.invoke('admin-manage-subscription', {
+        body: { action: 'get_all_subscriptions' }
+      });
+
+      if (subscriptionsError) throw subscriptionsError;
+
+      const subscriptions = subscriptionsData.subscribers || [];
+      
+      // Get all profiles with their roles
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (profilesError) throw profilesError;
+
+      const { data: roles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('*');
+
+      if (rolesError) throw rolesError;
+
+      // Combine profiles with roles and subscriptions
+      const usersWithRoles: UserWithRole[] = profiles?.map(profile => {
+        const userRole = roles?.find(role => role.user_id === profile.user_id);
+        const subscription = subscriptions.find((sub: any) => sub.user_id === profile.user_id);
+        
+        return {
+          ...profile,
+          role: userRole?.role || 'user',
+          subscription: subscription ? {
+            subscribed: subscription.subscribed,
+            subscription_tier: subscription.subscription_tier,
+            subscription_end: subscription.subscription_end
+          } : undefined
+        };
+      }) || [];
+
+      setUsers(usersWithRoles);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to load users: " + error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const grantFreeAccess = async (userId: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-manage-subscription', {
+        body: { 
+          action: 'grant_free_access',
+          target_user_id: userId,
+          subscription_data: {
+            tier: 'Admin Granted',
+            duration_days: 365
+          }
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Free access granted for 1 year",
+      });
+
+      // Reload users to reflect changes
+      await loadUsersWithSubscriptions();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to grant access: " + error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const revokeAccess = async (userId: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-manage-subscription', {
+        body: { 
+          action: 'revoke_access',
+          target_user_id: userId
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Access has been revoked",
+      });
+
+      // Reload users to reflect changes
+      await loadUsersWithSubscriptions();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to revoke access: " + error.message,
+        variant: "destructive",
+      });
+    }
+  };
 
   useEffect(() => {
     // Check authentication and admin status
@@ -75,48 +189,13 @@ const Admin: React.FC = () => {
       }
 
       setIsAdmin(true);
-      await loadUsers();
+      await loadUsersWithSubscriptions();
       await loadGlobalInstructions();
       setLoading(false);
     };
 
     checkAuth();
   }, [navigate, toast]);
-
-  const loadUsers = async () => {
-    try {
-      // Get all profiles with their roles
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (profilesError) throw profilesError;
-
-      const { data: roles, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('*');
-
-      if (rolesError) throw rolesError;
-
-      // Combine profiles with roles
-      const usersWithRoles: UserWithRole[] = profiles?.map(profile => {
-        const userRole = roles?.find(role => role.user_id === profile.user_id);
-        return {
-          ...profile,
-          role: userRole?.role || 'user'
-        };
-      }) || [];
-
-      setUsers(usersWithRoles);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: "Failed to load users: " + error.message,
-        variant: "destructive",
-      });
-    }
-  };
 
   const loadGlobalInstructions = async () => {
     try {
@@ -260,11 +339,11 @@ const Admin: React.FC = () => {
             <Shield className="w-8 h-8 text-primary" />
             <h2 className="text-3xl font-bold">Admin Panel</h2>
           </div>
-          <p className="text-muted-foreground">Manage users and their permissions</p>
+          <p className="text-muted-foreground">Manage users, subscriptions, and permissions</p>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Users</CardTitle>
@@ -283,6 +362,18 @@ const Admin: React.FC = () => {
             <CardContent>
               <div className="text-2xl font-bold">
                 {users.filter(user => user.role === 'admin').length}
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Subscribed Users</CardTitle>
+              <CreditCard className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {users.filter(user => user.subscription?.subscribed).length}
               </div>
             </CardContent>
           </Card>
@@ -339,7 +430,7 @@ const Admin: React.FC = () => {
         {/* Users Table */}
         <Card>
           <CardHeader>
-            <CardTitle>User Management</CardTitle>
+            <CardTitle>User Management & Subscription Control</CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
@@ -348,6 +439,7 @@ const Admin: React.FC = () => {
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Role</TableHead>
+                  <TableHead>Subscription</TableHead>
                   <TableHead>Joined</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -368,28 +460,80 @@ const Admin: React.FC = () => {
                       </Badge>
                     </TableCell>
                     <TableCell>
+                      <div className="flex flex-col gap-1">
+                        {user.subscription?.subscribed ? (
+                          <>
+                            <Badge variant="default" className="gap-1 w-fit">
+                              <CheckCircle className="h-3 w-3" />
+                              {user.subscription.subscription_tier}
+                            </Badge>
+                            {user.subscription.subscription_end && (
+                              <span className="text-xs text-muted-foreground">
+                                Until {new Date(user.subscription.subscription_end).toLocaleDateString()}
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <Badge variant="secondary" className="gap-1 w-fit">
+                            <XCircle className="h-3 w-3" />
+                            No Access
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
                       {new Date(user.created_at).toLocaleDateString()}
                     </TableCell>
                     <TableCell>
-                      {currentUser?.id !== user.user_id && (
-                        <Select
-                          value={user.role}
-                          onValueChange={(value: 'admin' | 'user') => 
-                            updateUserRole(user.user_id, value)
-                          }
-                        >
-                          <SelectTrigger className="w-24">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="user">User</SelectItem>
-                            <SelectItem value="admin">Admin</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      )}
-                      {currentUser?.id === user.user_id && (
-                        <span className="text-sm text-muted-foreground">You</span>
-                      )}
+                      <div className="flex flex-col gap-2">
+                        {/* Role Management */}
+                        {currentUser?.id !== user.user_id && (
+                          <Select
+                            value={user.role}
+                            onValueChange={(value: 'admin' | 'user') => 
+                              updateUserRole(user.user_id, value)
+                            }
+                          >
+                            <SelectTrigger className="w-24">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="user">User</SelectItem>
+                              <SelectItem value="admin">Admin</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                        {currentUser?.id === user.user_id && (
+                          <span className="text-sm text-muted-foreground">You</span>
+                        )}
+                        
+                        {/* Subscription Management */}
+                        {currentUser?.id !== user.user_id && (
+                          <div className="flex gap-1">
+                            {!user.subscription?.subscribed ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => grantFreeAccess(user.user_id)}
+                                className="text-xs gap-1"
+                              >
+                                <CheckCircle className="h-3 w-3" />
+                                Grant Access
+                              </Button>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => revokeAccess(user.user_id)}
+                                className="text-xs gap-1"
+                              >
+                                <XCircle className="h-3 w-3" />
+                                Revoke
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
