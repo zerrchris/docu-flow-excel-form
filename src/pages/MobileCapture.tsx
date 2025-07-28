@@ -10,7 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import extractorLogo from '@/assets/document-extractor-logo.png';
 import AuthButton from '@/components/AuthButton';
-import ActiveRunsheetButton from '@/components/ActiveRunsheetButton';
+
 import { SyncStatusBadge } from '@/components/SyncStatusBadge';
 
 interface CapturedDocument {
@@ -120,7 +120,7 @@ export const MobileCapture: React.FC = () => {
                 <Home className="h-4 w-4" />
                 Dashboard
               </Button>
-              <ActiveRunsheetButton />
+              
               <SyncStatusBadge />
               <AuthButton />
               {isMobile ? (
