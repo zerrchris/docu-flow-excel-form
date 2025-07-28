@@ -74,8 +74,7 @@ Deno.serve(async (req) => {
       'Grantor',
       'Grantee',
       'Legal Description',
-      'Notes',
-      'Document File Name'
+      'Notes'
     ]
 
     // Default column instructions for extraction
@@ -88,8 +87,7 @@ Deno.serve(async (req) => {
       'Grantor': "Extract the Grantor's name as it appears on the document and include the address if there is one",
       'Grantee': "Extract the Grantee's name as it appears on the document and include the address if there is one",
       'Legal Description': 'Extract the complete legal description of the property including lot, block, subdivision, and metes and bounds if present',
-      'Notes': 'Extract any additional relevant information, special conditions, or remarks',
-      'Document File Name': 'This will be filled automatically when documents are linked'
+      'Notes': 'Extract any additional relevant information, special conditions, or remarks'
     }
 
     // Create initial empty row
