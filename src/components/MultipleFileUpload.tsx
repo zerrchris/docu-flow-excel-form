@@ -320,6 +320,11 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
           });
         } else {
           console.log('🔧 Successfully saved extended runsheet data to database');
+          
+          // Dispatch event to refresh the spreadsheet UI with the new rows
+          window.dispatchEvent(new CustomEvent('refreshRunsheetData', {
+            detail: { runsheetId }
+          }));
         }
       } catch (error) {
         console.error('Error updating runsheet with extended data:', error);
