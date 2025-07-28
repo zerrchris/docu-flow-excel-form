@@ -52,10 +52,18 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
 
   // Update local filename when props change, but only if we haven't made local changes
   React.useEffect(() => {
+    console.log('🔧 DocumentLinker: Props changed for row', rowIndex, {
+      currentFilename, 
+      documentPath, 
+      existingDocumentUrl,
+      localFilename,
+      hasLocalChanges
+    });
+    
     if (!hasLocalChanges) {
       setLocalFilename(currentFilename || '');
     }
-  }, [currentFilename, hasLocalChanges]);
+  }, [currentFilename, hasLocalChanges, rowIndex, documentPath, existingDocumentUrl]);
 
   // Keep uploadedFile when we have a document linked for spreadsheet uploads
   React.useEffect(() => {
