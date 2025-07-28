@@ -808,6 +808,41 @@ Image: [base64 image data]`;
         }
       }
       
+      // Check if we have new columns from the extracted data and automatically add them
+      const newColumnsFromExtraction = Object.keys(extractedData).filter(key => 
+        !columns.includes(key) && key !== 'Storage Path' && extractedData[key] && extractedData[key].trim() !== ''
+      );
+      
+      // If we have new columns from analyzed data, add them to our columns automatically
+      if (newColumnsFromExtraction.length > 0) {
+        console.log('🔧 AUTO-UPDATING: Adding new columns from analysis:', newColumnsFromExtraction);
+        setColumns(prev => {
+          const updatedColumns = [...prev, ...newColumnsFromExtraction];
+          console.log('🔧 AUTO-UPDATING: Updated columns array:', updatedColumns);
+          return updatedColumns;
+        });
+        
+        // Also save these new columns to user preferences so they persist
+        setTimeout(async () => {
+          try {
+            const updatedColumns = [...columns, ...newColumnsFromExtraction];
+            const updatedInstructions = { ...columnInstructions };
+            
+            // Add default instructions for new columns
+            newColumnsFromExtraction.forEach(col => {
+              if (!updatedInstructions[col]) {
+                updatedInstructions[col] = `Extract the ${col.toLowerCase()} information`;
+              }
+            });
+            
+            await ExtractionPreferencesService.saveDefaultPreferences(updatedColumns, updatedInstructions);
+            console.log('🔧 AUTO-UPDATING: Saved updated preferences to database');
+          } catch (error) {
+            console.error('Error saving updated preferences:', error);
+          }
+        }, 500);
+      }
+      
       // Only update the main form data if no specific file was passed (main document)
       if (!fileToAnalyze) {
         console.log('🔧 ANALYSIS: Updating main formData with extracted data');
