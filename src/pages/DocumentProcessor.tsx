@@ -622,6 +622,18 @@ const DocumentProcessor: React.FC = () => {
     setIsAnalyzing(true);
     console.log('Starting analysis...');
     
+    // Check if runsheet is saved before analyzing
+    const runsheetId = activeRunsheet?.id || location.state?.runsheetId;
+    if (!runsheetId) {
+      setIsAnalyzing(false);
+      toast({
+        title: "Save Required",
+        description: "Please save your runsheet before analyzing documents. You can save by pressing Ctrl+S or clicking the Save button.",
+        variant: "destructive",
+      });
+      return {};
+    }
+    
     // Create abort controller for this analysis
     const abortController = new AbortController();
     setAnalysisAbortController(abortController);
