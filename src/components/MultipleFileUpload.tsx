@@ -314,26 +314,31 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
                 detail: { runsheetId: runsheetId }
               }));
               
-              // Then trigger specific row update event
-              console.log('🔧 Dispatching updateDocumentFilename event');
-              window.dispatchEvent(new CustomEvent('updateDocumentFilename', {
-                detail: {
-                  runsheetId: runsheetId,
-                  rowIndex: currentRowIndex,
-                  filename: result.document.stored_filename
-                }
-              }));
-              
-              // Finally trigger a custom event to notify the parent component
-              console.log('🔧 Dispatching documentRecordCreated event');
-              window.dispatchEvent(new CustomEvent('documentRecordCreated', {
-                detail: {
-                  runsheetId: runsheetId,
-                  rowIndex: currentRowIndex,
-                  document: result.document
-                }
-              }));
-            }, 500); // Reduced timeout for faster updates
+              // Add a small delay between events to ensure proper processing
+              setTimeout(() => {
+                // Then trigger specific row update event
+                console.log('🔧 Dispatching updateDocumentFilename event');
+                window.dispatchEvent(new CustomEvent('updateDocumentFilename', {
+                  detail: {
+                    runsheetId: runsheetId,
+                    rowIndex: currentRowIndex,
+                    filename: result.document.stored_filename
+                  }
+                }));
+                
+                // Finally trigger a custom event to notify the parent component
+                setTimeout(() => {
+                  console.log('🔧 Dispatching documentRecordCreated event');
+                  window.dispatchEvent(new CustomEvent('documentRecordCreated', {
+                    detail: {
+                      runsheetId: runsheetId,
+                      rowIndex: currentRowIndex,
+                      document: result.document
+                    }
+                  }));
+                }, 100); // Small delay between events
+              }, 100);
+            }, 300); // Reduced timeout but with staggered events
           }
         } else {
           // Update status to error

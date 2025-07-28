@@ -1295,7 +1295,11 @@ Image: [base64 image data]`;
                 title: "Files uploaded successfully",
                 description: `${count} file${count !== 1 ? 's' : ''} uploaded and linked to your runsheet.`
               });
-              setShowMultipleFileUpload(false);
+              
+              // Wait for the spreadsheet to refresh before closing the dialog
+              setTimeout(() => {
+                setShowMultipleFileUpload(false);
+              }, 1500); // Give enough time for all refresh events to process
             }}
             onClose={() => setShowMultipleFileUpload(false)}
           />
