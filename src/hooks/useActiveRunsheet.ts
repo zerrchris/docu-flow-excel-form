@@ -80,6 +80,8 @@ export const useActiveRunsheet = () => {
   };
 
   const clearActiveRunsheet = () => {
+    console.log('🚨 clearActiveRunsheet called! Stack trace:');
+    console.trace();
     globalActiveRunsheet = null;
     localStorage.removeItem(ACTIVE_RUNSHEET_KEY);
     saveToLocalStorage();
