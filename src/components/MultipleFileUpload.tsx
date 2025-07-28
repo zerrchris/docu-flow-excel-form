@@ -230,15 +230,33 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
 
     setIsUploading(true);
 
-    // Helper function to check if a row is empty
-    const isRowEmpty = (row: Record<string, string>) => {
-      return !Object.values(row).some(value => value && typeof value === 'string' && value.trim() !== '');
+    // Get current document map to check for existing document links
+    let documentMap: Map<number, any> = new Map();
+    try {
+      documentMap = await DocumentService.getDocumentMapForRunsheet(runsheetId);
+      console.log('🔧 Retrieved document map for empty row detection:', documentMap);
+    } catch (error) {
+      console.error('Error getting document map:', error);
+    }
+
+    // Helper function to check if a row is truly empty (no text data AND no linked document)
+    const isRowEmpty = (row: Record<string, string>, rowIndex: number) => {
+      // Check if row has any text data
+      const hasTextData = Object.values(row).some(value => value && typeof value === 'string' && value.trim() !== '');
+      
+      // Check if row has a linked document
+      const hasLinkedDocument = documentMap.has(rowIndex);
+      
+      console.log(`🔧 Row ${rowIndex} - hasTextData: ${hasTextData}, hasLinkedDocument: ${hasLinkedDocument}`);
+      
+      // Row is empty only if it has no text data AND no linked document
+      return !hasTextData && !hasLinkedDocument;
     };
 
     // Helper function to find next empty row starting from a given index
     const findNextEmptyRow = (startIndex: number, runsheetData: Record<string, string>[]): number => {
       for (let i = startIndex; i < runsheetData.length; i++) {
-        if (isRowEmpty(runsheetData[i])) {
+        if (isRowEmpty(runsheetData[i], i)) {
           return i;
         }
       }
@@ -248,10 +266,10 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
 
     const runsheetData = currentRunsheet.data || [];
     
-    // Find all empty rows that we can use
+    // Find all empty rows that we can use (considering both text data and document links)
     const emptyRows = runsheetData
       .map((row, index) => ({ row, index }))
-      .filter(({ row }) => isRowEmpty(row))
+      .filter(({ row, index }) => isRowEmpty(row, index))
       .map(({ index }) => index);
 
     // If we don't have enough empty rows, we'll extend the runsheet
