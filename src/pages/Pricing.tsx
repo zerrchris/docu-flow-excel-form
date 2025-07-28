@@ -154,11 +154,13 @@ const Pricing = () => {
                   className="w-full" 
                   variant={plan.popular ? "default" : "outline"}
                   onClick={() => handlePlanSelect(plan.id as 'daily' | 'weekly' | 'monthly')}
-                  disabled={subscribed}
+                  disabled={loading || subscribed}
                 >
-                  {subscribed 
-                    ? (subscriptionTier?.toLowerCase().includes(plan.id) ? 'Current Plan' : 'Already Subscribed')
-                    : 'Get Started'
+                  {loading 
+                    ? 'Loading...'
+                    : subscribed 
+                      ? (subscriptionTier?.toLowerCase().includes(plan.id) ? 'Current Plan' : 'Already Subscribed')
+                      : 'Get Started'
                   }
                 </Button>
               </CardFooter>
