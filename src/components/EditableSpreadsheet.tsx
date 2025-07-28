@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Plus, Trash2, Check, X, ArrowUp, ArrowDown, Save, FolderOpen, Download, Upload, AlignLeft, AlignCenter, AlignRight, Cloud, ChevronDown, FileText, Archive, ExternalLink, AlertTriangle, FileStack, Settings, Eye, EyeOff } from 'lucide-react';
+import { Plus, Trash2, Check, X, ArrowUp, ArrowDown, Save, FolderOpen, Download, Upload, AlignLeft, AlignCenter, AlignRight, Cloud, ChevronDown, FileText, Archive, ExternalLink, AlertTriangle, FileStack, Settings, Eye, EyeOff, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -155,6 +155,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [inlineViewerRow, setInlineViewerRow] = useState<number | null>(null);
   const [fullScreenWorkspace, setFullScreenWorkspace] = useState<{ runsheetId: string; rowIndex: number } | null>(null);
   const [showDocumentFileNameColumn, setShowDocumentFileNameColumn] = useState(false);
+  const [showDocumentLinker, setShowDocumentLinker] = useState(true);
   
   // Listen for document upload save requests
   React.useEffect(() => {
@@ -3668,30 +3669,39 @@ ${extractionFields}`
                  )}
                  
                  {/* Actions column header - not draggable */}
-                 <TableHead 
-                   className="font-bold text-center border-r border-border relative p-0 last:border-r-0 bg-muted/50"
-                   style={{ width: "200px", minWidth: "200px" }}
-                 >
-                   <div className="w-full h-full px-4 py-2 flex flex-col gap-1">
-                     <Button
-                       variant="outline"
-                       size="sm"
-                       onClick={() => setShowDocumentFileNameColumn(!showDocumentFileNameColumn)}
-                       className="text-xs"
-                     >
-                       {showDocumentFileNameColumn ? <EyeOff className="h-3 w-3 mr-1" /> : <Eye className="h-3 w-3 mr-1" />}
-                       {showDocumentFileNameColumn ? 'Hide' : 'Show'} File Name Column
-                     </Button>
-                     <Button
-                       variant="outline"
-                       size="sm"
-                       onClick={() => setShowDocumentNamingDialog(true)}
-                       className="text-xs"
-                     >
-                       <Settings className="h-3 w-3 mr-1" />
-                        Smart File Name Settings
-                     </Button>
-                   </div>
+                  <TableHead 
+                    className="font-bold text-center border-r border-border relative p-0 last:border-r-0 bg-muted/50"
+                    style={{ width: showDocumentLinker ? "200px" : "120px", minWidth: showDocumentLinker ? "200px" : "120px" }}
+                  >
+                    <div className="w-full h-full px-4 py-2 flex flex-col gap-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowDocumentLinker(!showDocumentLinker)}
+                        className="text-xs"
+                      >
+                        {showDocumentLinker ? <ChevronLeft className="h-3 w-3 mr-1" /> : <ChevronRight className="h-3 w-3 mr-1" />}
+                        {showDocumentLinker ? 'Hide' : 'Show'} Documents
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowDocumentFileNameColumn(!showDocumentFileNameColumn)}
+                        className="text-xs"
+                      >
+                        {showDocumentFileNameColumn ? <EyeOff className="h-3 w-3 mr-1" /> : <Eye className="h-3 w-3 mr-1" />}
+                        {showDocumentFileNameColumn ? 'Hide' : 'Show'} File Name Column
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowDocumentNamingDialog(true)}
+                        className="text-xs"
+                      >
+                        <Settings className="h-3 w-3 mr-1" />
+                         Smart File Name Settings
+                      </Button>
+                    </div>
                  </TableHead>
                </TableRow>
              </TableHeader>
@@ -3854,11 +3864,12 @@ ${extractionFields}`
                      })()}
                     
                     {/* Actions column - Document management */}
-                   <TableCell 
-                     className="border-r border-border last:border-r-0 p-2"
-                     style={{ width: "200px", minWidth: "200px" }}
-                   >
-                     <DocumentLinker
+                    <TableCell 
+                      className="border-r border-border last:border-r-0 p-2"
+                      style={{ width: showDocumentLinker ? "200px" : "120px", minWidth: showDocumentLinker ? "200px" : "120px" }}
+                    >
+                      {showDocumentLinker ? (
+                      <DocumentLinker
                        key={`${rowIndex}-${row['Document File Name']}`}
                        runsheetId={currentRunsheetId || ''}
                        rowIndex={rowIndex}
@@ -3927,7 +3938,12 @@ ${extractionFields}`
                          }}
                          isSpreadsheetUpload={true}
                          autoAnalyze={false}
-                       />
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-muted-foreground">
+                          <span className="text-xs">Documents Hidden</span>
+                        </div>
+                      )}
                       </TableCell>
                       
                       {/* Row resize handle */}
