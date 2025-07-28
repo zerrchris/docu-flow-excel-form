@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,7 +32,10 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({ children, fallbac
   return <>{children}</>;
 };
 
-export const SubscriptionRequired: React.FC = () => (
+export const SubscriptionRequired: React.FC = () => {
+  const navigate = useNavigate();
+  
+  return (
   <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center p-4">
     <Card className="w-full max-w-md">
       <CardHeader className="text-center">
@@ -59,18 +62,19 @@ export const SubscriptionRequired: React.FC = () => (
         </div>
 
         <div className="space-y-3 pt-4">
-          <Button className="w-full gap-2" onClick={() => window.location.href = '/pricing'}>
+          <Button className="w-full gap-2" onClick={() => navigate('/pricing')}>
             <CreditCard className="h-4 w-4" />
             View Pricing Plans
           </Button>
           
-          <Button variant="outline" className="w-full" onClick={() => window.location.href = '/'}>
+          <Button variant="outline" className="w-full" onClick={() => navigate('/')}>
             Back to Home
           </Button>
         </div>
       </CardContent>
     </Card>
   </div>
-);
+  );
+};
 
 export default SubscriptionGuard;

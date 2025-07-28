@@ -128,9 +128,9 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     return () => subscription.unsubscribe();
   }, []);
 
-  // Auto-refresh subscription status every 30 seconds
+  // Auto-refresh subscription status every 5 minutes instead of 30 seconds
   useEffect(() => {
-    const interval = setInterval(checkSubscription, 30000);
+    const interval = setInterval(checkSubscription, 300000); // 5 minutes
     return () => clearInterval(interval);
   }, []);
 
