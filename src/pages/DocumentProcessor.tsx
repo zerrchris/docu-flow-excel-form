@@ -998,10 +998,28 @@ Image: [base64 image data]`;
       return;
     }
 
-    // For single document processing, don't permanently add new columns to the global state
-    // Only include data that matches existing columns to prevent persistent fields
+    // For batch processing, we need to ensure all analyzed data columns are included
+    // Check if we have data for columns that aren't in our current column set
+    const newColumnsFromData = Object.keys(targetData).filter(key => 
+      !columns.includes(key) && key !== 'Storage Path' && targetData[key] && targetData[key].trim() !== ''
+    );
+    
+    // If we have new columns from analyzed data, add them to our columns
+    if (newColumnsFromData.length > 0) {
+      console.log('🔧 Adding new columns from analyzed data:', newColumnsFromData);
+      setColumns(prev => [...prev, ...newColumnsFromData]);
+    }
+    
+    // Include all data from targetData, including new columns
     const filteredData: Record<string, string> = {};
+    
+    // Include existing columns
     columns.forEach(column => {
+      filteredData[column] = targetData[column] || '';
+    });
+    
+    // Include new columns from analyzed data
+    newColumnsFromData.forEach(column => {
       filteredData[column] = targetData[column] || '';
     });
     
@@ -1079,8 +1097,26 @@ Image: [base64 image data]`;
     }
     
     // Continue with the rest of the addToSpreadsheet logic
+    // Check for new columns from analyzed data here too
+    const newColumnsFromData = Object.keys(targetData).filter(key => 
+      !columns.includes(key) && key !== 'Storage Path' && targetData[key] && targetData[key].trim() !== ''
+    );
+    
+    // If we have new columns from analyzed data, add them to our columns
+    if (newColumnsFromData.length > 0) {
+      console.log('🔧 Adding new columns from analyzed data (continue):', newColumnsFromData);
+      setColumns(prev => [...prev, ...newColumnsFromData]);
+    }
+    
     const filteredData: Record<string, string> = {};
+    
+    // Include existing columns
     columns.forEach(column => {
+      filteredData[column] = targetData[column] || '';
+    });
+    
+    // Include new columns from analyzed data
+    newColumnsFromData.forEach(column => {
       filteredData[column] = targetData[column] || '';
     });
     
