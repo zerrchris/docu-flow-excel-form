@@ -361,6 +361,27 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
   // Sync data with initialData prop changes
   useEffect(() => {
+    // Don't override data if we have an emergency draft or meaningful existing data
+    const hasEmergencyDraft = (() => {
+      try {
+        const emergencyDraft = localStorage.getItem('runsheet-emergency-draft');
+        return !!emergencyDraft;
+      } catch {
+        return false;
+      }
+    })();
+    
+    // Check if current data has meaningful content
+    const hasExistingData = data.some(row => 
+      Object.values(row).some(value => value && value.trim() !== '')
+    );
+    
+    // Only sync with initialData if we don't have emergency draft or existing data
+    if (hasEmergencyDraft || hasExistingData) {
+      console.log('🔒 Preserving existing data - skipping initialData sync');
+      return;
+    }
+    
     const minRows = 20;
     const existingRows = initialData.length;
     const emptyRows = Array.from({ length: Math.max(0, minRows - existingRows) }, () => {
@@ -373,11 +394,12 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     // Only update if the data actually changed
     setData(prevData => {
       if (JSON.stringify(prevData) !== JSON.stringify(newData)) {
+        console.log('🔄 Syncing with initialData');
         return newData;
       }
       return prevData;
     });
-  }, [initialData, initialColumns]);
+  }, [initialData, initialColumns, data]);
 
   // Emergency draft saving - auto-save to localStorage every 30 seconds and on data changes
   useEffect(() => {
@@ -433,6 +455,45 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     window.addEventListener('runsheetSaved', handleRunsheetSaved);
     return () => window.removeEventListener('runsheetSaved', handleRunsheetSaved);
   }, []);
+
+  // Complete emergency draft restoration on component mount
+  useEffect(() => {
+    const restoreEmergencyDraft = () => {
+      try {
+        const emergencyDraft = localStorage.getItem('runsheet-emergency-draft');
+        if (emergencyDraft) {
+          const draft = JSON.parse(emergencyDraft);
+          const draftAge = Date.now() - (draft.timestamp || 0);
+          
+          // Only restore if draft is less than 24 hours old
+          if (draftAge < 24 * 60 * 60 * 1000) {
+            console.log('🔄 Restoring complete emergency draft state from localStorage');
+            
+            if (draft.data) setData(draft.data);
+            if (draft.columns) setColumns(draft.columns);
+            if (draft.columnInstructions) setColumnInstructions(draft.columnInstructions);
+            if (draft.runsheetName) setRunsheetName(draft.runsheetName);
+            if (draft.currentRunsheetId) setCurrentRunsheetId(draft.currentRunsheetId);
+            
+            toast({
+              title: "Draft restored",
+              description: "Your previous work has been restored from backup.",
+              variant: "default"
+            });
+          } else {
+            // Clean up old draft
+            localStorage.removeItem('runsheet-emergency-draft');
+            console.log('🗑️ Removed old emergency draft (>24h)');
+          }
+        }
+      } catch (error) {
+        console.error('Error restoring emergency draft:', error);
+      }
+    };
+
+    // Only restore on initial mount, not on every re-render
+    restoreEmergencyDraft();
+  }, []); // Empty dependency array - only runs once on mount
 
   // Update local missing columns based on current column instructions
   useEffect(() => {
@@ -4159,10 +4220,13 @@ ${extractionFields}`
 
               {/* Table Body */}
               <TableBody>
-                  {data.map((row, rowIndex) => (
-                   <React.Fragment key={rowIndex}>
-                     {/* Show inline document viewer above this row if it's selected */}
-                    {inlineViewerRow === rowIndex && (
+                  {data.map((row, rowIndex) => {
+                    // Use a key variable to ensure clean props
+                    const fragmentKey = `row-${rowIndex}`;
+                    return (
+                      <React.Fragment key={fragmentKey}>
+                        {/* Show inline document viewer above this row if it's selected */}
+                       {inlineViewerRow === rowIndex && (
                       <TableRow>
                         <TableCell colSpan={columns.length + (showDocumentFileNameColumn ? 1 : 0) + 1} className="p-0 border-0">
                           <InlineDocumentViewer
@@ -4416,10 +4480,11 @@ ${extractionFields}`
                         onMouseDown={(e) => handleRowMouseDown(e, rowIndex)}
                         title="Drag to resize row height"
                       />
-                     </TableRow>
-                    </React.Fragment>
-                  ))}
-              </TableBody>
+                      </TableRow>
+                     </React.Fragment>
+                    );
+                  })}
+               </TableBody>
            </Table>
            </div>
 
