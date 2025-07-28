@@ -700,6 +700,21 @@ Image: [base64 image data]`;
 
       console.log('Extracted data:', extractedData);
       
+      // If we have a file being analyzed, add the file storage information for document linking
+      if (file || fileToAnalyze) {
+        const targetFile = fileToAnalyze || file;
+        if (targetFile) {
+          // Add storage path and filename information to the extracted data
+          // This is needed for document linking when the data is added to the runsheet
+          extractedData['Storage Path'] = previewUrl || targetFile.name; // Use preview URL if available, otherwise filename
+          extractedData['Document File Name'] = targetFile.name;
+          console.log('Added file storage info to extracted data:', {
+            'Storage Path': extractedData['Storage Path'],
+            'Document File Name': extractedData['Document File Name']
+          });
+        }
+      }
+      
       // Only update the main form data if no specific file was passed (main document)
       if (!fileToAnalyze) {
         console.log('Updating main formData with extracted data');
