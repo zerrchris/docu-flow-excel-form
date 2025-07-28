@@ -3706,20 +3706,18 @@ ${extractionFields}`
                     </TableHead>
                   )}
                   
-                  {/* Show Documents tab - only when document linker is hidden */}
+                  {/* Show Documents tab - positioned next to last column when hidden */}
                   {!showDocumentLinker && (
-                    <TableHead 
-                      className="border-r border-border relative p-0 bg-primary/10 cursor-pointer hover:bg-primary/20 transition-colors"
-                      style={{ width: "120px", minWidth: "120px" }}
+                    <div 
+                      className="absolute right-0 top-0 bottom-0 w-24 bg-primary/10 border border-primary/20 cursor-pointer hover:bg-primary/20 transition-colors flex items-center justify-center"
+                      style={{ transform: 'translateX(100%)' }}
                       onClick={() => setShowDocumentLinker(true)}
                     >
-                      <div className="w-full h-full px-4 py-2 flex items-center justify-center">
-                        <div className="flex items-center gap-2 text-primary font-medium">
-                          <ChevronRight className="h-4 w-4" />
-                          <span className="text-sm">Documents</span>
-                        </div>
+                      <div className="flex items-center gap-1 text-primary font-medium">
+                        <ChevronRight className="h-4 w-4" />
+                        <span className="text-xs">Docs</span>
                       </div>
-                    </TableHead>
+                    </div>
                   )}
                </TableRow>
              </TableHeader>
@@ -3957,22 +3955,6 @@ ${extractionFields}`
                             isSpreadsheetUpload={true}
                             autoAnalyze={false}
                           />
-                         </TableCell>
-                       )}
-                       
-                       {/* Show Documents tab cell - only when document linker is hidden */}
-                       {!showDocumentLinker && (
-                         <TableCell 
-                           className="border-r border-border last:border-r-0 p-2 bg-primary/5 cursor-pointer hover:bg-primary/10 transition-colors"
-                           style={{ width: "120px", minWidth: "120px" }}
-                           onClick={() => setShowDocumentLinker(true)}
-                         >
-                           <div className="flex items-center justify-center h-full text-primary">
-                             <div className="flex items-center gap-2">
-                               <ChevronRight className="h-4 w-4" />
-                               <span className="text-sm font-medium">Show</span>
-                             </div>
-                           </div>
                          </TableCell>
                        )}
                       
