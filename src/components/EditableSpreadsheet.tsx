@@ -162,7 +162,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [showNamingSettings, setShowNamingSettings] = useState(false);
   const [inlineViewerRow, setInlineViewerRow] = useState<number | null>(null);
   const [fullScreenWorkspace, setFullScreenWorkspace] = useState<{ runsheetId: string; rowIndex: number } | null>(null);
-  const [showDocumentFileNameColumn, setShowDocumentFileNameColumn] = useState(true); // TEMP: Show column to test
+  const [showDocumentFileNameColumn, setShowDocumentFileNameColumn] = useState(false);
   
   // Listen for document upload save requests
   React.useEffect(() => {
@@ -2603,9 +2603,36 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       setData(newData);
       onDataChange?.(newData);
       
-      // Trigger document filename updates if data changed and we have a runsheet ID
-      if (currentRunsheetId && user) {
-        // Debounced document update - wait a moment to avoid too many calls
+      // Handle Document File Name column edits specially - update the actual document filename
+      if (editingCell.column === 'Document File Name' && currentRunsheetId && cellValue.trim()) {
+        const document = documentMap.get(editingCell.rowIndex);
+        if (document) {
+          try {
+            // Update the document filename immediately
+            await DocumentService.updateDocumentFilenames(currentRunsheetId, [
+              { ...newData[editingCell.rowIndex], 'Row Index': editingCell.rowIndex.toString() }
+            ]);
+            
+            // Refresh the document map to reflect the changes
+            const updatedDocumentMap = await DocumentService.getDocumentMapForRunsheet(currentRunsheetId);
+            setDocumentMap(updatedDocumentMap);
+            onDocumentMapChange?.(updatedDocumentMap);
+            
+            toast({
+              title: "Document renamed",
+              description: `Document filename updated to: ${cellValue}`,
+            });
+          } catch (error) {
+            console.error('Error updating document filename:', error);
+            toast({
+              title: "Error",
+              description: "Failed to update document filename",
+              variant: "destructive",
+            });
+          }
+        }
+      } else if (currentRunsheetId && user) {
+        // For other columns, trigger document filename updates with debounce
         setTimeout(() => {
           DocumentService.updateDocumentFilenames(currentRunsheetId, newData);
         }, 2000);
@@ -2613,7 +2640,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       
       setEditingCell(null);
     }
-  }, [editingCell, cellValue, data, onDataChange, currentRunsheetId, user]);
+  }, [editingCell, cellValue, data, onDataChange, currentRunsheetId, user, documentMap, setDocumentMap, onDocumentMapChange, toast]);
 
   const cancelEdit = useCallback(() => {
     setEditingCell(null);
@@ -3411,6 +3438,18 @@ ${extractionFields}`
               </Button>
             )}
             
+            {/* Toggle Document File Name Column */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowDocumentFileNameColumn(!showDocumentFileNameColumn)}
+              className="gap-2"
+              title={`${showDocumentFileNameColumn ? 'Hide' : 'Show'} Document File Name column`}
+            >
+              {showDocumentFileNameColumn ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              {showDocumentFileNameColumn ? 'Hide' : 'Show'} File Names
+            </Button>
+            
               {/* New Runsheet Button */}
               <Dialog open={showNewRunsheetDialog} onOpenChange={setShowNewRunsheetDialog}>
                 <DialogTrigger asChild>
@@ -3926,7 +3965,7 @@ ${extractionFields}`
                                onMouseUp={handleMouseUp}
                                onKeyDown={(e) => handleKeyDown(e, rowIndex, column)}
                              >
-                               {row[column] || ''}
+                                {documentMap.get(rowIndex)?.stored_filename || row[column] || ''}
                              </div>
                            )}
                          </TableCell>
