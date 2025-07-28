@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { LogIn, FileText, Save, FolderOpen, Users, Shield, Zap } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { LogIn, FileText, Save, FolderOpen, Users, Shield, Zap, CreditCard } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
+import { useSubscription } from '@/contexts/SubscriptionContext';
 import extractorLogo from '@/assets/document-extractor-logo.png';
 import AuthButton from '@/components/AuthButton';
 const Home: React.FC = () => {
   const [user, setUser] = useState<SupabaseUser | null>(null);
+  const { subscribed, subscriptionTier } = useSubscription();
+  
   useEffect(() => {
     const initAuth = async () => {
       const {
@@ -40,10 +44,23 @@ const Home: React.FC = () => {
               </h1>
             </div>
             <div className="flex items-center gap-4">
+              {user && subscribed && (
+                <Badge variant="default" className="gap-1">
+                  <CreditCard className="h-3 w-3" />
+                  {subscriptionTier} Plan
+                </Badge>
+              )}
               <AuthButton />
-              {user && <Link to="/app">
+              {user && subscribed && (
+                <Link to="/app">
                   <Button>Open App</Button>
-                </Link>}
+                </Link>
+              )}
+              {user && !subscribed && (
+                <Link to="/pricing">
+                  <Button>Get Subscription</Button>
+                </Link>
+              )}
             </div>
           </div>
         </div>

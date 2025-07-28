@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import SubscriptionGuard, { SubscriptionRequired } from '@/components/SubscriptionGuard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -132,7 +133,8 @@ const Dashboard: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <SubscriptionGuard fallback={<SubscriptionRequired />}>
+      <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b">
         <div className="container mx-auto px-4 py-4">
@@ -334,6 +336,7 @@ const Dashboard: React.FC = () => {
         </DialogContent>
       </Dialog>
     </div>
+  </SubscriptionGuard>
   );
 };
 
