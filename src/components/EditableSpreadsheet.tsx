@@ -3541,12 +3541,15 @@ ${extractionFields}`
                               return row;
                             }));
                             setColumns(initialColumns);
-                            setSelectedCell(null);
-                            setEditingCell(null);
-                            setCellValue('');
-                            setSelectedRange(null);
-                            setHasUnsavedChanges(false);
-                            setLastSavedState('');
+                             setSelectedCell(null);
+                             setEditingCell(null);
+                             setCellValue('');
+                             setSelectedRange(null);
+                             setHasUnsavedChanges(false);
+                             setLastSavedState('');
+                             // CRITICAL: Clear document map and runsheet ID for new runsheet
+                             setDocumentMap(new Map());
+                             setCurrentRunsheetId(null);
                             onDataChange?.(Array.from({ length: 20 }, () => {
                               const row: Record<string, string> = {};
                               initialColumns.forEach(col => row[col] = '');
@@ -3597,12 +3600,15 @@ ${extractionFields}`
                           return row;
                         }));
                         setColumns(initialColumns);
-                        setSelectedCell(null);
-                        setEditingCell(null);
-                        setCellValue('');
-                        setSelectedRange(null);
-                        setHasUnsavedChanges(false);
-                        setLastSavedState('');
+                         setSelectedCell(null);
+                         setEditingCell(null);
+                         setCellValue('');
+                         setSelectedRange(null);
+                         setHasUnsavedChanges(false);
+                         setLastSavedState('');
+                         // CRITICAL: Clear document map and runsheet ID for new runsheet
+                         setDocumentMap(new Map());
+                         setCurrentRunsheetId(null);
                         onDataChange?.(Array.from({ length: 20 }, () => {
                           const row: Record<string, string> = {};
                           initialColumns.forEach(col => row[col] = '');
