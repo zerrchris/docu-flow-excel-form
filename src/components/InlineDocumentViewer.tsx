@@ -43,8 +43,21 @@ const InlineDocumentViewer: React.FC<InlineDocumentViewerProps> = ({
           setDocumentName(document.original_filename);
           setIsPdf(document.content_type === 'application/pdf' || document.original_filename.toLowerCase().endsWith('.pdf'));
         } else {
-          console.log('🔧 InlineDocumentViewer: No document found for runsheet:', runsheetId, 'rowIndex:', rowIndex);
-          setError('No document found for this row');
+          // Check if there's a pending document for this row
+          console.log('🔧 InlineDocumentViewer: No document found, checking pending documents');
+          const pendingDocs = JSON.parse(sessionStorage.getItem('pendingDocuments') || '[]');
+          const pendingDoc = pendingDocs.find((doc: any) => doc.rowIndex === rowIndex);
+          
+          if (pendingDoc) {
+            console.log('🔧 InlineDocumentViewer: Found pending document:', pendingDoc);
+            const url = `https://xnpmrafjjqsissbtempj.supabase.co/storage/v1/object/public/documents/${pendingDoc.storagePath}`;
+            setDocumentUrl(url);
+            setDocumentName(pendingDoc.fileName);
+            setIsPdf(pendingDoc.fileName.toLowerCase().endsWith('.pdf'));
+          } else {
+            console.log('🔧 InlineDocumentViewer: No document or pending document found for runsheet:', runsheetId, 'rowIndex:', rowIndex);
+            setError('No document found for this row');
+          }
         }
       } catch (error) {
         console.error('🔧 InlineDocumentViewer: Error loading document:', error);

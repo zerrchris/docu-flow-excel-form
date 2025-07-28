@@ -1218,8 +1218,47 @@ Image: [base64 image data]`;
         return;
       }
 
-      // Get the current runsheet ID from active runsheet or location state
-      const runsheetId = activeRunsheet?.id || location.state?.runsheetId;
+      // Get the current runsheet ID from active runsheet, location state, or spreadsheet data
+      let runsheetId = activeRunsheet?.id || location.state?.runsheetId;
+      
+      // If no runsheet ID from context, try to get it from the current spreadsheet
+      if (!runsheetId) {
+        // Check if we have a saved runsheet that matches our data
+        const currentData = spreadsheetData.filter(row => 
+          Object.values(row).some(value => value.trim() !== '')
+        );
+        
+        if (currentData.length > 0) {
+          // Try to find existing runsheet with matching data
+          try {
+            const { data: existingRunsheets } = await supabase
+              .from('runsheets')
+              .select('id, data')
+              .eq('user_id', user.id)
+              .order('updated_at', { ascending: false })
+              .limit(5);
+              
+            if (existingRunsheets?.length) {
+              for (const sheet of existingRunsheets) {
+                // Check if this runsheet has matching data
+                const sheetData = sheet.data as Record<string, string>[];
+                if (sheetData.length > rowIndex && 
+                    Object.keys(sheetData[rowIndex]).some(key => 
+                      sheetData[rowIndex][key] === currentData[rowIndex]?.[key] && 
+                      sheetData[rowIndex][key].trim() !== ''
+                    )) {
+                  runsheetId = sheet.id;
+                  console.log('🔧 CREATE_DOC_RECORD: Found matching runsheet:', runsheetId);
+                  break;
+                }
+              }
+            }
+          } catch (error) {
+            console.error('Error finding matching runsheet:', error);
+          }
+        }
+      }
+      
       console.log('🔧 CREATE_DOC_RECORD: activeRunsheet?.id:', activeRunsheet?.id);
       console.log('🔧 CREATE_DOC_RECORD: location.state?.runsheetId:', location.state?.runsheetId);
       console.log('🔧 CREATE_DOC_RECORD: location.state full object:', location.state);
