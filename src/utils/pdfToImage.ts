@@ -20,7 +20,7 @@ export interface PDFPage {
  */
 export const convertPDFToImages = async (file: File, scale: number = 2): Promise<PDFPage[]> => {
   try {
-    console.log('Starting PDF to image conversion...', {
+    console.log('🔧 PDF_CONVERSION: Starting PDF to image conversion...', {
       fileName: file.name,
       fileSize: file.size,
       fileType: file.type
@@ -35,15 +35,19 @@ export const convertPDFToImages = async (file: File, scale: number = 2): Promise
       throw new Error('Invalid file: File is not a PDF');
     }
     
+    console.log('🔧 PDF_CONVERSION: File validation passed, reading array buffer...');
+    
     // Convert file to array buffer with timeout
     const arrayBuffer = await Promise.race([
       file.arrayBuffer(),
       new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error('File reading timeout')), 30000)
+        setTimeout(() => reject(new Error('File reading timeout')), 10000)
       )
     ]);
     
-    console.log('File read successfully, size:', arrayBuffer.byteLength);
+    console.log('🔧 PDF_CONVERSION: File read successfully, size:', arrayBuffer.byteLength);
+    
+    console.log('🔧 PDF_CONVERSION: Loading PDF document...');
     
     // Load the PDF document with timeout
     const pdf = await Promise.race([
@@ -53,7 +57,7 @@ export const convertPDFToImages = async (file: File, scale: number = 2): Promise
         verbosity: 0, // Reduce console noise
       }).promise,
       new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error('PDF loading timeout')), 30000)
+        setTimeout(() => reject(new Error('PDF loading timeout')), 20000)
       )
     ]);
     

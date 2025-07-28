@@ -194,6 +194,19 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
                       <p className="text-sm text-muted-foreground">
                         Converting PDF pages to images for better analysis
                       </p>
+                      <Button 
+                        variant="outline" 
+                        onClick={() => {
+                          setIsProcessing(false);
+                          toast({
+                            title: "PDF conversion cancelled",
+                            description: "Please try converting the PDF to an image manually and upload the image instead.",
+                          });
+                        }}
+                        className="mt-2"
+                      >
+                        Cancel Conversion
+                      </Button>
                     </div>
                   </>
                 ) : (
