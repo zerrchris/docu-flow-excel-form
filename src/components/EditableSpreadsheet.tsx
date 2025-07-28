@@ -851,7 +851,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             window.dispatchEvent(responseEvent);
             setPendingUploadRequest(null);
           }
-          return;
+          return null; // Return null instead of undefined
         }
         
         finalName = runsheetName;
@@ -1004,7 +1004,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           setPendingSaveData({ isUpdate: false, shouldClose: true });
           setShowNameConflictDialog(true);
           setIsSaving(false);
-          return;
+          return null; // Return null instead of undefined
         }
         
         // Create new runsheet
