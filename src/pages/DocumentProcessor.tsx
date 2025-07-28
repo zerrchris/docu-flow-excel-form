@@ -960,6 +960,10 @@ Image: [base64 image data]`;
     
     // Generate smart filename if Document File Name is not provided and user has smart naming enabled
     if (!targetData['Document File Name'] || targetData['Document File Name'].trim() === '') {
+      console.log('📄 FILENAME: Document File Name is empty, checking smart naming preferences...');
+      console.log('📄 FILENAME: Current file object:', file);
+      console.log('📄 FILENAME: File name from file object:', file?.name);
+      
       // Check if user has smart naming enabled
       const { data: { user } } = await supabase.auth.getUser();
       let useSmartNaming = false;
@@ -975,18 +979,25 @@ Image: [base64 image data]`;
           .maybeSingle();
         
         useSmartNaming = preferences?.use_smart_naming ?? true; // Default to true if no preferences
+        console.log('📄 FILENAME: User preferences found:', preferences);
+        console.log('📄 FILENAME: Use smart naming:', useSmartNaming);
       } else {
         useSmartNaming = true; // Default to true for anonymous users
+        console.log('📄 FILENAME: No user found, defaulting to smart naming');
       }
       
       if (useSmartNaming) {
         const smartFilename = await generateSmartFilename(targetData);
         targetData['Document File Name'] = smartFilename;
+        console.log('📄 FILENAME: Generated smart filename:', smartFilename);
       } else {
         // Use original filename if available, otherwise use a simple fallback
         const originalFilename = file?.name || `document_${Date.now()}.pdf`;
         targetData['Document File Name'] = originalFilename;
+        console.log('📄 FILENAME: Using original filename:', originalFilename);
       }
+    } else {
+      console.log('📄 FILENAME: Document File Name already set:', targetData['Document File Name']);
     }
     
     // Check if any field has data
