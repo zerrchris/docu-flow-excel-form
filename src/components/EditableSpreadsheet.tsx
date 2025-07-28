@@ -165,21 +165,31 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         // Store the pending upload request for after save completes
         setPendingUploadRequest(event.detail);
         
-        await saveRunsheet();
+        // Save the runsheet and get the actual saved runsheet ID
+        const savedRunsheetResult = await saveRunsheet();
         
-        // After save, the currentRunsheetId should be set
-        if (currentRunsheetId) {
+        // Use the actual saved runsheet ID from the database, not the state
+        let runsheetIdToReturn = currentRunsheetId;
+        
+        // If we just created a new runsheet, use that ID
+        if (savedRunsheetResult && savedRunsheetResult.id) {
+          runsheetIdToReturn = savedRunsheetResult.id;
+        }
+        
+        if (runsheetIdToReturn) {
           // Send success response with the runsheet ID
           const responseEvent = new CustomEvent('runsheetSaveResponse', {
-            detail: { success: true, runsheetId: currentRunsheetId }
+            detail: { success: true, runsheetId: runsheetIdToReturn }
           });
           window.dispatchEvent(responseEvent);
+          console.log('🔧 EditableSpreadsheet: Sent success response with runsheet ID:', runsheetIdToReturn);
         } else {
           // Send error response
           const responseEvent = new CustomEvent('runsheetSaveResponse', {
-            detail: { success: false, error: 'Failed to save runsheet - no ID available' }
+            detail: { success: false, error: 'Failed to save runsheet - no ID available after save' }
           });
           window.dispatchEvent(responseEvent);
+          console.log('🔧 EditableSpreadsheet: Sent error response - no runsheet ID available');
         }
       } catch (error) {
         console.error('Error saving runsheet before upload:', error);
@@ -748,7 +758,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   };
 
   // Save runsheet to Supabase
-  const saveRunsheet = async () => {
+  const saveRunsheet = async (): Promise<{ id: string } | null> => {
     console.log('Save button clicked!');
     console.log('User state:', user);
     console.log('Runsheet name:', runsheetName);
@@ -927,6 +937,9 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         title: "Runsheet saved",
         description: `"${finalName}" has been saved successfully.`,
       });
+      
+      // Return the saved runsheet data
+      return savedRunsheet;
     } catch (error: any) {
       console.error('Save failed:', error);
       toast({
@@ -934,6 +947,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         description: error.message,
         variant: "destructive",
       });
+      return null;
     } finally {
       setIsSaving(false);
       console.log('Save process completed');
