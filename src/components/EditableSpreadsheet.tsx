@@ -3401,30 +3401,59 @@ ${extractionFields}`
       console.log('🔍 Current data before update:', data);
       console.log('🔍 Available columns:', columns);
 
-      // Create mapping from extracted keys to column names
-      // Since the AI returns keys that match the column names exactly, we mostly use direct mapping
-      const keyMapping: Record<string, string> = {
-        // Direct mappings for exact matches
-        "Book and Page": "Book and Page",
-        "Instrument Number": "Instrument Number", 
-        "Instrument Type": "Instrument Type",
-        "Recorded": "Recorded",
-        "Dated": "Dated",
-        "Grantor(s)": "Grantor(s)",
-        "Grantee(s)": "Grantee(s)", 
-        "Description": "Description",
-        "Comments": "Comments",
-        "Document File Name": "Document File Name"
+      // Create flexible mapping from extracted keys to column names
+      // The AI should return keys that match column names, but we'll handle some common variations
+      const createFlexibleMapping = (extractedData: any, availableColumns: string[]): Record<string, string> => {
+        const mapping: Record<string, string> = {};
+        
+        Object.keys(extractedData).forEach(aiKey => {
+          // First try exact match
+          if (availableColumns.includes(aiKey)) {
+            mapping[aiKey] = aiKey;
+            return;
+          }
+          
+          // Try case-insensitive match
+          const lowerAiKey = aiKey.toLowerCase();
+          const matchingColumn = availableColumns.find(col => col.toLowerCase() === lowerAiKey);
+          if (matchingColumn) {
+            mapping[aiKey] = matchingColumn;
+            return;
+          }
+          
+          // Try partial matches for common variations
+          const partialMatch = availableColumns.find(col => {
+            const lowerCol = col.toLowerCase();
+            const words = lowerCol.split(/[\s\/\-_]+/);
+            const aiWords = lowerAiKey.split(/[\s\/\-_]+/);
+            
+            // Check if any significant words match
+            return words.some(word => 
+              word.length > 2 && aiWords.some(aiWord => 
+                aiWord.includes(word) || word.includes(aiWord)
+              )
+            );
+          });
+          
+          if (partialMatch) {
+            mapping[aiKey] = partialMatch;
+          }
+        });
+        
+        return mapping;
       };
+
+      const keyMapping = createFlexibleMapping(extractedData, columns);
+      console.log('🔍 Generated key mapping:', keyMapping);
 
       // Map the extracted data to use column names as keys
       const mappedData: Record<string, string> = {};
       
       Object.entries(extractedData).forEach(([key, value]) => {
-        const mappedKey = keyMapping[key] || key;
+        const mappedKey = keyMapping[key];
         
-        // Only include data for columns that actually exist
-        if (columns.includes(mappedKey)) {
+        // Only include data for columns that actually exist and have a mapping
+        if (mappedKey && columns.includes(mappedKey)) {
           // Handle object values (like complex Grantor/Grantee data)
           let stringValue: string;
           if (typeof value === 'object' && value !== null) {
@@ -3443,6 +3472,8 @@ ${extractionFields}`
           }
           
           mappedData[mappedKey] = stringValue;
+        } else {
+          console.log('🔍 Skipping unmapped key:', key, 'value:', value);
         }
       });
 
