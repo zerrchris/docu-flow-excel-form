@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { ArrowLeft, Users, Shield, UserCheck, Settings, Home } from 'lucide-react';
 import extractorLogo from '@/assets/document-extractor-logo.png';
 import AuthButton from '@/components/AuthButton';
-import ActiveRunsheetButton from '@/components/ActiveRunsheetButton';
+
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 interface Profile {
@@ -245,7 +245,7 @@ const Admin: React.FC = () => {
                 <Home className="h-4 w-4" />
                 Dashboard
               </Button>
-              <ActiveRunsheetButton />
+              
               <AuthButton />
             </div>
           </div>
