@@ -303,9 +303,13 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
 
           // Update the runsheet data to show the linked document
           if (result.document) {
+            console.log('🔧 MultipleFileUpload: Dispatching events for document upload');
+            console.log('🔧 RunsheetId:', runsheetId, 'RowIndex:', currentRowIndex, 'Document:', result.document);
+            
             // Wait a moment for the database transaction to complete
             setTimeout(() => {
               // Trigger a custom event to notify the parent component to refresh data
+              console.log('🔧 Dispatching documentRecordCreated event');
               window.dispatchEvent(new CustomEvent('documentRecordCreated', {
                 detail: {
                   runsheetId: runsheetId,
@@ -315,6 +319,7 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
               }));
               
               // Also trigger a runsheet data refresh and update the specific row
+              console.log('🔧 Dispatching updateDocumentFilename event');
               window.dispatchEvent(new CustomEvent('updateDocumentFilename', {
                 detail: {
                   runsheetId: runsheetId,
@@ -324,10 +329,11 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
               }));
 
               // Force a refresh of the entire runsheet data to show linked documents
+              console.log('🔧 Dispatching refreshRunsheetData event');
               window.dispatchEvent(new CustomEvent('refreshRunsheetData', {
                 detail: { runsheetId: runsheetId }
               }));
-            }, 500); // Give database time to process
+            }, 1000); // Increased wait time for database consistency
           }
         } else {
           // Update status to error

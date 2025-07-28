@@ -467,6 +467,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     const handleRefreshRunsheetData = async (event: CustomEvent) => {
       const { runsheetId } = event.detail;
       console.log('🔧 EditableSpreadsheet: Refresh runsheet data event received for:', runsheetId);
+      console.log('🔧 EditableSpreadsheet: Current runsheet ID:', currentRunsheetId);
+      console.log('🔧 EditableSpreadsheet: IDs match:', runsheetId === currentRunsheetId);
       
       if (runsheetId === currentRunsheetId && user) {
         console.log('🔧 EditableSpreadsheet: Runsheet ID matches, refreshing data from database');
