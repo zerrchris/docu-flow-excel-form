@@ -851,12 +851,30 @@ Image: [base64 image data]`;
     console.log('🚀 ADD_TO_SPREADSHEET: location.state:', location.state);
     console.log('🚀 ADD_TO_SPREADSHEET: location.state?.runsheet?.id:', location.state?.runsheet?.id);
     
-    // Only check if runsheet exists, remove the hasUnsavedChanges check as it's too strict
-    const runsheetId = activeRunsheet?.id || location.state?.runsheet?.id;
-    console.log('🚀 Calculated runsheetId:', runsheetId);
+    // Check localStorage for active runsheet as fallback
+    let runsheetId = activeRunsheet?.id || location.state?.runsheet?.id;
     
     if (!runsheetId) {
-      console.log('🚀 ERROR: No runsheet ID found!');
+      console.log('🚀 No activeRunsheet or location.state, checking localStorage...');
+      try {
+        const storedRunsheet = localStorage.getItem('activeRunsheet');
+        if (storedRunsheet) {
+          const parsed = JSON.parse(storedRunsheet);
+          runsheetId = parsed.id;
+          console.log('🚀 Found runsheet in localStorage:', runsheetId);
+          
+          // Restore the active runsheet
+          setActiveRunsheet(parsed);
+        }
+      } catch (error) {
+        console.log('🚀 Error reading localStorage:', error);
+      }
+    }
+    
+    console.log('🚀 Final calculated runsheetId:', runsheetId);
+    
+    if (!runsheetId) {
+      console.log('🚀 ERROR: No runsheet ID found anywhere!');
       toast({
         title: "No Runsheet Selected",
         description: "Please select or create a runsheet first.",
