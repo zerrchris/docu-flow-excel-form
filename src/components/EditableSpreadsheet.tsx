@@ -554,11 +554,9 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       console.log('🔧 EditableSpreadsheet: IDs to check:', idsToCheck, 'activeRunsheetId:', activeRunsheetId, 'hasMatch:', hasMatch);
       
       if (hasMatch) {
-        console.log('🔍 EditableSpreadsheet: Runsheet ID matches, saving current data and refreshing document map');
+        console.log('🔍 EditableSpreadsheet: Runsheet ID matches, refreshing document map only');
         
-        // FIRST: Save current data to database before refreshing
-        console.log('🔍 EditableSpreadsheet: Saving current data before refresh');
-        await forceSave();
+        // Only refresh document map, don't force save to avoid interrupting user input
         
         // THEN: Refresh the entire document map
         if (user && activeRunsheetId) {
