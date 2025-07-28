@@ -30,17 +30,24 @@ const InlineDocumentViewer: React.FC<InlineDocumentViewerProps> = ({
         setIsLoading(true);
         setError(null);
         
+        console.log('🔧 InlineDocumentViewer: Loading document for runsheet:', runsheetId, 'rowIndex:', rowIndex);
         const document = await DocumentService.getDocumentForRow(runsheetId, rowIndex);
+        console.log('🔧 InlineDocumentViewer: Document found:', document);
+        
         if (document) {
           const url = DocumentService.getDocumentUrl(document.file_path);
+          console.log('🔧 InlineDocumentViewer: Generated URL:', url);
+          console.log('🔧 InlineDocumentViewer: File path from document:', document.file_path);
+          
           setDocumentUrl(url);
           setDocumentName(document.original_filename);
           setIsPdf(document.content_type === 'application/pdf' || document.original_filename.toLowerCase().endsWith('.pdf'));
         } else {
+          console.log('🔧 InlineDocumentViewer: No document found for runsheet:', runsheetId, 'rowIndex:', rowIndex);
           setError('No document found for this row');
         }
       } catch (error) {
-        console.error('Error loading document:', error);
+        console.error('🔧 InlineDocumentViewer: Error loading document:', error);
         setError('Failed to load document');
       } finally {
         setIsLoading(false);
