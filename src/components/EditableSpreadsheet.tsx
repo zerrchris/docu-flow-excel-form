@@ -2244,6 +2244,14 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     }
     
     setRunsheetName(uniqueName);
+    
+    // Generate default column instructions for all columns
+    const defaultInstructions: Record<string, string> = {};
+    finalHeaders.forEach(header => {
+      defaultInstructions[header] = generateExtractionSuggestion(header);
+    });
+    setColumnInstructions(defaultInstructions);
+    onColumnInstructionsChange?.(defaultInstructions);
 
     // Auto-save the runsheet with imported data
     setTimeout(() => {
@@ -2535,6 +2543,14 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         }, {} as Record<string, string>);
       });
       setData(updatedData);
+      
+      // Add default instruction for the new column
+      const newInstructions = {
+        ...columnInstructions,
+        [newColumnName]: generateExtractionSuggestion(newColumnName)
+      };
+      setColumnInstructions(newInstructions);
+      onColumnInstructionsChange?.(newInstructions);
     }
   };
 
@@ -2560,6 +2576,14 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         }, {} as Record<string, string>);
       });
       setData(updatedData);
+      
+      // Add default instruction for the new column
+      const newInstructions = {
+        ...columnInstructions,
+        [newColumnName]: generateExtractionSuggestion(newColumnName)
+      };
+      setColumnInstructions(newInstructions);
+      onColumnInstructionsChange?.(newInstructions);
     }
   };
 
