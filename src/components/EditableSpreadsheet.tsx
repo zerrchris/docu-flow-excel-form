@@ -4120,7 +4120,7 @@ ${extractionFields}`
                 <strong>Option 2:</strong> Save with the suggested name: "{nameConflictData?.suggestedName}"
               </p>
             </div>
-            <AlertDialogFooter>
+            <AlertDialogFooter className="justify-start">
               <AlertDialogCancel onClick={handleCancelSave}>
                 Cancel
               </AlertDialogCancel>
