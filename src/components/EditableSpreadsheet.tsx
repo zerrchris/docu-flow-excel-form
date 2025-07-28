@@ -3826,15 +3826,15 @@ ${extractionFields}`
                        {showDocumentFileNameColumn ? <EyeOff className="h-3 w-3 mr-1" /> : <Eye className="h-3 w-3 mr-1" />}
                        {showDocumentFileNameColumn ? 'Hide' : 'Show'} File Name Column
                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowDocumentNamingDialog(true)}
-                        className="text-xs text-purple-600 hover:text-purple-700"
-                      >
-                       <Sparkles className="h-3 w-3 mr-1" />
-                        Smart File Name Settings
-                     </Button>
+                       <Button
+                         variant="outline"
+                         size="sm"
+                         onClick={() => setShowDocumentNamingDialog(true)}
+                         className="text-xs"
+                       >
+                        <Sparkles className="h-3 w-3 mr-1 text-purple-600" />
+                         Smart File Name Settings
+                      </Button>
                    </div>
                  </TableHead>
                </TableRow>
