@@ -1101,7 +1101,7 @@ Image: [base64 image data]`;
         const documentInfo = {
           rowIndex,
           storagePath: data['Storage Path'],
-          fileName: data['Document File Name'] || 'Unknown Document'
+          fileName: data['Document File Name'] || file?.name || 'Unknown Document'
         };
         
         // Store in sessionStorage to be processed later
@@ -1114,7 +1114,7 @@ Image: [base64 image data]`;
       }
 
       const storagePath = data['Storage Path'];
-      const fileName = data['Document File Name'] || 'Unknown Document';
+      const fileName = data['Document File Name'] || file?.name || 'Unknown Document';
       
       if (storagePath) {
         console.log('🔧 DocumentProcessor: Creating document record with runsheet ID:', runsheetId);
