@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { FileText, Camera, FolderOpen, Upload, Users, Settings, Plus, Cloud, Columns } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import extractorLogo from '@/assets/document-extractor-logo.png';
 import AuthButton from '@/components/AuthButton';
+import { toast } from '@/hooks/use-toast';
+import { ExtractionPreferencesService } from '@/services/extractionPreferences';
 
 import { useActiveRunsheet } from '@/hooks/useActiveRunsheet';
 import OpenRunsheetDialog from '@/components/OpenRunsheetDialog';
@@ -16,6 +20,8 @@ const Dashboard: React.FC = () => {
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [showOpenDialog, setShowOpenDialog] = useState(false);
   const [showColumnPreferences, setShowColumnPreferences] = useState(false);
+  const [showNameNewRunsheetDialog, setShowNameNewRunsheetDialog] = useState(false);
+  const [newRunsheetName, setNewRunsheetName] = useState('');
   const navigate = useNavigate();
   const { activeRunsheet } = useActiveRunsheet();
 
@@ -34,12 +40,56 @@ const Dashboard: React.FC = () => {
     initAuth();
   }, []);
 
+  const handleCreateNewRunsheet = async () => {
+    if (!newRunsheetName.trim()) {
+      toast({
+        title: "Name required",
+        description: "Please enter a name for your runsheet.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      // Get user preferences for initial columns
+      const preferences = await ExtractionPreferencesService.getDefaultPreferences();
+      const initialColumns = preferences?.columns || ['Item Description', 'Category', 'Model/Part Number', 'Serial Number', 'Quantity', 'Unit Price', 'Total Price', 'Notes'];
+      const initialInstructions = preferences?.column_instructions || {};
+
+      const finalName = newRunsheetName.trim();
+      
+      // Navigate to the runsheet page with the name and preferences
+      navigate('/runsheet', { 
+        state: { 
+          newRunsheetName: finalName,
+          initialColumns,
+          initialInstructions
+        } 
+      });
+      
+      setShowNameNewRunsheetDialog(false);
+      setNewRunsheetName('');
+      
+      toast({
+        title: "New runsheet created",
+        description: `"${finalName}" is ready for your data.`,
+      });
+    } catch (error) {
+      console.error('Error creating new runsheet:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create new runsheet. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const workflowOptions = [
     {
       title: "New Runsheet",
       description: "Start with a blank runsheet",
       icon: Plus,
-      path: "/runsheet"
+      action: "new-runsheet"
     },
     {
       title: "Open Runsheet",
@@ -179,6 +229,8 @@ const Dashboard: React.FC = () => {
                     setShowOpenDialog(true);
                   } else if (option.action === "column-preferences") {
                     setShowColumnPreferences(true);
+                  } else if (option.action === "new-runsheet") {
+                    setShowNameNewRunsheetDialog(true);
                   } else if (option.path) {
                     navigate(option.path);
                   }
@@ -202,6 +254,8 @@ const Dashboard: React.FC = () => {
                           setShowOpenDialog(true);
                         } else if (option.action === "column-preferences") {
                           setShowColumnPreferences(true);
+                        } else if (option.action === "new-runsheet") {
+                          setShowNameNewRunsheetDialog(true);
                         } else if (option.path) {
                           navigate(option.path);
                         }
@@ -235,6 +289,48 @@ const Dashboard: React.FC = () => {
         open={showColumnPreferences} 
         onOpenChange={setShowColumnPreferences} 
       />
+
+      {/* Name New Runsheet Dialog */}
+      <Dialog open={showNameNewRunsheetDialog} onOpenChange={setShowNameNewRunsheetDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Name Your Runsheet</DialogTitle>
+            <DialogDescription>
+              Choose a descriptive name for your new runsheet. This will help you identify it later.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Input
+              placeholder="Enter runsheet name..."
+              value={newRunsheetName}
+              onChange={(e) => setNewRunsheetName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && newRunsheetName.trim()) {
+                  handleCreateNewRunsheet();
+                }
+              }}
+              autoFocus
+            />
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowNameNewRunsheetDialog(false);
+                setNewRunsheetName('');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreateNewRunsheet}
+              disabled={!newRunsheetName.trim()}
+            >
+              Create Runsheet
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
