@@ -122,8 +122,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       console.error('Error loading emergency draft:', error);
     }
     
-    // Ensure we always have at least 20 rows
-    const minRows = 20;
+    // Ensure we always have at least 100 rows for bulk operations
+    const minRows = 100;
     const existingRows = initialData.length;
     const emptyRows = Array.from({ length: Math.max(0, minRows - existingRows) }, () => {
       const row: Record<string, string> = {};
@@ -132,6 +132,22 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     });
     return [...initialData, ...emptyRows];
   });
+
+  // Helper function to ensure data has minimum number of rows
+  const ensureMinimumRows = useCallback((data: Record<string, string>[], columns: string[]): Record<string, string>[] => {
+    const minRows = 100;
+    const existingRows = data.length;
+    
+    if (existingRows >= minRows) return data;
+    
+    const emptyRows = Array.from({ length: minRows - existingRows }, () => {
+      const row: Record<string, string> = {};
+      columns.forEach(col => row[col] = '');
+      return row;
+    });
+    
+    return [...data, ...emptyRows];
+  }, []);
   const [editingCell, setEditingCell] = useState<{rowIndex: number, column: string} | null>(null);
   const [cellValue, setCellValue] = useState<string>('');
   const [selectedCell, setSelectedCell] = useState<{rowIndex: number, column: string} | null>(null);
@@ -527,6 +543,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
               console.log('🔍 EditableSpreadsheet: Current data length before refresh:', data.length);
               console.log('🔍 EditableSpreadsheet: New data from database:', runsheetData.data);
               const newData = (runsheetData.data as Record<string, string>[]) || [];
+              const dataWithMinRows = ensureMinimumRows(newData, columns);
               
               // Check if the new data actually contains the document we just processed
               const hasDocumentAtRow = newData[rowIndex] && (
@@ -539,7 +556,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
               
               if (hasDocumentAtRow) {
                 console.log('🔍 EditableSpreadsheet: Setting new data with document info');
-                setData(newData);
+                setData(dataWithMinRows);
               } else {
                 console.log('🔍 EditableSpreadsheet: New data missing document info, keeping current data');
               }
@@ -685,7 +702,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             console.log('🔧 EditableSpreadsheet: refreshRunsheetData - Current data length:', data.length);
             console.log('🔧 EditableSpreadsheet: refreshRunsheetData - New data from DB:', runsheet.data);
             // Properly type-cast the data from JSON to the expected format
-            setData((runsheet.data as Record<string, string>[]) || []);
+            const dataWithMinRows = ensureMinimumRows((runsheet.data as Record<string, string>[]) || [], (runsheet.columns as string[]) || []);
+            setData(dataWithMinRows);
             setColumns((runsheet.columns as string[]) || []);
             setRunsheetName(runsheet.name || 'Untitled Runsheet');
             setCurrentRunsheetId(runsheet.id);
@@ -1636,7 +1654,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     console.log('🔧 Debug: Setting runsheet data:', runsheet.data);
     console.log('🔧 Debug: Data length:', runsheet.data?.length);
     console.log('🔧 Debug: First row sample:', runsheet.data?.[0]);
-    setData(runsheet.data);
+    const dataWithMinRows = ensureMinimumRows(runsheet.data || [], runsheet.columns || []);
+    setData(dataWithMinRows);
     setColumnInstructions(finalColumnInstructions);
     onColumnInstructionsChange?.(finalColumnInstructions);
     
