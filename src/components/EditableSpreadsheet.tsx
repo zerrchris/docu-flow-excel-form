@@ -1929,7 +1929,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   // Handle CSV file upload
   const handleCSVUpload = (file: File, fileName: string) => {
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const content = e.target?.result as string;
         const rows = content.split('\n');
@@ -1946,7 +1946,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             return rowData;
           });
 
-        updateSpreadsheetData(headers, parsedData, fileName);
+        await updateSpreadsheetData(headers, parsedData, fileName);
       } catch (error) {
         console.error('Error parsing CSV:', error);
         toast({
@@ -1962,7 +1962,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   // Handle Excel file upload
   const handleExcelUpload = (file: File, fileName: string) => {
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const data = new Uint8Array(e.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: 'array' });
@@ -1991,7 +1991,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             return rowData;
           });
 
-        updateSpreadsheetData(headers, parsedData, fileName);
+        await updateSpreadsheetData(headers, parsedData, fileName);
       } catch (error) {
         console.error('Error parsing Excel file:', error);
         toast({
@@ -2176,7 +2176,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   };
 
   // Helper function to update spreadsheet data
-  const updateSpreadsheetData = (headers: string[], parsedData: Record<string, string>[], fileName: string) => {
+  const updateSpreadsheetData = async (headers: string[], parsedData: Record<string, string>[], fileName: string) => {
     // Document File Name column is no longer automatically added - users can toggle it if needed
     let finalHeaders = [...headers];
     
@@ -2210,9 +2210,40 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       onDataChange(updatedParsedData); // Only pass the actual data, not the empty rows
     }
     
-    // Update runsheet name based on filename
+    // Generate unique runsheet name based on filename
     const fileNameWithoutExt = fileName.replace(/\.[^/.]+$/, ""); // Remove extension
-    setRunsheetName(fileNameWithoutExt || 'Imported Runsheet');
+    let uniqueName = fileNameWithoutExt || 'Imported Runsheet';
+    
+    // Check if name already exists and generate unique name if needed
+    if (user) {
+      try {
+        const { data: existingRunsheets } = await supabase
+          .from('runsheets')
+          .select('name')
+          .eq('user_id', user.id)
+          .ilike('name', `${uniqueName}%`);
+        
+        if (existingRunsheets && existingRunsheets.length > 0) {
+          const existingNames = existingRunsheets.map(r => r.name);
+          let counter = 1;
+          let tempName = uniqueName;
+          
+          while (existingNames.includes(tempName)) {
+            tempName = `${uniqueName} (${counter})`;
+            counter++;
+          }
+          
+          uniqueName = tempName;
+        }
+      } catch (error) {
+        console.error('Error checking existing runsheet names:', error);
+        // Fallback to timestamp if there's an error
+        const timestamp = Date.now();
+        uniqueName = `${uniqueName}_${timestamp}`;
+      }
+    }
+    
+    setRunsheetName(uniqueName);
 
     // Auto-save the runsheet with imported data
     setTimeout(() => {
