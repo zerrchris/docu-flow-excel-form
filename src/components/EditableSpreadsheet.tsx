@@ -3705,6 +3705,22 @@ ${extractionFields}`
                       </div>
                     </TableHead>
                   )}
+                  
+                  {/* Show Documents tab - only when document linker is hidden */}
+                  {!showDocumentLinker && (
+                    <TableHead 
+                      className="border-r border-border relative p-0 bg-primary/10 cursor-pointer hover:bg-primary/20 transition-colors"
+                      style={{ width: "120px", minWidth: "120px" }}
+                      onClick={() => setShowDocumentLinker(true)}
+                    >
+                      <div className="w-full h-full px-4 py-2 flex items-center justify-center">
+                        <div className="flex items-center gap-2 text-primary font-medium">
+                          <ChevronRight className="h-4 w-4" />
+                          <span className="text-sm">Documents</span>
+                        </div>
+                      </div>
+                    </TableHead>
+                  )}
                </TableRow>
              </TableHeader>
 
@@ -3943,6 +3959,22 @@ ${extractionFields}`
                           />
                          </TableCell>
                        )}
+                       
+                       {/* Show Documents tab cell - only when document linker is hidden */}
+                       {!showDocumentLinker && (
+                         <TableCell 
+                           className="border-r border-border last:border-r-0 p-2 bg-primary/5 cursor-pointer hover:bg-primary/10 transition-colors"
+                           style={{ width: "120px", minWidth: "120px" }}
+                           onClick={() => setShowDocumentLinker(true)}
+                         >
+                           <div className="flex items-center justify-center h-full text-primary">
+                             <div className="flex items-center gap-2">
+                               <ChevronRight className="h-4 w-4" />
+                               <span className="text-sm font-medium">Show</span>
+                             </div>
+                           </div>
+                         </TableCell>
+                       )}
                       
                       {/* Row resize handle */}
                       <div
@@ -3958,22 +3990,6 @@ ${extractionFields}`
             </div>
 
         </div>
-        
-        {/* Floating tab to show document linker when hidden */}
-        {!showDocumentLinker && (
-          <div className="fixed right-0 top-1/2 transform -translate-y-1/2 z-50">
-            <Button
-              onClick={() => setShowDocumentLinker(true)}
-              className="rounded-l-lg rounded-r-none px-2 py-6 bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg"
-              size="sm"
-            >
-              <div className="flex flex-col items-center gap-1">
-                <ChevronRight className="h-4 w-4" />
-                <span className="text-xs transform rotate-90 whitespace-nowrap">Documents</span>
-              </div>
-            </Button>
-          </div>
-        )}
 
         <div className="flex justify-between items-center text-sm text-muted-foreground pt-2">
           <Dialog open={showAddRowsDialog} onOpenChange={setShowAddRowsDialog}>
