@@ -51,33 +51,35 @@ const Dashboard: React.FC = () => {
     }
 
     try {
-      // Get user preferences for initial columns
+      // Get user preferences for initial columns  
       const preferences = await ExtractionPreferencesService.getDefaultPreferences();
       const initialColumns = preferences?.columns || ['Item Description', 'Category', 'Model/Part Number', 'Serial Number', 'Quantity', 'Unit Price', 'Total Price', 'Notes'];
-      const initialInstructions = preferences?.column_instructions || {};
 
       const finalName = newRunsheetName.trim();
       
-      // Navigate to the runsheet page with the name and preferences
-      navigate('/runsheet', { 
-        state: { 
-          newRunsheetName: finalName,
-          initialColumns,
-          initialInstructions
-        } 
-      });
+      // Navigate to runsheet and trigger the same new runsheet creation as the + button
+      navigate('/runsheet');
+      
+      // Small delay to ensure navigation completes, then trigger the same event as the + button
+      setTimeout(() => {
+        // Dispatch the same event that the + button's "Start New Runsheet" option triggers
+        const event = new CustomEvent('createNewRunsheetFromDashboard', {
+          detail: {
+            name: finalName,
+            columns: initialColumns,
+            instructions: preferences?.column_instructions || {}
+          }
+        });
+        window.dispatchEvent(event);
+      }, 100);
       
       setShowNameNewRunsheetDialog(false);
       setNewRunsheetName('');
       
-      toast({
-        title: "New runsheet created",
-        description: `"${finalName}" is ready for your data.`,
-      });
     } catch (error) {
       console.error('Error creating new runsheet:', error);
       toast({
-        title: "Error",
+        title: "Error", 
         description: "Failed to create new runsheet. Please try again.",
         variant: "destructive"
       });

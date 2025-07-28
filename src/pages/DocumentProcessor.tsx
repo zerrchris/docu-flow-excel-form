@@ -69,9 +69,6 @@ const DocumentProcessor: React.FC = () => {
   
   // Preferences loading state
   const [isLoadingPreferences, setIsLoadingPreferences] = useState(true);
-  
-  // Track if we've initialized from navigation state to prevent re-initialization
-  const [hasInitializedFromNavigation, setHasInitializedFromNavigation] = useState(false);
 
   // Note: Removed activeRunsheet syncing since we're removing tab functionality
   
@@ -129,32 +126,6 @@ const DocumentProcessor: React.FC = () => {
   // Handle selected runsheet from navigation state
   useEffect(() => {
     const selectedRunsheet = location.state?.runsheet;
-    
-    // Handle new runsheet creation from Dashboard
-    if (location.state?.newRunsheetName && !hasInitializedFromNavigation) {
-      const { newRunsheetName, initialColumns, initialInstructions } = location.state;
-      
-      console.log('Initializing new runsheet from dashboard:', newRunsheetName, initialColumns);
-      
-      // Set up the new runsheet with user's preferences
-      setColumns(initialColumns || DEFAULT_COLUMNS);
-      setColumnInstructions(initialInstructions || DEFAULT_EXTRACTION_INSTRUCTIONS);
-      setSpreadsheetData([]);
-      setFormData({});
-      setFile(null);
-      setPreviewUrl(null);
-      setPendingFiles([]);
-      setHasUnsavedChanges(false);
-      
-      // Mark as initialized to prevent re-initialization
-      setHasInitializedFromNavigation(true);
-      
-      // Dispatch event to reset the spreadsheet to fresh state
-      const resetEvent = new CustomEvent('startNewRunsheet');
-      window.dispatchEvent(resetEvent);
-      
-      return;
-    }
     
     // Use ref to prevent infinite loops - only load each runsheet once
     if (selectedRunsheet && loadedRunsheetRef.current !== selectedRunsheet.id) {

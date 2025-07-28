@@ -202,8 +202,43 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
     window.addEventListener('saveRunsheetBeforeUpload', handleSaveRequest as EventListener);
     
+    // Handle new runsheet creation from Dashboard
+    const handleDashboardNewRunsheet = (event: CustomEvent) => {
+      const { name, columns: newColumns, instructions } = event.detail;
+      
+      // Create the new runsheet using the same logic as the + button
+      setRunsheetName(name);
+      setData(Array.from({ length: 20 }, () => {
+        const row: Record<string, string> = {};
+        newColumns.forEach((col: string) => row[col] = '');
+        return row;
+      }));
+      setColumns(newColumns);
+      setColumnInstructions(instructions);
+      setSelectedCell(null);
+      setEditingCell(null);
+      setCellValue('');
+      setSelectedRange(null);
+      setHasUnsavedChanges(false);
+      setLastSavedState('');
+      onDataChange?.(Array.from({ length: 20 }, () => {
+        const row: Record<string, string> = {};
+        newColumns.forEach((col: string) => row[col] = '');
+        return row;
+      }));
+      onColumnChange(newColumns);
+      
+      toast({
+        title: "New runsheet created",
+        description: `"${name}" is ready for your data.`,
+      });
+    };
+
+    window.addEventListener('createNewRunsheetFromDashboard', handleDashboardNewRunsheet as EventListener);
+    
     return () => {
       window.removeEventListener('saveRunsheetBeforeUpload', handleSaveRequest as EventListener);
+      window.removeEventListener('createNewRunsheetFromDashboard', handleDashboardNewRunsheet as EventListener);
     };
   }, [currentRunsheetId, runsheetName, data, columns, columnInstructions]);
   
