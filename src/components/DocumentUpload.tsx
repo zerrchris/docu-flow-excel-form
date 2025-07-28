@@ -32,6 +32,8 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
       return file; // Not a PDF, return as-is
     }
 
+    console.log('🔧 PDF_CONVERSION: Starting conversion for:', file.name, 'Size:', file.size);
+    
     try {
       setIsProcessing(true);
       
@@ -40,13 +42,24 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
         description: "Processing PDF pages for better data extraction...",
       });
 
-      // Convert PDF to images
-      const pdfPages = await convertPDFToImages(file, 2); // Scale factor of 2 for good quality
+      console.log('🔧 PDF_CONVERSION: Calling convertPDFToImages...');
+      
+      // Convert PDF to images with timeout
+      const conversionPromise = convertPDFToImages(file, 2);
+      const timeoutPromise = new Promise<never>((_, reject) => 
+        setTimeout(() => reject(new Error('PDF conversion timeout after 60 seconds')), 60000)
+      );
+      
+      const pdfPages = await Promise.race([conversionPromise, timeoutPromise]);
+      
+      console.log('🔧 PDF_CONVERSION: Conversion completed, pages:', pdfPages.length);
       
       if (pdfPages.length === 1) {
         // Single page PDF - return as single image file
         const imageFileName = file.name.replace(/\.pdf$/i, '_page1.png');
         const imageFile = createFileFromBlob(pdfPages[0].blob, imageFileName);
+        
+        console.log('🔧 PDF_CONVERSION: Single page converted to:', imageFileName);
         
         toast({
           title: "PDF converted successfully",
@@ -62,6 +75,8 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
             return createFileFromBlob(page.blob, imageFileName);
           });
           
+          console.log('🔧 PDF_CONVERSION: Multi-page converted to:', imageFiles.length, 'files');
+          
           toast({
             title: "PDF converted successfully",
             description: `Converted to ${imageFiles.length} image files`,
@@ -75,6 +90,8 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
           const imageFileName = file.name.replace(/\.pdf$/i, '_page1.png');
           const imageFile = createFileFromBlob(pdfPages[0].blob, imageFileName);
           
+          console.log('🔧 PDF_CONVERSION: Multi-page PDF, using first page:', imageFileName);
+          
           toast({
             title: "PDF converted successfully",
             description: `Using first page: ${imageFileName}`,
@@ -84,16 +101,18 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
         }
       }
     } catch (error) {
-      console.error('PDF conversion failed:', error);
+      console.error('🔧 PDF_CONVERSION: Conversion failed:', error);
+      
       toast({
         title: "PDF conversion failed",
-        description: "Unable to convert PDF. Please try converting to image manually.",
+        description: error instanceof Error ? error.message : "Unable to convert PDF. Please try converting to image manually.",
         variant: "destructive",
       });
       
       // Return original PDF file as fallback
       return file;
     } finally {
+      console.log('🔧 PDF_CONVERSION: Setting isProcessing to false');
       setIsProcessing(false);
     }
   };
