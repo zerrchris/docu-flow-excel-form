@@ -566,49 +566,9 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             console.log('🔧 EditableSpreadsheet: New document map:', documents);
             updateDocumentMap(documents);
             
-            // ALSO refresh the runsheet data to get updated Document File Name fields
-            console.log('🔍 EditableSpreadsheet: Fetching updated runsheet data');
-            const { data: runsheetData, error } = await supabase
-              .from('runsheets')
-              .select('data, columns')
-              .eq('id', activeRunsheetId)
-              .single();
-              
-            if (!error && runsheetData) {
-              console.log('🔍 EditableSpreadsheet: Current data length before refresh:', data.length);
-              console.log('🔍 EditableSpreadsheet: New data from database:', runsheetData.data);
-              const newData = (runsheetData.data as Record<string, string>[]) || [];
-              const dataWithMinRows = ensureMinimumRows(newData, columns);
-              
-              // Check if the new data actually contains the document we just processed
-              const hasDocumentAtRow = newData[rowIndex] && (
-                newData[rowIndex]['Document File Name'] || 
-                newData[rowIndex]['Storage Path']
-              );
-              
-              console.log('🔍 EditableSpreadsheet: Row', rowIndex, 'has document data:', hasDocumentAtRow);
-              console.log('🔍 EditableSpreadsheet: Row data:', newData[rowIndex]);
-              
-              if (hasDocumentAtRow) {
-                console.log('🔍 EditableSpreadsheet: Setting new data with document info');
-                // Preserve current row count if larger
-                const targetRowCount = Math.max(dataWithMinRows.length, data.length);
-                if (targetRowCount > dataWithMinRows.length) {
-                  const additionalRows = Array.from({ length: targetRowCount - dataWithMinRows.length }, () => {
-                    const row: Record<string, string> = {};
-                    columns.forEach(col => row[col] = '');
-                    return row;
-                  });
-                  setData([...dataWithMinRows, ...additionalRows]);
-                } else {
-                  setData(dataWithMinRows);
-                }
-              } else {
-                console.log('🔍 EditableSpreadsheet: New data missing document info, keeping current data');
-              }
-            } else {
-              console.error('🔍 EditableSpreadsheet: Error fetching runsheet data:', error);
-            }
+            // Don't refresh runsheet data when document processor just added data locally
+            // The local data is more current than the database at this point
+            console.log('🔍 EditableSpreadsheet: Skipping database refresh to preserve locally processed data');
           } catch (error) {
             console.error('Error refreshing documents:', error);
           }
