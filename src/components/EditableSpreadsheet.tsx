@@ -110,6 +110,18 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   
   const [columns, setColumns] = useState<string[]>(() => ensureDocumentColumns(initialColumns));
   const [data, setData] = useState<Record<string, string>[]>(() => {
+    // First check for emergency draft in localStorage
+    try {
+      const emergencyDraft = localStorage.getItem('runsheet-emergency-draft');
+      if (emergencyDraft) {
+        const draft = JSON.parse(emergencyDraft);
+        console.log('🔄 Restoring emergency draft from localStorage');
+        return draft.data || [];
+      }
+    } catch (error) {
+      console.error('Error loading emergency draft:', error);
+    }
+    
     // Ensure we always have at least 20 rows
     const minRows = 20;
     const existingRows = initialData.length;
@@ -317,6 +329,61 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       return prevData;
     });
   }, [initialData, initialColumns]);
+
+  // Emergency draft saving - auto-save to localStorage every 30 seconds and on data changes
+  useEffect(() => {
+    const saveEmergencyDraft = () => {
+      if (!data || data.length === 0) return;
+      
+      // Check if there's meaningful data to save
+      const hasData = data.some(row => 
+        Object.values(row).some(value => value && value.trim() !== '')
+      );
+      
+      if (hasData) {
+        try {
+          const draft = {
+            data,
+            columns,
+            columnInstructions,
+            runsheetName,
+            currentRunsheetId,
+            timestamp: Date.now()
+          };
+          localStorage.setItem('runsheet-emergency-draft', JSON.stringify(draft));
+          console.log('💾 Emergency draft saved to localStorage');
+        } catch (error) {
+          console.error('Error saving emergency draft:', error);
+        }
+      }
+    };
+
+    // Save immediately on data change
+    const timeoutId = setTimeout(saveEmergencyDraft, 1000);
+    
+    // Set up periodic saving every 30 seconds
+    const intervalId = setInterval(saveEmergencyDraft, 30000);
+    
+    return () => {
+      clearTimeout(timeoutId);
+      clearInterval(intervalId);
+    };
+  }, [data, columns, columnInstructions, runsheetName, currentRunsheetId]);
+
+  // Clear emergency draft when runsheet is successfully saved
+  useEffect(() => {
+    const handleRunsheetSaved = () => {
+      try {
+        localStorage.removeItem('runsheet-emergency-draft');
+        console.log('🗑️ Emergency draft cleared - runsheet saved');
+      } catch (error) {
+        console.error('Error clearing emergency draft:', error);
+      }
+    };
+
+    window.addEventListener('runsheetSaved', handleRunsheetSaved);
+    return () => window.removeEventListener('runsheetSaved', handleRunsheetSaved);
+  }, []);
 
   // Update local missing columns based on current column instructions
   useEffect(() => {
@@ -3845,8 +3912,8 @@ ${extractionFields}`
 
               {/* Table Body */}
               <TableBody>
-                 {data.map((row, rowIndex) => (
-                  <React.Fragment key={rowIndex}>
+                  {data.map((row, rowIndex) => (
+                   <React.Fragment key={rowIndex}>
                      {/* Show inline document viewer above this row if it's selected */}
                     {inlineViewerRow === rowIndex && (
                       <TableRow>
@@ -4103,7 +4170,7 @@ ${extractionFields}`
                         title="Drag to resize row height"
                       />
                      </TableRow>
-                   </React.Fragment>
+                    </React.Fragment>
                   ))}
               </TableBody>
            </Table>
