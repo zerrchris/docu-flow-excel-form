@@ -3706,18 +3706,20 @@ ${extractionFields}`
                     </TableHead>
                   )}
                   
-                  {/* Show Documents tab - positioned next to last column when hidden */}
+                  {/* Show Documents tab - button-like header when hidden */}
                   {!showDocumentLinker && (
-                    <div 
-                      className="absolute right-0 top-0 bottom-0 w-24 bg-primary/10 border border-primary/20 cursor-pointer hover:bg-primary/20 transition-colors flex items-center justify-center"
-                      style={{ transform: 'translateX(100%)' }}
+                    <TableHead 
+                      className="border-0 relative p-0 cursor-pointer"
+                      style={{ width: "60px", minWidth: "60px" }}
                       onClick={() => setShowDocumentLinker(true)}
                     >
-                      <div className="flex items-center gap-1 text-primary font-medium">
-                        <ChevronRight className="h-4 w-4" />
-                        <span className="text-xs">Docs</span>
+                      <div className="w-full h-full flex items-center justify-center">
+                        <div className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-md px-3 py-2 flex items-center gap-1 transition-colors shadow-sm">
+                          <ChevronRight className="h-3 w-3" />
+                          <span className="text-xs font-medium">Docs</span>
+                        </div>
                       </div>
-                    </div>
+                    </TableHead>
                   )}
                </TableRow>
              </TableHeader>
@@ -3955,6 +3957,15 @@ ${extractionFields}`
                             isSpreadsheetUpload={true}
                             autoAnalyze={false}
                           />
+                         </TableCell>
+                       )}
+                       
+                       {/* Hidden cell for Docs tab structure */}
+                       {!showDocumentLinker && (
+                         <TableCell 
+                           className="border-0 p-0 w-0"
+                           style={{ width: "60px", minWidth: "60px", visibility: "hidden" }}
+                         >
                          </TableCell>
                        )}
                       
