@@ -362,8 +362,15 @@ const DocumentProcessor: React.FC = () => {
       setColumns(defaultColumns);
       setColumnInstructions(DEFAULT_EXTRACTION_INSTRUCTIONS);
       
-      // Clear spreadsheet data to start fresh
-      setSpreadsheetData([]);
+      // ONLY clear spreadsheet data if we don't have an active runsheet
+      // This prevents losing runsheet data when refreshing fields
+      const currentRunsheetId = activeRunsheet?.id || location.state?.runsheet?.id;
+      if (!currentRunsheetId) {
+        console.log('No active runsheet - clearing spreadsheet data');
+        setSpreadsheetData([]);
+      } else {
+        console.log('Active runsheet found - preserving spreadsheet data');
+      }
       
       console.log('DocumentProcessor: Force reset to defaults complete');
     };
