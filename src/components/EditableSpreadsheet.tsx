@@ -1817,6 +1817,18 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         setIsLoadingRunsheet(true);
         console.log('🔧 Debug: About to call loadRunsheet()');
         await loadRunsheet(runsheet);
+        
+        // Set as active runsheet after loading
+        setActiveRunsheet({
+          id: runsheet.id,
+          name: runsheet.name,
+          data: Array.isArray(runsheet.data) ? runsheet.data as Record<string, string>[] : [],
+          columns: Array.isArray(runsheet.columns) ? runsheet.columns as string[] : [],
+          columnInstructions: (runsheet.column_instructions && typeof runsheet.column_instructions === 'object') 
+            ? runsheet.column_instructions as Record<string, string> 
+            : {}
+        });
+        
         console.log('🔧 Debug: loadRunsheet() completed');
       }
     } catch (error: any) {
