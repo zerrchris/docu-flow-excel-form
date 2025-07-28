@@ -401,16 +401,19 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       console.log('🔧 EditableSpreadsheet: Document record created event received:', event.detail);
       const { runsheetId, rowIndex } = event.detail;
       
-      console.log('🔧 EditableSpreadsheet: Comparing runsheetId:', runsheetId, 'vs currentRunsheetId:', currentRunsheetId);
+      console.log('🔧 EditableSpreadsheet: Comparing runsheetId:', runsheetId, 'vs currentRunsheet.id:', currentRunsheet?.id, 'vs currentRunsheetId:', currentRunsheetId);
       
-      if (runsheetId === currentRunsheetId) {
+      // Use currentRunsheet.id (global state) instead of currentRunsheetId (local state)
+      const activeRunsheetId = currentRunsheet?.id || currentRunsheetId;
+      
+      if (runsheetId === activeRunsheetId) {
         console.log('🔧 EditableSpreadsheet: Runsheet ID matches, refreshing document map');
         
         // Refresh the entire document map
-        if (user && currentRunsheetId) {
+        if (user && activeRunsheetId) {
           try {
-            console.log('🔧 EditableSpreadsheet: Fetching updated document map');
-            const documents = await DocumentService.getDocumentMapForRunsheet(currentRunsheetId);
+            console.log('🔍 EditableSpreadsheet: Fetching updated document map for runsheet:', activeRunsheetId);
+            const documents = await DocumentService.getDocumentMapForRunsheet(activeRunsheetId);
             console.log('🔧 EditableSpreadsheet: New document map:', documents);
             setDocumentMap(documents);
           } catch (error) {
@@ -429,7 +432,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       console.log('🔧 EditableSpreadsheet: Removing document record created event listener');
       window.removeEventListener('documentRecordCreated', handleDocumentRecordCreated as EventListener);
     };
-  }, [user, currentRunsheetId]);
+  }, [user, currentRunsheet, currentRunsheetId]);
 
   // Process pending document records when runsheet is saved
   useEffect(() => {
