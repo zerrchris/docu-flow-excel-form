@@ -2608,10 +2608,47 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         const document = documentMap.get(editingCell.rowIndex);
         if (document) {
           try {
-            // Update the document filename immediately
-            await DocumentService.updateDocumentFilenames(currentRunsheetId, [
-              { ...newData[editingCell.rowIndex], 'Row Index': editingCell.rowIndex.toString() }
-            ]);
+            // For direct filename edits, use the exact filename entered by the user
+            const sanitizedFilename = cellValue.trim();
+            
+            // Construct new file path with the user's exact filename
+            const pathParts = document.file_path.split('/');
+            const newFilePath = `${pathParts[0]}/${pathParts[1]}/${sanitizedFilename}`;
+
+            // Move file in storage
+            const { error: moveError } = await supabase.storage
+              .from('documents')
+              .move(document.file_path, newFilePath);
+
+            if (moveError) {
+              console.error('Error moving file in storage:', moveError);
+              toast({
+                title: "Error",
+                description: "Failed to rename document in storage",
+                variant: "destructive",
+              });
+              return;
+            }
+
+            // Update database record
+            const { error: updateError } = await supabase
+              .from('documents')
+              .update({
+                stored_filename: sanitizedFilename,
+                file_path: newFilePath,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', document.id);
+
+            if (updateError) {
+              console.error('Error updating document record:', updateError);
+              toast({
+                title: "Error",
+                description: "Failed to update document record",
+                variant: "destructive",
+              });
+              return;
+            }
             
             // Refresh the document map to reflect the changes
             const updatedDocumentMap = await DocumentService.getDocumentMapForRunsheet(currentRunsheetId);
@@ -2620,7 +2657,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             
             toast({
               title: "Document renamed",
-              description: `Document filename updated to: ${cellValue}`,
+              description: `Document filename updated to: ${sanitizedFilename}`,
             });
           } catch (error) {
             console.error('Error updating document filename:', error);
