@@ -1062,21 +1062,21 @@ Image: [base64 image data]`;
 
       {/* Navigation Confirmation Dialog */}
       <Dialog open={showNavigationDialog} onOpenChange={setShowNavigationDialog}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[700px]">
           <DialogHeader>
             <DialogTitle>Unsaved Changes</DialogTitle>
             <DialogDescription>
               You have unsaved changes in your current runsheet. What would you like to do?
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="flex flex-col sm:flex-row gap-3 sm:gap-3">
+          <DialogFooter className="flex flex-col sm:flex-row justify-end gap-3 pt-4">
             <Button 
               variant="outline" 
               onClick={() => {
                 setShowNavigationDialog(false);
                 setPendingNavigation(null);
               }}
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto sm:min-w-[120px]"
             >
               Cancel
             </Button>
@@ -1095,7 +1095,7 @@ Image: [base64 image data]`;
                   setPendingNavigation(null);
                 }
               }}
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto sm:min-w-[180px]"
             >
               Continue Without Saving
             </Button>
@@ -1121,7 +1121,7 @@ Image: [base64 image data]`;
                   }
                 }, 500);
               }}
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto sm:min-w-[140px]"
             >
               Save & Continue
             </Button>
