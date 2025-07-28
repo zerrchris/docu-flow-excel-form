@@ -3667,42 +3667,44 @@ ${extractionFields}`
                      </div>
                    </TableHead>
                  )}
-                 
-                 {/* Actions column header - not draggable */}
-                  <TableHead 
-                    className="font-bold text-center border-r border-border relative p-0 last:border-r-0 bg-muted/50"
-                    style={{ width: showDocumentLinker ? "200px" : "120px", minWidth: showDocumentLinker ? "200px" : "120px" }}
-                  >
-                    <div className="w-full h-full px-4 py-2 flex flex-col gap-1">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowDocumentLinker(!showDocumentLinker)}
-                        className="text-xs"
-                      >
-                        {showDocumentLinker ? <ChevronLeft className="h-3 w-3 mr-1" /> : <ChevronRight className="h-3 w-3 mr-1" />}
-                        {showDocumentLinker ? 'Hide' : 'Show'} Documents
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowDocumentFileNameColumn(!showDocumentFileNameColumn)}
-                        className="text-xs"
-                      >
-                        {showDocumentFileNameColumn ? <EyeOff className="h-3 w-3 mr-1" /> : <Eye className="h-3 w-3 mr-1" />}
-                        {showDocumentFileNameColumn ? 'Hide' : 'Show'} File Name Column
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowDocumentNamingDialog(true)}
-                        className="text-xs"
-                      >
-                        <Settings className="h-3 w-3 mr-1" />
-                         Smart File Name Settings
-                      </Button>
-                    </div>
-                 </TableHead>
+                  
+                  {/* Actions column header - conditionally visible */}
+                  {showDocumentLinker && (
+                    <TableHead 
+                      className="font-bold text-center border-r border-border relative p-0 last:border-r-0 bg-muted/50"
+                      style={{ width: "200px", minWidth: "200px" }}
+                    >
+                      <div className="w-full h-full px-4 py-2 flex flex-col gap-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowDocumentLinker(!showDocumentLinker)}
+                          className="text-xs"
+                        >
+                          <ChevronLeft className="h-3 w-3 mr-1" />
+                          Hide Documents
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowDocumentFileNameColumn(!showDocumentFileNameColumn)}
+                          className="text-xs"
+                        >
+                          {showDocumentFileNameColumn ? <EyeOff className="h-3 w-3 mr-1" /> : <Eye className="h-3 w-3 mr-1" />}
+                          {showDocumentFileNameColumn ? 'Hide' : 'Show'} File Name Column
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowDocumentNamingDialog(true)}
+                          className="text-xs"
+                        >
+                          <Settings className="h-3 w-3 mr-1" />
+                           Smart File Name Settings
+                        </Button>
+                      </div>
+                    </TableHead>
+                  )}
                </TableRow>
              </TableHeader>
 
@@ -3862,89 +3864,85 @@ ${extractionFields}`
                          </TableCell>
                        );
                      })()}
-                    
-                    {/* Actions column - Document management */}
-                    <TableCell 
-                      className="border-r border-border last:border-r-0 p-2"
-                      style={{ width: showDocumentLinker ? "200px" : "120px", minWidth: showDocumentLinker ? "200px" : "120px" }}
-                    >
-                      {showDocumentLinker ? (
-                      <DocumentLinker
-                       key={`${rowIndex}-${row['Document File Name']}`}
-                       runsheetId={currentRunsheetId || ''}
-                       rowIndex={rowIndex}
-                       currentFilename={row['Document File Name']}
-                       documentPath={(() => {
-                         const dbPath = documentMap.get(rowIndex)?.file_path;
-                         const storagePath = row['Storage Path'];
-                         return dbPath || storagePath;
-                       })()}
-                       existingDocumentUrl={row['Document File Name'] && row['Document File Name'].trim() !== '' ? 'exists' : undefined}
-                        onDocumentLinked={(filename) => {
-                           console.log('🔧 EditableSpreadsheet: onDocumentLinked called with filename:', filename);
-                           console.log('🔧 EditableSpreadsheet: Current row data before update:', data[rowIndex]);
-                           const newData = [...data];
-                           newData[rowIndex] = {
-                             ...newData[rowIndex],
-                             'Document File Name': filename
-                           };
-                           console.log('🔧 EditableSpreadsheet: New row data after update:', newData[rowIndex]);
-                           setData(newData);
-                           onDataChange?.(newData);
-                          
-                           // Refresh document map after a short delay to ensure DB is updated
-                           if (currentRunsheetId) {
-                             setTimeout(() => {
-                               console.log('🔧 EditableSpreadsheet: Refreshing document map');
-                               DocumentService.getDocumentMapForRunsheet(currentRunsheetId).then(setDocumentMap);
-                             }, 500);
-                           }
-                        }}
-                        onDocumentRemoved={() => {
-                          const newData = [...data];
-                          newData[rowIndex] = {
-                            ...newData[rowIndex],
-                            'Document File Name': ''
-                          };
-                          setData(newData);
-                          onDataChange?.(newData);
-                         setDocumentMap(prev => {
-                           const newMap = new Map(prev);
-                           newMap.delete(rowIndex);
-                           return newMap;
-                         });
-                        }}
-                        onAnalyzeDocument={async (file, filename) => {
-                          console.log('🔧 EditableSpreadsheet: onAnalyzeDocument called for row:', rowIndex);
-                          
-                          // Check if row has existing data (excluding Document File Name column)
-                          const rowData = data[rowIndex];
-                          const hasExistingData = columns.some(col => 
-                            rowData[col] && 
-                            rowData[col].trim() !== ''
-                          );
+                     
+                     {/* Actions column - Document management - conditionally visible */}
+                     {showDocumentLinker && (
+                       <TableCell 
+                         className="border-r border-border last:border-r-0 p-2"
+                         style={{ width: "200px", minWidth: "200px" }}
+                       >
+                         <DocumentLinker
+                          key={`${rowIndex}-${row['Document File Name']}`}
+                          runsheetId={currentRunsheetId || ''}
+                          rowIndex={rowIndex}
+                          currentFilename={row['Document File Name']}
+                          documentPath={(() => {
+                            const dbPath = documentMap.get(rowIndex)?.file_path;
+                            const storagePath = row['Storage Path'];
+                            return dbPath || storagePath;
+                          })()}
+                          existingDocumentUrl={row['Document File Name'] && row['Document File Name'].trim() !== '' ? 'exists' : undefined}
+                           onDocumentLinked={(filename) => {
+                              console.log('🔧 EditableSpreadsheet: onDocumentLinked called with filename:', filename);
+                              console.log('🔧 EditableSpreadsheet: Current row data before update:', data[rowIndex]);
+                              const newData = [...data];
+                              newData[rowIndex] = {
+                                ...newData[rowIndex],
+                                'Document File Name': filename
+                              };
+                              console.log('🔧 EditableSpreadsheet: New row data after update:', newData[rowIndex]);
+                              setData(newData);
+                              onDataChange?.(newData);
+                             
+                              // Refresh document map after a short delay to ensure DB is updated
+                              if (currentRunsheetId) {
+                                setTimeout(() => {
+                                  console.log('🔧 EditableSpreadsheet: Refreshing document map');
+                                  DocumentService.getDocumentMapForRunsheet(currentRunsheetId).then(setDocumentMap);
+                                }, 500);
+                              }
+                           }}
+                           onDocumentRemoved={() => {
+                             const newData = [...data];
+                             newData[rowIndex] = {
+                               ...newData[rowIndex],
+                               'Document File Name': ''
+                             };
+                             setData(newData);
+                             onDataChange?.(newData);
+                            setDocumentMap(prev => {
+                              const newMap = new Map(prev);
+                              newMap.delete(rowIndex);
+                              return newMap;
+                            });
+                           }}
+                           onAnalyzeDocument={async (file, filename) => {
+                             console.log('🔧 EditableSpreadsheet: onAnalyzeDocument called for row:', rowIndex);
+                             
+                             // Check if row has existing data (excluding Document File Name column)
+                             const rowData = data[rowIndex];
+                             const hasExistingData = columns.some(col => 
+                               rowData[col] && 
+                               rowData[col].trim() !== ''
+                             );
 
-                           if (hasExistingData) {
-                             // Show warning dialog
-                             setPendingAnalysis({ file, filename, rowIndex });
-                             setShowAnalyzeWarningDialog(true);
-                           } else {
-                             // Proceed with analysis
-                             await analyzeDocumentAndPopulateRow(file, rowIndex);
-                           }
-                         }}
-                         onOpenWorkspace={() => {
-                           setFullScreenWorkspace({ runsheetId: currentRunsheetId || '', rowIndex });
-                         }}
-                         isSpreadsheetUpload={true}
-                         autoAnalyze={false}
-                        />
-                      ) : (
-                        <div className="flex items-center justify-center h-full text-muted-foreground">
-                          <span className="text-xs">Documents Hidden</span>
-                        </div>
-                      )}
-                      </TableCell>
+                              if (hasExistingData) {
+                                // Show warning dialog
+                                setPendingAnalysis({ file, filename, rowIndex });
+                                setShowAnalyzeWarningDialog(true);
+                              } else {
+                                // Proceed with analysis
+                                await analyzeDocumentAndPopulateRow(file, rowIndex);
+                              }
+                            }}
+                            onOpenWorkspace={() => {
+                              setFullScreenWorkspace({ runsheetId: currentRunsheetId || '', rowIndex });
+                            }}
+                            isSpreadsheetUpload={true}
+                            autoAnalyze={false}
+                          />
+                         </TableCell>
+                       )}
                       
                       {/* Row resize handle */}
                       <div
@@ -3957,9 +3955,25 @@ ${extractionFields}`
                   ))}
               </TableBody>
            </Table>
-           </div>
+            </div>
 
         </div>
+        
+        {/* Floating tab to show document linker when hidden */}
+        {!showDocumentLinker && (
+          <div className="fixed right-0 top-1/2 transform -translate-y-1/2 z-50">
+            <Button
+              onClick={() => setShowDocumentLinker(true)}
+              className="rounded-l-lg rounded-r-none px-2 py-6 bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg"
+              size="sm"
+            >
+              <div className="flex flex-col items-center gap-1">
+                <ChevronRight className="h-4 w-4" />
+                <span className="text-xs transform rotate-90 whitespace-nowrap">Documents</span>
+              </div>
+            </Button>
+          </div>
+        )}
 
         <div className="flex justify-between items-center text-sm text-muted-foreground pt-2">
           <Dialog open={showAddRowsDialog} onOpenChange={setShowAddRowsDialog}>
