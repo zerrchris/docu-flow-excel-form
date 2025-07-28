@@ -899,23 +899,47 @@ Image: [base64 image data]`;
     }
   };
 
-  const startNewRunsheet = () => {
+  const startNewRunsheet = async () => {
     // Clear the loaded runsheet ref to allow fresh loading
     loadedRunsheetRef.current = null;
-    
-    // Reset to default state with default extraction instructions
-    setColumns(DEFAULT_COLUMNS);
-    setColumnInstructions(DEFAULT_EXTRACTION_INSTRUCTIONS);
-    setSpreadsheetData([]);
-    setFormData({});
     
     // Clear any file state
     setFile(null);
     setPreviewUrl(null);
     setPendingFiles([]);
+    setSpreadsheetData([]);
+    setFormData({});
     
     // Clear unsaved changes flag
     setHasUnsavedChanges(false);
+    
+    // Load user preferences for new runsheet
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        const preferences = await ExtractionPreferencesService.getDefaultPreferences();
+        
+        if (preferences && preferences.columns && preferences.column_instructions) {
+          setColumns(preferences.columns);
+          setColumnInstructions(preferences.column_instructions as Record<string, string>);
+          console.log('Loaded user preferences for new runsheet:', preferences);
+        } else {
+          // No saved preferences, use defaults
+          setColumns(DEFAULT_COLUMNS);
+          setColumnInstructions(DEFAULT_EXTRACTION_INSTRUCTIONS);
+        }
+      } else {
+        // Not authenticated, use defaults
+        setColumns(DEFAULT_COLUMNS);
+        setColumnInstructions(DEFAULT_EXTRACTION_INSTRUCTIONS);
+      }
+    } catch (error) {
+      console.error('Error loading user preferences for new runsheet:', error);
+      // Fallback to defaults on error
+      setColumns(DEFAULT_COLUMNS);
+      setColumnInstructions(DEFAULT_EXTRACTION_INSTRUCTIONS);
+    }
     
     // Dispatch event to reset the spreadsheet to fresh state
     const resetEvent = new CustomEvent('startNewRunsheet');
@@ -923,7 +947,7 @@ Image: [base64 image data]`;
     
     toast({
       title: "New runsheet started",
-      description: "Started a fresh runsheet with default settings.",
+      description: "Started a fresh runsheet with your preferred columns.",
     });
   };
 
