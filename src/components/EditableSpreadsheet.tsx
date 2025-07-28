@@ -3475,18 +3475,6 @@ ${extractionFields}`
               </Button>
             )}
             
-            {/* Toggle Document File Name Column */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowDocumentFileNameColumn(!showDocumentFileNameColumn)}
-              className="gap-2"
-              title={`${showDocumentFileNameColumn ? 'Hide' : 'Show'} Document File Name column`}
-            >
-              {showDocumentFileNameColumn ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              {showDocumentFileNameColumn ? 'Hide' : 'Show'} File Names
-            </Button>
-            
               {/* New Runsheet Button */}
               <Dialog open={showNewRunsheetDialog} onOpenChange={setShowNewRunsheetDialog}>
                 <DialogTrigger asChild>
