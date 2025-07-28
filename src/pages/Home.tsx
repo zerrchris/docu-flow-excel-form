@@ -34,8 +34,8 @@ const Home: React.FC = () => {
   }, []);
   return <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b">
-        <div className="container mx-auto px-4 py-4">
+      <header className="border-b w-full">
+        <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <img src={extractorLogo} alt="RunsheetPro Logo" className="h-12 w-12" />
