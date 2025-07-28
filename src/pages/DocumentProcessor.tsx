@@ -834,8 +834,8 @@ Image: [base64 image data]`;
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Get the current runsheet ID from location state
-      const runsheetId = location.state?.runsheetId;
+      // Get the current runsheet ID from active runsheet or location state
+      const runsheetId = activeRunsheet?.id || location.state?.runsheetId;
       if (!runsheetId) {
         console.log('🔧 DocumentProcessor: No runsheet ID available, document record will be created when runsheet is saved');
         
