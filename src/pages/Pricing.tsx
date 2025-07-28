@@ -172,9 +172,6 @@ const Pricing = () => {
             <h3 className="text-3xl font-bold mb-4">
               Everything included with your subscription
             </h3>
-            <p className="text-muted-foreground text-lg">
-              All features are available regardless of your billing frequency
-            </p>
           </div>
           
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
