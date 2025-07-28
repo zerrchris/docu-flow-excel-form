@@ -3710,16 +3710,15 @@ ${extractionFields}`
                   {!showDocumentLinker && (
                     <TableHead 
                       className="border-0 relative p-0 cursor-pointer"
-                      style={{ width: "40px", minWidth: "40px" }}
+                      style={{ width: "32px", minWidth: "32px" }}
                       onClick={() => setShowDocumentLinker(true)}
                     >
-                      <div className="w-full h-full flex items-center justify-center">
-                        <div className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-md px-2 py-1 flex items-center gap-1 transition-colors shadow-sm">
-                          <ChevronRight className="h-3 w-3" />
-                          <span className="text-xs font-medium">Doc</span>
-                        </div>
-                      </div>
-                    </TableHead>
+                       <div className="w-full h-full flex items-center justify-center">
+                         <div className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-md px-1 py-1 flex items-center transition-colors shadow-sm">
+                           <ChevronRight className="h-3 w-3" />
+                         </div>
+                       </div>
+                     </TableHead>
                   )}
                </TableRow>
              </TableHeader>
@@ -3964,7 +3963,7 @@ ${extractionFields}`
                        {!showDocumentLinker && (
                          <TableCell 
                            className="border-0 p-0 w-0"
-                           style={{ width: "40px", minWidth: "40px", visibility: "hidden" }}
+                           style={{ width: "32px", minWidth: "32px", visibility: "hidden" }}
                          >
                          </TableCell>
                        )}
