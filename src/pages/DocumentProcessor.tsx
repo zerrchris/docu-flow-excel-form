@@ -823,6 +823,20 @@ Image: [base64 image data]`;
         setColumns(prev => {
           const updatedColumns = [...prev, ...newColumnsFromExtraction];
           console.log('🔧 AUTO-UPDATING: Updated columns array:', updatedColumns);
+          
+          // Update form data after columns are updated to ensure synchronization
+          if (!fileToAnalyze) {
+            console.log('🔧 ANALYSIS: Updating main formData with extracted data (after column update)');
+            console.log('🔧 ANALYSIS: extractedData contains Storage Path:', extractedData['Storage Path']);
+            console.log('🔧 ANALYSIS: extractedData contains Document File Name:', extractedData['Document File Name']);
+            setFormData(extractedData);
+            
+            toast({
+              title: "Document analyzed successfully",
+              description: "Data has been extracted from the document using AI.",
+            });
+          }
+          
           return updatedColumns;
         });
         
@@ -845,22 +859,25 @@ Image: [base64 image data]`;
             console.error('Error saving updated preferences:', error);
           }
         }, 500);
-      }
-      
-      // Only update the main form data if no specific file was passed (main document)
-      if (!fileToAnalyze) {
-        console.log('🔧 ANALYSIS: Updating main formData with extracted data');
-        console.log('🔧 ANALYSIS: extractedData contains Storage Path:', extractedData['Storage Path']);
-        console.log('🔧 ANALYSIS: extractedData contains Document File Name:', extractedData['Document File Name']);
-        setFormData(extractedData);
+      } else {
+        // Only update the main form data if no new columns and no specific file was passed
+        if (!fileToAnalyze) {
+          console.log('🔧 ANALYSIS: Updating main formData with extracted data');
+          console.log('🔧 ANALYSIS: extractedData contains Storage Path:', extractedData['Storage Path']);
+          console.log('🔧 ANALYSIS: extractedData contains Document File Name:', extractedData['Document File Name']);
+          setFormData(extractedData);
+          
+          toast({
+            title: "Document analyzed successfully",
+            description: "Data has been extracted from the document using AI.",
+          });
+        }
         
         toast({
           title: "Document analyzed successfully",
           description: "Data has been extracted from the document using AI.",
         });
-      } else {
-        console.log('Not updating main formData - this is for batch processing');
-      }
+        }
       
       return extractedData;
       
