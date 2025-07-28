@@ -97,6 +97,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [showNameConflictDialog, setShowNameConflictDialog] = useState(false);
   const [nameConflictData, setNameConflictData] = useState<{ originalName: string; suggestedName: string } | null>(null);
   const [pendingSaveData, setPendingSaveData] = useState<{ isUpdate: boolean; runsheetId?: string; shouldClose?: boolean } | null>(null);
+  const [pendingUploadRequest, setPendingUploadRequest] = useState<any>(null);
   const [showDocumentNamingDialog, setShowDocumentNamingDialog] = useState(false);
   
   // Helper function to ensure document columns exist
@@ -160,6 +161,10 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     const handleSaveRequest = async (event: CustomEvent) => {
       try {
         console.log('🔧 EditableSpreadsheet: Received save request before upload');
+        
+        // Store the pending upload request for after save completes
+        setPendingUploadRequest(event.detail);
+        
         await saveRunsheet();
         
         // After save, the currentRunsheetId should be set
@@ -825,6 +830,15 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           setPendingSaveData({ isUpdate: false, shouldClose: false });
           setShowNameConflictDialog(true);
           setIsSaving(false);
+          
+          // If this was triggered by an upload request, send error response
+          if (pendingUploadRequest) {
+            const responseEvent = new CustomEvent('runsheetSaveResponse', {
+              detail: { success: false, error: 'Runsheet name conflict - please resolve the conflict and try again' }
+            });
+            window.dispatchEvent(responseEvent);
+            setPendingUploadRequest(null);
+          }
           return;
         }
         
@@ -1146,8 +1160,27 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           description: `"${finalName}" has been overwritten successfully.`,
         });
       }
+      
+      // If this was triggered by an upload request, send success response
+      if (pendingUploadRequest) {
+        const responseEvent = new CustomEvent('runsheetSaveResponse', {
+          detail: { success: true, runsheetId: savedRunsheet.id }
+        });
+        window.dispatchEvent(responseEvent);
+        setPendingUploadRequest(null);
+      }
     } catch (error: any) {
       console.error('Save failed:', error);
+      
+      // If this was triggered by an upload request, send error response
+      if (pendingUploadRequest) {
+        const responseEvent = new CustomEvent('runsheetSaveResponse', {
+          detail: { success: false, error: error.message || 'Failed to save runsheet' }
+        });
+        window.dispatchEvent(responseEvent);
+        setPendingUploadRequest(null);
+      }
+      
       toast({
         title: "Failed to save runsheet",
         description: error.message,
@@ -1177,6 +1210,15 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   };
 
   const handleCancelSave = () => {
+    // If this was triggered by an upload request, send error response
+    if (pendingUploadRequest) {
+      const responseEvent = new CustomEvent('runsheetSaveResponse', {
+        detail: { success: false, error: 'Save operation was cancelled' }
+      });
+      window.dispatchEvent(responseEvent);
+      setPendingUploadRequest(null);
+    }
+    
     setShowNameConflictDialog(false);
     setNameConflictData(null);
     setPendingSaveData(null);
