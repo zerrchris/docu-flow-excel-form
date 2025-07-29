@@ -25,7 +25,13 @@ export const AreaSelector: React.FC<AreaSelectorProps> = ({
   const overlayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    captureFullScreen();
+    // Add a small delay to allow user to switch to their intended window
+    // before capturing, preventing the capture interface from being captured
+    const timer = setTimeout(() => {
+      captureFullScreen();
+    }, 500);
+    
+    return () => clearTimeout(timer);
   }, []);
 
   const captureFullScreen = async () => {
