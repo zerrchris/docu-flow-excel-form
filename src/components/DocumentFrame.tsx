@@ -6,7 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { uploadFileToStorage } from '@/utils/fileStorage';
 import DataForm from './DataForm';
 import DocumentViewer from './DocumentViewer';
-import { MobileCapturedDocuments } from './MobileCapturedDocuments';
+
 import DocumentUpload from './DocumentUpload';
 
 import RealtimeVoiceInput from './RealtimeVoiceInput';
@@ -211,7 +211,6 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
                       <DocumentViewer file={file} previewUrl={previewUrl} />
                     ) : (
                       <div className="h-full p-6 space-y-4">
-                        <MobileCapturedDocuments />
                         <DocumentUpload 
                           onFileSelect={onFileSelect} 
                           onMultipleFilesSelect={onMultipleFilesSelect}
