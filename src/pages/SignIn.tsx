@@ -111,9 +111,20 @@ const SignIn: React.FC = () => {
       setEmail('');
       setPassword('');
     } catch (error: any) {
+      console.error('Authentication error:', error);
+      
+      let errorMessage = error.message;
+      
+      // Provide more helpful error messages
+      if (error.message === 'Invalid login credentials') {
+        errorMessage = isSignUp 
+          ? 'Account creation failed. Please check your email and password.'
+          : 'Invalid email or password. Please check your credentials or create an account first.';
+      }
+      
       toast({
         title: "Authentication failed",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
