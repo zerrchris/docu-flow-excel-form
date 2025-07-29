@@ -1,17 +1,47 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Check, ArrowLeft, FileText, Save, FolderOpen, Camera, Mic, Download, Smartphone, Settings, Layers } from 'lucide-react';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import extractorLogo from '@/assets/document-extractor-logo.png';
 
 const Pricing = () => {
   const { subscribed, subscriptionTier, createCheckout, manageSubscription, loading } = useSubscription();
+  const navigate = useNavigate();
+  const [isAuthenticated, setIsAuthenticated] = React.useState<boolean | null>(null);
+
+  // Check authentication status
+  React.useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setIsAuthenticated(!!session);
+    };
+    
+    checkAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setIsAuthenticated(!!session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const handlePlanSelect = async (plan: 'daily' | 'weekly' | 'monthly') => {
+    // Check if user is authenticated first
+    if (!isAuthenticated) {
+      toast({
+        title: "Sign in required",
+        description: "Please sign in to continue with your subscription.",
+        variant: "default"
+      });
+      navigate('/signin');
+      return;
+    }
+
     try {
       await createCheckout(plan);
     } catch (error) {
