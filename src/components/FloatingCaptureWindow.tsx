@@ -92,7 +92,7 @@ export const FloatingCaptureWindow: React.FC<FloatingCaptureWindowProps> = ({
     });
   };
 
-  const handleCombineDocuments = async (type: 'pdf' | 'vertical') => {
+  const handleCombineDocuments = async () => {
     if (captures.length === 0) {
       toast({
         title: "No Captures",
@@ -106,7 +106,7 @@ export const FloatingCaptureWindow: React.FC<FloatingCaptureWindowProps> = ({
     try {
       const files = captures.map(capture => capture.file);
       const result = await combineImages(files, { 
-        type, 
+        type: 'vertical', 
         maxWidth: 1200,
         quality: 0.9 
       });
@@ -119,7 +119,7 @@ export const FloatingCaptureWindow: React.FC<FloatingCaptureWindowProps> = ({
       
       toast({
         title: "Document Combined",
-        description: `Successfully combined ${files.length} captures into a ${type === 'pdf' ? 'PDF' : 'single image'}.`,
+        description: `Successfully combined ${files.length} captures into a single image.`,
       });
     } catch (error) {
       console.error('Failed to combine documents:', error);
@@ -196,28 +196,16 @@ export const FloatingCaptureWindow: React.FC<FloatingCaptureWindowProps> = ({
                 </Button>
 
                 {captures.length > 0 && (
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={() => handleCombineDocuments('pdf')}
-                      disabled={isCombining}
-                      size="sm"
-                      variant="secondary"
-                      className="flex-1"
-                    >
-                      <FileText className="h-4 w-4" />
-                      PDF ({captures.length})
-                    </Button>
-                    <Button
-                      onClick={() => handleCombineDocuments('vertical')}
-                      disabled={isCombining}
-                      size="sm"
-                      variant="secondary"
-                      className="flex-1"
-                    >
-                      <FileImage className="h-4 w-4" />
-                      Image ({captures.length})
-                    </Button>
-                  </div>
+                  <Button
+                    onClick={handleCombineDocuments}
+                    disabled={isCombining}
+                    size="sm"
+                    variant="secondary"
+                    className="w-full"
+                  >
+                    <FileImage className="h-4 w-4" />
+                    Save Image ({captures.length})
+                  </Button>
                 )}
               </div>
 

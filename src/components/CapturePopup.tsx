@@ -71,7 +71,7 @@ export const CapturePopup: React.FC = () => {
     });
   };
 
-  const handleCombineDocuments = async (type: 'pdf' | 'vertical') => {
+  const handleCombineDocuments = async () => {
     if (captures.length === 0) {
       showMessage('Please capture at least one area before combining.', 'error');
       return;
@@ -81,7 +81,7 @@ export const CapturePopup: React.FC = () => {
     try {
       const files = captures.map(capture => capture.file);
       const result = await combineImages(files, { 
-        type, 
+        type: 'vertical', 
         maxWidth: 1200,
         quality: 0.9 
       });
@@ -111,7 +111,7 @@ export const CapturePopup: React.FC = () => {
       captures.forEach(capture => URL.revokeObjectURL(capture.previewUrl));
       setCaptures([]);
       
-      showMessage(`Successfully combined ${files.length} captures into a ${type === 'pdf' ? 'PDF' : 'single image'}.`);
+      showMessage(`Successfully combined ${files.length} captures into a single image.`);
     } catch (error) {
       console.error('Failed to combine documents:', error);
       showMessage('Failed to combine the captured areas. Please try again.', 'error');
@@ -180,26 +180,16 @@ export const CapturePopup: React.FC = () => {
             </Button>
 
             {captures.length > 0 && (
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  onClick={() => handleCombineDocuments('pdf')}
-                  disabled={isCombining}
-                  size="sm"
-                  variant="secondary"
-                >
-                  {isCombining ? <RefreshCw className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
-                  PDF ({captures.length})
-                </Button>
-                <Button
-                  onClick={() => handleCombineDocuments('vertical')}
-                  disabled={isCombining}
-                  size="sm"
-                  variant="secondary"
-                >
-                  {isCombining ? <RefreshCw className="h-4 w-4 animate-spin" /> : <FileImage className="h-4 w-4" />}
-                  Image ({captures.length})
-                </Button>
-              </div>
+              <Button
+                onClick={handleCombineDocuments}
+                disabled={isCombining}
+                size="sm"
+                variant="secondary"
+                className="w-full"
+              >
+                {isCombining ? <RefreshCw className="h-4 w-4 animate-spin" /> : <FileImage className="h-4 w-4" />}
+                Save Image ({captures.length})
+              </Button>
             )}
           </div>
 
