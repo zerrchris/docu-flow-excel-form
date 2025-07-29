@@ -6,11 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Camera as CameraIcon, Upload, Image as ImageIcon, Plus, Search, ArrowLeft, ZoomIn } from 'lucide-react';
+import { Camera as CameraIcon, Upload, Image as ImageIcon, Plus, Search, ArrowLeft, ZoomIn, FolderOpen } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { offlineStorage } from '@/utils/offlineStorage';
 import { syncService } from '@/utils/syncService';
+import RunsheetSelectionDialog from './RunsheetSelectionDialog';
 
 interface MobileCameraProps {
   onPhotoUploaded?: (url: string, fileName: string) => void;
@@ -28,6 +29,8 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
   const [showProjectSelectionDialog, setShowProjectSelectionDialog] = useState(false);
   const [showExistingProjectsDialog, setShowExistingProjectsDialog] = useState(false);
   const [currentProject, setCurrentProject] = useState('');
+  const [selectedRunsheet, setSelectedRunsheet] = useState<any>(null);
+  const [showRunsheetSelectionDialog, setShowRunsheetSelectionDialog] = useState(false);
   const [projectName, setProjectName] = useState('');
   const [documentName, setDocumentName] = useState('');
   const [instrumentNumber, setInstrumentNumber] = useState('');
@@ -103,9 +106,30 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
   };
 
   const startDocumentCapture = async () => {
-    // Show project selection dialog first
-    await loadExistingProjects();
-    setShowProjectSelectionDialog(true);
+    // Show runsheet selection dialog first
+    setShowRunsheetSelectionDialog(true);
+  };
+
+  const handleRunsheetSelected = (runsheet: any, isNew?: boolean) => {
+    setSelectedRunsheet(runsheet);
+    setShowRunsheetSelectionDialog(false);
+    
+    if (runsheet) {
+      setCurrentProject(runsheet.name); // Use runsheet name as project for file organization
+      toast({
+        title: isNew ? "Runsheet Created" : "Runsheet Selected",
+        description: `Documents will be organized in "${runsheet.name}"`,
+      });
+    } else {
+      setCurrentProject(''); // No runsheet selected
+      toast({
+        title: "No Runsheet Selected",
+        description: "Documents will be stored without runsheet organization",
+      });
+    }
+    
+    // Proceed to document naming
+    setShowNameDialog(true);
   };
 
   const handleStartProject = () => {
@@ -979,6 +1003,15 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Runsheet Selection Dialog */}
+      <RunsheetSelectionDialog
+        open={showRunsheetSelectionDialog}
+        onOpenChange={setShowRunsheetSelectionDialog}
+        onRunsheetSelected={handleRunsheetSelected}
+        title="Select Runsheet for Documents"
+        description="Choose a runsheet to organize your captured documents"
+      />
     </Card>
   );
 };
