@@ -70,7 +70,7 @@ export const ScreenshotSession: React.FC<ScreenshotSessionProps> = ({
     });
   };
 
-  const handleCombineDocuments = async () => {
+  const handleCombineDocuments = async (type: 'pdf' | 'vertical') => {
     if (screenshots.length === 0) {
       toast({
         title: "No Screenshots",
@@ -84,7 +84,7 @@ export const ScreenshotSession: React.FC<ScreenshotSessionProps> = ({
     try {
       const files = screenshots.map(screenshot => screenshot.file);
       const { file } = await combineImages(files, { 
-        type: 'vertical',
+        type,
         maxWidth: 1200,
         quality: 0.9
       });
@@ -100,7 +100,7 @@ export const ScreenshotSession: React.FC<ScreenshotSessionProps> = ({
 
       toast({
         title: "Document Created",
-        description: `${screenshots.length} pages combined into image.`,
+        description: `${screenshots.length} pages combined into ${type === 'pdf' ? 'PDF' : 'vertical image'}.`,
       });
     } catch (error) {
       console.error('Combine failed:', error);
@@ -147,7 +147,7 @@ export const ScreenshotSession: React.FC<ScreenshotSessionProps> = ({
                     <li>Scroll to the next page in your document</li>
                     <li>Click "Capture Page" again for the next page</li>
                     <li>Repeat until you've captured all pages</li>
-                    <li>Choose "Save Image" to create the final document</li>
+                    <li>Choose "Combine as PDF" or "Combine Vertically" to create the final document</li>
                   </ol>
                 </div>
               </div>
@@ -178,7 +178,22 @@ export const ScreenshotSession: React.FC<ScreenshotSessionProps> = ({
               {screenshots.length > 0 && (
                 <div className="flex items-center gap-2">
                   <Button
-                    onClick={handleCombineDocuments}
+                    onClick={() => handleCombineDocuments('pdf')}
+                    disabled={isCombining}
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                  >
+                    {isCombining ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <FileText className="h-4 w-4" />
+                    )}
+                    Combine as PDF
+                  </Button>
+                  
+                  <Button
+                    onClick={() => handleCombineDocuments('vertical')}
                     disabled={isCombining}
                     variant="outline"
                     size="sm"
@@ -189,7 +204,7 @@ export const ScreenshotSession: React.FC<ScreenshotSessionProps> = ({
                     ) : (
                       <Download className="h-4 w-4" />
                     )}
-                    Save Image
+                    Combine Vertically
                   </Button>
                 </div>
               )}
