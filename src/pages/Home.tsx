@@ -8,6 +8,10 @@ import { supabase } from '@/integrations/supabase/client';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import extractorLogo from '@/assets/document-extractor-logo.png';
+import workflowStep1 from '@/assets/workflow-step1.png';
+import workflowStep2 from '@/assets/workflow-step2.png';
+import workflowStep3 from '@/assets/workflow-step3.png';
+import workflowStep4 from '@/assets/workflow-step4.png';
 import AuthButton from '@/components/AuthButton';
 const Home: React.FC = () => {
   const [user, setUser] = useState<SupabaseUser | null>(null);
@@ -125,6 +129,153 @@ const Home: React.FC = () => {
                 <CardDescription>Organize, edit, and manage your sheets and documents </CardDescription>
               </CardHeader>
             </Card>
+          </div>
+        </div>
+      </section>
+
+      {/* How it Works Section */}
+      <section className="py-16 px-4">
+        <div className="container mx-auto max-w-6xl">
+          <h3 className="text-3xl font-bold text-center mb-12">
+            How it Works
+          </h3>
+          <p className="text-lg text-muted-foreground text-center mb-16 max-w-3xl mx-auto">
+            See how easy it is to transform your documents into organized data with our 4-step process
+          </p>
+          
+          <div className="space-y-16">
+            {/* Step 1 */}
+            <div className="grid lg:grid-cols-2 gap-8 items-center">
+              <div className="order-2 lg:order-1">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
+                    1
+                  </div>
+                  <h4 className="text-2xl font-semibold">Upload Your Document</h4>
+                </div>
+                <p className="text-muted-foreground text-lg mb-4">
+                  Start by uploading any document - invoices, receipts, contracts, or forms. Simply drag and drop your file or browse to select it from your device.
+                </p>
+                <ul className="space-y-2 text-muted-foreground">
+                  <li>• Supports PDF, JPG, PNG formats</li>
+                  <li>• Drag & drop interface</li>
+                  <li>• Mobile camera capture available</li>
+                </ul>
+              </div>
+              <div className="order-1 lg:order-2">
+                <img 
+                  src={workflowStep1} 
+                  alt="Document upload interface" 
+                  className="rounded-lg shadow-lg w-full"
+                />
+              </div>
+            </div>
+
+            {/* Step 2 */}
+            <div className="grid lg:grid-cols-2 gap-8 items-center">
+              <div>
+                <img 
+                  src={workflowStep2} 
+                  alt="Document analysis interface" 
+                  className="rounded-lg shadow-lg w-full"
+                />
+              </div>
+              <div>
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
+                    2
+                  </div>
+                  <h4 className="text-2xl font-semibold">Analyze with AI</h4>
+                </div>
+                <p className="text-muted-foreground text-lg mb-4">
+                  Click the "Analyze Document" button and watch as our AI instantly reads your document and identifies key information like names, dates, amounts, and addresses.
+                </p>
+                <ul className="space-y-2 text-muted-foreground">
+                  <li>• AI-powered text extraction</li>
+                  <li>• Intelligent field detection</li>
+                  <li>• Works with handwritten text</li>
+                </ul>
+              </div>
+            </div>
+
+            {/* Step 3 */}
+            <div className="grid lg:grid-cols-2 gap-8 items-center">
+              <div className="order-2 lg:order-1">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
+                    3
+                  </div>
+                  <h4 className="text-2xl font-semibold">Review & Edit Data</h4>
+                </div>
+                <p className="text-muted-foreground text-lg mb-4">
+                  The extracted data automatically fills into organized fields. Review the information and make any necessary edits before adding it to your runsheet.
+                </p>
+                <ul className="space-y-2 text-muted-foreground">
+                  <li>• Pre-filled form fields</li>
+                  <li>• Easy editing and validation</li>
+                  <li>• Custom field configuration</li>
+                </ul>
+              </div>
+              <div className="order-1 lg:order-2">
+                <img 
+                  src={workflowStep3} 
+                  alt="Data extraction results" 
+                  className="rounded-lg shadow-lg w-full"
+                />
+              </div>
+            </div>
+
+            {/* Step 4 */}
+            <div className="grid lg:grid-cols-2 gap-8 items-center">
+              <div>
+                <img 
+                  src={workflowStep4} 
+                  alt="Runsheet with organized data" 
+                  className="rounded-lg shadow-lg w-full"
+                />
+              </div>
+              <div>
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
+                    4
+                  </div>
+                  <h4 className="text-2xl font-semibold">Add to Runsheet</h4>
+                </div>
+                <p className="text-muted-foreground text-lg mb-4">
+                  Click "Add to Runsheet" and your data is instantly organized into a professional spreadsheet format. Export, share, or continue adding more documents.
+                </p>
+                <ul className="space-y-2 text-muted-foreground">
+                  <li>• Organized spreadsheet format</li>
+                  <li>• Export to Excel or CSV</li>
+                  <li>• Cloud storage & sync</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* CTA after workflow */}
+          <div className="text-center mt-16">
+            <div className="bg-muted/50 rounded-2xl p-8 max-w-2xl mx-auto">
+              <h4 className="text-2xl font-semibold mb-4">Ready to streamline your workflow?</h4>
+              <p className="text-muted-foreground mb-6">
+                Join hundreds of users who have already transformed their document processing
+              </p>
+              {user ? (
+                <Link to="/app">
+                  <Button size="lg" className="gap-2">
+                    <FileText className="h-5 w-5" />
+                    Try It Now
+                  </Button>
+                </Link>
+              ) : (
+                <Link to="/signin">
+                  <Button size="lg" className="gap-2">
+                    <LogIn className="h-5 w-5" />
+                    Start Free Trial
+                  </Button>
+                </Link>
+              )}
+            </div>
           </div>
         </div>
       </section>
