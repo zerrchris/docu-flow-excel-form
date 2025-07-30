@@ -11,6 +11,7 @@ import extractorLogo from '@/assets/document-extractor-logo.png';
 import AuthButton from '@/components/AuthButton';
 const Home: React.FC = () => {
   const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [hoveredImage, setHoveredImage] = useState<string | null>(null);
   const {
     subscribed,
     subscriptionTier
@@ -149,14 +150,42 @@ const Home: React.FC = () => {
                 </ul>
               </div>
               <div className="order-1 lg:order-2">
-                <img src="/lovable-uploads/255c2ba1-c964-4a54-9d70-6c1da31848f3.png" alt="RunsheetPro welcome screen with workflow options" className="rounded-lg shadow-lg w-full" />
+                <div 
+                  className="relative group cursor-pointer"
+                  onMouseEnter={() => setHoveredImage("/lovable-uploads/255c2ba1-c964-4a54-9d70-6c1da31848f3.png")}
+                  onMouseLeave={() => setHoveredImage(null)}
+                >
+                  <img src="/lovable-uploads/255c2ba1-c964-4a54-9d70-6c1da31848f3.png" alt="RunsheetPro welcome screen with workflow options" className="rounded-lg shadow-lg w-full transition-all duration-300 group-hover:brightness-75" />
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <div className="bg-black/50 backdrop-blur-sm rounded-full p-3 flex items-center gap-2 text-white">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                      </svg>
+                      <span className="text-sm font-medium">Click to enlarge</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
             {/* Step 1.5 - Working with Runsheet */}
             <div className="grid lg:grid-cols-2 gap-8 items-center">
               <div>
-                <img src="/lovable-uploads/901ca479-cc15-44c2-ac1e-511e6913d2d5.png" alt="Active runsheet interface with data" className="rounded-lg shadow-lg w-full" />
+                <div 
+                  className="relative group cursor-pointer"
+                  onMouseEnter={() => setHoveredImage("/lovable-uploads/901ca479-cc15-44c2-ac1e-511e6913d2d5.png")}
+                  onMouseLeave={() => setHoveredImage(null)}
+                >
+                  <img src="/lovable-uploads/901ca479-cc15-44c2-ac1e-511e6913d2d5.png" alt="Active runsheet interface with data" className="rounded-lg shadow-lg w-full transition-all duration-300 group-hover:brightness-75" />
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <div className="bg-black/50 backdrop-blur-sm rounded-full p-3 flex items-center gap-2 text-white">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                      </svg>
+                      <span className="text-sm font-medium">Click to enlarge</span>
+                    </div>
+                  </div>
+                </div>
               </div>
               <div>
                 <div className="flex items-center gap-4 mb-4">
@@ -179,7 +208,21 @@ const Home: React.FC = () => {
             {/* Step 2 */}
             <div className="grid lg:grid-cols-2 gap-8 items-center">
               <div>
-                <img src="/lovable-uploads/e910cd5a-0990-432c-bda8-9d1b14f8b8fa.png" alt="Document processor upload interface" className="rounded-lg shadow-lg w-full" />
+                <div 
+                  className="relative group cursor-pointer"
+                  onMouseEnter={() => setHoveredImage("/lovable-uploads/e910cd5a-0990-432c-bda8-9d1b14f8b8fa.png")}
+                  onMouseLeave={() => setHoveredImage(null)}
+                >
+                  <img src="/lovable-uploads/e910cd5a-0990-432c-bda8-9d1b14f8b8fa.png" alt="Document processor upload interface" className="rounded-lg shadow-lg w-full transition-all duration-300 group-hover:brightness-75" />
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <div className="bg-black/50 backdrop-blur-sm rounded-full p-3 flex items-center gap-2 text-white">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                      </svg>
+                      <span className="text-sm font-medium">Click to enlarge</span>
+                    </div>
+                  </div>
+                </div>
               </div>
               <div>
                 <div className="flex items-center gap-4 mb-4">
@@ -218,14 +261,42 @@ const Home: React.FC = () => {
                 </ul>
               </div>
               <div className="order-1 lg:order-2">
-                <img src="/lovable-uploads/43ca29ad-3e45-4d92-831d-ba5100515a62.png" alt="Document analysis with highlighted analyze button" className="rounded-lg shadow-lg w-full" />
+                <div 
+                  className="relative group cursor-pointer"
+                  onMouseEnter={() => setHoveredImage("/lovable-uploads/43ca29ad-3e45-4d92-831d-ba5100515a62.png")}
+                  onMouseLeave={() => setHoveredImage(null)}
+                >
+                  <img src="/lovable-uploads/43ca29ad-3e45-4d92-831d-ba5100515a62.png" alt="Document analysis with highlighted analyze button" className="rounded-lg shadow-lg w-full transition-all duration-300 group-hover:brightness-75" />
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <div className="bg-black/50 backdrop-blur-sm rounded-full p-3 flex items-center gap-2 text-white">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                      </svg>
+                      <span className="text-sm font-medium">Click to enlarge</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
             {/* Step 4 */}
             <div className="grid lg:grid-cols-2 gap-8 items-center">
               <div>
-                <img src="/lovable-uploads/98320272-b5c8-4a78-b5d0-d8cbf36a89a6.png" alt="Add to runsheet with highlighted button" className="rounded-lg shadow-lg w-full" />
+                <div 
+                  className="relative group cursor-pointer"
+                  onMouseEnter={() => setHoveredImage("/lovable-uploads/98320272-b5c8-4a78-b5d0-d8cbf36a89a6.png")}
+                  onMouseLeave={() => setHoveredImage(null)}
+                >
+                  <img src="/lovable-uploads/98320272-b5c8-4a78-b5d0-d8cbf36a89a6.png" alt="Add to runsheet with highlighted button" className="rounded-lg shadow-lg w-full transition-all duration-300 group-hover:brightness-75" />
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <div className="bg-black/50 backdrop-blur-sm rounded-full p-3 flex items-center gap-2 text-white">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                      </svg>
+                      <span className="text-sm font-medium">Click to enlarge</span>
+                    </div>
+                  </div>
+                </div>
               </div>
               <div>
                 <div className="flex items-center gap-4 mb-4">
@@ -264,7 +335,21 @@ const Home: React.FC = () => {
                 </ul>
               </div>
               <div className="order-1 lg:order-2">
-                <img src="/lovable-uploads/dcd42115-3fc1-4647-8e5c-1773e44f0763.png" alt="Runsheet showing linked documents with file access" className="rounded-lg shadow-lg w-full" />
+                <div 
+                  className="relative group cursor-pointer"
+                  onMouseEnter={() => setHoveredImage("/lovable-uploads/dcd42115-3fc1-4647-8e5c-1773e44f0763.png")}
+                  onMouseLeave={() => setHoveredImage(null)}
+                >
+                  <img src="/lovable-uploads/dcd42115-3fc1-4647-8e5c-1773e44f0763.png" alt="Runsheet showing linked documents with file access" className="rounded-lg shadow-lg w-full transition-all duration-300 group-hover:brightness-75" />
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <div className="bg-black/50 backdrop-blur-sm rounded-full p-3 flex items-center gap-2 text-white">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                      </svg>
+                      <span className="text-sm font-medium">Click to enlarge</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
