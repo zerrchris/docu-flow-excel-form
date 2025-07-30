@@ -647,7 +647,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       console.log('🔧 EditableSpreadsheet: Removing document record created event listener');
       window.removeEventListener('documentRecordCreated', handleDocumentRecordCreated as EventListener);
     };
-  }, [user, currentRunsheet, currentRunsheetId]);
+  }, [user, currentRunsheetId]); // Removed currentRunsheet to prevent constant re-runs
 
   // Process pending document records when runsheet is saved
   useEffect(() => {

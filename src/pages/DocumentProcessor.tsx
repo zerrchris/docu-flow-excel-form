@@ -817,26 +817,28 @@ Image: [base64 image data]`;
         !columns.includes(key) && key !== 'Storage Path' && extractedData[key] && extractedData[key].trim() !== ''
       );
       
+      // ALWAYS update form data first, regardless of new columns
+      if (!fileToAnalyze) {
+        console.log('🔧 ANALYSIS: Updating main formData with extracted data');
+        console.log('🔧 ANALYSIS: extractedData:', extractedData);
+        setFormData(prev => {
+          console.log('🔧 ANALYSIS: Previous formData:', prev);
+          console.log('🔧 ANALYSIS: New formData:', extractedData);
+          return extractedData;
+        });
+        
+        toast({
+          title: "Document analyzed successfully",
+          description: "Data has been extracted from the document using AI.",
+        });
+      }
+      
       // If we have new columns from analyzed data, add them to our columns automatically
       if (newColumnsFromExtraction.length > 0) {
         console.log('🔧 AUTO-UPDATING: Adding new columns from analysis:', newColumnsFromExtraction);
         setColumns(prev => {
           const updatedColumns = [...prev, ...newColumnsFromExtraction];
           console.log('🔧 AUTO-UPDATING: Updated columns array:', updatedColumns);
-          
-          // Update form data after columns are updated to ensure synchronization
-          if (!fileToAnalyze) {
-            console.log('🔧 ANALYSIS: Updating main formData with extracted data (after column update)');
-            console.log('🔧 ANALYSIS: extractedData contains Storage Path:', extractedData['Storage Path']);
-            console.log('🔧 ANALYSIS: extractedData contains Document File Name:', extractedData['Document File Name']);
-            setFormData(extractedData);
-            
-            toast({
-              title: "Document analyzed successfully",
-              description: "Data has been extracted from the document using AI.",
-            });
-          }
-          
           return updatedColumns;
         });
         
@@ -859,25 +861,7 @@ Image: [base64 image data]`;
             console.error('Error saving updated preferences:', error);
           }
         }, 500);
-      } else {
-        // Only update the main form data if no new columns and no specific file was passed
-        if (!fileToAnalyze) {
-          console.log('🔧 ANALYSIS: Updating main formData with extracted data');
-          console.log('🔧 ANALYSIS: extractedData contains Storage Path:', extractedData['Storage Path']);
-          console.log('🔧 ANALYSIS: extractedData contains Document File Name:', extractedData['Document File Name']);
-          setFormData(extractedData);
-          
-          toast({
-            title: "Document analyzed successfully",
-            description: "Data has been extracted from the document using AI.",
-          });
-        }
-        
-        toast({
-          title: "Document analyzed successfully",
-          description: "Data has been extracted from the document using AI.",
-        });
-        }
+      }
       
       return extractedData;
       
@@ -995,23 +979,42 @@ Image: [base64 image data]`;
       }
     }
     
-    if (!runsheetId) {
-      // Create temporary runsheet automatically
-      const tempRunsheet = {
-        id: 'temp-' + Date.now(),
-        name: 'Quick Runsheet',
-        data: spreadsheetData,
-        columns: columns,
-        columnInstructions: columnInstructions
-      };
+    if (!runsheetId || runsheetId.startsWith('temp-')) {
+      // We need a proper saved runsheet to add documents
+      // Trigger the save process and wait for it to complete
+      console.log('🔧 ADD_TO_SPREADSHEET: Need to save runsheet first before adding documents');
       
-      setActiveRunsheet(tempRunsheet);
-      runsheetId = tempRunsheet.id;
-      
-      toast({
-        title: "Created Temporary Runsheet",
-        description: "A quick runsheet was created so you can add documents. Save it when ready.",
+      // Dispatch save request and wait for response
+      const savePromise = new Promise<{ success: boolean; runsheetId?: string; error?: string }>((resolve) => {
+        const handleSaveResponse = (event: CustomEvent) => {
+          window.removeEventListener('runsheetSaveResponse', handleSaveResponse as EventListener);
+          resolve(event.detail);
+        };
+        
+        window.addEventListener('runsheetSaveResponse', handleSaveResponse as EventListener);
+        
+        // Request the save
+        window.dispatchEvent(new CustomEvent('saveRunsheetBeforeUpload', {
+          detail: { 
+            operation: 'addToSpreadsheet',
+            data: dataToAdd || formData
+          }
+        }));
       });
+      
+      const saveResult = await savePromise;
+      
+      if (!saveResult.success) {
+        toast({
+          title: "Cannot add to runsheet",
+          description: saveResult.error || "Please save your runsheet first.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      runsheetId = saveResult.runsheetId!;
+      console.log('🔧 ADD_TO_SPREADSHEET: Received saved runsheet ID:', runsheetId);
     }
     
     const targetData = dataToAdd || formData;
