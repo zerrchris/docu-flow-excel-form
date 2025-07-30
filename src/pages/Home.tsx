@@ -225,7 +225,7 @@ const Home: React.FC = () => {
             {/* Step 4 */}
             <div className="grid lg:grid-cols-2 gap-8 items-center">
               <div>
-                <img src="/lovable-uploads/e910cd5a-0990-432c-bda8-9d1b14f8b8fa.png" alt="Add to runsheet with highlighted button" className="rounded-lg shadow-lg w-full" />
+                <img src="/lovable-uploads/dcd42115-3fc1-4647-8e5c-1773e44f0763.png" alt="Add to runsheet with highlighted button" className="rounded-lg shadow-lg w-full" />
               </div>
               <div>
                 <div className="flex items-center gap-4 mb-4">
@@ -235,13 +235,36 @@ const Home: React.FC = () => {
                   <h4 className="text-2xl font-semibold">Review & Add to Runsheet</h4>
                 </div>
                 <p className="text-muted-foreground text-lg mb-4">
-                  Review the extracted data for accuracy, make any necessary corrections, then click the highlighted "Add to Runsheet" button. The data will be added to the next row of your runsheet and the uploaded file will be automatically linked to that row.
+                  Review the extracted data for accuracy, make any necessary corrections, then click "Add to Runsheet". The data will be added to the next row of your runsheet with a document file reference.
                 </p>
                 <ul className="space-y-2 text-muted-foreground">
                   <li>• Automatic data validation</li>
-                  <li>• File linking and storage</li>
-                  <li>• Files available with runsheet download</li>
+                  <li>• Document reference number assigned</li>
+                  <li>• One-click addition to runsheet</li>
                 </ul>
+              </div>
+            </div>
+
+            {/* Step 5 */}
+            <div className="grid lg:grid-cols-2 gap-8 items-center">
+              <div className="order-2 lg:order-1">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
+                    5
+                  </div>
+                  <h4 className="text-2xl font-semibold">Access Linked Documents</h4>
+                </div>
+                <p className="text-muted-foreground text-lg mb-4">
+                  Once added to your runsheet, documents are automatically linked and accessible. Click on any document reference number or file icon to instantly view the original document associated with that row.
+                </p>
+                <ul className="space-y-2 text-muted-foreground">
+                  <li>• Permanent document linking</li>
+                  <li>• Quick access to source files</li>
+                  <li>• Files included in runsheet downloads</li>
+                </ul>
+              </div>
+              <div className="order-1 lg:order-2">
+                <img src="/lovable-uploads/98320272-b5c8-4a78-b5d0-d8cbf36a89a6.png" alt="Runsheet showing linked documents with file access" className="rounded-lg shadow-lg w-full" />
               </div>
             </div>
           </div>
