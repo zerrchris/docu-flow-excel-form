@@ -217,6 +217,7 @@ const Home: React.FC = () => {
                   className="relative group cursor-pointer"
                   onMouseEnter={() => setHoveredImage("/lovable-uploads/e910cd5a-0990-432c-bda8-9d1b14f8b8fa.png")}
                   onMouseLeave={() => setHoveredImage(null)}
+                  onClick={() => setEnlargedImage("/lovable-uploads/e910cd5a-0990-432c-bda8-9d1b14f8b8fa.png")}
                 >
                   <img src="/lovable-uploads/e910cd5a-0990-432c-bda8-9d1b14f8b8fa.png" alt="Document processor upload interface" className="rounded-lg shadow-lg w-full transition-all duration-300 group-hover:brightness-75" />
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -270,6 +271,7 @@ const Home: React.FC = () => {
                   className="relative group cursor-pointer"
                   onMouseEnter={() => setHoveredImage("/lovable-uploads/43ca29ad-3e45-4d92-831d-ba5100515a62.png")}
                   onMouseLeave={() => setHoveredImage(null)}
+                  onClick={() => setEnlargedImage("/lovable-uploads/43ca29ad-3e45-4d92-831d-ba5100515a62.png")}
                 >
                   <img src="/lovable-uploads/43ca29ad-3e45-4d92-831d-ba5100515a62.png" alt="Document analysis with highlighted analyze button" className="rounded-lg shadow-lg w-full transition-all duration-300 group-hover:brightness-75" />
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -291,6 +293,7 @@ const Home: React.FC = () => {
                   className="relative group cursor-pointer"
                   onMouseEnter={() => setHoveredImage("/lovable-uploads/98320272-b5c8-4a78-b5d0-d8cbf36a89a6.png")}
                   onMouseLeave={() => setHoveredImage(null)}
+                  onClick={() => setEnlargedImage("/lovable-uploads/98320272-b5c8-4a78-b5d0-d8cbf36a89a6.png")}
                 >
                   <img src="/lovable-uploads/98320272-b5c8-4a78-b5d0-d8cbf36a89a6.png" alt="Add to runsheet with highlighted button" className="rounded-lg shadow-lg w-full transition-all duration-300 group-hover:brightness-75" />
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -344,6 +347,7 @@ const Home: React.FC = () => {
                   className="relative group cursor-pointer"
                   onMouseEnter={() => setHoveredImage("/lovable-uploads/dcd42115-3fc1-4647-8e5c-1773e44f0763.png")}
                   onMouseLeave={() => setHoveredImage(null)}
+                  onClick={() => setEnlargedImage("/lovable-uploads/dcd42115-3fc1-4647-8e5c-1773e44f0763.png")}
                 >
                   <img src="/lovable-uploads/dcd42115-3fc1-4647-8e5c-1773e44f0763.png" alt="Runsheet showing linked documents with file access" className="rounded-lg shadow-lg w-full transition-all duration-300 group-hover:brightness-75" />
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
