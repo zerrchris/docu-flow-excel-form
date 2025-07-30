@@ -189,6 +189,7 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
       formData.append('runsheetId', actualRunsheetId);
       formData.append('rowIndex', rowIndex.toString());
       formData.append('originalFilename', file.name);
+      formData.append('useSmartNaming', 'false'); // Disable auto smart naming on upload
 
       // Get auth token
       const { data: { session } } = await supabase.auth.getSession();

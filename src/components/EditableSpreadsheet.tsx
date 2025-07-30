@@ -4246,10 +4246,8 @@ ${extractionFields}`
               {/* Table Body */}
               <TableBody>
                   {data.map((row, rowIndex) => {
-                    // Use a key variable to ensure clean props
-                    const fragmentKey = `row-${rowIndex}`;
                     return (
-                      <React.Fragment key={fragmentKey}>
+                      <React.Fragment key={`row-${rowIndex}`}>
                         {/* Show inline document viewer above this row if it's selected */}
                        {inlineViewerRow === rowIndex && (
                       <TableRow>
