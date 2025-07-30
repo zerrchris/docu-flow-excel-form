@@ -8,11 +8,6 @@ import { supabase } from '@/integrations/supabase/client';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import extractorLogo from '@/assets/document-extractor-logo.png';
-import welcomeScreen from '@/assets/welcome-screen.png';
-import activeRunsheet from '@/assets/active-runsheet.png';
-import documentAnalysis from '@/assets/document-analysis.png';
-import dataExtraction from '@/assets/data-extraction.png';
-import runsheetOverview from '@/assets/runsheet-overview.png';
 import AuthButton from '@/components/AuthButton';
 const Home: React.FC = () => {
   const [user, setUser] = useState<SupabaseUser | null>(null);
@@ -154,14 +149,14 @@ const Home: React.FC = () => {
                 </ul>
               </div>
               <div className="order-1 lg:order-2">
-                <img src={welcomeScreen} alt="RunsheetPro welcome screen with workflow options" className="rounded-lg shadow-lg w-full" />
+                <img src="/lovable-uploads/7149754a-1f31-458f-9a00-b21051d1c5c4.png" alt="RunsheetPro welcome screen with workflow options" className="rounded-lg shadow-lg w-full" />
               </div>
             </div>
 
             {/* Step 1.5 - Working with Runsheet */}
             <div className="grid lg:grid-cols-2 gap-8 items-center">
               <div>
-                <img src={activeRunsheet} alt="Active runsheet interface with data" className="rounded-lg shadow-lg w-full" />
+                <img src="/lovable-uploads/0367e27e-ef75-4d58-9d0f-56e0f344fe11.png" alt="Active runsheet interface with data" className="rounded-lg shadow-lg w-full" />
               </div>
               <div>
                 <div className="flex items-center gap-4 mb-4">
@@ -184,7 +179,7 @@ const Home: React.FC = () => {
             {/* Step 2 */}
             <div className="grid lg:grid-cols-2 gap-8 items-center">
               <div>
-                <img src={documentAnalysis} alt="Document processor upload interface" className="rounded-lg shadow-lg w-full" />
+                <img src="/lovable-uploads/43ca29ad-3e45-4d92-831d-ba5100515a62.png" alt="Document processor upload interface" className="rounded-lg shadow-lg w-full" />
               </div>
               <div>
                 <div className="flex items-center gap-4 mb-4">
@@ -223,14 +218,14 @@ const Home: React.FC = () => {
                 </ul>
               </div>
               <div className="order-1 lg:order-2">
-                <img src={documentAnalysis} alt="Document analysis with highlighted analyze button" className="rounded-lg shadow-lg w-full" />
+                <img src="/lovable-uploads/e910cd5a-0990-432c-bda8-9d1b14f8b8fa.png" alt="Document analysis with highlighted analyze button" className="rounded-lg shadow-lg w-full" />
               </div>
             </div>
 
             {/* Step 4 */}
             <div className="grid lg:grid-cols-2 gap-8 items-center">
               <div>
-                <img src={dataExtraction} alt="Add to runsheet with highlighted button" className="rounded-lg shadow-lg w-full" />
+                <img src="/lovable-uploads/e910cd5a-0990-432c-bda8-9d1b14f8b8fa.png" alt="Add to runsheet with highlighted button" className="rounded-lg shadow-lg w-full" />
               </div>
               <div>
                 <div className="flex items-center gap-4 mb-4">
