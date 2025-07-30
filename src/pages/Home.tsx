@@ -143,39 +143,39 @@ const Home: React.FC = () => {
                   <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
                     1
                   </div>
-                  <h4 className="text-2xl font-semibold">Upload Your Document</h4>
+                  <h4 className="text-2xl font-semibold">Start Your Runsheet</h4>
                 </div>
-                <p className="text-muted-foreground text-lg mb-4">Start by uploading any document - Simply drag and drop your file or browse to select it from your device.</p>
+                <p className="text-muted-foreground text-lg mb-4">Begin by creating a new runsheet or opening an existing one. Work on your runsheet as normal, entering data and organizing your information.</p>
                 <ul className="space-y-2 text-muted-foreground">
-                  <li>• Supports PDF, JPG, PNG formats</li>
-                  <li>• Drag & drop interface</li>
-                  <li>• Mobile camera capture available</li>
+                  <li>• Professional spreadsheet interface</li>
+                  <li>• Customizable columns and fields</li>
+                  <li>• Cloud storage and sync</li>
                 </ul>
               </div>
               <div className="order-1 lg:order-2">
-                <img src={workflowStep1} alt="Document upload interface" className="rounded-lg shadow-lg w-full" />
+                <img src={workflowStep1} alt="Professional runsheet interface" className="rounded-lg shadow-lg w-full" />
               </div>
             </div>
 
             {/* Step 2 */}
             <div className="grid lg:grid-cols-2 gap-8 items-center">
               <div>
-                <img src={workflowStep2} alt="Document analysis interface" className="rounded-lg shadow-lg w-full" />
+                <img src={workflowStep2} alt="Document processor upload interface" className="rounded-lg shadow-lg w-full" />
               </div>
               <div>
                 <div className="flex items-center gap-4 mb-4">
                   <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
                     2
                   </div>
-                  <h4 className="text-2xl font-semibold">Analyze with AI</h4>
+                  <h4 className="text-2xl font-semibold">Upload Your Document</h4>
                 </div>
                 <p className="text-muted-foreground text-lg mb-4">
-                  Click the "Analyze Document" button and watch as our AI instantly reads your document and identifies key information like names, dates, amounts, and addresses.
+                  When ready to analyze a document, go to the Document Processor. Upload your document using the highlighted "Document Capture" button.
                 </p>
                 <ul className="space-y-2 text-muted-foreground">
-                  <li>• AI-powered text extraction</li>
-                  <li>• Intelligent field detection</li>
-                  <li>• Works with handwritten text</li>
+                  <li>• Supports PDF, JPG, PNG formats</li>
+                  <li>• Drag & drop interface</li>
+                  <li>• Mobile camera capture available</li>
                 </ul>
               </div>
             </div>
@@ -187,41 +187,41 @@ const Home: React.FC = () => {
                   <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
                     3
                   </div>
-                  <h4 className="text-2xl font-semibold">Review & Edit Data</h4>
+                  <h4 className="text-2xl font-semibold">Analyze with AI</h4>
                 </div>
                 <p className="text-muted-foreground text-lg mb-4">
-                  The extracted data automatically fills into organized fields. Review the information and make any necessary edits before adding it to your runsheet.
+                  Click the highlighted "Analyze Document" button and watch as our AI instantly reads your document and extracts key information into organized fields.
                 </p>
                 <ul className="space-y-2 text-muted-foreground">
-                  <li>• Pre-filled form fields</li>
-                  <li>• Easy editing and validation</li>
-                  <li>• Custom field configuration</li>
+                  <li>• AI-powered text extraction</li>
+                  <li>• Intelligent field detection</li>
+                  <li>• Works with handwritten text</li>
                 </ul>
               </div>
               <div className="order-1 lg:order-2">
-                <img src={workflowStep3} alt="Data extraction results" className="rounded-lg shadow-lg w-full" />
+                <img src={workflowStep3} alt="Document analysis with highlighted analyze button" className="rounded-lg shadow-lg w-full" />
               </div>
             </div>
 
             {/* Step 4 */}
             <div className="grid lg:grid-cols-2 gap-8 items-center">
               <div>
-                <img src={workflowStep4} alt="Runsheet with organized data" className="rounded-lg shadow-lg w-full" />
+                <img src={workflowStep4} alt="Add to runsheet with highlighted button" className="rounded-lg shadow-lg w-full" />
               </div>
               <div>
                 <div className="flex items-center gap-4 mb-4">
                   <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
                     4
                   </div>
-                  <h4 className="text-2xl font-semibold">Add to Runsheet</h4>
+                  <h4 className="text-2xl font-semibold">Review & Add to Runsheet</h4>
                 </div>
                 <p className="text-muted-foreground text-lg mb-4">
-                  Click "Add to Runsheet" and your data is instantly organized into a professional spreadsheet format. Export, share, or continue adding more documents.
+                  Review the extracted data for accuracy, make any necessary corrections, then click the highlighted "Add to Runsheet" button. The data will be added to the next row of your runsheet and the uploaded file will be automatically linked to that row.
                 </p>
                 <ul className="space-y-2 text-muted-foreground">
-                  <li>• Organized spreadsheet format</li>
-                  <li>• Export to Excel or CSV</li>
-                  <li>• Cloud storage & sync</li>
+                  <li>• Automatic data validation</li>
+                  <li>• File linking and storage</li>
+                  <li>• Files available with runsheet download</li>
                 </ul>
               </div>
             </div>
