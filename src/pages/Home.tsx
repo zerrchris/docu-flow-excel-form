@@ -9,6 +9,7 @@ import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import extractorLogo from '@/assets/document-extractor-logo.png';
 import workflowStep1 from '@/assets/workflow-step1.png';
+import workflowStep1Alt from '@/assets/workflow-step1-alt.png';
 import workflowStep2 from '@/assets/workflow-step2.png';
 import workflowStep3 from '@/assets/workflow-step3.png';
 import workflowStep4 from '@/assets/workflow-step4.png';
@@ -145,15 +146,38 @@ const Home: React.FC = () => {
                   </div>
                   <h4 className="text-2xl font-semibold">Start Your Runsheet</h4>
                 </div>
-                <p className="text-muted-foreground text-lg mb-4">Begin by creating a new runsheet or opening an existing one. Work on your runsheet as normal, entering data and organizing your information.</p>
+                <p className="text-muted-foreground text-lg mb-4">Begin by creating a new runsheet from the welcome screen. Choose "New Runsheet" to start with a blank template, or "Open Runsheet" to load a previously saved one.</p>
+                <ul className="space-y-2 text-muted-foreground">
+                  <li>• Multiple workflow options available</li>
+                  <li>• Professional welcome interface</li>
+                  <li>• Easy runsheet management</li>
+                </ul>
+              </div>
+              <div className="order-1 lg:order-2">
+                <img src={workflowStep1} alt="RunsheetPro welcome screen with workflow options" className="rounded-lg shadow-lg w-full" />
+              </div>
+            </div>
+
+            {/* Step 1.5 - Working with Runsheet */}
+            <div className="grid lg:grid-cols-2 gap-8 items-center">
+              <div>
+                <img src={workflowStep1Alt} alt="Active runsheet interface with data" className="rounded-lg shadow-lg w-full" />
+              </div>
+              <div>
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
+                    1b
+                  </div>
+                  <h4 className="text-2xl font-semibold">Work on Your Runsheet</h4>
+                </div>
+                <p className="text-muted-foreground text-lg mb-4">
+                  Once your runsheet is open, work with it as normal - entering data, organizing information, and managing your records in the professional spreadsheet interface.
+                </p>
                 <ul className="space-y-2 text-muted-foreground">
                   <li>• Professional spreadsheet interface</li>
                   <li>• Customizable columns and fields</li>
                   <li>• Cloud storage and sync</li>
                 </ul>
-              </div>
-              <div className="order-1 lg:order-2">
-                <img src={workflowStep1} alt="Professional runsheet interface" className="rounded-lg shadow-lg w-full" />
               </div>
             </div>
 
