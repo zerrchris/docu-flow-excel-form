@@ -225,7 +225,7 @@ const Home: React.FC = () => {
             {/* Step 4 */}
             <div className="grid lg:grid-cols-2 gap-8 items-center">
               <div>
-                <img src="/lovable-uploads/dcd42115-3fc1-4647-8e5c-1773e44f0763.png" alt="Add to runsheet with highlighted button" className="rounded-lg shadow-lg w-full" />
+                <img src="/lovable-uploads/98320272-b5c8-4a78-b5d0-d8cbf36a89a6.png" alt="Add to runsheet with highlighted button" className="rounded-lg shadow-lg w-full" />
               </div>
               <div>
                 <div className="flex items-center gap-4 mb-4">
@@ -264,7 +264,7 @@ const Home: React.FC = () => {
                 </ul>
               </div>
               <div className="order-1 lg:order-2">
-                <img src="/lovable-uploads/98320272-b5c8-4a78-b5d0-d8cbf36a89a6.png" alt="Runsheet showing linked documents with file access" className="rounded-lg shadow-lg w-full" />
+                <img src="/lovable-uploads/dcd42115-3fc1-4647-8e5c-1773e44f0763.png" alt="Runsheet showing linked documents with file access" className="rounded-lg shadow-lg w-full" />
               </div>
             </div>
           </div>
