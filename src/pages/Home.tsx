@@ -156,7 +156,7 @@ const Home: React.FC = () => {
             {/* Step 1.5 - Working with Runsheet */}
             <div className="grid lg:grid-cols-2 gap-8 items-center">
               <div>
-                <img src="/lovable-uploads/0367e27e-ef75-4d58-9d0f-56e0f344fe11.png" alt="Active runsheet interface with data" className="rounded-lg shadow-lg w-full" />
+                <img src="/lovable-uploads/901ca479-cc15-44c2-ac1e-511e6913d2d5.png" alt="Active runsheet interface with data" className="rounded-lg shadow-lg w-full" />
               </div>
               <div>
                 <div className="flex items-center gap-4 mb-4">
