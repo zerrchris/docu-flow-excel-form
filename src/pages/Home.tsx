@@ -11,7 +11,6 @@ import extractorLogo from '@/assets/document-extractor-logo.png';
 import AuthButton from '@/components/AuthButton';
 const Home: React.FC = () => {
   const [user, setUser] = useState<SupabaseUser | null>(null);
-  const [hoveredImage, setHoveredImage] = useState<string | null>(null);
   const {
     subscribed,
     subscriptionTier
@@ -35,23 +34,7 @@ const Home: React.FC = () => {
     };
     initAuth();
   }, []);
-  return <div className="min-h-screen bg-background relative">
-      {/* Image Overlay */}
-      {hoveredImage && (
-        <div 
-          className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center pointer-events-none"
-          onClick={() => setHoveredImage(null)}
-        >
-          <div className="pointer-events-auto">
-            <img 
-              src={hoveredImage} 
-              alt="Enlarged workflow step" 
-              className="max-w-[80vw] max-h-[80vh] object-contain rounded-lg shadow-2xl animate-scale-in"
-              onMouseLeave={() => setHoveredImage(null)}
-            />
-          </div>
-        </div>
-      )}
+  return <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b w-full">
         <div className="max-w-7xl mx-auto px-4 py-4">
@@ -166,26 +149,14 @@ const Home: React.FC = () => {
                 </ul>
               </div>
               <div className="order-1 lg:order-2">
-                <img 
-                  src="/lovable-uploads/7149754a-1f31-458f-9a00-b21051d1c5c4.png" 
-                  alt="RunsheetPro welcome screen with workflow options" 
-                  className="rounded-lg shadow-lg w-full cursor-pointer transition-transform duration-200 hover:scale-105" 
-                  onMouseEnter={() => setHoveredImage("/lovable-uploads/7149754a-1f31-458f-9a00-b21051d1c5c4.png")}
-                  onMouseLeave={() => setHoveredImage(null)}
-                />
+                <img src="/lovable-uploads/7149754a-1f31-458f-9a00-b21051d1c5c4.png" alt="RunsheetPro welcome screen with workflow options" className="rounded-lg shadow-lg w-full" />
               </div>
             </div>
 
             {/* Step 1.5 - Working with Runsheet */}
             <div className="grid lg:grid-cols-2 gap-8 items-center">
               <div>
-                <img 
-                  src="/lovable-uploads/901ca479-cc15-44c2-ac1e-511e6913d2d5.png" 
-                  alt="Active runsheet interface with data" 
-                  className="rounded-lg shadow-lg w-full cursor-pointer transition-transform duration-200 hover:scale-105" 
-                  onMouseEnter={() => setHoveredImage("/lovable-uploads/901ca479-cc15-44c2-ac1e-511e6913d2d5.png")}
-                  onMouseLeave={() => setHoveredImage(null)}
-                />
+                <img src="/lovable-uploads/901ca479-cc15-44c2-ac1e-511e6913d2d5.png" alt="Active runsheet interface with data" className="rounded-lg shadow-lg w-full" />
               </div>
               <div>
                 <div className="flex items-center gap-4 mb-4">
@@ -208,13 +179,7 @@ const Home: React.FC = () => {
             {/* Step 2 */}
             <div className="grid lg:grid-cols-2 gap-8 items-center">
               <div>
-                <img 
-                  src="/lovable-uploads/e910cd5a-0990-432c-bda8-9d1b14f8b8fa.png" 
-                  alt="Document processor upload interface" 
-                  className="rounded-lg shadow-lg w-full cursor-pointer transition-transform duration-200 hover:scale-105" 
-                  onMouseEnter={() => setHoveredImage("/lovable-uploads/e910cd5a-0990-432c-bda8-9d1b14f8b8fa.png")}
-                  onMouseLeave={() => setHoveredImage(null)}
-                />
+                <img src="/lovable-uploads/e910cd5a-0990-432c-bda8-9d1b14f8b8fa.png" alt="Document processor upload interface" className="rounded-lg shadow-lg w-full" />
               </div>
               <div>
                 <div className="flex items-center gap-4 mb-4">
@@ -253,26 +218,14 @@ const Home: React.FC = () => {
                 </ul>
               </div>
               <div className="order-1 lg:order-2">
-                <img 
-                  src="/lovable-uploads/43ca29ad-3e45-4d92-831d-ba5100515a62.png" 
-                  alt="Document analysis with highlighted analyze button" 
-                  className="rounded-lg shadow-lg w-full cursor-pointer transition-transform duration-200 hover:scale-105" 
-                  onMouseEnter={() => setHoveredImage("/lovable-uploads/43ca29ad-3e45-4d92-831d-ba5100515a62.png")}
-                  onMouseLeave={() => setHoveredImage(null)}
-                />
+                <img src="/lovable-uploads/43ca29ad-3e45-4d92-831d-ba5100515a62.png" alt="Document analysis with highlighted analyze button" className="rounded-lg shadow-lg w-full" />
               </div>
             </div>
 
             {/* Step 4 */}
             <div className="grid lg:grid-cols-2 gap-8 items-center">
               <div>
-                <img 
-                  src="/lovable-uploads/98320272-b5c8-4a78-b5d0-d8cbf36a89a6.png" 
-                  alt="Add to runsheet with highlighted button" 
-                  className="rounded-lg shadow-lg w-full cursor-pointer transition-transform duration-200 hover:scale-105" 
-                  onMouseEnter={() => setHoveredImage("/lovable-uploads/98320272-b5c8-4a78-b5d0-d8cbf36a89a6.png")}
-                  onMouseLeave={() => setHoveredImage(null)}
-                />
+                <img src="/lovable-uploads/98320272-b5c8-4a78-b5d0-d8cbf36a89a6.png" alt="Add to runsheet with highlighted button" className="rounded-lg shadow-lg w-full" />
               </div>
               <div>
                 <div className="flex items-center gap-4 mb-4">
@@ -311,13 +264,7 @@ const Home: React.FC = () => {
                 </ul>
               </div>
               <div className="order-1 lg:order-2">
-                <img 
-                  src="/lovable-uploads/dcd42115-3fc1-4647-8e5c-1773e44f0763.png" 
-                  alt="Runsheet showing linked documents with file access" 
-                  className="rounded-lg shadow-lg w-full cursor-pointer transition-transform duration-200 hover:scale-105" 
-                  onMouseEnter={() => setHoveredImage("/lovable-uploads/dcd42115-3fc1-4647-8e5c-1773e44f0763.png")}
-                  onMouseLeave={() => setHoveredImage(null)}
-                />
+                <img src="/lovable-uploads/dcd42115-3fc1-4647-8e5c-1773e44f0763.png" alt="Runsheet showing linked documents with file access" className="rounded-lg shadow-lg w-full" />
               </div>
             </div>
           </div>
