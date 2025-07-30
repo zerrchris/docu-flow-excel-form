@@ -142,11 +142,13 @@ const Home: React.FC = () => {
                   </div>
                   <h4 className="text-2xl font-semibold">Start Your Runsheet</h4>
                 </div>
-                <p className="text-muted-foreground text-lg mb-4">Begin by creating a new runsheet from the welcome screen. Choose "New Runsheet" to start with a blank template, or "Open Runsheet" to load a previously saved one.</p>
+                <p className="text-muted-foreground text-lg mb-4">Begin by choosing your workflow from the welcome screen. You can create a new runsheet, continue where you left off with an active runsheet, upload an existing runsheet file, open a previously saved runsheet, or connect to Google Drive to import spreadsheets.</p>
                 <ul className="space-y-2 text-muted-foreground">
-                  <li>• Multiple workflow options available</li>
-                  <li>• Professional welcome interface</li>
-                  <li>• Easy runsheet management</li>
+                  <li>• Create new runsheet from scratch</li>
+                  <li>• Continue working on active runsheets</li>
+                  <li>• Upload existing Excel/CSV files</li>
+                  <li>• Open previously saved runsheets</li>
+                  <li>• Connect Google Drive integration</li>
                 </ul>
               </div>
               <div className="order-1 lg:order-2">
