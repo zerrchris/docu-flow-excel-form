@@ -8,11 +8,11 @@ import { supabase } from '@/integrations/supabase/client';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import extractorLogo from '@/assets/document-extractor-logo.png';
-import workflowStep1 from '@/assets/workflow-step1.png';
-import workflowStep1Alt from '@/assets/workflow-step1-alt.png';
-import workflowStep2 from '@/assets/workflow-step2.png';
-import workflowStep3 from '@/assets/workflow-step3.png';
-import workflowStep4 from '@/assets/workflow-step4.png';
+import welcomeScreen from '@/assets/welcome-screen.png';
+import activeRunsheet from '@/assets/active-runsheet.png';
+import documentAnalysis from '@/assets/document-analysis.png';
+import dataExtraction from '@/assets/data-extraction.png';
+import runsheetOverview from '@/assets/runsheet-overview.png';
 import AuthButton from '@/components/AuthButton';
 const Home: React.FC = () => {
   const [user, setUser] = useState<SupabaseUser | null>(null);
@@ -154,14 +154,14 @@ const Home: React.FC = () => {
                 </ul>
               </div>
               <div className="order-1 lg:order-2">
-                <img src={workflowStep1} alt="RunsheetPro welcome screen with workflow options" className="rounded-lg shadow-lg w-full" />
+                <img src={welcomeScreen} alt="RunsheetPro welcome screen with workflow options" className="rounded-lg shadow-lg w-full" />
               </div>
             </div>
 
             {/* Step 1.5 - Working with Runsheet */}
             <div className="grid lg:grid-cols-2 gap-8 items-center">
               <div>
-                <img src={workflowStep1Alt} alt="Active runsheet interface with data" className="rounded-lg shadow-lg w-full" />
+                <img src={activeRunsheet} alt="Active runsheet interface with data" className="rounded-lg shadow-lg w-full" />
               </div>
               <div>
                 <div className="flex items-center gap-4 mb-4">
@@ -184,7 +184,7 @@ const Home: React.FC = () => {
             {/* Step 2 */}
             <div className="grid lg:grid-cols-2 gap-8 items-center">
               <div>
-                <img src={workflowStep2} alt="Document processor upload interface" className="rounded-lg shadow-lg w-full" />
+                <img src={documentAnalysis} alt="Document processor upload interface" className="rounded-lg shadow-lg w-full" />
               </div>
               <div>
                 <div className="flex items-center gap-4 mb-4">
@@ -223,14 +223,14 @@ const Home: React.FC = () => {
                 </ul>
               </div>
               <div className="order-1 lg:order-2">
-                <img src={workflowStep3} alt="Document analysis with highlighted analyze button" className="rounded-lg shadow-lg w-full" />
+                <img src={documentAnalysis} alt="Document analysis with highlighted analyze button" className="rounded-lg shadow-lg w-full" />
               </div>
             </div>
 
             {/* Step 4 */}
             <div className="grid lg:grid-cols-2 gap-8 items-center">
               <div>
-                <img src={workflowStep4} alt="Add to runsheet with highlighted button" className="rounded-lg shadow-lg w-full" />
+                <img src={dataExtraction} alt="Add to runsheet with highlighted button" className="rounded-lg shadow-lg w-full" />
               </div>
               <div>
                 <div className="flex items-center gap-4 mb-4">
