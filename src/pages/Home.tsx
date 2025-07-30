@@ -12,6 +12,7 @@ import AuthButton from '@/components/AuthButton';
 const Home: React.FC = () => {
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [hoveredImage, setHoveredImage] = useState<string | null>(null);
+  const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
   const {
     subscribed,
     subscriptionTier
@@ -156,6 +157,7 @@ const Home: React.FC = () => {
                   className="relative group cursor-pointer"
                   onMouseEnter={() => setHoveredImage("/lovable-uploads/255c2ba1-c964-4a54-9d70-6c1da31848f3.png")}
                   onMouseLeave={() => setHoveredImage(null)}
+                  onClick={() => setEnlargedImage("/lovable-uploads/255c2ba1-c964-4a54-9d70-6c1da31848f3.png")}
                 >
                   <img src="/lovable-uploads/255c2ba1-c964-4a54-9d70-6c1da31848f3.png" alt="RunsheetPro welcome screen with workflow options" className="rounded-lg shadow-lg w-full transition-all duration-300 group-hover:brightness-75" />
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -177,6 +179,7 @@ const Home: React.FC = () => {
                   className="relative group cursor-pointer"
                   onMouseEnter={() => setHoveredImage("/lovable-uploads/901ca479-cc15-44c2-ac1e-511e6913d2d5.png")}
                   onMouseLeave={() => setHoveredImage(null)}
+                  onClick={() => setEnlargedImage("/lovable-uploads/901ca479-cc15-44c2-ac1e-511e6913d2d5.png")}
                 >
                   <img src="/lovable-uploads/901ca479-cc15-44c2-ac1e-511e6913d2d5.png" alt="Active runsheet interface with data" className="rounded-lg shadow-lg w-full transition-all duration-300 group-hover:brightness-75" />
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -446,6 +449,30 @@ const Home: React.FC = () => {
           </p>
         </div>
       </footer>
+
+      {/* Image Enlargement Overlay */}
+      {enlargedImage && (
+        <div 
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => setEnlargedImage(null)}
+        >
+          <div className="relative max-w-7xl max-h-full">
+            <img 
+              src={enlargedImage} 
+              alt="Enlarged view" 
+              className="max-w-full max-h-full object-contain rounded-lg"
+            />
+            <button 
+              onClick={() => setEnlargedImage(null)}
+              className="absolute top-4 right-4 text-white bg-black/50 hover:bg-black/70 rounded-full p-2 transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
     </div>;
 };
 export default Home;
