@@ -15,8 +15,10 @@ import workflowStep4 from '@/assets/workflow-step4.png';
 import AuthButton from '@/components/AuthButton';
 const Home: React.FC = () => {
   const [user, setUser] = useState<SupabaseUser | null>(null);
-  const { subscribed, subscriptionTier } = useSubscription();
-  
+  const {
+    subscribed,
+    subscriptionTier
+  } = useSubscription();
   useEffect(() => {
     const initAuth = async () => {
       const {
@@ -48,25 +50,15 @@ const Home: React.FC = () => {
               </h1>
             </div>
             <div className="flex items-center gap-4">
-              {user && subscribed && (
-                <Badge variant="default" className="gap-1">
+              {user && subscribed && <Badge variant="default" className="gap-1">
                   <CreditCard className="h-3 w-3" />
                   {subscriptionTier} Plan
-                </Badge>
-              )}
-              {user ? (
-                subscribed ? (
-                  <Link to="/pricing">
+                </Badge>}
+              {user ? subscribed ? <Link to="/pricing">
                     <Button variant="outline">Manage Subscription</Button>
-                  </Link>
-                ) : (
-                  <Link to="/pricing">
+                  </Link> : <Link to="/pricing">
                     <Button>Get Subscription</Button>
-                  </Link>
-                )
-              ) : (
-                <AuthButton />
-              )}
+                  </Link> : <AuthButton />}
             </div>
           </div>
         </div>
@@ -153,9 +145,7 @@ const Home: React.FC = () => {
                   </div>
                   <h4 className="text-2xl font-semibold">Upload Your Document</h4>
                 </div>
-                <p className="text-muted-foreground text-lg mb-4">
-                  Start by uploading any document - invoices, receipts, contracts, or forms. Simply drag and drop your file or browse to select it from your device.
-                </p>
+                <p className="text-muted-foreground text-lg mb-4">Start by uploading any document - Simply drag and drop your file or browse to select it from your device.</p>
                 <ul className="space-y-2 text-muted-foreground">
                   <li>• Supports PDF, JPG, PNG formats</li>
                   <li>• Drag & drop interface</li>
@@ -163,22 +153,14 @@ const Home: React.FC = () => {
                 </ul>
               </div>
               <div className="order-1 lg:order-2">
-                <img 
-                  src={workflowStep1} 
-                  alt="Document upload interface" 
-                  className="rounded-lg shadow-lg w-full"
-                />
+                <img src={workflowStep1} alt="Document upload interface" className="rounded-lg shadow-lg w-full" />
               </div>
             </div>
 
             {/* Step 2 */}
             <div className="grid lg:grid-cols-2 gap-8 items-center">
               <div>
-                <img 
-                  src={workflowStep2} 
-                  alt="Document analysis interface" 
-                  className="rounded-lg shadow-lg w-full"
-                />
+                <img src={workflowStep2} alt="Document analysis interface" className="rounded-lg shadow-lg w-full" />
               </div>
               <div>
                 <div className="flex items-center gap-4 mb-4">
@@ -217,22 +199,14 @@ const Home: React.FC = () => {
                 </ul>
               </div>
               <div className="order-1 lg:order-2">
-                <img 
-                  src={workflowStep3} 
-                  alt="Data extraction results" 
-                  className="rounded-lg shadow-lg w-full"
-                />
+                <img src={workflowStep3} alt="Data extraction results" className="rounded-lg shadow-lg w-full" />
               </div>
             </div>
 
             {/* Step 4 */}
             <div className="grid lg:grid-cols-2 gap-8 items-center">
               <div>
-                <img 
-                  src={workflowStep4} 
-                  alt="Runsheet with organized data" 
-                  className="rounded-lg shadow-lg w-full"
-                />
+                <img src={workflowStep4} alt="Runsheet with organized data" className="rounded-lg shadow-lg w-full" />
               </div>
               <div>
                 <div className="flex items-center gap-4 mb-4">
@@ -260,21 +234,17 @@ const Home: React.FC = () => {
               <p className="text-muted-foreground mb-6">
                 Join hundreds of users who have already transformed their document processing
               </p>
-              {user ? (
-                <Link to="/app">
+              {user ? <Link to="/app">
                   <Button size="lg" className="gap-2">
                     <FileText className="h-5 w-5" />
                     Try It Now
                   </Button>
-                </Link>
-              ) : (
-                <Link to="/signin">
+                </Link> : <Link to="/signin">
                   <Button size="lg" className="gap-2">
                     <LogIn className="h-5 w-5" />
                     Start Free Trial
                   </Button>
-                </Link>
-              )}
+                </Link>}
             </div>
           </div>
         </div>
