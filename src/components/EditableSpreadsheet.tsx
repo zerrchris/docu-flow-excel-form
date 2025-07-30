@@ -319,6 +319,30 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
     window.addEventListener('createNewRunsheetFromDashboard', handleDashboardNewRunsheet as EventListener);
     
+    // Handle new runsheet start from DocumentProcessor
+    const handleStartNewRunsheet = (event: CustomEvent) => {
+      console.log('🧹 EditableSpreadsheet: Received startNewRunsheet event');
+      const { clearDocuments, clearStorage } = event.detail || {};
+      
+      if (clearDocuments) {
+        // Clear document map completely
+        setDocumentMap(new Map());
+        updateDocumentMap(new Map());
+        console.log('🧹 EditableSpreadsheet: Cleared document map');
+      }
+      
+      if (clearStorage) {
+        // Clear any runsheet-related state
+        setCurrentRunsheetId(null);
+        setRunsheetName('Untitled Runsheet');
+        setLastSaveTime(null);
+        setHasUnsavedChanges(false);
+        console.log('🧹 EditableSpreadsheet: Cleared runsheet state');
+      }
+    };
+    
+    window.addEventListener('startNewRunsheet', handleStartNewRunsheet as EventListener);
+    
     // Handle Ctrl+S save event from DocumentProcessor
     const handleSaveEvent = () => {
       if (user && hasUnsavedChanges) {
@@ -331,6 +355,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     return () => {
       window.removeEventListener('saveRunsheetBeforeUpload', handleSaveRequest as EventListener);
       window.removeEventListener('createNewRunsheetFromDashboard', handleDashboardNewRunsheet as EventListener);
+      window.removeEventListener('startNewRunsheet', handleStartNewRunsheet as EventListener);
       window.removeEventListener('saveRunsheet', handleSaveEvent);
     };
   }, [currentRunsheetId, runsheetName, data, columns, columnInstructions]);

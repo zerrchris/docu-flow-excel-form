@@ -36,7 +36,7 @@ const DEFAULT_EXTRACTION_INSTRUCTIONS: Record<string, string> = {
 
 const DocumentProcessor: React.FC = () => {
   // Hook to get active runsheet data  
-  const { activeRunsheet, setActiveRunsheet } = useActiveRunsheet();
+  const { activeRunsheet, setActiveRunsheet, clearActiveRunsheet } = useActiveRunsheet();
   
   // Document state
   const [file, setFile] = useState<File | null>(null);
@@ -1364,12 +1364,33 @@ Image: [base64 image data]`;
     // Clear the loaded runsheet ref to allow fresh loading
     loadedRunsheetRef.current = null;
     
-    // Clear any file state
+    // CRITICAL: Clear all persistent storage that might carry over documents
+    try {
+      // Clear pending documents from sessionStorage
+      sessionStorage.removeItem('pendingDocuments');
+      console.log('🧹 Cleared pending documents from sessionStorage');
+      
+      // Clear emergency draft from localStorage
+      localStorage.removeItem('runsheet-emergency-draft');
+      console.log('🧹 Cleared emergency draft from localStorage');
+      
+      // Clear active runsheet from localStorage and state
+      localStorage.removeItem('activeRunsheet');
+      console.log('🧹 Cleared active runsheet from localStorage');
+    } catch (error) {
+      console.error('Error clearing storage during new runsheet:', error);
+    }
+    
+    // Clear all component state
     setFile(null);
     setPreviewUrl(null);
     setPendingFiles([]);
     setSpreadsheetData([]);
     setFormData({});
+    setDocumentMap(new Map()); // Clear document map
+    
+    // Clear active runsheet state using the hook
+    clearActiveRunsheet();
     
     // Clear unsaved changes flag
     setHasUnsavedChanges(false);
@@ -1403,7 +1424,9 @@ Image: [base64 image data]`;
     }
     
     // Dispatch event to reset the spreadsheet to fresh state
-    const resetEvent = new CustomEvent('startNewRunsheet');
+    const resetEvent = new CustomEvent('startNewRunsheet', {
+      detail: { clearDocuments: true, clearStorage: true }
+    });
     window.dispatchEvent(resetEvent);
     
     toast({
