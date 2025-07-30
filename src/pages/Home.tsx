@@ -149,7 +149,7 @@ const Home: React.FC = () => {
                 </ul>
               </div>
               <div className="order-1 lg:order-2">
-                <img src="/lovable-uploads/7149754a-1f31-458f-9a00-b21051d1c5c4.png" alt="RunsheetPro welcome screen with workflow options" className="rounded-lg shadow-lg w-full" />
+                <img src="/lovable-uploads/255c2ba1-c964-4a54-9d70-6c1da31848f3.png" alt="RunsheetPro welcome screen with workflow options" className="rounded-lg shadow-lg w-full" />
               </div>
             </div>
 
