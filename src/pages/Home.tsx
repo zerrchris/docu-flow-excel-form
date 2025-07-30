@@ -36,18 +36,20 @@ const Home: React.FC = () => {
     initAuth();
   }, []);
   return <div className="min-h-screen bg-background relative">
-      {/* Full Screen Image Overlay */}
+      {/* Image Overlay */}
       {hoveredImage && (
         <div 
-          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-8"
-          onMouseEnter={() => setHoveredImage(hoveredImage)}
-          onMouseLeave={() => setHoveredImage(null)}
+          className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center pointer-events-none"
+          onClick={() => setHoveredImage(null)}
         >
-          <img 
-            src={hoveredImage} 
-            alt="Enlarged workflow step" 
-            className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl animate-scale-in"
-          />
+          <div className="pointer-events-auto">
+            <img 
+              src={hoveredImage} 
+              alt="Enlarged workflow step" 
+              className="max-w-[80vw] max-h-[80vh] object-contain rounded-lg shadow-2xl animate-scale-in"
+              onMouseLeave={() => setHoveredImage(null)}
+            />
+          </div>
         </div>
       )}
       {/* Header */}
