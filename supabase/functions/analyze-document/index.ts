@@ -81,18 +81,43 @@ serve(async (req) => {
     const supportedFormats = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
     const mimeType = imageData.split(';')[0].replace('data:', '');
     
+    // Handle octet-stream by checking if it's actually an image
     if (!supportedFormats.includes(mimeType)) {
-      console.error('Unsupported file format:', mimeType);
-      return new Response(
-        JSON.stringify({ 
-          error: `Unsupported file format: ${mimeType}. Please use PNG, JPEG, GIF, or WebP images.`,
-          details: 'OpenAI vision API only supports image formats'
-        }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      // If it's octet-stream, try to detect if it's actually an image by checking base64 headers
+      if (mimeType === 'application/octet-stream') {
+        const base64Content = imageData.split(',')[1];
+        if (base64Content) {
+          // Check for image file signatures in base64
+          if (base64Content.startsWith('/9j/') || base64Content.startsWith('iVBOR') || 
+              base64Content.startsWith('R0lGOD') || base64Content.startsWith('UklGR')) {
+            console.log('Detected image content in octet-stream, proceeding with analysis');
+          } else {
+            console.error('Unsupported file format:', mimeType);
+            return new Response(
+              JSON.stringify({ 
+                error: `Unsupported file format: ${mimeType}. Please use PNG, JPEG, GIF, or WebP images.`,
+                details: 'File appears to be octet-stream but not a recognizable image format'
+              }),
+              { 
+                status: 400, 
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+              }
+            );
+          }
         }
-      );
+      } else {
+        console.error('Unsupported file format:', mimeType);
+        return new Response(
+          JSON.stringify({ 
+            error: `Unsupported file format: ${mimeType}. Please use PNG, JPEG, GIF, or WebP images.`,
+            details: 'OpenAI vision API only supports image formats'
+          }),
+          { 
+            status: 400, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      }
     }
 
     // Validate base64 content
