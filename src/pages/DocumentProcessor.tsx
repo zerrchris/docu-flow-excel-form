@@ -1048,7 +1048,8 @@ Image: [base64 image data]`;
       );
       
       // ALWAYS update form data first, regardless of new columns
-      if (!fileToAnalyze) {
+      // Update form data when analyzing the main document (file) or when no specific file is provided
+      if (!fileToAnalyze || fileToAnalyze === file) {
         console.log('🔧 ANALYSIS: Updating main formData with extracted data');
         console.log('🔧 ANALYSIS: extractedData:', extractedData);
         setFormData(prev => {
