@@ -379,11 +379,26 @@ const Home: React.FC = () => {
                 </ul>
               </div>
               <div>
-                <img 
-                  src="https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=600&h=400&fit=crop&crop=center"
-                  alt="Quick document view with expanded interface"
-                  className="rounded-lg shadow-lg w-full"
-                />
+                <div 
+                  className="relative group cursor-pointer"
+                  onMouseEnter={() => setHoveredImage("/lovable-uploads/09cb2d94-09f3-47de-a814-f63096d089d6.png")}
+                  onMouseLeave={() => setHoveredImage(null)}
+                  onClick={() => setEnlargedImage("/lovable-uploads/09cb2d94-09f3-47de-a814-f63096d089d6.png")}
+                >
+                  <img 
+                    src="/lovable-uploads/09cb2d94-09f3-47de-a814-f63096d089d6.png"
+                    alt="Quick document view with expanded interface showing warranty deed"
+                    className="rounded-lg shadow-lg w-full transition-all duration-300 group-hover:brightness-75"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <div className="bg-black/50 backdrop-blur-sm rounded-full p-3 flex items-center gap-2 text-white">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                      </svg>
+                      <span className="text-sm font-medium">Click to enlarge</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
