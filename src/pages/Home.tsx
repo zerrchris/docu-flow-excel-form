@@ -359,49 +359,6 @@ const Home: React.FC = () => {
               </div>
             </div>
 
-            {/* Document Quick View Step */}
-            <div className="grid lg:grid-cols-2 gap-8 items-center">
-              <div>
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
-                    •
-                  </div>
-                  <h4 className="text-2xl font-semibold">Quick Document View</h4>
-                </div>
-                <p className="text-muted-foreground text-lg mb-4">
-                  Once a document is linked to your runsheet, you can always quickly view the full document with just a click of a button. The document opens in an expanded view for easy reading and reference.
-                </p>
-                <ul className="space-y-2 text-muted-foreground">
-                  <li>• One-click document expansion</li>
-                  <li>• Full-size document viewing</li>
-                  <li>• Easy navigation and zooming</li>
-                  <li>• Quick return to runsheet</li>
-                </ul>
-              </div>
-              <div>
-                <div 
-                  className="relative group cursor-pointer"
-                  onMouseEnter={() => setHoveredImage("/lovable-uploads/09cb2d94-09f3-47de-a814-f63096d089d6.png")}
-                  onMouseLeave={() => setHoveredImage(null)}
-                  onClick={() => setEnlargedImage("/lovable-uploads/09cb2d94-09f3-47de-a814-f63096d089d6.png")}
-                >
-                  <img 
-                    src="/lovable-uploads/09cb2d94-09f3-47de-a814-f63096d089d6.png"
-                    alt="Quick document view with expanded interface showing warranty deed"
-                    className="rounded-lg shadow-lg w-full transition-all duration-300 group-hover:brightness-75"
-                  />
-                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    <div className="bg-black/50 backdrop-blur-sm rounded-full p-3 flex items-center gap-2 text-white">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
-                      </svg>
-                      <span className="text-sm font-medium">Click to enlarge</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
             {/* Batch Processing Step */}
             <div className="grid lg:grid-cols-2 gap-8 items-center">
               <div className="order-2 lg:order-1">
@@ -467,6 +424,49 @@ const Home: React.FC = () => {
                     alt="Documents added directly to runsheet with reference numbers"
                     className="rounded-lg shadow-lg w-full"
                   />
+                </div>
+               </div>
+
+              {/* Document Quick View Step */}
+              <div className="grid lg:grid-cols-2 gap-8 items-center">
+                <div>
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
+                      •
+                    </div>
+                    <h4 className="text-2xl font-semibold">Quick Document View</h4>
+                  </div>
+                  <p className="text-muted-foreground text-lg mb-4">
+                    Once a document is linked to your runsheet, you can always quickly view the full document with just a click of a button. The document opens in an expanded view for easy reading and reference.
+                  </p>
+                  <ul className="space-y-2 text-muted-foreground">
+                    <li>• One-click document expansion</li>
+                    <li>• Full-size document viewing</li>
+                    <li>• Easy navigation and zooming</li>
+                    <li>• Quick return to runsheet</li>
+                  </ul>
+                </div>
+                <div>
+                  <div 
+                    className="relative group cursor-pointer"
+                    onMouseEnter={() => setHoveredImage("/lovable-uploads/09cb2d94-09f3-47de-a814-f63096d089d6.png")}
+                    onMouseLeave={() => setHoveredImage(null)}
+                    onClick={() => setEnlargedImage("/lovable-uploads/09cb2d94-09f3-47de-a814-f63096d089d6.png")}
+                  >
+                    <img 
+                      src="/lovable-uploads/09cb2d94-09f3-47de-a814-f63096d089d6.png"
+                      alt="Quick document view with expanded interface showing warranty deed"
+                      className="rounded-lg shadow-lg w-full transition-all duration-300 group-hover:brightness-75"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <div className="bg-black/50 backdrop-blur-sm rounded-full p-3 flex items-center gap-2 text-white">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                        </svg>
+                        <span className="text-sm font-medium">Click to enlarge</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
