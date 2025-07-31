@@ -14,7 +14,7 @@ interface ImageCombinerProps {
 }
 
 const ImageCombiner: React.FC<ImageCombinerProps> = ({ files, onCombined, onCancel }) => {
-  const [combineType, setCombineType] = useState<'pdf' | 'vertical' | 'grid'>('pdf');
+  const [combineType, setCombineType] = useState<'vertical' | 'grid'>('vertical');
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
 
@@ -34,7 +34,7 @@ const ImageCombiner: React.FC<ImageCombinerProps> = ({ files, onCombined, onCanc
       
       toast({
         title: "Images combined successfully",
-        description: `Created ${combineType === 'pdf' ? 'PDF' : 'image'} with ${files.length} images.`,
+        description: `Created combined image with ${files.length} images.`,
       });
     } catch (error) {
       console.error('Error combining images:', error);
@@ -67,7 +67,6 @@ const ImageCombiner: React.FC<ImageCombinerProps> = ({ files, onCombined, onCanc
               <SelectValue placeholder="Select combination type" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="pdf">PDF Document (each image on separate page)</SelectItem>
               <SelectItem value="vertical">Vertical Collage (stack images vertically)</SelectItem>
               <SelectItem value="grid">Grid Layout (arrange in grid)</SelectItem>
             </SelectContent>
@@ -75,7 +74,6 @@ const ImageCombiner: React.FC<ImageCombinerProps> = ({ files, onCombined, onCanc
         </div>
 
         <div className="text-xs text-muted-foreground space-y-1">
-          <p><strong>PDF:</strong> Best for documents - each image becomes a page</p>
           <p><strong>Vertical:</strong> Creates one long image by stacking vertically</p>
           <p><strong>Grid:</strong> Arranges images in a square grid layout</p>
         </div>
