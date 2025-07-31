@@ -1693,7 +1693,11 @@ Image: [base64 image data]`;
     <div className="min-h-screen bg-background">
       {isDocumentMode ? (
         // Full-screen document processing mode
-        <div className="fixed inset-0 z-50 bg-background flex flex-col">
+        <div 
+          className="fixed inset-0 z-50 bg-background flex flex-col"
+          onWheel={(e) => e.stopPropagation()}
+          onScroll={(e) => e.stopPropagation()}
+        >
           {/* Document Mode Header */}
           <header className="border-b w-full shrink-0 bg-background">
             <div className="container mx-auto px-4 py-4">
@@ -1744,7 +1748,22 @@ Image: [base64 image data]`;
               <div className="p-4 border-b bg-muted/30 shrink-0">
                 <h4 className="text-md font-medium text-foreground">Document Data</h4>
               </div>
-              <div className="flex-1 overflow-y-auto">
+              <div 
+                className="flex-1 overflow-y-auto overscroll-contain"
+                style={{ scrollbarGutter: 'stable' }}
+                onWheel={(e) => {
+                  e.stopPropagation();
+                  // Allow scrolling within this container only
+                  const target = e.currentTarget;
+                  const { scrollTop, scrollHeight, clientHeight } = target;
+                  
+                  // Prevent scrolling the parent if we're at the boundaries
+                  if ((e.deltaY < 0 && scrollTop === 0) || 
+                      (e.deltaY > 0 && scrollTop + clientHeight >= scrollHeight)) {
+                    e.preventDefault();
+                  }
+                }}
+              >
                 <div className="p-4 space-y-4">
                   {/* Real-time Voice Input */}
                   <RealtimeVoiceInput
