@@ -209,7 +209,23 @@ const Home: React.FC = () => {
 
             {/* Step 2 */}
             <div className="grid lg:grid-cols-2 gap-8 items-center">
-              <div>
+              <div className="order-2 lg:order-1">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
+                    •
+                  </div>
+                  <h4 className="text-2xl font-semibold">Upload Your Document</h4>
+                </div>
+                <p className="text-muted-foreground text-lg mb-4">
+                  When ready to analyze a document, go to the Document Processor. Upload your document using the highlighted "Document Capture" button.
+                </p>
+                <ul className="space-y-2 text-muted-foreground">
+                  <li>• Supports PDF, JPG, PNG formats</li>
+                  <li>• Drag & drop interface</li>
+                  <li>• Mobile camera capture available</li>
+                </ul>
+              </div>
+              <div className="order-1 lg:order-2">
                 <div 
                   className="relative group cursor-pointer"
                   onMouseEnter={() => setHoveredImage("/lovable-uploads/e910cd5a-0990-432c-bda8-9d1b14f8b8fa.png")}
@@ -226,22 +242,6 @@ const Home: React.FC = () => {
                     </div>
                   </div>
                 </div>
-              </div>
-              <div>
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
-                    •
-                  </div>
-                  <h4 className="text-2xl font-semibold">Upload Your Document</h4>
-                </div>
-                <p className="text-muted-foreground text-lg mb-4">
-                  When ready to analyze a document, go to the Document Processor. Upload your document using the highlighted "Document Capture" button.
-                </p>
-                <ul className="space-y-2 text-muted-foreground">
-                  <li>• Supports PDF, JPG, PNG formats</li>
-                  <li>• Drag & drop interface</li>
-                  <li>• Mobile camera capture available</li>
-                </ul>
               </div>
             </div>
 
@@ -285,7 +285,23 @@ const Home: React.FC = () => {
 
             {/* Step 4 */}
             <div className="grid lg:grid-cols-2 gap-8 items-center">
-              <div>
+              <div className="order-2 lg:order-1">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
+                    •
+                  </div>
+                  <h4 className="text-2xl font-semibold">Review & Add to Runsheet</h4>
+                </div>
+                <p className="text-muted-foreground text-lg mb-4">
+                  Review the extracted data for accuracy, make any necessary corrections, then click "Add to Runsheet". The data will be added to the next row of your runsheet with a document file reference.
+                </p>
+                <ul className="space-y-2 text-muted-foreground">
+                  <li>• Automatic data validation</li>
+                  <li>• Document reference number assigned</li>
+                  <li>• One-click addition to runsheet</li>
+                </ul>
+              </div>
+              <div className="order-1 lg:order-2">
                 <div 
                   className="relative group cursor-pointer"
                   onMouseEnter={() => setHoveredImage("/lovable-uploads/98320272-b5c8-4a78-b5d0-d8cbf36a89a6.png")}
@@ -302,22 +318,6 @@ const Home: React.FC = () => {
                     </div>
                   </div>
                 </div>
-              </div>
-              <div>
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
-                    •
-                  </div>
-                  <h4 className="text-2xl font-semibold">Review & Add to Runsheet</h4>
-                </div>
-                <p className="text-muted-foreground text-lg mb-4">
-                  Review the extracted data for accuracy, make any necessary corrections, then click "Add to Runsheet". The data will be added to the next row of your runsheet with a document file reference.
-                </p>
-                <ul className="space-y-2 text-muted-foreground">
-                  <li>• Automatic data validation</li>
-                  <li>• Document reference number assigned</li>
-                  <li>• One-click addition to runsheet</li>
-                </ul>
               </div>
             </div>
 
@@ -361,25 +361,7 @@ const Home: React.FC = () => {
 
             {/* Batch Processing Step */}
             <div className="grid lg:grid-cols-2 gap-8 items-center">
-              <div>
-                <div 
-                  className="relative group cursor-pointer"
-                  onMouseEnter={() => setHoveredImage("/lovable-uploads/83b659c7-5a73-4ad3-993c-f20fe21afa72.png")}
-                  onMouseLeave={() => setHoveredImage(null)}
-                  onClick={() => setEnlargedImage("/lovable-uploads/83b659c7-5a73-4ad3-993c-f20fe21afa72.png")}
-                >
-                  <img src="/lovable-uploads/83b659c7-5a73-4ad3-993c-f20fe21afa72.png" alt="Batch processing multiple documents" className="rounded-lg shadow-lg w-full transition-all duration-300 group-hover:brightness-75" />
-                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    <div className="bg-black/50 backdrop-blur-sm rounded-full p-3 flex items-center gap-2 text-white">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
-                      </svg>
-                      <span className="text-sm font-medium">Click to enlarge</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div>
+              <div className="order-2 lg:order-1">
                 <div className="flex items-center gap-4 mb-4">
                   <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
                     •
@@ -396,6 +378,24 @@ const Home: React.FC = () => {
                    <li>• Progress tracking for each document</li>
                    <li>• Bulk addition to runsheet</li>
                  </ul>
+               </div>
+               <div className="order-1 lg:order-2">
+                 <div 
+                   className="relative group cursor-pointer"
+                   onMouseEnter={() => setHoveredImage("/lovable-uploads/83b659c7-5a73-4ad3-993c-f20fe21afa72.png")}
+                   onMouseLeave={() => setHoveredImage(null)}
+                   onClick={() => setEnlargedImage("/lovable-uploads/83b659c7-5a73-4ad3-993c-f20fe21afa72.png")}
+                 >
+                   <img src="/lovable-uploads/83b659c7-5a73-4ad3-993c-f20fe21afa72.png" alt="Batch processing multiple documents" className="rounded-lg shadow-lg w-full transition-all duration-300 group-hover:brightness-75" />
+                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                     <div className="bg-black/50 backdrop-blur-sm rounded-full p-3 flex items-center gap-2 text-white">
+                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                       </svg>
+                       <span className="text-sm font-medium">Click to enlarge</span>
+                     </div>
+                   </div>
+                 </div>
                </div>
              </div>
 
