@@ -3383,6 +3383,27 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     try {
       console.log('🔍 Starting document analysis for:', file.name, 'type:', file.type, 'size:', file.size);
       
+      // Check if the file is a PDF and handle appropriately
+      if (file.type === 'application/pdf') {
+        toast({
+          title: "PDF Analysis Not Supported",
+          description: "PDF files cannot be analyzed directly. Please convert your PDF to an image format (PNG, JPEG) and try again.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Verify the file is a supported image format
+      const supportedImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+      if (file.type && !supportedImageTypes.includes(file.type)) {
+        toast({
+          title: "Unsupported File Format",
+          description: `File format ${file.type} is not supported. Please use PNG, JPEG, GIF, or WebP images.`,
+          variant: "destructive"
+        });
+        return;
+      }
+      
       // Get extraction preferences
       const extractionPrefs = await ExtractionPreferencesService.getDefaultPreferences();
       const extractionFields = extractionPrefs?.columns?.map(col => `${col}: ${extractionPrefs.column_instructions?.[col] || 'Extract this field'}`).join('\n') || 
