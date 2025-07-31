@@ -269,18 +269,39 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
       if (documentUrl.startsWith('data:')) {
         console.log('🔧 Using base64 data from pending document');
         imageData = documentUrl;
+        
+        // Check if it's PDF data (even if incorrectly labeled)
+        const base64Content = documentUrl.split(',')[1];
+        if (base64Content && base64Content.startsWith('JVBERi0')) {
+          toast({
+            title: "PDF Analysis Not Supported",
+            description: "PDF files cannot be analyzed directly. Please convert your PDF to an image format (PNG, JPEG) and try again.",
+            variant: "destructive"
+          });
+          return;
+        }
+        
+        // Check MIME type for PDFs
+        if (documentUrl.includes('data:application/pdf')) {
+          toast({
+            title: "PDF Analysis Not Supported", 
+            description: "PDF files cannot be analyzed directly. Please convert your PDF to an image format (PNG, JPEG) and try again.",
+            variant: "destructive"
+          });
+          return;
+        }
       } else {
         console.log('🔧 Fetching document from storage URL');
         // Convert the document URL to base64 for analysis
         const response = await fetch(documentUrl);
         const blob = await response.blob();
         
-        if (isPdf) {
-          // For PDFs, we'll need to convert to image first
+        if (isPdf || blob.type === 'application/pdf') {
+          // For PDFs, show clear error message
           toast({
-            title: "PDF Analysis",
-            description: "PDF analysis is currently limited. Consider converting to image first.",
-            variant: "default"
+            title: "PDF Analysis Not Supported",
+            description: "PDF files cannot be analyzed directly. Please convert your PDF to an image format (PNG, JPEG) and try again.",
+            variant: "destructive"
           });
           return;
         } else {
