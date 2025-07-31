@@ -1695,7 +1695,7 @@ Image: [base64 image data]`;
         // Full-screen document processing mode
         <div className="fixed inset-0 z-50 bg-background flex flex-col">
           {/* Document Mode Header */}
-          <header className="border-b w-full shrink-0">
+          <header className="border-b w-full shrink-0 bg-background">
             <div className="container mx-auto px-4 py-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
@@ -1738,56 +1738,51 @@ Image: [base64 image data]`;
           </header>
           
           {/* Document Processing Area */}
-          <div className="flex-1 min-h-0">
-            <ResizablePanelGroup direction="horizontal" className="w-full h-full">
-              <ResizablePanel defaultSize={33} minSize={25} maxSize={60}>
-                <div className="h-full border-r border-border bg-card">
-                  <div className="p-6 h-full overflow-auto">
-                    <div className="space-y-4">
-                      <h4 className="text-md font-medium text-foreground">Document Data</h4>
-                      
-                      {/* Real-time Voice Input */}
-                      <RealtimeVoiceInput
-                        fields={columns}
-                        columnInstructions={columnInstructions || {}}
-                        onDataExtracted={(data) => {
-                          // Update form data with voice input
-                          setFormData(prev => ({ ...prev, ...data }));
-                        }}
-                      />
-                      
-                      {/* Data Form */}
-                      <DataForm 
-                        fields={columns}
-                        formData={formData}
-                        onChange={handleFieldChange}
-                        onAnalyze={analyzeDocument}
-                        onCancelAnalysis={cancelAnalysis}
-                        onAddToSpreadsheet={addToSpreadsheet}
-                        onResetDocument={uploadNewDocument}
-                        isAnalyzing={isAnalyzing}
-                        isUploading={false}
-                        hasAddedToSpreadsheet={false}
-                      />
-                    </div>
-                  </div>
+          <div className="flex-1 flex overflow-hidden">
+            {/* Left Panel - Form */}
+            <div className="w-1/3 min-w-[400px] max-w-[600px] border-r border-border bg-card flex flex-col">
+              <div className="p-4 border-b bg-muted/30 shrink-0">
+                <h4 className="text-md font-medium text-foreground">Document Data</h4>
+              </div>
+              <div className="flex-1 overflow-y-auto">
+                <div className="p-4 space-y-4">
+                  {/* Real-time Voice Input */}
+                  <RealtimeVoiceInput
+                    fields={columns}
+                    columnInstructions={columnInstructions || {}}
+                    onDataExtracted={(data) => {
+                      // Update form data with voice input
+                      setFormData(prev => ({ ...prev, ...data }));
+                    }}
+                  />
+                  
+                  {/* Data Form */}
+                  <DataForm 
+                    fields={columns}
+                    formData={formData}
+                    onChange={handleFieldChange}
+                    onAnalyze={analyzeDocument}
+                    onCancelAnalysis={cancelAnalysis}
+                    onAddToSpreadsheet={addToSpreadsheet}
+                    onResetDocument={uploadNewDocument}
+                    isAnalyzing={isAnalyzing}
+                    isUploading={false}
+                    hasAddedToSpreadsheet={false}
+                  />
                 </div>
-              </ResizablePanel>
-              
-              <ResizableHandle withHandle />
-              
-              <ResizablePanel defaultSize={67}>
-                <div className="h-full">
-                  {file ? (
-                    <DocumentViewer file={file} previewUrl={previewUrl} />
-                  ) : (
-                    <div className="h-full flex items-center justify-center">
-                      <p className="text-muted-foreground">No document loaded</p>
-                    </div>
-                  )}
+              </div>
+            </div>
+            
+            {/* Right Panel - Document Viewer */}
+            <div className="flex-1 flex flex-col overflow-hidden">
+              {file ? (
+                <DocumentViewer file={file} previewUrl={previewUrl} />
+              ) : (
+                <div className="h-full flex items-center justify-center">
+                  <p className="text-muted-foreground">No document loaded</p>
                 </div>
-              </ResizablePanel>
-            </ResizablePanelGroup>
+              )}
+            </div>
           </div>
         </div>
       ) : (
