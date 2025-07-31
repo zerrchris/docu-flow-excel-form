@@ -111,9 +111,34 @@ document.addEventListener('DOMContentLoaded', async () => {
     const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
     const isLocalDevelopment = tabs[0] && tabs[0].url.includes('localhost');
     
-    const appUrl = isLocalDevelopment 
+    let appUrl = isLocalDevelopment 
       ? 'http://localhost:5173' 
       : 'https://preview--docu-flow-excel-form.lovable.app';
+    
+    // Include auth data and active runsheet if available
+    try {
+      const result = await chrome.storage.local.get(['supabase_session', 'activeRunsheet']);
+      const params = new URLSearchParams();
+      
+      if (result.supabase_session && result.supabase_session.access_token) {
+        const authData = {
+          access_token: result.supabase_session.access_token,
+          refresh_token: result.supabase_session.refresh_token
+        };
+        params.set('extension_auth', encodeURIComponent(JSON.stringify(authData)));
+      }
+      
+      if (result.activeRunsheet && result.activeRunsheet.id) {
+        params.set('id', result.activeRunsheet.id);
+        appUrl += '/runsheet';
+      }
+      
+      if (params.toString()) {
+        appUrl += '?' + params.toString();
+      }
+    } catch (error) {
+      console.error('Error preparing app URL with auth data:', error);
+    }
       
     chrome.tabs.create({ 
       url: appUrl 

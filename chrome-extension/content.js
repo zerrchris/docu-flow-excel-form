@@ -1843,7 +1843,7 @@ function setupFrameEventListeners() {
 }
 
 // Open current runsheet in the main app
-function openCurrentRunsheetInApp() {
+async function openCurrentRunsheetInApp() {
   if (!activeRunsheet) {
     showNotification('No active runsheet to open', 'error');
     return;
@@ -1855,7 +1855,17 @@ function openCurrentRunsheetInApp() {
     : 'https://preview--docu-flow-excel-form.lovable.app';
   
   // Construct URL to open the specific runsheet
-  const runsheetUrl = `${appUrl}/runsheet?id=${activeRunsheet.id || 'default'}`;
+  let runsheetUrl = `${appUrl}/runsheet?id=${activeRunsheet.id || 'default'}`;
+  
+  // Include auth data if available
+  if (userSession && userSession.access_token) {
+    const authData = {
+      access_token: userSession.access_token,
+      refresh_token: userSession.refresh_token
+    };
+    const encodedAuth = encodeURIComponent(JSON.stringify(authData));
+    runsheetUrl += `&extension_auth=${encodedAuth}`;
+  }
   
   // Open in new tab
   window.open(runsheetUrl, '_blank');

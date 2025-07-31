@@ -109,8 +109,41 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   };
 
-  // Check subscription on auth state change
+  // Handle extension session transfer and check subscription on auth state change
   useEffect(() => {
+    const handleExtensionAuth = async () => {
+      // Check if there's an extension session to transfer
+      const urlParams = new URLSearchParams(window.location.search);
+      const extensionAuth = urlParams.get('extension_auth');
+      
+      if (extensionAuth) {
+        try {
+          // Extension is trying to pass auth data
+          const authData = JSON.parse(decodeURIComponent(extensionAuth));
+          
+          if (authData.access_token && authData.refresh_token) {
+            // Set the session in Supabase
+            const { error } = await supabase.auth.setSession({
+              access_token: authData.access_token,
+              refresh_token: authData.refresh_token
+            });
+            
+            if (error) {
+              console.error('Failed to set extension session:', error);
+            } else {
+              console.log('Extension session transferred successfully');
+              // Clean up URL parameter
+              const newUrl = new URL(window.location.href);
+              newUrl.searchParams.delete('extension_auth');
+              window.history.replaceState({}, '', newUrl.toString());
+            }
+          }
+        } catch (error) {
+          console.error('Failed to parse extension auth data:', error);
+        }
+      }
+    };
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         checkSubscription();
@@ -122,8 +155,10 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
       }
     });
 
-    // Check initial session
-    checkSubscription();
+    // Handle extension auth first, then check initial session
+    handleExtensionAuth().then(() => {
+      checkSubscription();
+    });
 
     return () => subscription.unsubscribe();
   }, []);
