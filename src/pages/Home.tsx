@@ -139,7 +139,7 @@ const Home: React.FC = () => {
               <div className="order-2 lg:order-1">
                 <div className="flex items-center gap-4 mb-4">
                   <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
-                    1
+                    •
                   </div>
                   <h4 className="text-2xl font-semibold">Start Your Runsheet</h4>
                 </div>
@@ -195,7 +195,7 @@ const Home: React.FC = () => {
               <div>
                 <div className="flex items-center gap-4 mb-4">
                   <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
-                    1
+                    •
                   </div>
                   <h4 className="text-2xl font-semibold">Work on Your Runsheet</h4>
                 </div>
@@ -233,7 +233,7 @@ const Home: React.FC = () => {
               <div>
                 <div className="flex items-center gap-4 mb-4">
                   <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
-                    2
+                    •
                   </div>
                   <h4 className="text-2xl font-semibold">Upload Your Document</h4>
                 </div>
@@ -253,7 +253,7 @@ const Home: React.FC = () => {
               <div className="order-2 lg:order-1">
                 <div className="flex items-center gap-4 mb-4">
                   <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
-                    3
+                    •
                   </div>
                   <h4 className="text-2xl font-semibold">Analyze with AI</h4>
                 </div>
@@ -309,7 +309,7 @@ const Home: React.FC = () => {
               <div>
                 <div className="flex items-center gap-4 mb-4">
                   <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
-                    4
+                    •
                   </div>
                   <h4 className="text-2xl font-semibold">Review & Add to Runsheet</h4>
                 </div>
@@ -329,7 +329,7 @@ const Home: React.FC = () => {
               <div className="order-2 lg:order-1">
                 <div className="flex items-center gap-4 mb-4">
                   <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
-                    5
+                    •
                   </div>
                   <h4 className="text-2xl font-semibold">Access Linked Documents</h4>
                 </div>
