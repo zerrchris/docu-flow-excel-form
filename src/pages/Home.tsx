@@ -463,7 +463,7 @@ const Home: React.FC = () => {
                 </div>
                 <div className="order-1 lg:order-2">
                   <img 
-                    src="https://images.unsplash.com/photo-1581090464777-f3220bbe1b8b?w=600&h=400&fit=crop&crop=center"
+                    src="/lovable-uploads/71200d6b-0740-4bd9-b89d-878aea657b25.png"
                     alt="Documents added directly to runsheet with reference numbers"
                     className="rounded-lg shadow-lg w-full"
                   />
