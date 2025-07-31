@@ -5,11 +5,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Upload, FolderOpen, Plus, AlertTriangle, Smartphone, Files, Home, FileStack, RefreshCw } from 'lucide-react';
 import DocumentFrame from '@/components/DocumentFrame';
+import DocumentViewer from '@/components/DocumentViewer';
+import DataForm from '@/components/DataForm';
+import RealtimeVoiceInput from '@/components/RealtimeVoiceInput';
 import EditableSpreadsheet from '@/components/EditableSpreadsheet';
 import AuthButton from '@/components/AuthButton';
 import BatchProcessing from '@/components/BatchProcessing';
 import DocumentUpload from '@/components/DocumentUpload';
 import MultipleFileUpload from '@/components/MultipleFileUpload';
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 import { GoogleDrivePicker } from '@/components/GoogleDrivePicker';
 import { ExtractionPreferencesService } from '@/services/extractionPreferences';
 import { AdminSettingsService } from '@/services/adminSettings';
@@ -37,6 +41,9 @@ const DEFAULT_EXTRACTION_INSTRUCTIONS: Record<string, string> = {
 const DocumentProcessor: React.FC = () => {
   // Hook to get active runsheet data  
   const { activeRunsheet, setActiveRunsheet, clearActiveRunsheet } = useActiveRunsheet();
+  
+  // View state
+  const [isDocumentMode, setIsDocumentMode] = useState(false);
   
   // Document state
   const [file, setFile] = useState<File | null>(null);
@@ -654,6 +661,17 @@ const DocumentProcessor: React.FC = () => {
     setShowCombineConfirmation(false);
   };
 
+  // Function to go back to runsheet mode while preserving document
+  const goBackToRunsheet = () => {
+    setIsDocumentMode(false);
+  };
+
+  // Function to upload new document (resets everything)
+  const uploadNewDocument = () => {
+    resetDocument();
+    setIsDocumentMode(false);
+  };
+
   // Handle single file selection
   const handleFileSelect = (selectedFile: File) => {
     console.log('🔧 DocumentProcessor: handleFileSelect called with file:', selectedFile.name, 'Size:', selectedFile.size, 'Type:', selectedFile.type);
@@ -668,6 +686,9 @@ const DocumentProcessor: React.FC = () => {
     // Create preview URL for the file
     const url = URL.createObjectURL(selectedFile);
     setPreviewUrl(url);
+    
+    // Enter document processing mode
+    setIsDocumentMode(true);
     
     console.log('🔧 DocumentProcessor: File set and preview URL created:', url);
     
@@ -1669,83 +1690,188 @@ Image: [base64 image data]`;
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b w-full">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <Link to="/" className="flex items-center gap-4">
-              <img 
-                src={extractorLogo} 
-                alt="RunsheetPro Logo" 
-                className="h-12 w-12"
-              />
-              <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                RunsheetPro
-              </h1>
-            </Link>
-            <div className="flex items-center gap-4">
-              <Button
-                variant="default"
-                size="sm"
-                onClick={() => {
-                  if (hasUnsavedChanges) {
-                    setPendingNavigation({ path: '/app' });
-                    setShowNavigationDialog(true);
-                  } else {
-                    navigate('/app');
-                  }
-                }}
-                className="gap-2"
-              >
-                <Home className="h-4 w-4" />
-                Dashboard
-              </Button>
-              <AuthButton />
+      {isDocumentMode ? (
+        // Full-screen document processing mode
+        <div className="fixed inset-0 z-50 bg-background flex flex-col">
+          {/* Document Mode Header */}
+          <header className="border-b w-full shrink-0">
+            <div className="container mx-auto px-4 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <img 
+                    src={extractorLogo} 
+                    alt="RunsheetPro Logo" 
+                    className="h-12 w-12"
+                  />
+                  <div className="flex flex-col">
+                    <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                      Document Processor
+                    </h1>
+                    <p className="text-sm text-muted-foreground">
+                      {file ? file.name : 'Processing Document'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={goBackToRunsheet}
+                    className="gap-2"
+                  >
+                    Back to Runsheet
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={uploadNewDocument}
+                    className="gap-2"
+                  >
+                    <Upload className="h-4 w-4" />
+                    Upload New Document
+                  </Button>
+                  <AuthButton />
+                </div>
+              </div>
+            </div>
+          </header>
+          
+          {/* Document Processing Area */}
+          <div className="flex-1 min-h-0">
+            <ResizablePanelGroup direction="horizontal" className="w-full h-full">
+              <ResizablePanel defaultSize={33} minSize={25} maxSize={60}>
+                <div className="h-full border-r border-border bg-card">
+                  <div className="p-6 h-full overflow-auto">
+                    <div className="space-y-4">
+                      <h4 className="text-md font-medium text-foreground">Document Data</h4>
+                      
+                      {/* Real-time Voice Input */}
+                      <RealtimeVoiceInput
+                        fields={columns}
+                        columnInstructions={columnInstructions || {}}
+                        onDataExtracted={(data) => {
+                          // Update form data with voice input
+                          setFormData(prev => ({ ...prev, ...data }));
+                        }}
+                      />
+                      
+                      {/* Data Form */}
+                      <DataForm 
+                        fields={columns}
+                        formData={formData}
+                        onChange={handleFieldChange}
+                        onAnalyze={analyzeDocument}
+                        onCancelAnalysis={cancelAnalysis}
+                        onAddToSpreadsheet={addToSpreadsheet}
+                        onResetDocument={uploadNewDocument}
+                        isAnalyzing={isAnalyzing}
+                        isUploading={false}
+                        hasAddedToSpreadsheet={false}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </ResizablePanel>
+              
+              <ResizableHandle withHandle />
+              
+              <ResizablePanel defaultSize={67}>
+                <div className="h-full">
+                  {file ? (
+                    <DocumentViewer file={file} previewUrl={previewUrl} />
+                  ) : (
+                    <div className="h-full flex items-center justify-center">
+                      <p className="text-muted-foreground">No document loaded</p>
+                    </div>
+                  )}
+                </div>
+              </ResizablePanel>
+            </ResizablePanelGroup>
+          </div>
+        </div>
+      ) : (
+        // Normal runsheet view
+        <div>
+          {/* Header */}
+          <header className="border-b w-full">
+            <div className="container mx-auto px-4 py-4">
+              <div className="flex items-center justify-between">
+                <Link to="/" className="flex items-center gap-4">
+                  <img 
+                    src={extractorLogo} 
+                    alt="RunsheetPro Logo" 
+                    className="h-12 w-12"
+                  />
+                  <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                    RunsheetPro
+                  </h1>
+                </Link>
+                <div className="flex items-center gap-4">
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => {
+                      if (hasUnsavedChanges) {
+                        setPendingNavigation({ path: '/app' });
+                        setShowNavigationDialog(true);
+                      } else {
+                        navigate('/app');
+                      }
+                    }}
+                    className="gap-2"
+                  >
+                    <Home className="h-4 w-4" />
+                    Dashboard
+                  </Button>
+                  <AuthButton />
+                </div>
+              </div>
+            </div>
+          </header>
+          
+          <div className="w-full px-4 py-6">
+            <DocumentFrame 
+              file={file}
+              previewUrl={previewUrl}
+              fields={columns}
+              formData={formData}
+              columnInstructions={columnInstructions}
+              onChange={handleFieldChange}
+              onAnalyze={analyzeDocument}
+              onCancelAnalysis={cancelAnalysis}
+              onAddToSpreadsheet={addToSpreadsheet}
+              onFileSelect={handleFileSelect}
+              onMultipleFilesSelect={handleMultipleFilesSelect}
+              onResetDocument={uploadNewDocument}
+              isAnalyzing={isAnalyzing}
+            />
+            
+            <BatchProcessing 
+              fields={columns}
+              onAddToSpreadsheet={addToSpreadsheet}
+              onAnalyze={analyzeDocument}
+              isAnalyzing={isAnalyzing}
+            />
+            
+            <div className="mt-6">
+            <EditableSpreadsheet
+              initialColumns={columns}
+              initialData={spreadsheetData}
+              onColumnChange={handleColumnsChange}
+              onDataChange={handleSpreadsheetDataChange}
+              onColumnInstructionsChange={setColumnInstructions}
+              onUnsavedChanges={setHasUnsavedChanges}
+              missingColumns={highlightMissingColumns ? missingColumns : []}
+              initialRunsheetName={location.state?.runsheet?.name}
+              initialRunsheetId={location.state?.runsheetId}
+              onShowMultipleUpload={() => setShowMultipleFileUpload(true)}
+              onDocumentMapChange={handleDocumentMapChange}
+            />
             </div>
           </div>
         </div>
-      </header>
+      )}
       
-      <div className="w-full px-4 py-6">
-        <DocumentFrame 
-          file={file}
-          previewUrl={previewUrl}
-          fields={columns}
-          formData={formData}
-          columnInstructions={columnInstructions}
-          onChange={handleFieldChange}
-          onAnalyze={analyzeDocument}
-          onCancelAnalysis={cancelAnalysis}
-          onAddToSpreadsheet={addToSpreadsheet}
-          onFileSelect={handleFileSelect}
-          onMultipleFilesSelect={handleMultipleFilesSelect}
-          onResetDocument={resetDocument}
-          isAnalyzing={isAnalyzing}
-        />
-        
-        <BatchProcessing 
-          fields={columns}
-          onAddToSpreadsheet={addToSpreadsheet}
-          onAnalyze={analyzeDocument}
-          isAnalyzing={isAnalyzing}
-        />
-        
-        <div className="mt-6">
-        <EditableSpreadsheet
-          initialColumns={columns}
-          initialData={spreadsheetData}
-          onColumnChange={handleColumnsChange}
-          onDataChange={handleSpreadsheetDataChange}
-          onColumnInstructionsChange={setColumnInstructions}
-          onUnsavedChanges={setHasUnsavedChanges}
-          missingColumns={highlightMissingColumns ? missingColumns : []}
-          initialRunsheetName={location.state?.runsheet?.name}
-          initialRunsheetId={location.state?.runsheetId}
-          onShowMultipleUpload={() => setShowMultipleFileUpload(true)}
-          onDocumentMapChange={handleDocumentMapChange}
-        />
-        </div>
-      </div>
       {/* Combine Images Confirmation Dialog */}
       <Dialog open={showCombineConfirmation} onOpenChange={setShowCombineConfirmation}>
         <DialogContent className="sm:max-w-[400px]">
