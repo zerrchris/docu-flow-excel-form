@@ -1749,19 +1749,10 @@ Image: [base64 image data]`;
                 <h4 className="text-md font-medium text-foreground">Document Data</h4>
               </div>
               <div 
-                className="flex-1 overflow-y-auto overscroll-contain"
-                style={{ scrollbarGutter: 'stable' }}
-                onWheel={(e) => {
-                  e.stopPropagation();
-                  // Allow scrolling within this container only
-                  const target = e.currentTarget;
-                  const { scrollTop, scrollHeight, clientHeight } = target;
-                  
-                  // Prevent scrolling the parent if we're at the boundaries
-                  if ((e.deltaY < 0 && scrollTop === 0) || 
-                      (e.deltaY > 0 && scrollTop + clientHeight >= scrollHeight)) {
-                    e.preventDefault();
-                  }
+                className="flex-1 overflow-y-auto p-0"
+                style={{ 
+                  maxHeight: 'calc(100vh - 200px)',
+                  scrollBehavior: 'smooth'
                 }}
               >
                 <div className="p-4 space-y-4">
