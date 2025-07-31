@@ -154,11 +154,14 @@ const InlineDocumentViewer: React.FC<InlineDocumentViewerProps> = ({
       </div>
 
       {/* Document content */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden" onWheel={(e) => e.stopPropagation()}>
         {isPdf ? (
           <PDFViewer file={null} previewUrl={documentUrl} />
         ) : (
-          <div className="h-full overflow-auto bg-muted/10 flex items-center justify-center">
+          <div 
+            className="h-full overflow-auto bg-muted/10 flex items-center justify-center"
+            onWheel={(e) => e.stopPropagation()}
+          >
             <img
               src={documentUrl}
               alt={documentName}

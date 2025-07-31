@@ -206,7 +206,7 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ file, previewUrl }) => {
         )}
 
         {/* PDF viewer area */}
-        <div className="flex-1 bg-muted/20 relative">
+        <div className="flex-1 bg-muted/20 relative" onWheel={(e) => e.stopPropagation()}>
           {loading && (
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="text-muted-foreground">Loading PDF...</div>
