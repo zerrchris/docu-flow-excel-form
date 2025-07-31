@@ -73,6 +73,47 @@ const DocumentProcessor: React.FC = () => {
   
   // Preferences loading state
   const [isLoadingPreferences, setIsLoadingPreferences] = useState(true);
+  
+  // Add state to track user activity to prevent unwanted refreshes
+  const [hasUserActivity, setHasUserActivity] = useState(false);
+  const [lastActivityTime, setLastActivityTime] = useState<number>(Date.now());
+  
+  // Track user activity to prevent data loss
+  useEffect(() => {
+    const trackActivity = () => {
+      setHasUserActivity(true);
+      setLastActivityTime(Date.now());
+    };
+    
+    // Listen for user interactions that indicate active work
+    const events = ['keydown', 'mousedown', 'input', 'change'];
+    events.forEach(event => {
+      document.addEventListener(event, trackActivity);
+    });
+    
+    console.log('🔄 DocumentProcessor: User activity tracking enabled');
+    
+    return () => {
+      events.forEach(event => {
+        document.removeEventListener(event, trackActivity);
+      });
+    };
+  }, []);
+  
+  // Warn about potential data loss
+  useEffect(() => {
+    const beforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUserActivity && (spreadsheetData.length > 0 || Object.keys(formData).length > 0)) {
+        console.log('⚠️ DocumentProcessor: Warning user about potential data loss');
+        e.preventDefault();
+        e.returnValue = 'You have unsaved work. Are you sure you want to leave?';
+        return e.returnValue;
+      }
+    };
+    
+    window.addEventListener('beforeunload', beforeUnload);
+    return () => window.removeEventListener('beforeunload', beforeUnload);
+  }, [hasUserActivity, spreadsheetData, formData]);
 
   // Note: Removed activeRunsheet syncing since we're removing tab functionality
   
@@ -127,55 +168,71 @@ const DocumentProcessor: React.FC = () => {
     loadUserPreferences();
   }, []);
 
-  // Handle selected runsheet from navigation state
+  // Handle selected runsheet from navigation state - with stability improvements
   useEffect(() => {
     const selectedRunsheet = location.state?.runsheet;
     
+    console.log('🔄 DocumentProcessor: Navigation state effect triggered', {
+      selectedRunsheet: selectedRunsheet?.id,
+      loadedRef: loadedRunsheetRef.current,
+      hasSpreadsheetData: spreadsheetData.length > 0
+    });
+    
     // Use ref to prevent infinite loops - only load each runsheet once
     if (selectedRunsheet && loadedRunsheetRef.current !== selectedRunsheet.id) {
-      console.log('Loading selected runsheet:', selectedRunsheet);
+      console.log('📋 Loading selected runsheet:', selectedRunsheet);
       loadedRunsheetRef.current = selectedRunsheet.id;
       
-      // Load runsheet data
-      if (selectedRunsheet.data && Array.isArray(selectedRunsheet.data)) {
+      // Only load runsheet data if we don't already have spreadsheet data (to prevent data loss)
+      if (selectedRunsheet.data && Array.isArray(selectedRunsheet.data) && spreadsheetData.length === 0) {
+        console.log('📊 Loading runsheet data (spreadsheet is empty)');
         setSpreadsheetData(selectedRunsheet.data);
+      } else if (spreadsheetData.length > 0) {
+        console.log('⚠️ Skipping runsheet data load - preserving existing spreadsheet data to prevent loss');
       }
       
-      // Load runsheet columns if available - these should take priority over user preferences
+      // Load runsheet columns if available - but be more careful about overriding user work
       if (selectedRunsheet.columns && Array.isArray(selectedRunsheet.columns)) {
-        console.log('Loading runsheet columns (takes priority over user preferences):', selectedRunsheet.columns);
-        setColumns(selectedRunsheet.columns);
+        console.log('📝 Loading runsheet columns (checking if safe to override):', selectedRunsheet.columns);
         
-        // Also update user preferences to match the runsheet columns to keep them in sync
-        const updatePreferences = async () => {
-          try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user && selectedRunsheet.column_instructions) {
-              // Filter column instructions to only include columns that exist in the runsheet
-              const filteredInstructions: Record<string, string> = {};
-              selectedRunsheet.columns.forEach(column => {
-                if (selectedRunsheet.column_instructions[column]) {
-                  filteredInstructions[column] = selectedRunsheet.column_instructions[column];
-                }
-              });
-              
-              // Save the filtered preferences to prevent future conflicts
-              await ExtractionPreferencesService.saveDefaultPreferences(
-                selectedRunsheet.columns, 
-                filteredInstructions
-              );
-              console.log('Updated user preferences to match runsheet columns');
+        // Only override columns if the user hasn't made significant changes
+        const hasUserChanges = spreadsheetData.length > 0 || Object.keys(formData).length > 0;
+        if (!hasUserChanges) {
+          console.log('✅ Safe to load runsheet columns - no user changes detected');
+          setColumns(selectedRunsheet.columns);
+          
+          // Update user preferences to match the runsheet columns
+          const updatePreferences = async () => {
+            try {
+              const { data: { user } } = await supabase.auth.getUser();
+              if (user && selectedRunsheet.column_instructions) {
+                const filteredInstructions: Record<string, string> = {};
+                selectedRunsheet.columns.forEach(column => {
+                  if (selectedRunsheet.column_instructions[column]) {
+                    filteredInstructions[column] = selectedRunsheet.column_instructions[column];
+                  }
+                });
+                
+                await ExtractionPreferencesService.saveDefaultPreferences(
+                  selectedRunsheet.columns, 
+                  filteredInstructions
+                );
+                console.log('Updated user preferences to match runsheet columns');
+              }
+            } catch (error) {
+              console.error('Error updating user preferences:', error);
             }
-          } catch (error) {
-            console.error('Error updating user preferences:', error);
-          }
-        };
-        
-        updatePreferences();
+          };
+          
+          updatePreferences();
+        } else {
+          console.log('⚠️ Skipping column override - preserving user changes');
+        }
       }
       
-      // Load column instructions if available
-      if (selectedRunsheet.column_instructions) {
+      // Load column instructions if available and safe
+      if (selectedRunsheet.column_instructions && Object.keys(formData).length === 0) {
+        console.log('📝 Loading column instructions');
         setColumnInstructions(selectedRunsheet.column_instructions);
       }
       
@@ -184,7 +241,7 @@ const DocumentProcessor: React.FC = () => {
         description: `Loaded "${selectedRunsheet.name}" with ${selectedRunsheet.data?.length || 0} rows.`,
       });
     }
-  }, [location.state]);
+  }, [location.state?.runsheet?.id]); // More specific dependency to reduce unnecessary re-runs
 
   // Handle URL parameters for actions (upload, google-drive, etc.) and runsheet ID
   useEffect(() => {
