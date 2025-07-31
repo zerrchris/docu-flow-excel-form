@@ -14,7 +14,6 @@ interface ImageCombinerProps {
 }
 
 const ImageCombiner: React.FC<ImageCombinerProps> = ({ files, onCombined, onCancel }) => {
-  const [combineType, setCombineType] = useState<'vertical' | 'grid'>('vertical');
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
 
@@ -24,7 +23,7 @@ const ImageCombiner: React.FC<ImageCombinerProps> = ({ files, onCombined, onCanc
     setIsProcessing(true);
     try {
       const options: CombineOptions = {
-        type: combineType,
+        type: 'vertical',
         quality: 0.8,
         maxWidth: 1200
       };
@@ -57,26 +56,8 @@ const ImageCombiner: React.FC<ImageCombinerProps> = ({ files, onCombined, onCanc
         </div>
         
         <p className="text-sm text-muted-foreground">
-          You've selected {files.length} images. Choose how to combine them:
+          You've selected {files.length} images. They will be combined into a single vertical image.
         </p>
-
-        <div className="space-y-2">
-          <Label htmlFor="combine-type">Combination Type</Label>
-          <Select value={combineType} onValueChange={(value) => setCombineType(value as any)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select combination type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="vertical">Vertical Collage (stack images vertically)</SelectItem>
-              <SelectItem value="grid">Grid Layout (arrange in grid)</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="text-xs text-muted-foreground space-y-1">
-          <p><strong>Vertical:</strong> Creates one long image by stacking vertically</p>
-          <p><strong>Grid:</strong> Arranges images in a square grid layout</p>
-        </div>
 
         <div className="flex gap-2 pt-4">
           <Button 
