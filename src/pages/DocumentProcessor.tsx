@@ -1636,33 +1636,71 @@ Image: [base64 image data]`;
 
       {/* Column Instructions Validation Dialog */}
       <Dialog open={showValidationDialog} onOpenChange={setShowValidationDialog}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Configuration Required</DialogTitle>
             <DialogDescription>
               All column headers must have extraction instructions configured before analyzing documents.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
-            <p className="text-sm text-muted-foreground mb-3">
-              Please configure extraction instructions for the following columns:
+          <div className="py-4 space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Configure extraction instructions for each column below:
             </p>
-            <div className="bg-muted p-3 rounded-md">
-              <ul className="list-disc list-inside space-y-1">
-                {missingColumns.map((column) => (
-                  <li key={column} className="text-sm font-medium text-foreground">
-                    {column}
-                  </li>
-                ))}
-              </ul>
+            
+            <div className="space-y-3">
+              {missingColumns.map((column) => (
+                <div key={column} className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">{column}</label>
+                  <textarea
+                    placeholder={`Enter extraction instructions for ${column}...`}
+                    className="w-full min-h-[60px] p-2 text-sm border border-border rounded-md bg-background resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+                    value={columnInstructions[column] || ''}
+                    onChange={(e) => {
+                      setColumnInstructions(prev => ({
+                        ...prev,
+                        [column]: e.target.value
+                      }));
+                    }}
+                  />
+                </div>
+              ))}
             </div>
-            <p className="text-sm text-muted-foreground mt-3">
-              Click on any column header in the spreadsheet below to add extraction instructions.
-            </p>
+            
+            <div className="text-xs text-muted-foreground bg-muted p-3 rounded-md">
+              <strong>Tip:</strong> Be specific about what information to extract. For example: "Extract the document type (e.g., Deed, Mortgage, Lien)" or "Extract the full legal property description including lot and block numbers."
+            </div>
           </div>
           <div className="flex justify-end gap-3">
             <Button variant="outline" onClick={handleValidationDialogClose}>
-              Continue
+              Skip for now
+            </Button>
+            <Button 
+              onClick={() => {
+                // Save all the configured instructions
+                const hasValidInstructions = missingColumns.every(col => 
+                  columnInstructions[col]?.trim()
+                );
+                
+                if (hasValidInstructions) {
+                  // Save as default preferences
+                  ExtractionPreferencesService.saveDefaultPreferences(columns, columnInstructions);
+                  toast({
+                    title: "Instructions saved",
+                    description: "Extraction instructions configured and saved as default.",
+                  });
+                  setShowValidationDialog(false);
+                } else {
+                  toast({
+                    title: "Missing instructions",
+                    description: "Please provide extraction instructions for all columns.",
+                    variant: "destructive"
+                  });
+                }
+              }}
+              disabled={!missingColumns.every(col => columnInstructions[col]?.trim())}
+            >
+              Save & Continue
             </Button>
           </div>
         </DialogContent>
