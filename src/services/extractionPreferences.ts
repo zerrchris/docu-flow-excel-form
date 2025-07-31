@@ -38,6 +38,7 @@ export class ExtractionPreferencesService {
       return null;
     }
 
+    console.log('🔍 Loaded default preferences:', data);
     return data;
   }
 
