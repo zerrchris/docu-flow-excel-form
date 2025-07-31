@@ -106,8 +106,22 @@ const DocumentProcessor: React.FC = () => {
       if (hasUserActivity && (spreadsheetData.length > 0 || Object.keys(formData).length > 0)) {
         console.log('⚠️ DocumentProcessor: Warning user about potential data loss');
         e.preventDefault();
-        e.returnValue = 'You have unsaved work. Are you sure you want to leave?';
-        return e.returnValue;
+        
+        // Create a more descriptive message about what will be lost
+        let message = 'You have unsaved work that will be lost if you leave:';
+        
+        if (spreadsheetData.length > 0) {
+          message += `\n• ${spreadsheetData.length} row(s) of data in your spreadsheet`;
+        }
+        
+        if (Object.values(formData).some(value => value.trim() !== '')) {
+          message += '\n• Current form data being analyzed';
+        }
+        
+        message += '\n\nAre you sure you want to leave without saving?';
+        
+        e.returnValue = message;
+        return message;
       }
     };
     
