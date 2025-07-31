@@ -390,7 +390,7 @@ const Home: React.FC = () => {
                   <h4 className="text-2xl font-semibold">Batch Process Multiple Documents</h4>
                 </div>
                 <p className="text-muted-foreground text-lg mb-4">
-                  For efficiency, upload and process multiple documents at once. The batch processing feature allows you to analyze dozens of documents simultaneously, with each one automatically added to your runsheet as a separate row.
+                  Upload multiple documents at once and let our AI analyze them one at a time in sequence. Each instrument is processed, inspected for accuracy, and automatically added to your runsheet. The next document automatically appears for review, and the process repeats until all your instruments are analyzed - creating a seamless, efficient workflow.
                 </p>
                 <ul className="space-y-2 text-muted-foreground">
                   <li>• Upload multiple files simultaneously</li>
