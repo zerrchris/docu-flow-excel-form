@@ -493,6 +493,86 @@ const DocumentProcessor: React.FC = () => {
     };
   }, []);
 
+  // Listen for processing pending documents after runsheet save
+  useEffect(() => {
+    const handleProcessPendingDocuments = async () => {
+      console.log('🔧 PENDING_DOCS: Processing pending documents event received');
+      
+      try {
+        const pendingDocs = JSON.parse(sessionStorage.getItem('pendingDocuments') || '[]');
+        if (pendingDocs.length === 0) {
+          console.log('🔧 PENDING_DOCS: No pending documents to process');
+          return;
+        }
+        
+        console.log('🔧 PENDING_DOCS: Found pending documents to process:', pendingDocs);
+        
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          console.log('🔧 PENDING_DOCS: No user found, cannot process pending documents');
+          return;
+        }
+        
+        // Get the current active runsheet ID
+        const currentRunsheetId = activeRunsheet?.id;
+        if (!currentRunsheetId || currentRunsheetId.startsWith('temp-')) {
+          console.log('🔧 PENDING_DOCS: No valid runsheet ID available, keeping documents pending');
+          return;
+        }
+        
+        console.log('🔧 PENDING_DOCS: Processing documents for runsheet:', currentRunsheetId);
+        
+        // Process each pending document
+        for (const doc of pendingDocs) {
+          try {
+            console.log('🔧 PENDING_DOCS: Creating document record for:', doc);
+            
+            const { error } = await supabase
+              .from('documents')
+              .insert({
+                user_id: user.id,
+                runsheet_id: currentRunsheetId,
+                row_index: doc.rowIndex,
+                file_path: doc.storagePath,
+                stored_filename: doc.fileName,
+                original_filename: doc.fileName,
+                content_type: 'application/pdf'
+              });
+            
+            if (error) {
+              console.error('🔧 PENDING_DOCS: Error creating document record for row', doc.rowIndex, ':', error);
+            } else {
+              console.log('🔧 PENDING_DOCS: Successfully created document record for row', doc.rowIndex);
+              
+              // Dispatch event to refresh document display
+              window.dispatchEvent(new CustomEvent('documentRecordCreated', {
+                detail: { 
+                  runsheetId: currentRunsheetId, 
+                  rowIndex: doc.rowIndex
+                }
+              }));
+            }
+          } catch (error) {
+            console.error('🔧 PENDING_DOCS: Error processing pending document:', error);
+          }
+        }
+        
+        // Clear processed documents from session storage
+        sessionStorage.removeItem('pendingDocuments');
+        console.log('🔧 PENDING_DOCS: Cleared processed pending documents from session storage');
+        
+      } catch (error) {
+        console.error('🔧 PENDING_DOCS: Error processing pending documents:', error);
+      }
+    };
+
+    window.addEventListener('processPendingDocuments', handleProcessPendingDocuments);
+    
+    return () => {
+      window.removeEventListener('processPendingDocuments', handleProcessPendingDocuments);
+    };
+  }, [activeRunsheet?.id]);
+
   // Handle navigation - no longer blocked since runsheet auto-saves
   const handleNavigation = useCallback((path: string) => {
     navigate(path);
@@ -1242,9 +1322,25 @@ Image: [base64 image data]`;
     });
     
     // Auto-save the runsheet after adding data to show filename options
-    setTimeout(() => {
+    setTimeout(async () => {
+      console.log('🔧 AUTO_SAVE: Starting auto-save after add to spreadsheet');
+      
+      // First save the runsheet to get a proper ID
       const saveEvent = new CustomEvent('saveRunsheet');
       window.dispatchEvent(saveEvent);
+      
+      // Wait a bit for the save to complete, then process any pending documents
+      setTimeout(() => {
+        console.log('🔧 AUTO_SAVE: Processing pending documents after save delay');
+        const pendingDocs = JSON.parse(sessionStorage.getItem('pendingDocuments') || '[]');
+        if (pendingDocs.length > 0) {
+          console.log('🔧 AUTO_SAVE: Found pending documents to process:', pendingDocs);
+          // Process pending documents after save
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('processPendingDocuments'));
+          }, 1000);
+        }
+      }, 1500); // Give the save operation time to complete
     }, 100);
     
     toast({
@@ -1253,11 +1349,15 @@ Image: [base64 image data]`;
     });
 
     // Reset form data for next entry - use current columns (which may have been updated)
-    const emptyFormData: Record<string, string> = {};
-    columns.forEach(column => {
-      emptyFormData[column] = '';
-    });
-    setFormData(emptyFormData);
+    // Only reset after a successful add to prevent loss of data
+    setTimeout(() => {
+      console.log('🔧 FORM_RESET: Resetting form data after successful add');
+      const emptyFormData: Record<string, string> = {};
+      columns.forEach(column => {
+        emptyFormData[column] = '';
+      });
+      setFormData(emptyFormData);
+    }, 500); // Small delay to ensure the data was properly added first
   };
 
   // Continue adding to spreadsheet without validation (used after user confirms)
@@ -1401,14 +1501,15 @@ Image: [base64 image data]`;
       console.log('🔧 CREATE_DOC_RECORD: Final runsheetId:', runsheetId);
       
       if (!runsheetId || runsheetId.startsWith('temp-')) {
-        console.log('🔧 DocumentProcessor: No valid runsheet ID available (is null or temp), document record will be created when runsheet is saved');
-        console.log('🔧 DocumentProcessor: Consider this a pending document that needs to be processed after runsheet save');
+        console.log('🔧 CREATE_DOC_RECORD: No valid runsheet ID available (is null or temp), storing document for later creation');
+        console.log('🔧 CREATE_DOC_RECORD: Current runsheetId:', runsheetId);
         
         // Store the document info for later creation when the runsheet is saved
         const documentInfo = {
           rowIndex,
           storagePath: data['Storage Path'],
-          fileName: data['Document File Name'] || file?.name || 'Unknown Document'
+          fileName: data['Document File Name'] || file?.name || 'Unknown Document',
+          timestamp: Date.now()
         };
         
         // Store in sessionStorage to be processed later
@@ -1416,7 +1517,8 @@ Image: [base64 image data]`;
         pendingDocs.push(documentInfo);
         sessionStorage.setItem('pendingDocuments', JSON.stringify(pendingDocs));
         
-        console.log('🔧 DocumentProcessor: Stored document info for later creation:', documentInfo);
+        console.log('🔧 CREATE_DOC_RECORD: Stored document info for later creation:', documentInfo);
+        console.log('🔧 CREATE_DOC_RECORD: Total pending documents:', pendingDocs.length);
         return;
       }
 
