@@ -3396,12 +3396,27 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       // Verify the file is a supported image format
       const supportedImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
       if (file.type && !supportedImageTypes.includes(file.type)) {
-        toast({
-          title: "Unsupported File Format",
-          description: `File format ${file.type} is not supported. Please use PNG, JPEG, GIF, or WebP images.`,
-          variant: "destructive"
-        });
-        return;
+        // Handle octet-stream files that might actually be images
+        if (file.type === 'application/octet-stream') {
+          // Check if filename suggests it's an image
+          const isImageFile = /\.(jpg|jpeg|png|gif|webp)$/i.test(file.name);
+          if (!isImageFile) {
+            toast({
+              title: "Unsupported File Format",
+              description: `File format ${file.type} is not supported. Please use PNG, JPEG, GIF, or WebP images.`,
+              variant: "destructive"
+            });
+            return;
+          }
+          // Continue processing for octet-stream files with image extensions
+        } else {
+          toast({
+            title: "Unsupported File Format",
+            description: `File format ${file.type} is not supported. Please use PNG, JPEG, GIF, or WebP images.`,
+            variant: "destructive"
+          });
+          return;
+        }
       }
       
       // Get extraction preferences

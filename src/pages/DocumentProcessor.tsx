@@ -690,14 +690,31 @@ const DocumentProcessor: React.FC = () => {
       // Verify the file is a supported image format
       const supportedImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
       if (!supportedImageTypes.includes(targetFile.type)) {
-        toast({
-          title: "Unsupported File Format",
-          description: `File format ${targetFile.type} is not supported. Please use PNG, JPEG, GIF, or WebP images.`,
-          variant: "destructive"
-        });
-        setIsAnalyzing(false);
-        setAnalysisAbortController(null);
-        return;
+        // Handle octet-stream files that might actually be images
+        if (targetFile.type === 'application/octet-stream') {
+          // Check if filename suggests it's an image
+          const isImageFile = /\.(jpg|jpeg|png|gif|webp)$/i.test(targetFile.name);
+          if (!isImageFile) {
+            toast({
+              title: "Unsupported File Format",
+              description: `File format ${targetFile.type} is not supported. Please use PNG, JPEG, GIF, or WebP images.`,
+              variant: "destructive"
+            });
+            setIsAnalyzing(false);
+            setAnalysisAbortController(null);
+            return;
+          }
+          // Continue processing for octet-stream files with image extensions
+        } else {
+          toast({
+            title: "Unsupported File Format",
+            description: `File format ${targetFile.type} is not supported. Please use PNG, JPEG, GIF, or WebP images.`,
+            variant: "destructive"
+          });
+          setIsAnalyzing(false);
+          setAnalysisAbortController(null);
+          return;
+        }
       }
 
       // Convert file to base64 for OpenAI API
