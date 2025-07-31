@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useSubscription } from '@/contexts/SubscriptionContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Lock, CreditCard } from 'lucide-react';
@@ -12,8 +13,27 @@ interface SubscriptionGuardProps {
 
 const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({ children, fallback }) => {
   const { subscribed, loading } = useSubscription();
+  const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
-  if (loading) {
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setUser(session?.user || null);
+      setAuthLoading(false);
+    };
+
+    checkAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user || null);
+      setAuthLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -21,6 +41,12 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({ children, fallbac
     );
   }
 
+  // If user is not authenticated, redirect to signin
+  if (!user) {
+    return <Navigate to="/signin" replace />;
+  }
+
+  // If user is authenticated but not subscribed, show subscription requirement
   if (!subscribed) {
     if (fallback) {
       return <>{fallback}</>;
