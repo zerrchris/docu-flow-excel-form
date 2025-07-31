@@ -331,7 +331,7 @@ const Home: React.FC = () => {
                   <h4 className="text-2xl font-semibold">Access Linked Documents</h4>
                 </div>
                 <p className="text-muted-foreground text-lg mb-4">
-                  Once added to your runsheet, documents are automatically linked and accessible. Click on any document reference number or file icon to instantly view the original document associated with that row.
+                  Once added to your runsheet, documents are automatically linked and accessible for future reference.
                 </p>
                 <ul className="space-y-2 text-muted-foreground">
                   <li>• Permanent document linking</li>
