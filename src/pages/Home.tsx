@@ -389,13 +389,42 @@ const Home: React.FC = () => {
                 <p className="text-muted-foreground text-lg mb-4">
                   Upload multiple documents at once and let our AI analyze them one at a time in sequence. Each instrument is processed, inspected for accuracy, and automatically added to your runsheet. The next document automatically appears for review, and the process repeats until all your instruments are analyzed - creating a seamless, efficient workflow.
                 </p>
-                <ul className="space-y-2 text-muted-foreground">
-                  <li>• Upload multiple files simultaneously</li>
-                  <li>• Parallel AI processing for speed</li>
-                  <li>• Automatic queue management</li>
-                  <li>• Progress tracking for each document</li>
-                  <li>• Bulk addition to runsheet</li>
-                </ul>
+                 <ul className="space-y-2 text-muted-foreground">
+                   <li>• Upload multiple files simultaneously</li>
+                   <li>• Parallel AI processing for speed</li>
+                   <li>• Automatic queue management</li>
+                   <li>• Progress tracking for each document</li>
+                   <li>• Bulk addition to runsheet</li>
+                 </ul>
+               </div>
+             </div>
+
+             {/* Smart Document Integration Bullet */}
+             <div className="grid lg:grid-cols-2 gap-8 items-center">
+               <div>
+                 <img 
+                   src="https://images.unsplash.com/photo-1581090464777-f3220bbe1b8b?w=600&h=400&fit=crop&crop=center"
+                   alt="Smart document analysis with AI brain button for automatic field population"
+                   className="rounded-lg shadow-lg w-full"
+                 />
+               </div>
+               <div>
+                 <div className="flex items-center gap-4 mb-4">
+                   <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
+                     •
+                   </div>
+                   <h4 className="text-2xl font-semibold">Smart Document Integration</h4>
+                 </div>
+                 <p className="text-muted-foreground text-lg mb-4">
+                   Add documents directly to your runsheet through upload or screen capture. Once added, simply click the brain button to automatically analyze the document and populate your spreadsheet fields instantly.
+                 </p>
+                 <ul className="space-y-2 text-muted-foreground">
+                   <li>• Upload or capture documents directly to runsheet</li>
+                   <li>• One-click AI analysis with the brain button</li>
+                   <li>• Automatic field population and data extraction</li>
+                   <li>• Real-time document preview and validation</li>
+                   <li>• Support for multiple document formats</li>
+                 </ul>
               </div>
             </div>
           </div>
@@ -421,53 +450,6 @@ const Home: React.FC = () => {
             </div>
           </div>
 
-          {/* Direct Document Linking Feature */}
-          <div className="mt-24 p-8 bg-gradient-to-br from-primary/5 to-secondary/5 rounded-2xl border border-primary/10">
-            <div className="grid md:grid-cols-2 gap-8 items-center">
-              <div>
-                <h4 className="text-2xl font-bold mb-4 text-primary">
-                  Smart Document Integration
-                </h4>
-                <p className="text-lg text-muted-foreground mb-6">
-                  Add documents directly to your runsheet through upload or screen capture. Once added, simply click the brain button to automatically analyze the document and populate your spreadsheet fields instantly.
-                </p>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 bg-primary rounded-full"></div>
-                    <span className="text-muted-foreground">Upload or capture documents directly to runsheet</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 bg-primary rounded-full"></div>
-                    <span className="text-muted-foreground">One-click AI analysis with the brain button</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 bg-primary rounded-full"></div>
-                    <span className="text-muted-foreground">Automatic field population and data extraction</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 bg-primary rounded-full"></div>
-                    <span className="text-muted-foreground">Real-time document preview and validation</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 bg-primary rounded-full"></div>
-                    <span className="text-muted-foreground">Seamless integration with existing workflows</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 bg-primary rounded-full"></div>
-                    <span className="text-muted-foreground">Support for multiple document formats and sources</span>
-                  </div>
-                </div>
-              </div>
-              <div className="relative">
-                <img 
-                  src="https://images.unsplash.com/photo-1581090464777-f3220bbe1b8b?w=600&h=400&fit=crop&crop=center"
-                  alt="Smart document analysis with AI brain button for automatic field population"
-                  className="rounded-lg shadow-lg w-full"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-lg"></div>
-              </div>
-            </div>
-          </div>
         </div>
       </section>
 
