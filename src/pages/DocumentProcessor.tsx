@@ -675,6 +675,31 @@ const DocumentProcessor: React.FC = () => {
     setAnalysisAbortController(abortController);
     
     try {
+      // Check if the file is a PDF and handle appropriately
+      if (targetFile.type === 'application/pdf') {
+        toast({
+          title: "PDF Analysis Not Supported",
+          description: "PDF files cannot be analyzed directly. Please convert your PDF to an image format (PNG, JPEG) and try again.",
+          variant: "destructive"
+        });
+        setIsAnalyzing(false);
+        setAnalysisAbortController(null);
+        return;
+      }
+
+      // Verify the file is a supported image format
+      const supportedImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+      if (!supportedImageTypes.includes(targetFile.type)) {
+        toast({
+          title: "Unsupported File Format",
+          description: `File format ${targetFile.type} is not supported. Please use PNG, JPEG, GIF, or WebP images.`,
+          variant: "destructive"
+        });
+        setIsAnalyzing(false);
+        setAnalysisAbortController(null);
+        return;
+      }
+
       // Convert file to base64 for OpenAI API
       const fileBase64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
