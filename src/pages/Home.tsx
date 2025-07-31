@@ -420,6 +420,42 @@ const Home: React.FC = () => {
                 </Link>}
             </div>
           </div>
+
+          {/* Direct Document Linking Feature */}
+          <div className="mt-24 p-8 bg-gradient-to-br from-primary/5 to-secondary/5 rounded-2xl border border-primary/10">
+            <div className="grid md:grid-cols-2 gap-8 items-center">
+              <div>
+                <h4 className="text-2xl font-bold mb-4 text-primary">
+                  Smart Document Integration
+                </h4>
+                <p className="text-lg text-muted-foreground mb-6">
+                  Add documents directly to your runsheet through upload or screen capture. Once added, simply click the brain button to automatically analyze the document and populate your spreadsheet fields instantly.
+                </p>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 bg-primary rounded-full"></div>
+                    <span className="text-muted-foreground">Upload or capture documents directly to runsheet</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 bg-primary rounded-full"></div>
+                    <span className="text-muted-foreground">One-click AI analysis with the brain button</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 bg-primary rounded-full"></div>
+                    <span className="text-muted-foreground">Automatic field population and data extraction</span>
+                  </div>
+                </div>
+              </div>
+              <div className="relative">
+                <img 
+                  src="https://images.unsplash.com/photo-1581090464777-f3220bbe1b8b?w=600&h=400&fit=crop&crop=center"
+                  alt="Smart document analysis with AI brain button for automatic field population"
+                  className="rounded-lg shadow-lg w-full"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-lg"></div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
