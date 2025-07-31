@@ -828,6 +828,22 @@ Image: [base64 image data]`;
         systemMessage += `\n\nGlobal Extraction Guidelines:\n${globalInstructions}`;
       }
 
+      // Determine correct MIME type for the image data
+      let mimeType = targetFile.type;
+      if (targetFile.type === 'application/octet-stream') {
+        // Infer MIME type from file extension for octet-stream files
+        const fileName = targetFile.name.toLowerCase();
+        if (fileName.endsWith('.jpg') || fileName.endsWith('.jpeg')) {
+          mimeType = 'image/jpeg';
+        } else if (fileName.endsWith('.png')) {
+          mimeType = 'image/png';
+        } else if (fileName.endsWith('.gif')) {
+          mimeType = 'image/gif';
+        } else if (fileName.endsWith('.webp')) {
+          mimeType = 'image/webp';
+        }
+      }
+
       // Call company's OpenAI Edge Function for document analysis
       const response = await fetch('https://xnpmrafjjqsissbtempj.supabase.co/functions/v1/analyze-document', {
         method: 'POST',
@@ -836,7 +852,7 @@ Image: [base64 image data]`;
         },
         body: JSON.stringify({
           prompt: extractionPrompt,
-          imageData: `data:${targetFile.type};base64,${fileBase64}`,
+          imageData: `data:${mimeType};base64,${fileBase64}`,
           systemMessage: systemMessage
         }),
         signal: abortController.signal // Add abort signal to the fetch request
