@@ -195,7 +195,7 @@ const Home: React.FC = () => {
               <div>
                 <div className="flex items-center gap-4 mb-4">
                   <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
-                    1b
+                    1
                   </div>
                   <h4 className="text-2xl font-semibold">Work on Your Runsheet</h4>
                 </div>
