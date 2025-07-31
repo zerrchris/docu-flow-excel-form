@@ -285,7 +285,7 @@ const Home: React.FC = () => {
 
             {/* Step 4 */}
             <div className="grid lg:grid-cols-2 gap-8 items-center">
-              <div className="order-2 lg:order-1">
+              <div>
                 <div className="flex items-center gap-4 mb-4">
                   <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
                     •
@@ -301,7 +301,7 @@ const Home: React.FC = () => {
                   <li>• One-click addition to runsheet</li>
                 </ul>
               </div>
-              <div className="order-1 lg:order-2">
+              <div>
                 <div 
                   className="relative group cursor-pointer"
                   onMouseEnter={() => setHoveredImage("/lovable-uploads/98320272-b5c8-4a78-b5d0-d8cbf36a89a6.png")}
