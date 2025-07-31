@@ -2822,7 +2822,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   };
 
   // Cell editing functions
-  const selectCell = (rowIndex: number, column: string, shouldStartEditing: boolean = true) => {
+  const selectCell = (rowIndex: number, column: string, shouldStartEditing: boolean = false) => {
     // Save any current editing before switching cells
     if (editingCell) {
       const newData = [...data];
@@ -2852,14 +2852,25 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       }
     }, 100); // Increased delay to allow for layout updates
     
-    // Start editing immediately like Excel
+    // Only start editing if explicitly requested (for double-click or typing)
     if (shouldStartEditing) {
       startEditing(rowIndex, column, data[rowIndex]?.[column] || '');
     }
   };
 
+  const handleCellClick = (rowIndex: number, column: string, event: React.MouseEvent) => {
+    // Single click behavior - if cell is already being edited, allow cursor positioning
+    if (editingCell && editingCell.rowIndex === rowIndex && editingCell.column === column) {
+      // Already editing this cell, allow normal click behavior for cursor positioning
+      return;
+    }
+    
+    // Otherwise, just select the cell without starting edit mode
+    selectCell(rowIndex, column, false);
+  };
+
   const handleCellDoubleClick = (rowIndex: number, column: string) => {
-    // Double click should select all text in the cell
+    // Double click should enter edit mode and select all text in the cell
     startEditing(rowIndex, column, data[rowIndex]?.[column] || '');
     // Focus and select all text after the textarea is rendered
     setTimeout(() => {
@@ -2990,14 +3001,15 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           
           saveEdit();
           
-          // Move to the next row in the same column (Excel-like behavior)
-          const nextRowIndex = currentRowIndex + 1;
-          if (nextRowIndex < data.length) {
-            setTimeout(() => {
-              selectCell(nextRowIndex, currentColumn);
-            }, 0);
-          }
+        // Move to the next row in the same column (Excel-like behavior)
+        const nextRowIndex = currentRowIndex + 1;
+        if (nextRowIndex < data.length) {
+          setTimeout(() => {
+            selectCell(nextRowIndex, currentColumn, false);
+          }, 0);
+        }
         } else {
+          // Enter should start editing mode
           startEditing(rowIndex, column, data[rowIndex]?.[column] || '');
         }
         e.preventDefault();
@@ -3048,11 +3060,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         const nextColumn = columns[nextColumnIndex];
         
         if (nextColumn && nextRowIndex >= 0 && nextRowIndex < data.length) {
-          selectCell(nextRowIndex, nextColumn);
-          // Auto-start editing the next cell
-          setTimeout(() => {
-            startEditing(nextRowIndex, nextColumn, data[nextRowIndex]?.[nextColumn] || '');
-          }, 0);
+          // Tab navigation should just select the cell (Excel-like behavior)
+          selectCell(nextRowIndex, nextColumn, false);
         }
         break;
         
@@ -3060,7 +3069,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         e.preventDefault();
         if (editingCell) return;
         if (rowIndex > 0) {
-          selectCell(rowIndex - 1, column);
+          selectCell(rowIndex - 1, column, false);
         }
         break;
         
@@ -3068,7 +3077,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         e.preventDefault();
         if (editingCell) return;
         if (rowIndex < data.length - 1) {
-          selectCell(rowIndex + 1, column);
+          selectCell(rowIndex + 1, column, false);
         }
         break;
         
@@ -3082,7 +3091,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             newColumnIndex--;
           }
           if (newColumnIndex >= 0) {
-            selectCell(rowIndex, columns[newColumnIndex]);
+            selectCell(rowIndex, columns[newColumnIndex], false);
           }
         }
         break;
@@ -3097,20 +3106,35 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             newColumnIndex++;
           }
           if (newColumnIndex < columns.length) {
-            selectCell(rowIndex, columns[newColumnIndex]);
+            selectCell(rowIndex, columns[newColumnIndex], false);
           }
         }
         break;
         
       case 'Delete':
-      case 'Backspace':
         if (!editingCell && selectedCell?.rowIndex === rowIndex && selectedCell?.column === column) {
+          // Clear the cell content when Delete is pressed (Excel-like behavior)
           const newData = [...data];
           newData[rowIndex] = {
             ...newData[rowIndex],
             [column]: ''
           };
           setData(newData);
+          onDataChange?.(newData);
+          e.preventDefault();
+        }
+        break;
+        
+      case 'Backspace':
+        if (!editingCell && selectedCell?.rowIndex === rowIndex && selectedCell?.column === column) {
+          // Backspace on selected cell should clear content (Excel-like behavior)
+          const newData = [...data];
+          newData[rowIndex] = {
+            ...newData[rowIndex],
+            [column]: ''
+          };
+          setData(newData);
+          onDataChange?.(newData);
           e.preventDefault();
         }
         break;
@@ -3138,7 +3162,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         const nextRowIndex = currentRowIndex + 1;
         if (nextRowIndex < data.length) {
           setTimeout(() => {
-            selectCell(nextRowIndex, currentColumn);
+            selectCell(nextRowIndex, currentColumn, false);
           }, 0);
         }
       }
@@ -4336,8 +4360,8 @@ ${extractionFields}`
                             height: isEditing ? 'fit-content' : `${getRowHeight(rowIndex)}px`,
                             minHeight: isEditing ? '60px' : `${getRowHeight(rowIndex)}px`
                           }}
-                         onClick={() => selectCell(rowIndex, column)}
-                         onDoubleClick={() => handleCellDoubleClick(rowIndex, column)}
+                          onClick={(e) => handleCellClick(rowIndex, column, e)}
+                          onDoubleClick={() => handleCellDoubleClick(rowIndex, column)}
                          tabIndex={0}
                        >
                          {isEditing ? (
@@ -4405,8 +4429,8 @@ ${extractionFields}`
                              height: isEditing ? 'fit-content' : `${getRowHeight(rowIndex)}px`,
                              minHeight: isEditing ? '60px' : `${getRowHeight(rowIndex)}px`
                            }}
-                           onClick={() => selectCell(rowIndex, column)}
-                           onDoubleClick={() => handleCellDoubleClick(rowIndex, column)}
+                            onClick={(e) => handleCellClick(rowIndex, column, e)}
+                            onDoubleClick={() => handleCellDoubleClick(rowIndex, column)}
                            tabIndex={0}
                          >
                            {isEditing ? (
