@@ -562,17 +562,22 @@ async function addRowToSheet() {
   });
   
   // Check if there's a captured snip to include
+  let screenshotUrl = null;
   if (window.currentCapturedSnip && window.currentSnipFilename) {
     console.log('🔧 RunsheetPro Extension: Including captured snip in row data');
-    // Upload the snip first, then include its filename in the row data
+    // Upload the snip first, then include its URL in the sync request
     try {
       const uploadResult = await uploadSnipToStorage(window.currentCapturedSnip);
       rowData['Document File Name'] = window.currentSnipFilename;
+      screenshotUrl = uploadResult.url;
       hasData = true;
       
       // Clear the captured snip since we're about to save it
       window.currentCapturedSnip = null;
       window.currentSnipFilename = null;
+      
+      // Clear screenshot indicator
+      updateScreenshotIndicator(false);
     } catch (error) {
       console.error('Error uploading captured snip:', error);
       showNotification('Failed to upload captured snip, but continuing with other data...', 'warning');
@@ -614,8 +619,8 @@ async function addRowToSheet() {
       }
     }
     
-    // Add the row data using extension-sync endpoint
-    const syncResponse = await fetch('https://xnpmrafjjqsissbtempj.supabase.co/functions/v1/add-row-to-runsheet', {
+    // Add the row data using extension-sync endpoint with screenshot URL if available
+    const syncResponse = await fetch('https://xnpmrafjjqsissbtempj.supabase.co/functions/v1/extension-sync', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${userSession.access_token}`,
@@ -625,7 +630,7 @@ async function addRowToSheet() {
       body: JSON.stringify({
         runsheet_id: activeRunsheet.id,
         row_data: rowData,
-        row_index: nextRowIndex
+        screenshot_url: screenshotUrl
       })
     });
     
@@ -639,7 +644,11 @@ async function addRowToSheet() {
     console.log('Sync response result:', result);
     
     if (result.success) {
-      showNotification(`Row ${nextRowIndex + 1} added successfully!`, 'success');
+      showNotification(`Row ${result.row_index + 1} added successfully!`, 'success');
+      
+      // Update current row index to move to next row
+      currentRowIndex = result.row_index + 1;
+      updateRowNavigationUI();
       
       // Clear all input fields and textareas for next entry
       inputs.forEach(input => {
@@ -869,8 +878,15 @@ function createRunsheetFrame() {
   header.innerHTML = `
     <span class="frame-title">RunsheetPro Runsheet - ${activeRunsheet?.name || 'Default'} 
       <span id="current-row-indicator" style="font-size: 12px; color: hsl(var(--muted-foreground, 215 16% 47%)); margin-left: 8px;">
-        (Row ${(window.currentDisplayRowIndex || 0) + 1})
+        (Row ${currentRowIndex + 1})
       </span>
+      ${currentViewMode === 'single' ? `
+        <div style="display: inline-flex; align-items: center; margin-left: 8px; gap: 4px;">
+          <button id="prev-row-btn" style="background: hsl(var(--secondary, 210 40% 96%)); border: 1px solid hsl(var(--border, 214 32% 91%)); padding: 2px 6px; border-radius: 3px; cursor: pointer; font-size: 11px;" ${currentRowIndex <= 0 ? 'disabled' : ''}title="Previous row">←</button>
+          <button id="next-row-btn" style="background: hsl(var(--secondary, 210 40% 96%)); border: 1px solid hsl(var(--border, 214 32% 91%)); padding: 2px 6px; border-radius: 3px; cursor: pointer; font-size: 11px;" title="Next row">→</button>
+          <span id="screenshot-indicator" style="font-size: 11px; color: hsl(var(--primary, 215 80% 40%)); margin-left: 4px; display: none;">📷</span>
+        </div>
+      ` : ''}
     </span>
     <div class="frame-controls">
       <button id="test-button" class="control-btn" style="background: red !important; color: white !important;">🚀 TEST BUTTON</button>
@@ -898,6 +914,11 @@ function createRunsheetFrame() {
   } else {
     createSingleEntryView(content);
   }
+  
+  // Initialize row navigation UI
+  setTimeout(() => {
+    updateRowNavigationUI();
+  }, 100);
   
   runsheetFrame.appendChild(resizeHandle);
   runsheetFrame.appendChild(header);
@@ -1877,6 +1898,27 @@ function setupFrameEventListeners() {
   if (screenshotBtn) {
     screenshotBtn.addEventListener('click', () => {
       startSnipMode();
+    });
+  }
+  
+  // Row navigation buttons
+  const prevRowBtn = document.getElementById('prev-row-btn');
+  if (prevRowBtn) {
+    prevRowBtn.addEventListener('click', () => {
+      if (currentRowIndex > 0) {
+        currentRowIndex--;
+        updateRunsheetView();
+        updateRowNavigationUI();
+      }
+    });
+  }
+  
+  const nextRowBtn = document.getElementById('next-row-btn');
+  if (nextRowBtn) {
+    nextRowBtn.addEventListener('click', () => {
+      currentRowIndex++;
+      updateRunsheetView();
+      updateRowNavigationUI();
     });
   }
   
@@ -2916,6 +2958,9 @@ async function captureSelectedArea(left, top, width, height) {
                 }
               }
               
+              // Update screenshot indicator
+              updateScreenshotIndicator(true);
+              
               cleanupSnipMode();
               showNotification('Snip captured! Fill in data and click "Add to Row" to save everything together.', 'success');
             } catch (error) {
@@ -3204,21 +3249,20 @@ async function uploadSnipToStorage(blob) {
       throw new Error('User not authenticated');
     }
     
-    // Create form data
-    const formData = new FormData();
+    // Create filename with user folder structure
     const filename = `snip-${Date.now()}.png`;
-    const file = new File([blob], filename, { type: 'image/png' });
+    const filePath = `${userSession.user.id}/snips/${filename}`;
     
-    formData.append('file', file);
-    
-    // Upload to Supabase Storage
-    const response = await fetch('https://xnpmrafjjqsissbtempj.supabase.co/storage/v1/object/documents/' + userSession.user.id + '/snips/' + filename, {
+    // Upload using the correct storage API format
+    const response = await fetch(`https://xnpmrafjjqsissbtempj.supabase.co/storage/v1/object/documents/${filePath}`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${userSession.access_token}`,
+        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhucG1yYWZqanFzaXNzYnRlbXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4NzMyNjcsImV4cCI6MjA2ODQ0OTI2N30.aQG15Ed8IOLJfM5p7XF_kEM5FUz8zJug1pxAi9rTTsg',
+        'Content-Type': 'image/png',
         'x-upsert': 'true'
       },
-      body: formData
+      body: blob
     });
     
     if (!response.ok) {
@@ -3228,11 +3272,12 @@ async function uploadSnipToStorage(blob) {
     }
     
     // Get public URL
-    const publicUrl = `https://xnpmrafjjqsissbtempj.supabase.co/storage/v1/object/public/documents/${userSession.user.id}/snips/${filename}`;
+    const publicUrl = `https://xnpmrafjjqsissbtempj.supabase.co/storage/v1/object/public/documents/${filePath}`;
     
     return {
       url: publicUrl,
-      filename: filename
+      filename: filename,
+      filePath: filePath
     };
     
   } catch (error) {
@@ -3396,4 +3441,38 @@ try {
 } catch (error) {
   console.error('🔧 RunsheetPro Extension: Critical initialization error:', error);
   console.error('🔧 RunsheetPro Extension: Error stack:', error.stack);
+}
+
+// Update screenshot indicator in header
+function updateScreenshotIndicator(hasScreenshot) {
+  const indicator = document.getElementById('screenshot-indicator');
+  if (indicator) {
+    indicator.style.display = hasScreenshot ? 'inline' : 'none';
+    indicator.title = hasScreenshot ? 'Screenshot captured for this row' : '';
+  }
+}
+
+// Update row navigation UI
+function updateRowNavigationUI() {
+  const prevBtn = document.getElementById('prev-row-btn');
+  const nextBtn = document.getElementById('next-row-btn');
+  const indicator = document.getElementById('current-row-indicator');
+  
+  if (prevBtn) {
+    prevBtn.disabled = currentRowIndex <= 0;
+    prevBtn.style.opacity = currentRowIndex <= 0 ? '0.5' : '1';
+  }
+  
+  if (indicator) {
+    indicator.textContent = `(Row ${currentRowIndex + 1})`;
+  }
+  
+  // Check if current row has screenshot and update indicator
+  if (activeRunsheet && activeRunsheet.data && activeRunsheet.data[currentRowIndex]) {
+    const hasScreenshot = activeRunsheet.data[currentRowIndex]['Document File Name'] || 
+                         activeRunsheet.data[currentRowIndex]['screenshot_url'];
+    updateScreenshotIndicator(!!hasScreenshot);
+  } else {
+    updateScreenshotIndicator(false);
+  }
 }
