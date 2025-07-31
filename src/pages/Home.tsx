@@ -214,7 +214,7 @@ const Home: React.FC = () => {
                   <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
                     •
                   </div>
-                  <h4 className="text-2xl font-semibold">Upload Your Document</h4>
+                  <h4 className="text-2xl font-semibold">Ready to Analyze?</h4>
                 </div>
                 <p className="text-muted-foreground text-lg mb-4">
                   When ready to analyze a document, go to the Document Processor. Upload your document using the highlighted "Document Capture" button.
