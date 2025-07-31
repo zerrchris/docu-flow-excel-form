@@ -487,14 +487,7 @@ const Home: React.FC = () => {
 
               {/* Brain Button Analysis */}
               <div className="grid lg:grid-cols-2 gap-8 items-center">
-                <div>
-                  <img 
-                    src="https://images.unsplash.com/photo-1581090464777-f3220bbe1b8b?w=600&h=400&fit=crop&crop=center"
-                    alt="Brain button for AI analysis and automatic field population"
-                    className="rounded-lg shadow-lg w-full"
-                  />
-                </div>
-                <div>
+                <div className="order-2 lg:order-1">
                   <div className="flex items-center gap-4 mb-4">
                     <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
                       •
@@ -510,6 +503,13 @@ const Home: React.FC = () => {
                     <li>• Intelligent field mapping and detection</li>
                     <li>• Real-time document analysis results</li>
                   </ul>
+                </div>
+                <div className="order-1 lg:order-2">
+                  <img 
+                    src="https://images.unsplash.com/photo-1581090464777-f3220bbe1b8b?w=600&h=400&fit=crop&crop=center"
+                    alt="Brain button for AI analysis and automatic field population"
+                    className="rounded-lg shadow-lg w-full"
+                  />
                 </div>
               </div>
           </div>
