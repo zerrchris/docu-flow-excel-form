@@ -1656,6 +1656,41 @@ function createSingleEntryView(content) {
       
       buttonContainer.appendChild(addRowBtn);
       
+      // Add screenshot button container below the Add to Row button
+      const screenshotContainer = document.createElement('div');
+      screenshotContainer.style.cssText = `
+        display: flex !important;
+        gap: 4px !important;
+        width: 100% !important;
+        margin-top: 4px !important;
+      `;
+      
+      // Screenshot button
+      const screenshotBtn = document.createElement('button');
+      screenshotBtn.innerHTML = '📷 Screenshot';
+      screenshotBtn.style.cssText = `
+        background: hsl(var(--secondary, 210 40% 96%)) !important;
+        color: hsl(var(--secondary-foreground, 222 47% 11%)) !important;
+        border: 1px solid hsl(var(--border, 214 32% 91%)) !important;
+        border-radius: 4px !important;
+        padding: 6px 10px !important;
+        font-size: 11px !important;
+        cursor: pointer !important;
+        flex: 1 !important;
+        font-weight: 500 !important;
+        transition: all 0.2s ease !important;
+      `;
+      screenshotBtn.title = 'Take a screenshot';
+      
+      screenshotBtn.addEventListener('click', () => {
+        console.log('Screenshot button clicked');
+        startSnipMode();
+      });
+      
+      screenshotContainer.appendChild(screenshotBtn);
+      
+      buttonContainer.appendChild(screenshotContainer);
+      
       cell.appendChild(buttonContainer);
     }
     
