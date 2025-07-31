@@ -129,9 +129,6 @@ const Home: React.FC = () => {
           <h3 className="text-3xl font-bold text-center mb-12">
             How it Works
           </h3>
-          <p className="text-lg text-muted-foreground text-center mb-16 max-w-3xl mx-auto">
-            See how easy it is to transform your documents into organized data with our 4-step process
-          </p>
           
           <div className="space-y-16">
             {/* Step 1 */}
