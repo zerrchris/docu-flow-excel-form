@@ -442,34 +442,61 @@ const Home: React.FC = () => {
                </div>
              </div>
 
-             {/* Smart Document Integration Bullet */}
-             <div className="grid lg:grid-cols-2 gap-8 items-center">
-               <div>
-                 <img 
-                   src="https://images.unsplash.com/photo-1581090464777-f3220bbe1b8b?w=600&h=400&fit=crop&crop=center"
-                   alt="Smart document analysis with AI brain button for automatic field population"
-                   className="rounded-lg shadow-lg w-full"
-                 />
-               </div>
-               <div>
-                 <div className="flex items-center gap-4 mb-4">
-                   <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
-                     •
-                   </div>
-                   <h4 className="text-2xl font-semibold">Smart Document Integration</h4>
-                 </div>
-                 <p className="text-muted-foreground text-lg mb-4">
-                   Add documents directly to your runsheet through upload or screen capture. Once added, simply click the brain button to automatically analyze the document and populate your spreadsheet fields instantly.
-                 </p>
-                 <ul className="space-y-2 text-muted-foreground">
-                   <li>• Upload or capture documents directly to runsheet</li>
-                   <li>• One-click AI analysis with the brain button</li>
-                   <li>• Automatic field population and data extraction</li>
-                   <li>• Real-time document preview and validation</li>
-                   <li>• Support for multiple document formats</li>
-                 </ul>
+              {/* Add Documents Directly to Runsheet */}
+              <div className="grid lg:grid-cols-2 gap-8 items-center">
+                <div className="order-2 lg:order-1">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
+                      •
+                    </div>
+                    <h4 className="text-2xl font-semibold">Add Documents Directly to Runsheet</h4>
+                  </div>
+                  <p className="text-muted-foreground text-lg mb-4">
+                    Upload or capture documents directly to your runsheet for instant linking and organization. Documents appear in your runsheet with reference numbers and can be accessed anytime.
+                  </p>
+                  <ul className="space-y-2 text-muted-foreground">
+                    <li>• Upload files directly to runsheet rows</li>
+                    <li>• Screen capture for quick document addition</li>
+                    <li>• Automatic document reference numbering</li>
+                    <li>• Permanent document-to-row linking</li>
+                  </ul>
+                </div>
+                <div className="order-1 lg:order-2">
+                  <img 
+                    src="https://images.unsplash.com/photo-1581090464777-f3220bbe1b8b?w=600&h=400&fit=crop&crop=center"
+                    alt="Documents added directly to runsheet with reference numbers"
+                    className="rounded-lg shadow-lg w-full"
+                  />
+                </div>
               </div>
-            </div>
+
+              {/* Brain Button Analysis */}
+              <div className="grid lg:grid-cols-2 gap-8 items-center">
+                <div>
+                  <img 
+                    src="https://images.unsplash.com/photo-1581090464777-f3220bbe1b8b?w=600&h=400&fit=crop&crop=center"
+                    alt="Brain button for AI analysis and automatic field population"
+                    className="rounded-lg shadow-lg w-full"
+                  />
+                </div>
+                <div>
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
+                      •
+                    </div>
+                    <h4 className="text-2xl font-semibold">AI Brain Button Analysis</h4>
+                  </div>
+                  <p className="text-muted-foreground text-lg mb-4">
+                    Once a document is added to your runsheet, click the brain button to automatically analyze the document and populate your spreadsheet fields with extracted data.
+                  </p>
+                  <ul className="space-y-2 text-muted-foreground">
+                    <li>• One-click AI analysis with brain button</li>
+                    <li>• Automatic field population and data extraction</li>
+                    <li>• Intelligent field mapping and detection</li>
+                    <li>• Real-time document analysis results</li>
+                  </ul>
+                </div>
+              </div>
           </div>
 
           {/* CTA after workflow */}
