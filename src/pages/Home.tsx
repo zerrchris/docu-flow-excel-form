@@ -286,22 +286,6 @@ const Home: React.FC = () => {
             {/* Step 4 */}
             <div className="grid lg:grid-cols-2 gap-8 items-center">
               <div>
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
-                    •
-                  </div>
-                  <h4 className="text-2xl font-semibold">Review & Add to Runsheet</h4>
-                </div>
-                <p className="text-muted-foreground text-lg mb-4">
-                  Review the extracted data for accuracy, make any necessary corrections, then click "Add to Runsheet". The data will be added to the next row of your runsheet with a document file reference.
-                </p>
-                <ul className="space-y-2 text-muted-foreground">
-                  <li>• Automatic data validation</li>
-                  <li>• Document reference number assigned</li>
-                  <li>• One-click addition to runsheet</li>
-                </ul>
-              </div>
-              <div>
                 <div 
                   className="relative group cursor-pointer"
                   onMouseEnter={() => setHoveredImage("/lovable-uploads/98320272-b5c8-4a78-b5d0-d8cbf36a89a6.png")}
@@ -318,6 +302,22 @@ const Home: React.FC = () => {
                     </div>
                   </div>
                 </div>
+              </div>
+              <div>
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
+                    •
+                  </div>
+                  <h4 className="text-2xl font-semibold">Review & Add to Runsheet</h4>
+                </div>
+                <p className="text-muted-foreground text-lg mb-4">
+                  Review the extracted data for accuracy, make any necessary corrections, then click "Add to Runsheet". The data will be added to the next row of your runsheet with a document file reference.
+                </p>
+                <ul className="space-y-2 text-muted-foreground">
+                  <li>• Automatic data validation</li>
+                  <li>• Document reference number assigned</li>
+                  <li>• One-click addition to runsheet</li>
+                </ul>
               </div>
             </div>
 
