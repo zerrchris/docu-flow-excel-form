@@ -55,24 +55,38 @@ Deno.serve(async (req) => {
         throw new Error(`Failed to fetch runsheet: ${fetchError.message}`)
       }
 
-      // Update runsheet data - always update the first row for simplicity
+      // Update runsheet data - find the next available row or add new row
       const currentData = runsheet.data as any[]
       const updatedData = [...currentData]
       
-      // Ensure we have at least one row
-      if (updatedData.length === 0) {
+      // Find the first empty row or add a new one
+      let targetRowIndex = 0;
+      
+      // Look for first row that has all empty values
+      for (let i = 0; i < updatedData.length; i++) {
+        const row = updatedData[i];
+        const hasData = Object.values(row).some(value => value && value.toString().trim() !== '');
+        if (!hasData) {
+          targetRowIndex = i;
+          break;
+        }
+        targetRowIndex = i + 1; // Next row after this one
+      }
+      
+      // If we need to add a new row
+      if (targetRowIndex >= updatedData.length) {
         const emptyRow: Record<string, string> = {}
         runsheet.columns.forEach((col: string) => emptyRow[col] = '')
         updatedData.push(emptyRow)
       }
 
-      // Update the first row with the provided data
-      updatedData[0] = { ...updatedData[0], ...row_data }
+      // Update the target row with the provided data
+      updatedData[targetRowIndex] = { ...updatedData[targetRowIndex], ...row_data }
 
       // Add screenshot URL if provided
       if (screenshot_url) {
-        updatedData[0] = { 
-          ...updatedData[0], 
+        updatedData[targetRowIndex] = { 
+          ...updatedData[targetRowIndex], 
           screenshot_url 
         }
       }
@@ -94,8 +108,8 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           success: true, 
-          row_index: 0,
-          message: 'Data synced successfully' 
+          row_index: targetRowIndex,
+          message: `Data added to row ${targetRowIndex + 1}` 
         }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
