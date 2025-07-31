@@ -359,6 +359,34 @@ const Home: React.FC = () => {
               </div>
             </div>
 
+            {/* Document Quick View Step */}
+            <div className="grid lg:grid-cols-2 gap-8 items-center">
+              <div>
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
+                    •
+                  </div>
+                  <h4 className="text-2xl font-semibold">Quick Document View</h4>
+                </div>
+                <p className="text-muted-foreground text-lg mb-4">
+                  Once a document is linked to your runsheet, you can always quickly view the full document with just a click of a button. The document opens in an expanded view for easy reading and reference.
+                </p>
+                <ul className="space-y-2 text-muted-foreground">
+                  <li>• One-click document expansion</li>
+                  <li>• Full-size document viewing</li>
+                  <li>• Easy navigation and zooming</li>
+                  <li>• Quick return to runsheet</li>
+                </ul>
+              </div>
+              <div>
+                <img 
+                  src="https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=600&h=400&fit=crop&crop=center"
+                  alt="Quick document view with expanded interface"
+                  className="rounded-lg shadow-lg w-full"
+                />
+              </div>
+            </div>
+
             {/* Batch Processing Step */}
             <div className="grid lg:grid-cols-2 gap-8 items-center">
               <div className="order-2 lg:order-1">
