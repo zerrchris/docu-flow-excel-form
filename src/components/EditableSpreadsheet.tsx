@@ -337,7 +337,15 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         setRunsheetName('Untitled Runsheet');
         setLastSaveTime(null);
         setHasUnsavedChanges(false);
-        console.log('🧹 EditableSpreadsheet: Cleared runsheet state');
+        
+        // CRITICAL: Clear the actual spreadsheet data to prevent old data from persisting
+        setData([]);
+        setSelectedCell(null);
+        setEditingCell(null);
+        setCellValue('');
+        setSelectedRange(null);
+        
+        console.log('🧹 EditableSpreadsheet: Cleared runsheet state and data');
       }
     };
     
@@ -1761,8 +1769,16 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     console.log('🔧 Debug: Data length:', runsheet.data?.length);
     console.log('🔧 Debug: First row sample:', runsheet.data?.[0]);
     const dataWithMinRows = ensureMinimumRows(runsheet.data || [], runsheet.columns || []);
-    // Preserve current row count if larger when loading saved runsheet
-    const targetRowCount = Math.max(dataWithMinRows.length, data.length);
+    // Only preserve current row count if we're loading a runsheet with actual data
+    // For new/empty runsheets, use the minimum required rows
+    const hasActualData = runsheet.data && runsheet.data.length > 0 && 
+      runsheet.data.some((row: any) => Object.values(row).some(value => value && String(value).trim() !== ''));
+    const targetRowCount = hasActualData ? Math.max(dataWithMinRows.length, data.length) : dataWithMinRows.length;
+    
+    console.log('🔧 Debug: hasActualData:', hasActualData);
+    console.log('🔧 Debug: dataWithMinRows.length:', dataWithMinRows.length);
+    console.log('🔧 Debug: current data.length:', data.length);
+    console.log('🔧 Debug: targetRowCount:', targetRowCount);
     if (targetRowCount > dataWithMinRows.length) {
       const additionalRows = Array.from({ length: targetRowCount - dataWithMinRows.length }, () => {
         const row: Record<string, string> = {};
