@@ -45,7 +45,24 @@ serve(async (req) => {
       );
     }
 
-    // Check if the data is a PDF (PDFs can't be processed by vision API)
+    // Check if the data is a PDF by examining the base64 content header
+    // PDFs start with "%PDF" which is "JVBERi0" in base64
+    const base64Content = imageData.split(',')[1];
+    if (base64Content && base64Content.startsWith('JVBERi0')) {
+      console.error('PDF files are not supported by OpenAI vision API');
+      return new Response(
+        JSON.stringify({ 
+          error: 'PDF files are not currently supported for analysis. Please convert your PDF to an image format (PNG, JPEG) and try again.',
+          details: 'OpenAI vision API only supports image formats'
+        }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    // Also check the MIME type for PDFs
     if (imageData.includes('data:application/pdf')) {
       console.error('PDF files are not supported by OpenAI vision API');
       return new Response(
