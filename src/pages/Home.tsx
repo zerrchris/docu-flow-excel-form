@@ -367,11 +367,11 @@ const Home: React.FC = () => {
               <div>
                 <div 
                   className="relative group cursor-pointer"
-                  onMouseEnter={() => setHoveredImage("https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800&auto=format&fit=crop&q=60")}
+                  onMouseEnter={() => setHoveredImage("/lovable-uploads/83b659c7-5a73-4ad3-993c-f20fe21afa72.png")}
                   onMouseLeave={() => setHoveredImage(null)}
-                  onClick={() => setEnlargedImage("https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800&auto=format&fit=crop&q=60")}
+                  onClick={() => setEnlargedImage("/lovable-uploads/83b659c7-5a73-4ad3-993c-f20fe21afa72.png")}
                 >
-                  <img src="https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800&auto=format&fit=crop&q=60" alt="Batch processing multiple documents" className="rounded-lg shadow-lg w-full transition-all duration-300 group-hover:brightness-75" />
+                  <img src="/lovable-uploads/83b659c7-5a73-4ad3-993c-f20fe21afa72.png" alt="Batch processing multiple documents" className="rounded-lg shadow-lg w-full transition-all duration-300 group-hover:brightness-75" />
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                     <div className="bg-black/50 backdrop-blur-sm rounded-full p-3 flex items-center gap-2 text-white">
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
