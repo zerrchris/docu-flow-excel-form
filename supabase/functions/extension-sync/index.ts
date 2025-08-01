@@ -90,10 +90,24 @@ Deno.serve(async (req) => {
           screenshot_url 
         }
 
-        // Extract filename from screenshot URL
+        // Extract filename and file path from screenshot URL
         const urlParts = screenshot_url.split('/')
         const filename = urlParts[urlParts.length - 1]
-        const filePath = screenshot_url.replace(`${supabaseUrl}/storage/v1/object/public/documents/`, '')
+        
+        // For screenshots from extension, the URL is like:
+        // https://xnpmrafjjqsissbtempj.supabase.co/storage/v1/object/public/documents/user_id/snips/filename.png
+        // We need to extract: user_id/snips/filename.png
+        const baseUrl = `${supabaseUrl}/storage/v1/object/public/documents/`
+        const filePath = screenshot_url.replace(baseUrl, '')
+
+        console.log('Creating document record:', {
+          filename,
+          filePath,
+          screenshot_url,
+          runsheet_id,
+          targetRowIndex,
+          user_id: user.id
+        })
 
         // Check if document record already exists for this row
         const { data: existingDoc, error: existingError } = await supabase
@@ -115,17 +129,26 @@ Deno.serve(async (req) => {
           content_type: 'image/png'
         }
 
+        let documentResult;
         if (existingDoc) {
           // Update existing document
-          await supabase
+          documentResult = await supabase
             .from('documents')
             .update(documentData)
             .eq('id', existingDoc.id)
+            .select()
         } else {
           // Insert new document
-          await supabase
+          documentResult = await supabase
             .from('documents')
             .insert(documentData)
+            .select()
+        }
+
+        if (documentResult.error) {
+          console.error('Failed to create/update document record:', documentResult.error)
+        } else {
+          console.log('Document record created/updated successfully:', documentResult.data)
         }
       }
 
