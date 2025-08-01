@@ -276,9 +276,12 @@ const DocumentProcessor: React.FC = () => {
       console.log('Loading runsheet from URL parameter:', runsheetId);
       loadedRunsheetRef.current = runsheetId;
       
+      // Check if this is coming from extension (force refresh)
+      const fromExtension = searchParams.get('from') === 'extension';
+      
       // Dispatch event to load the runsheet
       const loadEvent = new CustomEvent('loadSpecificRunsheet', {
-        detail: { runsheetId }
+        detail: { runsheetId, forceRefresh: fromExtension }
       });
       window.dispatchEvent(loadEvent);
     }

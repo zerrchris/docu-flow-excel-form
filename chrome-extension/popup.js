@@ -130,6 +130,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       
       if (result.activeRunsheet && result.activeRunsheet.id) {
         params.set('id', result.activeRunsheet.id);
+        params.set('from', 'extension'); // Add extension flag for force refresh
         appUrl += '/runsheet';
       }
       

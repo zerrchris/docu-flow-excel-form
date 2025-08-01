@@ -634,6 +634,9 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
     // Use the local filename (updated immediately) or fallback to prop
     const filename = localFilename || currentFilename || 'document';
     
+    // Check if the filename is a URL (for screenshots from extension)
+    const isImageUrl = filename.startsWith('http') && (filename.includes('.png') || filename.includes('.jpg') || filename.includes('.jpeg'));
+    
     return (
       <Card 
         className="p-3 border-dashed"
@@ -644,33 +647,61 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 flex-1">
-            <File className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-            {isEditingName ? (
-              <Input
-                value={editedFilename}
-                onChange={(e) => setEditedFilename(e.target.value)}
-                className="h-6 text-xs flex-1"
-                tabIndex={-1}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleRenameDocument();
-                  if (e.key === 'Escape') {
-                    setIsEditingName(false);
-                    setEditedFilename('');
-                  }
-                }}
-                autoFocus
-              />
+            {isImageUrl ? (
+              <div className="flex items-center gap-2 flex-1">
+                <img 
+                  src={filename} 
+                  alt="Screenshot preview" 
+                  className="w-8 h-8 object-cover rounded border"
+                  onError={(e) => {
+                    // Fallback to file icon if image fails to load
+                    e.currentTarget.style.display = 'none';
+                    e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                  }}
+                />
+                <File className="w-4 h-4 text-muted-foreground flex-shrink-0 hidden" />
+                <span 
+                  className="text-sm font-medium truncate flex-1 cursor-pointer hover:text-primary" 
+                  title={filename}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    window.open(filename, '_blank');
+                  }}
+                >
+                  Screenshot
+                </span>
+              </div>
             ) : (
-              <span 
-                className="text-sm font-medium truncate flex-1 cursor-pointer hover:text-primary" 
-                title={filename}
-                onClick={() => {
-                  setEditedFilename(filename);
-                  setIsEditingName(true);
-                }}
-              >
-                {filename}
-              </span>
+              <>
+                <File className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                {isEditingName ? (
+                  <Input
+                    value={editedFilename}
+                    onChange={(e) => setEditedFilename(e.target.value)}
+                    className="h-6 text-xs flex-1"
+                    tabIndex={-1}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleRenameDocument();
+                      if (e.key === 'Escape') {
+                        setIsEditingName(false);
+                        setEditedFilename('');
+                      }
+                    }}
+                    autoFocus
+                  />
+                ) : (
+                  <span 
+                    className="text-sm font-medium truncate flex-1 cursor-pointer hover:text-primary" 
+                    title={filename}
+                    onClick={() => {
+                      setEditedFilename(filename);
+                      setIsEditingName(true);
+                    }}
+                  >
+                    {filename}
+                  </span>
+                )}
+              </>
             )}
           </div>
           {!isEditingName && (

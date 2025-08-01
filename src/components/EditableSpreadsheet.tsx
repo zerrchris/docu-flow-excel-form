@@ -754,9 +754,9 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     };
 
     const handleLoadSpecificRunsheet = (event: CustomEvent) => {
-      const { runsheetId } = event.detail;
-      console.log('Loading specific runsheet:', runsheetId);
-      loadSpecificRunsheet(runsheetId);
+      const { runsheetId, forceRefresh } = event.detail;
+      console.log('Loading specific runsheet:', runsheetId, 'Force refresh:', forceRefresh);
+      loadSpecificRunsheet(runsheetId, forceRefresh);
     };
 
     const handleAutoRestoreLastRunsheet = async () => {
@@ -1814,7 +1814,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   };
 
   // Load a specific runsheet by ID (for URL parameter functionality)
-  const loadSpecificRunsheet = async (runsheetId: string) => {
+  const loadSpecificRunsheet = async (runsheetId: string, forceRefresh: boolean = false) => {
     // Wait for user authentication to be loaded
     let currentUser = user;
     if (!currentUser) {
@@ -1875,6 +1875,18 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         console.log('🔧 Debug: Runsheet name:', runsheet.name);
         console.log('🔧 Debug: Runsheet data length:', Array.isArray(runsheet.data) ? runsheet.data.length : 0);
         console.log('🔧 Debug: Runsheet columns:', runsheet.columns);
+        console.log('🔧 Debug: Force refresh:', forceRefresh);
+        
+        // If force refresh is enabled (from extension), clear existing data first
+        if (forceRefresh) {
+          console.log('🔄 Force refresh enabled - clearing existing data');
+          setData([]);
+          setSelectedCell(null);
+          setEditingCell(null);
+          setCellValue('');
+          setSelectedRange(null);
+        }
+        
         console.log('🔧 Debug: About to call setIsLoadingRunsheet(true)');
         setIsLoadingRunsheet(true);
         console.log('🔧 Debug: About to call loadRunsheet()');
