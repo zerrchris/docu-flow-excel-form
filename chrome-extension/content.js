@@ -11,6 +11,7 @@ let captures = [];
 let isCapturing = false;
 let userSession = null;
 let currentViewMode = 'single'; // 'single' or 'full'
+let currentRowIndex = 0; // Track current row being edited
 
 // Snip mode variables
 let isSnipMode = false;
