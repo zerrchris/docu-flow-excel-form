@@ -83,11 +83,49 @@ Deno.serve(async (req) => {
       // Update the target row with the provided data
       updatedData[targetRowIndex] = { ...updatedData[targetRowIndex], ...row_data }
 
-      // Add screenshot URL if provided
+      // Add screenshot URL if provided and create document record
       if (screenshot_url) {
         updatedData[targetRowIndex] = { 
           ...updatedData[targetRowIndex], 
           screenshot_url 
+        }
+
+        // Extract filename from screenshot URL
+        const urlParts = screenshot_url.split('/')
+        const filename = urlParts[urlParts.length - 1]
+        const filePath = screenshot_url.replace(`${supabaseUrl}/storage/v1/object/public/documents/`, '')
+
+        // Check if document record already exists for this row
+        const { data: existingDoc, error: existingError } = await supabase
+          .from('documents')
+          .select('id')
+          .eq('runsheet_id', runsheet_id)
+          .eq('row_index', targetRowIndex)
+          .eq('user_id', user.id)
+          .maybeSingle()
+
+        // Create or update document record
+        const documentData = {
+          user_id: user.id,
+          runsheet_id: runsheet_id,
+          row_index: targetRowIndex,
+          original_filename: filename,
+          stored_filename: filename,
+          file_path: filePath,
+          content_type: 'image/png'
+        }
+
+        if (existingDoc) {
+          // Update existing document
+          await supabase
+            .from('documents')
+            .update(documentData)
+            .eq('id', existingDoc.id)
+        } else {
+          // Insert new document
+          await supabase
+            .from('documents')
+            .insert(documentData)
         }
       }
 
