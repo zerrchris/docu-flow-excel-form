@@ -3347,7 +3347,7 @@ async function linkSnipToRunsheet(snipUrl) {
     const input = document.querySelector(`input[data-column="Document File Name"]`);
     if (input) {
       input.value = snipUrl;
-      console.log('Updated Document File Name input with:', filename);
+      console.log('Updated Document File Name input with screenshot URL');
     }
     
     // Update the Document File Name column header to show the document interface
