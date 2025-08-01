@@ -4446,28 +4446,34 @@ ${extractionFields}`
                          tabIndex={0}
                        >
                          {isEditing ? (
-                           <Textarea
-                             ref={textareaRef}
-                             value={cellValue}
-                             onChange={(e) => setCellValue(e.target.value)}
-                             onKeyDown={(e) => {
-                               // Allow Shift+Enter for line breaks, but handle Tab/Enter/Escape/Arrow keys
-                               if ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Tab' || e.key === 'Escape' || 
-                                   ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
-                                 handleInputKeyDown(e);
-                               }
-                             }}
-                             className={`w-full border-2 border-primary rounded-none bg-background focus:ring-0 focus:outline-none resize-none p-2 ${
-                               columnAlignments[column] === 'center' ? 'text-center' : 
-                               columnAlignments[column] === 'right' ? 'text-right' : 'text-left'
-                             }`}
-                             style={{ 
-                               minHeight: '60px',
-                               width: '100%',
-                               height: 'auto'
-                             }}
-                             rows={Math.max(3, Math.ceil(cellValue.length / 50))}
-                           />
+                            <Textarea
+                              ref={textareaRef}
+                              value={cellValue}
+                              onChange={(e) => setCellValue(e.target.value)}
+                              onKeyDown={(e) => {
+                                // Allow Shift+Enter for line breaks, but handle Tab/Enter/Escape/Arrow keys
+                                if ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Tab' || e.key === 'Escape' || 
+                                    ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                                  handleInputKeyDown(e);
+                                }
+                              }}
+                              className={`w-full border-2 border-primary rounded-none bg-background focus:ring-0 focus:outline-none resize-y p-2 ${
+                                columnAlignments[column] === 'center' ? 'text-center' : 
+                                columnAlignments[column] === 'right' ? 'text-right' : 'text-left'
+                              }`}
+                              style={{ 
+                                minHeight: '60px',
+                                width: '100%',
+                                height: 'auto',
+                                overflow: 'hidden'
+                              }}
+                              onInput={(e) => {
+                                // Auto-resize textarea based on content
+                                const target = e.target as HTMLTextAreaElement;
+                                target.style.height = 'auto';
+                                target.style.height = Math.max(60, target.scrollHeight) + 'px';
+                              }}
+                            />
                          ) : (
                            <div
                              data-cell={`${rowIndex}-${column}`}
@@ -4515,45 +4521,55 @@ ${extractionFields}`
                            tabIndex={0}
                          >
                            {isEditing ? (
-                             <Textarea
-                               ref={textareaRef}
-                               value={cellValue}
-                               onChange={(e) => setCellValue(e.target.value)}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter' && !e.shiftKey) {
-                                    e.preventDefault();
-                                    saveEdit();
-                                    
-                                    // For Document File Name column, only auto-advance if there are documents in both current and next row
-                                    const currentDocument = documentMap.get(rowIndex);
-                                    const nextRowIndex = rowIndex + 1;
-                                    const nextDocument = documentMap.get(nextRowIndex);
-                                    
-                                    if (currentDocument && nextDocument && nextRowIndex < data.length) {
-                                      // Both current and next row have documents - auto-advance
-                                      setTimeout(() => {
-                                        selectCell(nextRowIndex, 'Document File Name');
-                                        setTimeout(() => {
-                                          const nextRowData = data[nextRowIndex];
-                                          const nextCellValue = nextDocument.stored_filename || nextRowData['Document File Name'] || '';
-                                          startEditing(nextRowIndex, 'Document File Name', nextCellValue);
-                                        }, 10);
-                                      }, 10);
-                                    }
-                                    // If no documents in current/next row, just save and stop editing
-                                  } else if (e.key === 'Escape') {
-                                    e.preventDefault();
-                                    cancelEdit();
-                                  } else if (e.key === 'Tab') {
-                                    e.preventDefault();
-                                    saveEdit();
-                                    // Move to actions column (no next cell for Document File Name)
-                                  }
+                              <Textarea
+                                ref={textareaRef}
+                                value={cellValue}
+                                onChange={(e) => setCellValue(e.target.value)}
+                                 onKeyDown={(e) => {
+                                   if (e.key === 'Enter' && !e.shiftKey) {
+                                     e.preventDefault();
+                                     saveEdit();
+                                     
+                                     // For Document File Name column, only auto-advance if there are documents in both current and next row
+                                     const currentDocument = documentMap.get(rowIndex);
+                                     const nextRowIndex = rowIndex + 1;
+                                     const nextDocument = documentMap.get(nextRowIndex);
+                                     
+                                     if (currentDocument && nextDocument && nextRowIndex < data.length) {
+                                       // Both current and next row have documents - auto-advance
+                                       setTimeout(() => {
+                                         selectCell(nextRowIndex, 'Document File Name');
+                                         setTimeout(() => {
+                                           const nextRowData = data[nextRowIndex];
+                                           const nextCellValue = nextDocument.stored_filename || nextRowData['Document File Name'] || '';
+                                           startEditing(nextRowIndex, 'Document File Name', nextCellValue);
+                                         }, 10);
+                                       }, 10);
+                                     }
+                                     // If no documents in current/next row, just save and stop editing
+                                   } else if (e.key === 'Escape') {
+                                     e.preventDefault();
+                                     cancelEdit();
+                                   } else if (e.key === 'Tab') {
+                                     e.preventDefault();
+                                     saveEdit();
+                                     // Move to actions column (no next cell for Document File Name)
+                                   }
+                                 }}
+                                onBlur={saveEdit}
+                                className="w-full h-full resize-y border-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent p-2"
+                                style={{ 
+                                  minHeight: '60px',
+                                  overflow: 'hidden'
                                 }}
-                               onBlur={saveEdit}
-                               className="w-full h-full resize-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent p-2"
-                               autoFocus
-                             />
+                                onInput={(e) => {
+                                  // Auto-resize textarea based on content
+                                  const target = e.target as HTMLTextAreaElement;
+                                  target.style.height = 'auto';
+                                  target.style.height = Math.max(60, target.scrollHeight) + 'px';
+                                }}
+                                autoFocus
+                              />
                            ) : (
                              <div
                                data-cell={`${rowIndex}-${column}`}
