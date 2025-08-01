@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useActiveRunsheet } from '@/hooks/useActiveRunsheet';
 
 import * as XLSX from 'xlsx';
@@ -80,6 +80,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 }) => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { setActiveRunsheet, clearActiveRunsheet, currentRunsheet, updateRunsheet } = useActiveRunsheet();
   const [user, setUser] = useState<User | null>(null);
   
@@ -584,6 +585,74 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
     initAuth();
   }, []);
+
+  // Check if opened from extension and needs fresh data
+  const isFromExtension = searchParams.get('from') === 'extension';
+  
+  useEffect(() => {
+    console.log('🔧 EditableSpreadsheet: Component mounted/updated', {
+      isFromExtension,
+      initialRunsheetId,
+      currentRunsheetId
+    });
+    
+    // Force refresh if opened from extension
+    if (isFromExtension && initialRunsheetId && initialRunsheetId === currentRunsheetId) {
+      console.log('🔄 Force refreshing runsheet data from extension');
+      loadSpecificRunsheet(initialRunsheetId, true); // Force refresh
+    }
+  }, [isFromExtension, initialRunsheetId, currentRunsheetId]);
+
+  // Set up real-time updates
+  useEffect(() => {
+    if (!currentRunsheetId || !user) return;
+
+    console.log('🔄 Setting up real-time updates for runsheet:', currentRunsheetId);
+    
+    const channel = supabase
+      .channel('runsheet-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'runsheets',
+          filter: `id=eq.${currentRunsheetId}`
+        },
+        (payload) => {
+          console.log('🔄 Real-time runsheet update received:', payload);
+          if (payload.new && payload.new.id === currentRunsheetId) {
+            const updatedRunsheet = payload.new;
+            console.log('📊 Updating runsheet data from real-time event');
+            
+            // Update local state with new data
+            setData(updatedRunsheet.data || []);
+            setColumns(updatedRunsheet.columns || []);
+            setColumnInstructions(updatedRunsheet.column_instructions || {});
+            setRunsheetName(updatedRunsheet.name || 'Untitled Runsheet');
+            
+            // Trigger callbacks
+            onDataChange?.(updatedRunsheet.data || []);
+            onColumnChange(updatedRunsheet.columns || []);
+            onColumnInstructionsChange?.(updatedRunsheet.column_instructions || {});
+            
+            
+            // Documents will be reloaded by the loadDocuments useEffect below
+            
+            toast({
+              title: "Runsheet updated",
+              description: "Your runsheet has been updated with new data from the extension.",
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log('🔄 Cleaning up real-time subscription');
+      supabase.removeChannel(channel);
+    };
+  }, [currentRunsheetId, user, onDataChange, onColumnChange, onColumnInstructionsChange, toast]);
 
   // Update runsheet name when initialRunsheetName prop changes
   useEffect(() => {
