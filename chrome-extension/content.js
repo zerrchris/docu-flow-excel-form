@@ -3310,9 +3310,8 @@ async function linkSnipToRunsheet(snipUrl) {
       runsheetData[targetRowIndex] = {};
     }
     
-    // Store the snip URL in the Document File Name column
-    const filename = `captured_snip_${Date.now()}.png`;
-    runsheetData[targetRowIndex]['Document File Name'] = filename;
+    // Store the snip URL directly in the Document File Name column so it displays as an image
+    runsheetData[targetRowIndex]['Document File Name'] = snipUrl;
     
     console.log('Updated row data:', runsheetData[targetRowIndex]);
     console.log('Making PATCH request to update runsheet...');
@@ -3347,7 +3346,7 @@ async function linkSnipToRunsheet(snipUrl) {
     // Update the Document File Name field in the UI
     const input = document.querySelector(`input[data-column="Document File Name"]`);
     if (input) {
-      input.value = filename;
+      input.value = snipUrl;
       console.log('Updated Document File Name input with:', filename);
     }
     
@@ -3361,15 +3360,15 @@ async function linkSnipToRunsheet(snipUrl) {
       if (uploadInterface && documentInterface && filenameText) {
         uploadInterface.style.display = 'none';
         documentInterface.style.display = 'flex';
-        filenameText.textContent = filename;
+        filenameText.textContent = 'Screenshot captured';
         headerContainer.style.border = '1px solid hsl(var(--border, 214 32% 91%))';
       }
     }
     
     // Create a file object for the brain button functionality
-    const file = new File([new Blob()], filename, { type: 'image/png' });
+    const file = new File([new Blob()], 'screenshot.png', { type: 'image/png' });
     window.currentAnalysisFile = file;
-    window.currentAnalysisFileName = filename;
+    window.currentAnalysisFileName = 'screenshot.png';
     
     console.log('Snip linked successfully to row', targetRowIndex);
     
