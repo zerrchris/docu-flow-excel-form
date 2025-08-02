@@ -2919,7 +2919,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     // Clear range selection when selecting a single cell
     setSelectedRange(null);
     
-    // Scroll the selected cell into view after layout updates
+    // Scroll the selected cell into view and focus it
     setTimeout(() => {
       const cellElement = document.querySelector(`[data-cell="${rowIndex}-${column}"]`);
       if (cellElement) {
@@ -2930,6 +2930,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           block: 'nearest',
           inline: 'nearest'
         });
+        // Focus the cell element to ensure proper tab index behavior
+        (cellElement.parentElement as HTMLElement)?.focus();
       }
     }, 100); // Increased delay to allow for layout updates
     
@@ -4451,7 +4453,7 @@ ${extractionFields}`
                           }}
                           onClick={(e) => handleCellClick(rowIndex, column, e)}
                           onDoubleClick={() => handleCellDoubleClick(rowIndex, column)}
-                         tabIndex={0}
+                          tabIndex={isSelected ? 0 : -1}
                        >
                          {isEditing ? (
                             <Textarea
@@ -4526,7 +4528,7 @@ ${extractionFields}`
                            }}
                             onClick={(e) => handleCellClick(rowIndex, column, e)}
                             onDoubleClick={() => handleCellDoubleClick(rowIndex, column)}
-                           tabIndex={0}
+                           tabIndex={isSelected ? 0 : -1}
                          >
                            {isEditing ? (
                               <Textarea
