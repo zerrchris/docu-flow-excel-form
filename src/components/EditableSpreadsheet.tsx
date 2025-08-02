@@ -2948,8 +2948,15 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       return;
     }
     
-    // Otherwise, just select the cell without starting edit mode
-    selectCell(rowIndex, column, false);
+    // Start editing the cell and select all text
+    startEditing(rowIndex, column, data[rowIndex]?.[column] || '');
+    // Select all text after the textarea is rendered
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+        textareaRef.current.select();
+      }
+    }, 10);
   };
 
   const handleCellDoubleClick = (rowIndex: number, column: string) => {
