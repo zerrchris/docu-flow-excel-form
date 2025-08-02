@@ -2948,15 +2948,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       return;
     }
     
-    // Start editing the cell and select all text
-    startEditing(rowIndex, column, data[rowIndex]?.[column] || '');
-    // Select all text after the textarea is rendered
-    setTimeout(() => {
-      if (textareaRef.current) {
-        textareaRef.current.focus();
-        textareaRef.current.select();
-      }
-    }, 10);
+    // Make single click act exactly like double click
+    handleCellDoubleClick(rowIndex, column);
   };
 
   const handleCellDoubleClick = (rowIndex: number, column: string) => {
