@@ -3141,8 +3141,16 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         const nextColumn = columns[nextColumnIndex];
         
         if (nextColumn && nextRowIndex >= 0 && nextRowIndex < data.length) {
-          // Tab navigation should just select the cell (Excel-like behavior)
-          selectCell(nextRowIndex, nextColumn, false);
+          // Start editing the next cell and select all text
+          setTimeout(() => {
+            startEditing(nextRowIndex, nextColumn, data[nextRowIndex]?.[nextColumn] || '');
+            // Select all text in the next cell for easy deletion/replacement
+            setTimeout(() => {
+              if (textareaRef.current) {
+                textareaRef.current.select();
+              }
+            }, 20);
+          }, 0);
         }
         break;
         
