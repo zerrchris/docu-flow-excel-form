@@ -1741,13 +1741,23 @@ function createFullRunsheetView(content) {
     data: [{}]
   };
 
+  // Create scrollable container for table
+  const tableContainer = document.createElement('div');
+  tableContainer.style.cssText = `
+    width: 100% !important;
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+  `;
+
   // Create table for full view
   const table = document.createElement('table');
   table.style.cssText = `
-    width: 100% !important;
+    min-width: 100% !important;
+    width: max-content !important;
     border-collapse: collapse !important;
     font-size: 11px !important;
     font-family: inherit !important;
+    table-layout: auto !important;
   `;
 
   // Create header
@@ -1767,12 +1777,13 @@ function createFullRunsheetView(content) {
       font-weight: 600 !important;
       border-right: 1px solid hsl(var(--border, 214 32% 91%)) !important;
       min-width: 100px !important;
-      max-width: 200px !important;
-      overflow: hidden !important;
-      text-overflow: ellipsis !important;
+      width: auto !important;
+      overflow: visible !important;
       white-space: nowrap !important;
       height: auto !important;
       line-height: 1.2 !important;
+      position: relative !important;
+      resize: horizontal !important;
     `;
     headerRow.appendChild(th);
   });
@@ -1811,9 +1822,11 @@ function createFullRunsheetView(content) {
       td.style.cssText = `
         padding: 0 !important;
         border-right: 1px solid hsl(var(--border, 214 32% 91%)) !important;
-        max-width: 200px !important;
+        min-width: 100px !important;
+        width: auto !important;
         vertical-align: top !important;
         position: relative !important;
+        white-space: nowrap !important;
       `;
       
       // Create editable input/textarea for each cell
@@ -2070,7 +2083,8 @@ function createFullRunsheetView(content) {
   });
 
   table.appendChild(tbody);
-  fullViewContainer.appendChild(table);
+  tableContainer.appendChild(table);
+  fullViewContainer.appendChild(tableContainer);
   content.appendChild(fullViewContainer);
 }
 
