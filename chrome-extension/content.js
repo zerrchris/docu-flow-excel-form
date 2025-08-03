@@ -889,8 +889,9 @@ function createRunsheetFrame() {
       </span>
       ${currentViewMode === 'single' ? `
         <div style="display: inline-flex; align-items: center; margin-left: 8px; gap: 4px;">
-          <button id="prev-row-btn" style="background: hsl(var(--secondary, 210 40% 96%)); border: 1px solid hsl(var(--border, 214 32% 91%)); padding: 2px 6px; border-radius: 3px; cursor: pointer; font-size: 11px;" ${currentRowIndex <= 0 ? 'disabled' : ''}title="Previous row">←</button>
-          <button id="next-row-btn" style="background: hsl(var(--secondary, 210 40% 96%)); border: 1px solid hsl(var(--border, 214 32% 91%)); padding: 2px 6px; border-radius: 3px; cursor: pointer; font-size: 11px;" title="Next row">→</button>
+          <span id="target-row-indicator" style="font-size: 12px; color: hsl(var(--muted-foreground, 215 16% 47%)); margin-right: 8px;">
+            (Will add to Row ${getNextAvailableRowNumber()})
+          </span>
           <span id="screenshot-indicator" style="font-size: 11px; color: hsl(var(--primary, 215 80% 40%)); margin-left: 4px; display: none;">📷</span>
           <button id="view-screenshot-btn" style="background: hsl(var(--muted, 210 40% 96%)); color: hsl(var(--foreground, 222 47% 11%)); border: 1px solid hsl(var(--border, 214 32% 91%)); padding: 2px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; display: none;" title="View current screenshot">👁️ View</button>
           <button id="analyze-screenshot-btn" style="background: hsl(var(--accent, 230 60% 60%)); color: white; border: 1px solid hsl(var(--accent, 230 60% 60%)); padding: 2px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; display: none;" title="Analyze screenshot with AI">🔍 Analyze</button>
@@ -947,6 +948,52 @@ function findFirstEmptyRow(runsheetData) {
   
   // If no empty row found, return the next index (add to end)
   return emptyRowIndex === -1 ? runsheetData.data.length : emptyRowIndex;
+}
+
+// Get the next available row number for display
+function getNextAvailableRowNumber() {
+  if (!activeRunsheet || !activeRunsheet.data) {
+    return 1; // First row if no data
+  }
+  
+  const nextRowIndex = findNextAvailableRow(activeRunsheet);
+  return nextRowIndex + 1; // Convert to 1-based for display
+}
+
+// Find next available row (first empty row or add to end)
+function findNextAvailableRow(runsheetData) {
+  if (!runsheetData || !runsheetData.data || runsheetData.data.length === 0) {
+    return 0; // First row
+  }
+  
+  // Look for first completely empty row
+  for (let i = 0; i < runsheetData.data.length; i++) {
+    const row = runsheetData.data[i];
+    if (!row || Object.keys(row).length === 0) {
+      return i;
+    }
+    
+    // Check if all values are empty/null
+    const hasData = Object.values(row).some(value => 
+      value !== null && value !== undefined && value !== ''
+    );
+    
+    if (!hasData) {
+      return i;
+    }
+  }
+  
+  // No empty rows found, add to end
+  return runsheetData.data.length;
+}
+
+// Update target row indicator
+function updateTargetRowIndicator() {
+  const indicator = document.getElementById('target-row-indicator');
+  if (indicator) {
+    const rowNumber = getNextAvailableRowNumber();
+    indicator.textContent = `(Will add to Row ${rowNumber})`;
+  }
 }
 
 // Refresh single entry view to show current row
@@ -1011,11 +1058,11 @@ function createSingleEntryView(content) {
     data: []  // Start with no rows until user adds data
   };
 
-  // Find the first empty row index
-  let currentRowIndex = findFirstEmptyRow(runsheetData);
+  // Find the next available row (first empty row or add to end)
+  const nextRowIndex = findNextAvailableRow(runsheetData);
   
-  // Store current row index globally for tracking
-  window.currentDisplayRowIndex = currentRowIndex;
+  // Store next row index for reference
+  window.nextRowIndex = nextRowIndex;
   
   // Create header row with resizable columns
   const headerRow = document.createElement('div');
@@ -1472,7 +1519,7 @@ function createSingleEntryView(content) {
   // Create editable data row (show first row of data)
   const dataRow = document.createElement('div');
   dataRow.className = 'table-row editable-row';
-  dataRow.dataset.rowIndex = currentRowIndex;
+  dataRow.dataset.rowIndex = nextRowIndex;
   
   runsheetData.columns.forEach((column, colIndex) => {
     const cell = document.createElement('div');
@@ -2122,36 +2169,8 @@ function setupFrameEventListeners() {
     });
   }
   
-  // Row navigation buttons
-  const prevRowBtn = document.getElementById('prev-row-btn');
-  if (prevRowBtn) {
-    prevRowBtn.addEventListener('click', () => {
-      if (currentRowIndex > 0) {
-        currentRowIndex--;
-        updateRunsheetView();
-        updateRowNavigationUI();
-        
-        // Save state when changing rows
-        if (typeof saveExtensionState === 'function') {
-          saveExtensionState();
-        }
-      }
-    });
-  }
-  
-  const nextRowBtn = document.getElementById('next-row-btn');
-  if (nextRowBtn) {
-    nextRowBtn.addEventListener('click', () => {
-      currentRowIndex++;
-      updateRunsheetView();
-      updateRowNavigationUI();
-      
-      // Save state when changing rows
-      if (typeof saveExtensionState === 'function') {
-        saveExtensionState();
-      }
-    });
-  }
+  // Remove old row navigation event listeners (no longer needed)
+  // Single entry view is for adding new data only
   
   // Open in app button
   const openAppBtn = document.getElementById('open-app-btn');
