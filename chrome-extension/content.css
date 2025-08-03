@@ -79,8 +79,8 @@
 
 /* Runsheet Table - Matching EditableSpreadsheet styling */
 .runsheet-table {
-  width: 100% !important;
-  min-width: 1200px !important;
+  width: max-content !important; /* Allow table to expand beyond container */
+  min-width: 100% !important;
   border-collapse: separate !important;
   border-spacing: 0 !important;
   height: 100% !important;
@@ -90,7 +90,8 @@
 
 .table-row {
   display: flex !important;
-  width: 100% !important;
+  width: max-content !important; /* Allow row to expand with content */
+  min-width: 100% !important;
   flex-shrink: 0 !important;
 }
 
@@ -118,7 +119,7 @@
 }
 
 .table-cell {
-  flex: 1 !important;
+  flex: 0 0 auto !important; /* Don't flex, use explicit widths */
   padding: 0 !important;
   border-right: 1px solid hsl(var(--border, 0 0% 89%)) !important;
   display: flex !important;
@@ -126,6 +127,7 @@
   min-height: 20px !important;
   font-size: 11px !important;
   position: relative !important;
+  min-width: 120px !important; /* Ensure minimum width */
 }
 
 /* Data row cells should be more compact */

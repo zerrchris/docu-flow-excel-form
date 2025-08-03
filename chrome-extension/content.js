@@ -1028,8 +1028,14 @@ function createSingleEntryView(content) {
   runsheetData.columns.forEach((column, index) => {
     const cell = document.createElement('div');
     cell.className = 'table-cell';
-    cell.style.width = `${120}px`; // Default width
-    cell.style.minWidth = `${120}px`;
+    
+    // Get stored width or use default
+    const storedWidth = localStorage.getItem(`runsheetpro-column-width-${index}`) || '120';
+    const width = parseInt(storedWidth);
+    
+    cell.style.width = `${width}px`;
+    cell.style.minWidth = `${width}px`;
+    cell.style.maxWidth = `${width}px`;
     cell.style.position = 'relative';
     cell.style.height = '18px';
     cell.style.maxHeight = '18px';
@@ -1470,8 +1476,15 @@ function createSingleEntryView(content) {
   runsheetData.columns.forEach((column, colIndex) => {
     const cell = document.createElement('div');
     cell.className = 'table-cell';
-    cell.style.width = `${120}px`; // Match header width
-    cell.style.minWidth = `${120}px`;
+    
+    // Get stored width or use default to match header
+    const storedWidth = localStorage.getItem(`runsheetpro-column-width-${colIndex}`) || '120';
+    const width = parseInt(storedWidth);
+    
+    cell.style.width = `${width}px`;
+    cell.style.minWidth = `${width}px`;
+    cell.style.maxWidth = `${width}px`;
+    cell.style.flex = '0 0 auto';
     cell.style.position = 'relative';
     
     // Create textarea instead of input for multi-line support (except for Document File Name)
@@ -1734,6 +1747,11 @@ function createSingleEntryView(content) {
   
   table.appendChild(dataRow);
   content.appendChild(table);
+  
+  // Update table width after creating all cells
+  setTimeout(() => {
+    updateTableWidth();
+  }, 0);
 }
 
 // Create full runsheet view (shows all data)
@@ -3917,4 +3935,33 @@ function updateSnipPreview() {
     snipItem.appendChild(label);
     previewContent.appendChild(snipItem);
   });
+}
+
+// Update table width based on all column widths
+function updateTableWidth() {
+  const table = document.querySelector('.runsheet-table');
+  if (!table) return;
+  
+  // Calculate total width from all columns
+  const cells = document.querySelectorAll('.header-row .table-cell');
+  let totalWidth = 0;
+  
+  cells.forEach(cell => {
+    const cellWidth = parseInt(cell.style.width) || 120;
+    totalWidth += cellWidth;
+  });
+  
+  // Set table and row widths
+  const minWidth = Math.max(totalWidth, 800); // Minimum 800px
+  table.style.width = `${minWidth}px`;
+  table.style.minWidth = `${minWidth}px`;
+  
+  // Update all rows to match
+  const rows = document.querySelectorAll('.table-row');
+  rows.forEach(row => {
+    row.style.width = `${minWidth}px`;
+    row.style.minWidth = `${minWidth}px`;
+  });
+  
+  console.log('🔧 RunsheetPro Extension: Updated table width to', minWidth, 'px');
 }
