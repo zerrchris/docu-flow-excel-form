@@ -1781,7 +1781,7 @@ function createFullRunsheetView(content) {
   thead.appendChild(headerRow);
   table.appendChild(thead);
 
-  // Create body with data
+  // Create body with editable cells
   const tbody = document.createElement('tbody');
   
   // If no data exists, show placeholder
@@ -1794,22 +1794,176 @@ function createFullRunsheetView(content) {
       hover:background: hsl(var(--muted, 210 40% 96%) / 0.5) !important;
     `;
 
-    runsheetData.columns.forEach(column => {
+    runsheetData.columns.forEach((column, colIndex) => {
       const td = document.createElement('td');
       td.style.cssText = `
-        padding: 6px 4px !important;
+        padding: 0 !important;
         border-right: 1px solid hsl(var(--border, 214 32% 91%)) !important;
         max-width: 200px !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
-        word-wrap: break-word !important;
         vertical-align: top !important;
+        position: relative !important;
       `;
       
+      // Create editable input/textarea for each cell
       const cellValue = rowData[column] || '';
-      td.textContent = cellValue;
-      td.title = cellValue; // Show full text on hover
+      let inputElement;
       
+      if (column === 'Legal Description' || column === 'Notes') {
+        // Use textarea for longer text fields
+        inputElement = document.createElement('textarea');
+        inputElement.style.cssText = `
+          width: 100% !important;
+          min-height: 24px !important;
+          border: none !important;
+          outline: none !important;
+          padding: 6px 4px !important;
+          font-size: 11px !important;
+          font-family: inherit !important;
+          background: transparent !important;
+          resize: none !important;
+          overflow: hidden !important;
+        `;
+        inputElement.value = cellValue;
+        
+        // Auto-resize function
+        const autoResize = () => {
+          inputElement.style.height = 'auto';
+          inputElement.style.height = Math.max(24, inputElement.scrollHeight) + 'px';
+        };
+        inputElement.addEventListener('input', autoResize);
+        setTimeout(autoResize, 0);
+      } else {
+        // Use input for shorter fields
+        inputElement = document.createElement('input');
+        inputElement.type = 'text';
+        inputElement.style.cssText = `
+          width: 100% !important;
+          height: 32px !important;
+          border: none !important;
+          outline: none !important;
+          padding: 6px 4px !important;
+          font-size: 11px !important;
+          font-family: inherit !important;
+          background: transparent !important;
+        `;
+        inputElement.value = cellValue;
+      }
+      
+      // Set data attributes for identification
+      inputElement.setAttribute('data-row', rowIndex);
+      inputElement.setAttribute('data-column', column);
+      inputElement.setAttribute('data-col-index', colIndex);
+      
+      // Add keyboard navigation
+      inputElement.addEventListener('keydown', (e) => {
+        const currentRow = parseInt(inputElement.getAttribute('data-row'));
+        const currentCol = parseInt(inputElement.getAttribute('data-col-index'));
+        
+        if (e.key === 'ArrowRight' || (e.key === 'Tab' && !e.shiftKey)) {
+          e.preventDefault();
+          // Move to next cell (right)
+          const nextCol = currentCol + 1;
+          if (nextCol < runsheetData.columns.length) {
+            const nextCell = tbody.querySelector(`[data-row="${currentRow}"][data-col-index="${nextCol}"]`);
+            if (nextCell) {
+              nextCell.focus();
+              nextCell.select();
+            }
+          } else {
+            // Move to first cell of next row
+            const nextRow = currentRow + 1;
+            if (nextRow < dataRows.length) {
+              const nextCell = tbody.querySelector(`[data-row="${nextRow}"][data-col-index="0"]`);
+              if (nextCell) {
+                nextCell.focus();
+                nextCell.select();
+              }
+            }
+          }
+        } else if (e.key === 'ArrowLeft' || (e.key === 'Tab' && e.shiftKey)) {
+          e.preventDefault();
+          // Move to previous cell (left)
+          const prevCol = currentCol - 1;
+          if (prevCol >= 0) {
+            const prevCell = tbody.querySelector(`[data-row="${currentRow}"][data-col-index="${prevCol}"]`);
+            if (prevCell) {
+              prevCell.focus();
+              prevCell.select();
+            }
+          } else {
+            // Move to last cell of previous row
+            const prevRow = currentRow - 1;
+            if (prevRow >= 0) {
+              const lastColIndex = runsheetData.columns.length - 1;
+              const prevCell = tbody.querySelector(`[data-row="${prevRow}"][data-col-index="${lastColIndex}"]`);
+              if (prevCell) {
+                prevCell.focus();
+                prevCell.select();
+              }
+            }
+          }
+        } else if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          // Move to cell below
+          const nextRow = currentRow + 1;
+          if (nextRow < dataRows.length) {
+            const nextCell = tbody.querySelector(`[data-row="${nextRow}"][data-col-index="${currentCol}"]`);
+            if (nextCell) {
+              nextCell.focus();
+              nextCell.select();
+            }
+          }
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          // Move to cell above
+          const prevRow = currentRow - 1;
+          if (prevRow >= 0) {
+            const prevCell = tbody.querySelector(`[data-row="${prevRow}"][data-col-index="${currentCol}"]`);
+            if (prevCell) {
+              prevCell.focus();
+              prevCell.select();
+            }
+          }
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          // Move to cell below or next row
+          const nextRow = currentRow + 1;
+          if (nextRow < dataRows.length) {
+            const nextCell = tbody.querySelector(`[data-row="${nextRow}"][data-col-index="${currentCol}"]`);
+            if (nextCell) {
+              nextCell.focus();
+              nextCell.select();
+            }
+          }
+        }
+      });
+      
+      // Handle data changes
+      inputElement.addEventListener('input', () => {
+        // Update the runsheet data
+        if (!activeRunsheet.data[currentRow]) {
+          activeRunsheet.data[currentRow] = {};
+        }
+        activeRunsheet.data[currentRow][column] = inputElement.value;
+        
+        // Sync data changes
+        syncData();
+      });
+      
+      // Handle focus events to select text
+      inputElement.addEventListener('focus', () => {
+        setTimeout(() => {
+          inputElement.select();
+        }, 10);
+      });
+      
+      // Single click to start editing and select text
+      inputElement.addEventListener('click', () => {
+        inputElement.focus();
+        inputElement.select();
+      });
+      
+      td.appendChild(inputElement);
       row.appendChild(td);
     });
 
@@ -1817,7 +1971,6 @@ function createFullRunsheetView(content) {
   });
 
   table.appendChild(tbody);
-
   fullViewContainer.appendChild(table);
   content.appendChild(fullViewContainer);
 }
