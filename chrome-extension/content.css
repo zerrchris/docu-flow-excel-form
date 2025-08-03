@@ -179,8 +179,11 @@
 }
 
 .table-cell textarea {
-  overflow: hidden !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
   line-height: 1.4 !important;
+  max-height: calc(100vh - 120px) !important; /* Account for frame header and other UI elements */
+  scrollbar-width: thin !important;
 }
 
 .table-cell input:focus,
@@ -516,4 +519,23 @@ body {
     background: hsl(var(--background, 215 30% 12%) / 0.95) !important;
     border-color: hsl(var(--border, 215 25% 25%)) !important;
   }
+}
+
+/* Custom scrollbar styling for cell content */
+.table-cell textarea::-webkit-scrollbar {
+  width: 6px !important;
+}
+
+.table-cell textarea::-webkit-scrollbar-track {
+  background: hsl(var(--muted, 210 40% 96%)) !important;
+  border-radius: 3px !important;
+}
+
+.table-cell textarea::-webkit-scrollbar-thumb {
+  background: hsl(var(--border, 214 32% 91%)) !important;
+  border-radius: 3px !important;
+}
+
+.table-cell textarea::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground, 215 16% 47%)) !important;
 }
