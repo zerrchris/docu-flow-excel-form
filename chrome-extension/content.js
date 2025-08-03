@@ -887,6 +887,7 @@ function createRunsheetFrame() {
           <button id="prev-row-btn" style="background: hsl(var(--secondary, 210 40% 96%)); border: 1px solid hsl(var(--border, 214 32% 91%)); padding: 2px 6px; border-radius: 3px; cursor: pointer; font-size: 11px;" ${currentRowIndex <= 0 ? 'disabled' : ''}title="Previous row">←</button>
           <button id="next-row-btn" style="background: hsl(var(--secondary, 210 40% 96%)); border: 1px solid hsl(var(--border, 214 32% 91%)); padding: 2px 6px; border-radius: 3px; cursor: pointer; font-size: 11px;" title="Next row">→</button>
           <span id="screenshot-indicator" style="font-size: 11px; color: hsl(var(--primary, 215 80% 40%)); margin-left: 4px; display: none;">📷</span>
+          <button id="analyze-screenshot-btn" style="background: hsl(var(--accent, 230 60% 60%)); color: white; border: 1px solid hsl(var(--accent, 230 60% 60%)); padding: 2px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; display: none;" title="Analyze screenshot with AI">🔍 Analyze</button>
         </div>
       ` : ''}
     </span>
@@ -2061,6 +2062,14 @@ function setupFrameEventListeners() {
   if (screenshotBtn) {
     screenshotBtn.addEventListener('click', () => {
       startSnipMode();
+    });
+  }
+  
+  // Analyze screenshot button
+  const analyzeBtn = document.getElementById('analyze-screenshot-btn');
+  if (analyzeBtn) {
+    analyzeBtn.addEventListener('click', () => {
+      analyzeCurrentScreenshot();
     });
   }
   
@@ -3574,9 +3583,15 @@ try {
 // Update screenshot indicator in header
 function updateScreenshotIndicator(hasScreenshot) {
   const indicator = document.getElementById('screenshot-indicator');
+  const analyzeBtn = document.getElementById('analyze-screenshot-btn');
+  
   if (indicator) {
     indicator.style.display = hasScreenshot ? 'inline' : 'none';
     indicator.title = hasScreenshot ? 'Screenshot captured for this row' : '';
+  }
+  
+  if (analyzeBtn) {
+    analyzeBtn.style.display = hasScreenshot ? 'inline-block' : 'none';
   }
 }
 
@@ -3603,6 +3618,129 @@ function updateRowNavigationUI() {
   } else {
     updateScreenshotIndicator(false);
   }
+}
+
+// Analyze current screenshot with AI
+async function analyzeCurrentScreenshot() {
+  if (!activeRunsheet || !userSession) {
+    showNotification('No active runsheet or authentication', 'error');
+    return;
+  }
+
+  // Get screenshot from current data or captured snip
+  let screenshotData = null;
+  
+  if (window.currentCapturedSnip) {
+    screenshotData = window.currentCapturedSnip;
+  } else if (activeRunsheet.data && activeRunsheet.data[currentRowIndex]) {
+    screenshotData = activeRunsheet.data[currentRowIndex]['screenshot_url'];
+  } else if (captures.length > 0) {
+    screenshotData = captures[captures.length - 1];
+  }
+
+  if (!screenshotData) {
+    showNotification('No screenshot available to analyze', 'error');
+    return;
+  }
+
+  try {
+    showNotification('Analyzing screenshot...', 'info');
+    
+    const analyzeBtn = document.getElementById('analyze-screenshot-btn');
+    if (analyzeBtn) {
+      analyzeBtn.textContent = '🔄 Analyzing...';
+      analyzeBtn.disabled = true;
+    }
+
+    const response = await fetch('https://xnpmrafjjqsissbtempj.supabase.co/functions/v1/analyze-document', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${userSession.access_token}`,
+        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhucG1yYWZqanFzaXNzYnRlbXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4NzMyNjcsImV4cCI6MjA2ODQ0OTI2N30.aQG15Ed8IOLJfM5p7XF_kEM5FUz8zJug1pxAi9rTTsg',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        image_data: screenshotData,
+        analysis_type: 'document_extraction'
+      })
+    });
+
+    const result = await response.json();
+    
+    if (analyzeBtn) {
+      analyzeBtn.textContent = '🔍 Analyze';
+      analyzeBtn.disabled = false;
+    }
+
+    if (result.success && result.extracted_data) {
+      showNotification('Screenshot analyzed successfully!', 'success');
+      
+      // Fill in the form fields with extracted data
+      fillFormWithExtractedData(result.extracted_data);
+    } else {
+      throw new Error(result.error || 'Analysis failed');
+    }
+  } catch (error) {
+    console.error('Screenshot analysis error:', error);
+    showNotification('Failed to analyze screenshot', 'error');
+    
+    const analyzeBtn = document.getElementById('analyze-screenshot-btn');
+    if (analyzeBtn) {
+      analyzeBtn.textContent = '🔍 Analyze';
+      analyzeBtn.disabled = false;
+    }
+  }
+}
+
+// Fill form fields with extracted data from AI analysis
+function fillFormWithExtractedData(extractedData) {
+  if (!extractedData || typeof extractedData !== 'object') return;
+  
+  console.log('🔧 RunsheetPro Extension: Filling form with extracted data:', extractedData);
+  
+  // Map common field names to runsheet columns
+  const fieldMapping = {
+    'instrument_number': 'Inst Number',
+    'book_page': 'Book/Page',
+    'instrument_type': 'Inst Type',
+    'recording_date': 'Recording Date',
+    'document_date': 'Document Date',
+    'grantor': 'Grantor',
+    'grantee': 'Grantee',
+    'legal_description': 'Legal Description',
+    'notes': 'Notes'
+  };
+
+  // Fill in fields based on mapping
+  Object.entries(fieldMapping).forEach(([aiField, columnName]) => {
+    if (extractedData[aiField]) {
+      const input = document.querySelector(`input[data-column="${columnName}"], textarea[data-column="${columnName}"]`);
+      if (input && !input.value.trim()) { // Only fill if field is empty
+        input.value = extractedData[aiField];
+        
+        // Trigger auto-resize for textareas
+        if (input.tagName === 'TEXTAREA') {
+          input.style.height = 'auto';
+          input.style.height = Math.max(32, input.scrollHeight) + 'px';
+        }
+      }
+    }
+  });
+
+  // Also try to fill any other fields that match exactly
+  Object.entries(extractedData).forEach(([key, value]) => {
+    if (value && typeof value === 'string') {
+      const input = document.querySelector(`input[data-column="${key}"], textarea[data-column="${key}"]`);
+      if (input && !input.value.trim()) {
+        input.value = value;
+        
+        if (input.tagName === 'TEXTAREA') {
+          input.style.height = 'auto';
+          input.style.height = Math.max(32, input.scrollHeight) + 'px';
+        }
+      }
+    }
+  });
 }
 
 // Create snip preview panel
