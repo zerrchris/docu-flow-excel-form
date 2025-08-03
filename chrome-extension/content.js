@@ -765,6 +765,11 @@ function loadRunsheet(runsheet) {
   
   activeRunsheet = runsheet;
   
+  // Save state when setting active runsheet
+  if (typeof saveExtensionState === 'function') {
+    saveExtensionState();
+  }
+  
   // Store runsheet data for persistence across page navigation
   chrome.storage.local.set({ 
     'active_runsheet': runsheet,
@@ -1512,6 +1517,11 @@ function createSingleEntryView(content) {
       
       textarea.addEventListener('input', () => {
         autoResize();
+        
+        // Auto-save form data as user types
+        if (typeof saveCurrentFormData === 'function') {
+          saveCurrentFormData();
+        }
       });
       
       textarea.addEventListener('focus', () => {
@@ -1856,7 +1866,14 @@ function createFullRunsheetView(content) {
           inputElement.style.height = 'auto';
           inputElement.style.height = Math.max(24, inputElement.scrollHeight) + 'px';
         };
-        inputElement.addEventListener('input', autoResize);
+        inputElement.addEventListener('input', () => {
+          autoResize();
+          
+          // Auto-save form data as user types
+          if (typeof saveCurrentFormData === 'function') {
+            saveCurrentFormData();
+          }
+        });
         setTimeout(autoResize, 0);
       } else {
         // Use input for shorter fields
@@ -2019,6 +2036,11 @@ function switchViewMode(newMode) {
       }
     }
     updateViewModeButton();
+    
+    // Save state when switching view modes
+    if (typeof saveExtensionState === 'function') {
+      saveExtensionState();
+    }
   }
 }
 
@@ -2081,6 +2103,11 @@ function setupFrameEventListeners() {
         currentRowIndex--;
         updateRunsheetView();
         updateRowNavigationUI();
+        
+        // Save state when changing rows
+        if (typeof saveExtensionState === 'function') {
+          saveExtensionState();
+        }
       }
     });
   }
@@ -2091,6 +2118,11 @@ function setupFrameEventListeners() {
       currentRowIndex++;
       updateRunsheetView();
       updateRowNavigationUI();
+      
+      // Save state when changing rows
+      if (typeof saveExtensionState === 'function') {
+        saveExtensionState();
+      }
     });
   }
   
@@ -2350,7 +2382,26 @@ function debounce(func, wait) {
   };
 }
 
-// Initialize the extension
+// Initialize extension with state restoration
+initializeExtensionWithStateRestore();
+function initializeExtension() {
+  console.log('🔧 RunsheetPro Extension: Starting initializeExtension() function');
+  
+  // Check if extension is disabled
+  chrome.storage.local.get(['extension_disabled']).then((settings) => {
+    if (settings.extension_disabled) {
+      console.log('🔧 RunsheetPro Extension: Extension is disabled');
+      return;
+    }
+    
+    console.log('🔧 RunsheetPro Extension: Extension is enabled, continuing initialization');
+    
+    // Always create the runsheet button first
+    createRunsheetButton();
+    console.log('🔧 RunsheetPro Extension: Button creation attempted');
+  });
+}
+
 async function init() {
   console.log('🔧 RunsheetPro Extension: Starting init() function');
   
@@ -2793,6 +2844,25 @@ function startSnipModeWithMode(mode = 'single') {
   snipMode = mode;
   capturedSnips = [];
   
+  // For scroll and navigate modes, initialize persistent session
+  if (mode === 'scroll' || mode === 'navigate') {
+    snipSession = {
+      active: true,
+      mode: mode,
+      captures: [],
+      currentFormData: {},
+      startTime: Date.now()
+    };
+    
+    // Save current form data before starting
+    if (typeof saveCurrentFormData === 'function') {
+      saveCurrentFormData();
+    }
+    if (typeof saveExtensionState === 'function') {
+      saveExtensionState();
+    }
+  }
+  
   createSnipOverlay();
   if (mode !== 'single') {
     createSnipControlPanel();
@@ -2800,8 +2870,8 @@ function startSnipModeWithMode(mode = 'single') {
   
   const messages = {
     single: 'Single snip mode! Drag to select area - it will auto-submit when done.',
-    scroll: 'Snip & scroll mode! Drag to select areas, scroll as needed.',
-    navigate: 'Click & navigate mode! Drag to select areas, navigate between pages.'
+    scroll: 'Snip & scroll mode! Drag to select areas, scroll as needed. Your session will persist.',
+    navigate: 'Click & navigate mode! Drag to select areas, navigate between pages. Your session will persist.'
   };
   
   showNotification(messages[mode], 'info');

@@ -23,14 +23,14 @@
     "service_worker": "background.js"
   },
 
-  "content_scripts": [
-    {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"],
-      "css": ["content.css"],
-      "run_at": "document_end"
-    }
-  ],
+    "content_scripts": [
+        {
+            "matches": ["<all_urls>"],
+            "js": ["persistent-state.js", "content.js"],
+            "css": ["content.css"],
+            "run_at": "document_end"
+        }
+    ],
 
   "action": {
     "default_popup": "popup.html",
