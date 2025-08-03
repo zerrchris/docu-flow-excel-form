@@ -84,11 +84,19 @@
   border-collapse: separate !important;
   border-spacing: 0 !important;
   height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
 }
 
 .table-row {
   display: flex !important;
   width: 100% !important;
+  flex-shrink: 0 !important;
+}
+
+.table-row.editable-row {
+  flex: 1 !important;
+  min-height: 0 !important;
 }
 
 .header-row {
