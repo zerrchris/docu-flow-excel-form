@@ -891,7 +891,7 @@ function createRunsheetFrame() {
     </span>
     <div class="frame-controls">
       <button id="add-data-btn" class="control-btn" style="background: blue !important; color: white !important;">➕ Add Data</button>
-      <button id="screenshot-btn" class="control-btn" style="background: green !important; color: white !important;">📷 Screenshot</button>
+      <button id="screenshot-btn" class="control-btn" style="background: green !important; color: white !important;">📷 Screenshot Options</button>
       <button id="open-app-btn" class="control-btn">🚀 Open in App</button>
       <button id="view-mode-btn" class="control-btn">${currentViewMode === 'single' ? '📋 Quick View' : '📝 Back to Entry'}</button>
       <button id="select-runsheet-btn" class="control-btn">📄 Select Sheet</button>
@@ -2236,98 +2236,11 @@ async function openCurrentRunsheetInApp() {
   showNotification(`Opening runsheet: ${activeRunsheet.name}`, 'info');
 }
 
-// Start snip mode (select area to capture)
+// Start snip mode (select area to capture) - show mode selector first
 function startSnipMode() {
-  console.log('🔧 RunsheetPro Extension: Starting snip mode');
-  
-  // Create overlay for area selection
-  const overlay = document.createElement('div');
-  overlay.style.cssText = `
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
-    background: rgba(0, 0, 0, 0.3) !important;
-    cursor: crosshair !important;
-    z-index: 2147483647 !important;
-  `;
-  
-  let startX, startY, endX, endY;
-  let isSelecting = false;
-  let selectionBox = null;
-  
-  overlay.addEventListener('mousedown', (e) => {
-    isSelecting = true;
-    startX = e.clientX;
-    startY = e.clientY;
-    
-    // Create selection box
-    selectionBox = document.createElement('div');
-    selectionBox.style.cssText = `
-      position: fixed !important;
-      border: 2px dashed #fff !important;
-      background: rgba(255, 255, 255, 0.1) !important;
-      z-index: 2147483648 !important;
-      pointer-events: none !important;
-    `;
-    document.body.appendChild(selectionBox);
-  });
-  
-  overlay.addEventListener('mousemove', (e) => {
-    if (!isSelecting || !selectionBox) return;
-    
-    endX = e.clientX;
-    endY = e.clientY;
-    
-    const left = Math.min(startX, endX);
-    const top = Math.min(startY, endY);
-    const width = Math.abs(endX - startX);
-    const height = Math.abs(endY - startY);
-    
-    selectionBox.style.left = left + 'px';
-    selectionBox.style.top = top + 'px';
-    selectionBox.style.width = width + 'px';
-    selectionBox.style.height = height + 'px';
-  });
-  
-  overlay.addEventListener('mouseup', (e) => {
-    if (!isSelecting) return;
-    
-    endX = e.clientX;
-    endY = e.clientY;
-    
-    const left = Math.min(startX, endX);
-    const top = Math.min(startY, endY);
-    const width = Math.abs(endX - startX);
-    const height = Math.abs(endY - startY);
-    
-    // Clean up
-    document.body.removeChild(overlay);
-    if (selectionBox) {
-      document.body.removeChild(selectionBox);
-    }
-    
-    // Capture the selected area
-    if (width > 10 && height > 10) {
-      captureSelectedArea(left, top, width, height);
-    }
-  });
-  
-  // Add escape key to cancel
-  const cancelSnip = (e) => {
-    if (e.key === 'Escape') {
-      document.body.removeChild(overlay);
-      if (selectionBox) {
-        document.body.removeChild(selectionBox);
-      }
-      document.removeEventListener('keydown', cancelSnip);
-    }
-  };
-  document.addEventListener('keydown', cancelSnip);
-  
-  document.body.appendChild(overlay);
-  showNotification('Select an area to capture', 'info');
+  console.log('🔧 RunsheetPro Extension: Showing snip mode selector');
+  showSnipModeSelector();
+}
 }
 
 // Capture selected area
