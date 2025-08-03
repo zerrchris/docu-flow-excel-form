@@ -238,6 +238,7 @@ function showSignInPopup() {
   });
   
   document.body.appendChild(runsheetButton);
+  console.log('🔧 RunsheetPro Extension: Runsheet button created and added to DOM');
 }
 
 // Show quick create dialog
@@ -2440,6 +2441,8 @@ function debounce(func, wait) {
 
 // Initialize the extension
 async function init() {
+  console.log('🔧 RunsheetPro Extension: Starting init() function');
+  
   // Check if extension is disabled
   const settings = await chrome.storage.local.get(['extension_disabled']);
   if (settings.extension_disabled) {
@@ -2447,31 +2450,37 @@ async function init() {
     return;
   }
   
-  console.log('🔧 RunsheetPro Extension: Initializing');
+  console.log('🔧 RunsheetPro Extension: Extension is enabled, continuing initialization');
   
-  // Check authentication
-  const isAuthenticated = await checkAuth();
-  
-  // Create the runsheet button
+  // Always create the runsheet button first
   createRunsheetButton();
+  console.log('🔧 RunsheetPro Extension: Button creation attempted');
   
-  // Check if there's an active runsheet to restore
-  const storedData = await chrome.storage.local.get(['active_runsheet']);
-  if (storedData.active_runsheet && isAuthenticated) {
-    console.log('🔧 RunsheetPro Extension: Restoring active runsheet:', storedData.active_runsheet.name);
-    
-    // Restore the active runsheet
-    activeRunsheet = storedData.active_runsheet;
-    
-    // Create and show the frame with the restored runsheet
-    createRunsheetFrame();
-    if (runsheetFrame) {
-      runsheetFrame.style.display = 'block';
-      document.body.appendChild(runsheetFrame);
-      setupFrameEventListeners();
+  // Check authentication after button is created
+  const isAuthenticated = await checkAuth();
+  console.log('🔧 RunsheetPro Extension: Authentication check result:', isAuthenticated);
+  
+  // Check if there's an active runsheet to restore (only if authenticated)
+  if (isAuthenticated) {
+    const storedData = await chrome.storage.local.get(['active_runsheet']);
+    if (storedData.active_runsheet) {
+      console.log('🔧 RunsheetPro Extension: Restoring active runsheet:', storedData.active_runsheet.name);
+      
+      // Restore the active runsheet
+      activeRunsheet = storedData.active_runsheet;
+      
+      // Create and show the frame with the restored runsheet
+      createRunsheetFrame();
+      if (runsheetFrame) {
+        runsheetFrame.style.display = 'block';
+        document.body.appendChild(runsheetFrame);
+        setupFrameEventListeners();
+      }
+      
+      showNotification(`Restored runsheet: ${activeRunsheet.name}`, 'success');
     }
-    
-    showNotification(`Restored runsheet: ${activeRunsheet.name}`, 'success');
+  } else {
+    console.log('🔧 RunsheetPro Extension: User not authenticated, button will show sign-in prompt');
   }
   
   console.log('🔧 RunsheetPro Extension: Initialized successfully');
