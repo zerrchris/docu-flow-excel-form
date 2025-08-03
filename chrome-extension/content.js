@@ -892,6 +892,7 @@ function createRunsheetFrame() {
           <button id="prev-row-btn" style="background: hsl(var(--secondary, 210 40% 96%)); border: 1px solid hsl(var(--border, 214 32% 91%)); padding: 2px 6px; border-radius: 3px; cursor: pointer; font-size: 11px;" ${currentRowIndex <= 0 ? 'disabled' : ''}title="Previous row">←</button>
           <button id="next-row-btn" style="background: hsl(var(--secondary, 210 40% 96%)); border: 1px solid hsl(var(--border, 214 32% 91%)); padding: 2px 6px; border-radius: 3px; cursor: pointer; font-size: 11px;" title="Next row">→</button>
           <span id="screenshot-indicator" style="font-size: 11px; color: hsl(var(--primary, 215 80% 40%)); margin-left: 4px; display: none;">📷</span>
+          <button id="view-screenshot-btn" style="background: hsl(var(--muted, 210 40% 96%)); color: hsl(var(--foreground, 222 47% 11%)); border: 1px solid hsl(var(--border, 214 32% 91%)); padding: 2px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; display: none;" title="View current screenshot">👁️ View</button>
           <button id="analyze-screenshot-btn" style="background: hsl(var(--accent, 230 60% 60%)); color: white; border: 1px solid hsl(var(--accent, 230 60% 60%)); padding: 2px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; display: none;" title="Analyze screenshot with AI">🔍 Analyze</button>
         </div>
       ` : ''}
@@ -2102,6 +2103,14 @@ function setupFrameEventListeners() {
   if (screenshotBtn) {
     screenshotBtn.addEventListener('click', () => {
       startSnipMode();
+    });
+  }
+  
+  // View screenshot button
+  const viewScreenshotBtn = document.getElementById('view-screenshot-btn');
+  if (viewScreenshotBtn) {
+    viewScreenshotBtn.addEventListener('click', () => {
+      viewCurrentScreenshot();
     });
   }
   
@@ -3672,6 +3681,7 @@ try {
 function updateScreenshotIndicator(hasScreenshot) {
   const indicator = document.getElementById('screenshot-indicator');
   const analyzeBtn = document.getElementById('analyze-screenshot-btn');
+  const viewBtn = document.getElementById('view-screenshot-btn');
   
   if (indicator) {
     indicator.style.display = hasScreenshot ? 'inline' : 'none';
@@ -3680,6 +3690,10 @@ function updateScreenshotIndicator(hasScreenshot) {
   
   if (analyzeBtn) {
     analyzeBtn.style.display = hasScreenshot ? 'inline-block' : 'none';
+  }
+  
+  if (viewBtn) {
+    viewBtn.style.display = hasScreenshot ? 'inline-block' : 'none';
   }
 }
 
@@ -3767,7 +3781,134 @@ async function analyzeCurrentScreenshot() {
       fillFormWithExtractedData(result.extracted_data);
     } else {
       throw new Error(result.error || 'Analysis failed');
+}
+
+// View current screenshot
+function viewCurrentScreenshot() {
+  console.log('🔧 RunsheetPro Extension: Viewing current screenshot');
+  
+  // Get screenshot from current data or captured snip
+  let screenshotData = null;
+  let screenshotSource = '';
+  
+  if (window.currentCapturedSnip) {
+    screenshotData = window.currentCapturedSnip;
+    screenshotSource = 'captured';
+  } else if (activeRunsheet.data && activeRunsheet.data[currentRowIndex]) {
+    screenshotData = activeRunsheet.data[currentRowIndex]['screenshot_url'];
+    screenshotSource = 'stored';
+  } else if (captures.length > 0) {
+    screenshotData = captures[captures.length - 1];
+    screenshotSource = 'recent';
+  }
+
+  if (!screenshotData) {
+    showNotification('No screenshot available to view', 'error');
+    return;
+  }
+
+  // Create screenshot viewer modal
+  const modal = document.createElement('div');
+  modal.id = 'screenshot-viewer-modal';
+  modal.style.cssText = `
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background: rgba(0, 0, 0, 0.9) !important;
+    z-index: 2147483647 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    backdrop-filter: blur(4px) !important;
+  `;
+
+  const content = document.createElement('div');
+  content.style.cssText = `
+    position: relative !important;
+    max-width: 90vw !important;
+    max-height: 90vh !important;
+    background: white !important;
+    border-radius: 8px !important;
+    padding: 16px !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3) !important;
+  `;
+
+  const header = document.createElement('div');
+  header.style.cssText = `
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    margin-bottom: 12px !important;
+    padding-bottom: 8px !important;
+    border-bottom: 1px solid #e5e7eb !important;
+  `;
+
+  const title = document.createElement('h3');
+  title.textContent = `Screenshot Preview (${screenshotSource})`;
+  title.style.cssText = `
+    margin: 0 !important;
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    color: #1f2937 !important;
+  `;
+
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = '✕';
+  closeBtn.style.cssText = `
+    background: none !important;
+    border: none !important;
+    font-size: 20px !important;
+    cursor: pointer !important;
+    color: #6b7280 !important;
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 4px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  `;
+
+  const image = document.createElement('img');
+  image.src = screenshotData;
+  image.style.cssText = `
+    max-width: 100% !important;
+    max-height: 70vh !important;
+    object-fit: contain !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 4px !important;
+  `;
+
+  // Close handlers
+  const closeModal = () => {
+    modal.remove();
+  };
+
+  closeBtn.addEventListener('click', closeModal);
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+  });
+
+  // Keyboard close
+  const handleKeyPress = (e) => {
+    if (e.key === 'Escape') {
+      closeModal();
+      document.removeEventListener('keydown', handleKeyPress);
     }
+  };
+  document.addEventListener('keydown', handleKeyPress);
+
+  // Build modal
+  header.appendChild(title);
+  header.appendChild(closeBtn);
+  content.appendChild(header);
+  content.appendChild(image);
+  modal.appendChild(content);
+  document.body.appendChild(modal);
+
+  console.log('🔧 RunsheetPro Extension: Screenshot viewer opened');
+}
   } catch (error) {
     console.error('Screenshot analysis error:', error);
     showNotification('Failed to analyze screenshot', 'error');
