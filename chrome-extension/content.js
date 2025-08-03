@@ -1778,6 +1778,19 @@ function createFullRunsheetView(content) {
     headerRow.appendChild(th);
   });
 
+  // Add header for action column
+  const actionTh = document.createElement('th');
+  actionTh.textContent = 'Actions';
+  actionTh.style.cssText = `
+    padding: 4px !important;
+    text-align: center !important;
+    font-weight: 600 !important;
+    min-width: 80px !important;
+    max-width: 80px !important;
+    width: 80px !important;
+  `;
+  headerRow.appendChild(actionTh);
+
   thead.appendChild(headerRow);
   table.appendChild(thead);
 
@@ -1870,14 +1883,10 @@ function createFullRunsheetView(content) {
               nextCell.select();
             }
           } else {
-            // Move to first cell of next row
-            const nextRow = currentRow + 1;
-            if (nextRow < dataRows.length) {
-              const nextCell = tbody.querySelector(`[data-row="${nextRow}"][data-col-index="0"]`);
-              if (nextCell) {
-                nextCell.focus();
-                nextCell.select();
-              }
+            // Move to Add Data button
+            const addDataBtn = tbody.querySelector(`[data-row="${currentRow}"][data-col-index="${runsheetData.columns.length}"]`);
+            if (addDataBtn) {
+              addDataBtn.focus();
             }
           }
         } else if (e.key === 'ArrowLeft' || (e.key === 'Tab' && e.shiftKey)) {
@@ -1966,6 +1975,97 @@ function createFullRunsheetView(content) {
       td.appendChild(inputElement);
       row.appendChild(td);
     });
+
+    // Add action column with Add Data button
+    const actionTd = document.createElement('td');
+    actionTd.style.cssText = `
+      padding: 2px !important;
+      border-right: none !important;
+      text-align: center !important;
+      vertical-align: middle !important;
+      width: 80px !important;
+      min-width: 80px !important;
+      max-width: 80px !important;
+    `;
+
+    const addDataBtn = document.createElement('button');
+    addDataBtn.textContent = 'Add Data';
+    addDataBtn.style.cssText = `
+      background: hsl(var(--primary, 215 80% 40%)) !important;
+      color: hsl(var(--primary-foreground, 210 40% 98%)) !important;
+      border: 1px solid hsl(var(--primary, 215 80% 40%)) !important;
+      border-radius: 4px !important;
+      padding: 4px 8px !important;
+      font-size: 10px !important;
+      cursor: pointer !important;
+      font-weight: 500 !important;
+      transition: all 0.2s ease !important;
+      width: 70px !important;
+    `;
+    
+    // Set data attributes
+    addDataBtn.setAttribute('data-row', rowIndex);
+    addDataBtn.setAttribute('data-col-index', runsheetData.columns.length); // After last column
+    addDataBtn.tabIndex = 0;
+
+    // Click handler
+    addDataBtn.addEventListener('click', () => {
+      addRowToSheet();
+    });
+
+    // Keyboard navigation
+    addDataBtn.addEventListener('keydown', (e) => {
+      const currentRow = parseInt(addDataBtn.getAttribute('data-row'));
+      const currentCol = parseInt(addDataBtn.getAttribute('data-col-index'));
+      
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        addRowToSheet();
+      } else if (e.key === 'ArrowLeft' || (e.key === 'Tab' && e.shiftKey)) {
+        e.preventDefault();
+        // Move to last editable cell in this row
+        const lastColIndex = runsheetData.columns.length - 1;
+        const prevCell = tbody.querySelector(`[data-row="${currentRow}"][data-col-index="${lastColIndex}"]`);
+        if (prevCell) {
+          prevCell.focus();
+          prevCell.select();
+        }
+      } else if (e.key === 'ArrowRight' || e.key === 'Tab') {
+        e.preventDefault();
+        // Move to first cell of next row
+        const nextRow = currentRow + 1;
+        if (nextRow < dataRows.length) {
+          const nextCell = tbody.querySelector(`[data-row="${nextRow}"][data-col-index="0"]`);
+          if (nextCell) {
+            nextCell.focus();
+            nextCell.select();
+          }
+        }
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        // Move to button in row below
+        const nextRow = currentRow + 1;
+        if (nextRow < dataRows.length) {
+          const nextButton = tbody.querySelector(`[data-row="${nextRow}"][data-col-index="${currentCol}"]`);
+          if (nextButton) {
+            nextButton.focus();
+          }
+        }
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        // Move to button in row above
+        const prevRow = currentRow - 1;
+        if (prevRow >= 0) {
+          const prevButton = tbody.querySelector(`[data-row="${prevRow}"][data-col-index="${currentCol}"]`);
+          if (prevButton) {
+            prevButton.focus();
+          }
+        }
+      }
+    });
+
+    actionTd.appendChild(addDataBtn);
+    row.appendChild(actionTd);
 
     tbody.appendChild(row);
   });
