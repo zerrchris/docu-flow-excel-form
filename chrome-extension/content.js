@@ -2972,17 +2972,23 @@ function createSnipOverlay() {
       await captureSelectedArea(left, top, width, height);
       
       // Handle different modes after capture  
-      if (snipMode !== 'single') {
-        // Multi-capture modes: show controls and continue
-        if (snipMode === 'scroll') {
-          snipOverlay.style.display = 'block';
-          if (snipControlPanel) {
-            snipControlPanel.style.display = 'flex';
-          }
-        } else if (snipMode === 'navigate') {
-          // Navigate mode: hide overlay, show fixed navigation controls
-          hideSnipModeForNavigation();
+      if (snipMode === 'single') {
+        // Single mode: automatically store and cleanup
+        cleanupSnipMode();
+        showNotification('Screenshot captured and saved!', 'success');
+      } else if (snipMode === 'scroll') {
+        // Scroll mode: keep crosshairs active for continuous snipping
+        snipOverlay.style.display = 'block';
+        if (snipControlPanel) {
+          snipControlPanel.style.display = 'flex';
         }
+        updateSnipCounter();
+        showNotification(`Snip ${capturedSnips.length} captured! Continue scrolling and snipping or click "Snipping Complete"`, 'success');
+      } else if (snipMode === 'navigate') {
+        // Navigate mode: hide crosshairs, show navigation controls with "Next Snip"
+        hideSnipModeForNavigation();
+        updateSnipCounter();
+        showNotification(`Snip ${capturedSnips.length} captured! Navigate to next area and click "Next Snip"`, 'success');
       }
     }, 100);
   });
@@ -3027,7 +3033,7 @@ function createSnipControlPanel() {
   
   // Done button
   const doneButton = document.createElement('button');
-  doneButton.textContent = snipMode === 'scroll' ? 'Done Snipping' : 'Finish Snipping';
+  doneButton.textContent = snipMode === 'scroll' ? 'Snipping Complete' : 'Done Snipping';
   doneButton.style.cssText = `
     background: #3b82f6 !important;
     color: white !important;
@@ -3262,7 +3268,7 @@ function createNavigationControlPanel() {
   
   // Snip Again button
   const snipAgainButton = document.createElement('button');
-  snipAgainButton.textContent = 'Snip Again';
+  snipAgainButton.textContent = 'Next Snip';
   snipAgainButton.style.cssText = `
     background: #3b82f6 !important;
     color: white !important;
