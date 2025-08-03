@@ -2242,7 +2242,6 @@ function startSnipMode() {
   console.log('🔧 RunsheetPro Extension: Showing snip mode selector');
   showSnipModeSelector();
 }
-}
 
 // Capture selected area
 async function captureSelectedArea(left, top, width, height) {
