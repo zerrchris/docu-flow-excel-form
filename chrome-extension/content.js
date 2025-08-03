@@ -2239,7 +2239,7 @@ async function openCurrentRunsheetInApp() {
 
 // Start snip mode (select area to capture) - show mode selector first
 function startSnipMode() {
-  console.log('🔧 RunsheetPro Extension: Showing snip mode selector');
+  console.log('🔧 RunsheetPro Extension: startSnipMode() called without parameters - showing selector');
   showSnipModeSelector();
 }
 
@@ -2491,6 +2491,7 @@ async function init() {
 
 // Show snip mode selector modal
 function showSnipModeSelector() {
+  console.log('🔧 RunsheetPro Extension: showSnipModeSelector() called');
   // Remove any existing selector
   const existingSelector = document.getElementById('runsheetpro-snip-selector');
   if (existingSelector) {
@@ -2598,17 +2599,17 @@ function showSnipModeSelector() {
   // Add event listeners
   document.getElementById('single-snip-option').addEventListener('click', () => {
     overlay.remove();
-    startSnipMode('single');
+    startSnipModeWithMode('single');
   });
 
   document.getElementById('scroll-snip-option').addEventListener('click', () => {
     overlay.remove();
-    startSnipMode('scroll');
+    startSnipModeWithMode('scroll');
   });
 
   document.getElementById('navigate-snip-option').addEventListener('click', () => {
     overlay.remove();
-    startSnipMode('navigate');
+    startSnipModeWithMode('navigate');
   });
 
   document.getElementById('cancel-snip-selector').addEventListener('click', () => {
@@ -2859,8 +2860,21 @@ function loadSelectedRunsheet(runsheetData) {
 }
 
 // Start snip mode with specific mode
-function startSnipMode(mode = 'single') {
+function startSnipModeWithMode(mode = 'single') {
   if (isSnipMode) return;
+  
+  // Check if there's already a file for this row and warn user
+  if (mode === 'single' && activeRunsheet && activeRunsheet.data && activeRunsheet.data[currentRowIndex]) {
+    const currentRow = activeRunsheet.data[currentRowIndex];
+    const hasExistingFile = currentRow['Document File Name'] || currentRow['screenshot_url'];
+    
+    if (hasExistingFile) {
+      const confirmOverwrite = confirm('A screenshot already exists for this row. Taking a new screenshot will replace the existing one. Continue?');
+      if (!confirmOverwrite) {
+        return;
+      }
+    }
+  }
   
   console.log('🔧 RunsheetPro Extension: Starting snip mode:', mode);
   isSnipMode = true;
@@ -3019,7 +3033,23 @@ function createSnipControlPanel() {
     align-items: center !important;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+    max-width: 90vw !important;
   `;
+  
+  // Preview toggle button
+  const previewToggle = document.createElement('button');
+  previewToggle.textContent = '👁 Preview';
+  previewToggle.style.cssText = `
+    background: #6b7280 !important;
+    color: white !important;
+    border: none !important;
+    padding: 6px 12px !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+  `;
+  
   
   // Snip counter
   const counter = document.createElement('span');
@@ -3063,11 +3093,15 @@ function createSnipControlPanel() {
   
   cancelButton.addEventListener('click', cancelSnipping);
   
+  snipControlPanel.appendChild(previewToggle);
   snipControlPanel.appendChild(counter);
   snipControlPanel.appendChild(doneButton);
   snipControlPanel.appendChild(cancelButton);
   
   document.body.appendChild(snipControlPanel);
+  
+  // Create preview panel (initially hidden)
+  createSnipPreviewPanel();
 }
 
 // Capture selected area
@@ -3177,6 +3211,12 @@ function updateSnipCounter() {
   const counter = document.getElementById('snip-counter');
   if (counter) {
     counter.textContent = `Snips captured: ${capturedSnips.length}`;
+  }
+  
+  // Also update the preview if it's visible
+  const previewPanel = document.getElementById('runsheetpro-snip-preview');
+  if (previewPanel && previewPanel.style.display === 'flex') {
+    updateSnipPreview();
   }
 }
 
@@ -3660,4 +3700,110 @@ function updateRowNavigationUI() {
   } else {
     updateScreenshotIndicator(false);
   }
+}
+
+// Create snip preview panel
+function createSnipPreviewPanel() {
+  const previewPanel = document.createElement('div');
+  previewPanel.id = 'runsheetpro-snip-preview';
+  previewPanel.style.cssText = `
+    position: fixed !important;
+    top: 20px !important;
+    right: 20px !important;
+    width: 300px !important;
+    max-height: 400px !important;
+    background: white !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 8px !important;
+    z-index: 2147483648 !important;
+    display: none !important;
+    flex-direction: column !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+  `;
+  
+  const header = document.createElement('div');
+  header.style.cssText = `
+    padding: 12px 16px !important;
+    border-bottom: 1px solid #e5e7eb !important;
+    font-weight: 600 !important;
+    font-size: 14px !important;
+    color: #374151 !important;
+  `;
+  header.textContent = 'Captured Snips Preview';
+  
+  const content = document.createElement('div');
+  content.id = 'preview-content';
+  content.style.cssText = `
+    padding: 12px !important;
+    overflow-y: auto !important;
+    max-height: 300px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+  `;
+  
+  previewPanel.appendChild(header);
+  previewPanel.appendChild(content);
+  document.body.appendChild(previewPanel);
+}
+
+// Toggle snip preview panel
+function toggleSnipPreview() {
+  const previewPanel = document.getElementById('runsheetpro-snip-preview');
+  if (!previewPanel) return;
+  
+  if (previewPanel.style.display === 'none' || previewPanel.style.display === '') {
+    // Show preview
+    previewPanel.style.display = 'flex';
+    updateSnipPreview();
+  } else {
+    // Hide preview
+    previewPanel.style.display = 'none';
+  }
+}
+
+// Update snip preview with current captured snips
+function updateSnipPreview() {
+  const previewContent = document.getElementById('preview-content');
+  if (!previewContent) return;
+  
+  previewContent.innerHTML = '';
+  
+  if (capturedSnips.length === 0) {
+    previewContent.innerHTML = '<p style="color: #6b7280; font-size: 12px; text-align: center;">No snips captured yet</p>';
+    return;
+  }
+  
+  capturedSnips.forEach((snip, index) => {
+    const snipItem = document.createElement('div');
+    snipItem.style.cssText = `
+      border: 1px solid #e5e7eb !important;
+      border-radius: 6px !important;
+      overflow: hidden !important;
+      background: #f9fafb !important;
+    `;
+    
+    const img = document.createElement('img');
+    img.src = URL.createObjectURL(snip.blob);
+    img.style.cssText = `
+      width: 100% !important;
+      height: auto !important;
+      max-height: 120px !important;
+      object-fit: cover !important;
+    `;
+    
+    const label = document.createElement('div');
+    label.style.cssText = `
+      padding: 6px 8px !important;
+      font-size: 11px !important;
+      color: #6b7280 !important;
+      background: white !important;
+    `;
+    label.textContent = `Snip ${index + 1}`;
+    
+    snipItem.appendChild(img);
+    snipItem.appendChild(label);
+    previewContent.appendChild(snipItem);
+  });
 }
