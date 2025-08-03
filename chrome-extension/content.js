@@ -890,7 +890,6 @@ function createRunsheetFrame() {
       ` : ''}
     </span>
     <div class="frame-controls">
-      <button id="test-button" class="control-btn" style="background: red !important; color: white !important;">🚀 TEST BUTTON</button>
       <button id="add-data-btn" class="control-btn" style="background: blue !important; color: white !important;">➕ Add Data</button>
       <button id="screenshot-btn" class="control-btn" style="background: green !important; color: white !important;">📷 Screenshot</button>
       <button id="open-app-btn" class="control-btn">🚀 Open in App</button>
@@ -2130,14 +2129,6 @@ function linkCapturedImageToRow(rowIndex) {
 // Setup event listeners for the frame
 function setupFrameEventListeners() {
   if (!runsheetFrame) return;
-  
-  // Test button
-  const testBtn = document.getElementById('test-button');
-  if (testBtn) {
-    testBtn.addEventListener('click', () => {
-      alert('TEST BUTTON WORKS! File is updating.');
-    });
-  }
   
   // Add Data button
   const addDataBtn = document.getElementById('add-data-btn');
