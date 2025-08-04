@@ -2656,6 +2656,7 @@ function debounce(func, wait) {
 }
 
 // Initialize extension with state restoration
+function initializeExtension() {
   console.log('🔧 RunsheetPro Extension: Starting initializeExtension() function');
   
   // Check if extension is disabled
