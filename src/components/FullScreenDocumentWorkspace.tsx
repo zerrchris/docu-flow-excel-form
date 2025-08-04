@@ -340,6 +340,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
         // Parse the JSON response from AI
         let extractedData = {};
         try {
+          // Try to parse as JSON first
           extractedData = JSON.parse(data.generatedText);
           console.log('✅ Parsed extracted data:', extractedData);
         } catch (e) {
@@ -347,11 +348,19 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
           // If JSON parsing fails, try to extract JSON from the text
           const jsonMatch = data.generatedText.match(/\{[\s\S]*\}/);
           if (jsonMatch) {
-            extractedData = JSON.parse(jsonMatch[0]);
-            console.log('✅ Extracted data from regex match:', extractedData);
+            try {
+              extractedData = JSON.parse(jsonMatch[0]);
+              console.log('✅ Extracted data from regex match:', extractedData);
+            } catch (parseError) {
+              console.error('🔍 JSON parsing of matched content failed:', parseError);
+              // If all parsing fails, show the raw response and continue with empty data
+              console.log('Raw response that failed to parse:', data.generatedText);
+              extractedData = {};
+            }
           } else {
             console.error('🔍 Could not find JSON in response:', data.generatedText);
-            throw new Error('Could not parse analysis results');
+            // Don't throw error, just use empty data
+            extractedData = {};
           }
         }
         
