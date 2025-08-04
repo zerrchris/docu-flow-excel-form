@@ -712,11 +712,16 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       console.log('🔧 EditableSpreadsheet: Document record created event received:', event.detail);
       const { runsheetId, rowIndex, allPossibleIds } = event.detail;
       
-      console.log('🔧 EditableSpreadsheet: Event received with runsheetId:', runsheetId, 'allPossibleIds:', allPossibleIds);
-      console.log('🔧 EditableSpreadsheet: Comparing against currentRunsheet.id:', currentRunsheet?.id, 'currentRunsheetId:', currentRunsheetId);
+      // Get the most current runsheet ID at the time of the event
+      const getCurrentRunsheetId = () => {
+        const globalRunsheet = JSON.parse(localStorage.getItem('activeRunsheet') || 'null');
+        return globalRunsheet?.id || currentRunsheetId;
+      };
       
-      // Use currentRunsheet.id (global state) instead of currentRunsheetId (local state)
-      const activeRunsheetId = currentRunsheet?.id || currentRunsheetId;
+      const activeRunsheetId = getCurrentRunsheetId();
+      
+      console.log('🔧 EditableSpreadsheet: Event received with runsheetId:', runsheetId, 'allPossibleIds:', allPossibleIds);
+      console.log('🔧 EditableSpreadsheet: Comparing against activeRunsheetId:', activeRunsheetId);
       
       // Check if any of the IDs match our current runsheet
       const idsToCheck = [
@@ -769,7 +774,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       }
     };
 
-    console.log('🔧 EditableSpreadsheet: Setting up document record created event listener for activeRunsheetId:', currentRunsheet?.id || currentRunsheetId);
+    console.log('🔧 EditableSpreadsheet: Setting up document record created event listener');
     window.addEventListener('documentRecordCreated', handleDocumentRecordCreated as EventListener);
     
     // Also listen for postMessage events from extension
@@ -789,7 +794,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       window.removeEventListener('documentRecordCreated', handleDocumentRecordCreated as EventListener);
       window.removeEventListener('message', handlePostMessage);
     };
-  }, [user, currentRunsheetId]); // Removed currentRunsheet to prevent constant re-runs
+  }, [user]); // Only depend on user, and get runsheet ID dynamically
 
   // Process pending document records when runsheet is saved
   useEffect(() => {
