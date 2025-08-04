@@ -1004,8 +1004,45 @@ Image: [base64 image data]`;
       let extractedData: Record<string, string>;
       try {
         // Remove any markdown code blocks if present
-        const cleanedText = extractedText.replace(/```json\n?|\n?```/g, '').trim();
-        extractedData = JSON.parse(cleanedText);
+        let cleanedText = extractedText.replace(/```json\n?|\n?```/g, '').trim();
+        
+        // Try to parse as JSON first
+        try {
+          extractedData = JSON.parse(cleanedText);
+        } catch (jsonError) {
+          // If direct JSON parsing fails, try to extract JSON from the text
+          console.log('🔍 JSON parsing failed, trying to extract structured data from text...');
+          
+          // Look for a JSON object in the text
+          const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            extractedData = JSON.parse(jsonMatch[0]);
+          } else {
+            // If no JSON found, parse the markdown-style response
+            console.log('🔍 No JSON found, parsing markdown-style response...');
+            extractedData = {};
+            
+            // Parse markdown-style response like "- **Field:** Value"
+            const lines = cleanedText.split('\n');
+            for (const line of lines) {
+              const match = line.match(/[-*]\s*\*\*([^*]+)\*\*[:\s]*(.+)/);
+              if (match) {
+                const fieldName = match[1].trim();
+                let value = match[2].trim();
+                
+                // Clean up the value
+                value = value.replace(/^["']|["']$/g, ''); // Remove quotes
+                if (value.toLowerCase() === 'n/a' || value.toLowerCase() === 'not found' || value.toLowerCase() === 'none') {
+                  value = '';
+                }
+                
+                extractedData[fieldName] = value;
+              }
+            }
+            
+            console.log('🔍 Parsed data from markdown format:', extractedData);
+          }
+        }
       } catch (parseError) {
         console.error('Failed to parse OpenAI response:', extractedText);
         throw new Error('Failed to parse extracted data. Please try again.');
