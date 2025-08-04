@@ -4627,12 +4627,11 @@ ${extractionFields}`
                                    {documentMap.get(rowIndex)?.stored_filename || row[column] || ''}
                                  </span>
                                </div>
-                            )}
-                          </TableCell>
+                             )}
+                           </TableCell>
                           );
-                      })}
                      
-                        {/* Document File Name column - conditionally visible */}
+                         {/* Document File Name column - conditionally visible */}
                       {showDocumentFileNameColumn && (() => {
                         const column = 'Document File Name';
                         const isSelected = selectedCell?.rowIndex === rowIndex && selectedCell?.column === column;
