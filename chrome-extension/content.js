@@ -82,8 +82,9 @@ function createRunsheetButton() {
   `;
   runsheetButton.innerHTML = '📋';
   runsheetButton.title = 'RunsheetPro Runsheet Assistant';
+  console.log('🔧 RunsheetPro Extension: Button HTML and styles set, about to add event listeners');
   
-  // Hover effects
+  // Click handler
   runsheetButton.addEventListener('mouseenter', () => {
     runsheetButton.style.transform = 'scale(1.1)';
     runsheetButton.style.boxShadow = '0 6px 25px rgba(0, 0, 0, 0.4)';
