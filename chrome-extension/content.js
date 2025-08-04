@@ -2397,16 +2397,6 @@ function switchViewMode(newMode) {
     }
   }
 }
-      }
-    }
-    updateViewModeButton();
-    
-    // Save state when switching view modes
-    if (typeof saveExtensionState === 'function') {
-      saveExtensionState();
-    }
-  }
-}
 
 // Update the view mode button text
 function updateViewModeButton() {
