@@ -2388,6 +2388,15 @@ function switchViewMode(newMode) {
           }
         }, 100);
       }
+    }
+    updateViewModeButton();
+    
+    // Save state when switching view modes
+    if (typeof saveExtensionState === 'function') {
+      saveExtensionState();
+    }
+  }
+}
       }
     }
     updateViewModeButton();
