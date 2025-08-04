@@ -645,7 +645,7 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
           e.preventDefault(); // Prevent default behavior
         }}
       >
-        <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 flex-1">
             {isImageUrl ? (
               <div className="flex items-center gap-2 flex-1">
@@ -691,7 +691,8 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                   />
                 ) : (
                   <span 
-                    className="text-sm font-medium truncate flex-1 cursor-pointer hover:text-primary" 
+                    className="text-sm font-medium truncate cursor-pointer hover:text-primary max-w-[200px] block" 
+                    style={{ maxWidth: '200px' }}
                     title={filename}
                     onClick={() => {
                       setEditedFilename(filename);
