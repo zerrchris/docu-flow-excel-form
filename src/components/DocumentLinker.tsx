@@ -47,6 +47,7 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
   const [uploadedFile, setUploadedFile] = useState<File | null>(null); // Store file for analysis
   const [showImageCombiner, setShowImageCombiner] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -713,14 +714,38 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                   variant="ghost"
                   size="sm"
                   tabIndex={-1}
-                  onClick={(e) => {
+                  disabled={isAnalyzing}
+                  onClick={async (e) => {
                     e.stopPropagation();
-                    onAnalyzeDocument(uploadedFile, filename);
+                    setIsAnalyzing(true);
+                    
+                    try {
+                      toast({
+                        title: "Analyzing Document",
+                        description: "AI is thinking... extracting data from your document.",
+                      });
+                      
+                      await onAnalyzeDocument(uploadedFile, filename);
+                      
+                      toast({
+                        title: "Analysis Complete",
+                        description: "Data has been extracted and applied to the row.",
+                      });
+                    } catch (error) {
+                      console.error('Analysis error:', error);
+                      toast({
+                        title: "Analysis Failed",
+                        description: "There was an error analyzing the document.",
+                        variant: "destructive",
+                      });
+                    } finally {
+                      setIsAnalyzing(false);
+                    }
                   }}
-                  className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700"
-                  title="Analyze document and extract data"
+                  className={`h-6 w-6 p-0 ${isAnalyzing ? 'text-blue-400' : 'text-blue-600 hover:text-blue-700'}`}
+                  title={isAnalyzing ? "AI is thinking..." : "Analyze document and extract data"}
                 >
-                  <Brain className="w-3 h-3" />
+                  <Brain className={`w-3 h-3 ${isAnalyzing ? 'animate-pulse' : ''}`} />
                 </Button>
               )}
                 {onOpenWorkspace && (
