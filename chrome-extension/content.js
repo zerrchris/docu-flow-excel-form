@@ -84,16 +84,19 @@ function createRunsheetButton() {
   runsheetButton.title = 'RunsheetPro Runsheet Assistant';
   console.log('🔧 RunsheetPro Extension: Button HTML and styles set, about to add event listeners');
   
-  // Click handler
+  // Hover effects
+  console.log('🔧 RunsheetPro Extension: Adding mouseenter event listener');
   runsheetButton.addEventListener('mouseenter', () => {
     runsheetButton.style.transform = 'scale(1.1)';
     runsheetButton.style.boxShadow = '0 6px 25px rgba(0, 0, 0, 0.4)';
   });
+  console.log('🔧 RunsheetPro Extension: Adding mouseleave event listener');
   
   runsheetButton.addEventListener('mouseleave', () => {
     runsheetButton.style.transform = 'scale(1)';
     runsheetButton.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.3)';
   });
+  console.log('🔧 RunsheetPro Extension: Adding click event listener');
   
   // Click handler
   runsheetButton.addEventListener('click', async () => {
@@ -245,8 +248,7 @@ function showSignInPopup() {
       submitBtn.disabled = false;
     }
   });
-  
-  console.log('🔧 RunsheetPro Extension: About to append button to document.body');
+  console.log('🔧 RunsheetPro Extension: All event listeners added, proceeding to DOM append');
   console.log('🔧 RunsheetPro Extension: document.body exists:', !!document.body);
   console.log('🔧 RunsheetPro Extension: document.readyState:', document.readyState);
   
