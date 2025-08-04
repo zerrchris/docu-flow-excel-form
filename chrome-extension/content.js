@@ -1,5 +1,7 @@
 // RunsheetPro Runsheet Assistant - Content Script
 
+// IMMEDIATE TEST - This should appear in console if script loads
+console.log('🔧 RUNSHEETPRO EXTENSION LOADED 🔧');
 console.log('🔧 RunsheetPro Extension: Content script loading started');
 console.log('🔧 RunsheetPro Extension: Document ready state:', document.readyState);
 

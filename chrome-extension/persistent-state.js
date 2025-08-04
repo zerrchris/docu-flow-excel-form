@@ -286,3 +286,6 @@ async function initializeExtensionWithStateRestore() {
     initializeExtension();
   }
 }
+
+// Call initialization when script loads
+initializeExtensionWithStateRestore();
