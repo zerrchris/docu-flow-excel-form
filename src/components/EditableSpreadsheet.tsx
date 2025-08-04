@@ -4340,10 +4340,10 @@ ${extractionFields}`
         <div 
           ref={containerRef}
           className="border rounded-md bg-background relative h-[750px] mx-6"
-          style={{ overflow: 'auto', minWidth: `${getTotalTableWidth()}px` }}
+          style={{ overflow: 'auto', width: `${getTotalTableWidth()}px` }}
         >
-          <div style={{ minWidth: `${getTotalTableWidth()}px`, width: '100%' }}>
-            <Table className="border-collapse w-full" style={{ tableLayout: 'fixed', minWidth: `${getTotalTableWidth()}px` }}>
+          <div style={{ width: `${getTotalTableWidth()}px` }}>
+            <Table className="border-collapse" style={{ tableLayout: 'fixed', width: `${getTotalTableWidth()}px` }}>
             {/* Sticky Header */}
             <TableHeader className="sticky top-0 z-40 bg-background border-b-2 shadow-sm"
               style={{ boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
@@ -4430,8 +4430,8 @@ ${extractionFields}`
                  
                  {/* Actions column header - not draggable */}
                   <TableHead 
-                    className="font-bold text-center relative p-0 bg-muted/50"
-                    style={{ minWidth: "600px" }}
+                    className="font-bold text-center relative p-0 bg-muted/50 border-r-0"
+                    style={{ width: "600px", minWidth: "600px" }}
                    >
                    <div className="w-full h-full px-4 py-2 flex flex-col gap-1">
                      <Button
@@ -4564,19 +4564,19 @@ ${extractionFields}`
                        const isInRange = isCellInRange(rowIndex, columnIndex);
                        
                        return (
-                         <TableCell 
-                           key={`${rowIndex}-${column}`}
-                            className={`border-r border-border p-0 cursor-text overflow-hidden`}
-                            style={{ 
-                              width: "350px", 
-                              minWidth: "350px",
-                              maxWidth: "350px",
-                              height: isEditing ? 'fit-content' : `${getRowHeight(rowIndex)}px`,
-                              minHeight: isEditing ? '60px' : `${getRowHeight(rowIndex)}px`
-                            }}
-                            onClick={(e) => handleCellClick(rowIndex, column, e)}
-                            onDoubleClick={() => handleCellDoubleClick(rowIndex, column)}
-                           tabIndex={isSelected ? 0 : -1}
+                          <TableCell 
+                            key={`${rowIndex}-${column}`}
+                             className={`border-r-0 p-0 cursor-text overflow-hidden`}
+                             style={{ 
+                               width: "350px", 
+                               minWidth: "350px",
+                               maxWidth: "350px",
+                               height: isEditing ? 'fit-content' : `${getRowHeight(rowIndex)}px`,
+                               minHeight: isEditing ? '60px' : `${getRowHeight(rowIndex)}px`
+                             }}
+                             onClick={(e) => handleCellClick(rowIndex, column, e)}
+                             onDoubleClick={() => handleCellDoubleClick(rowIndex, column)}
+                            tabIndex={isSelected ? 0 : -1}
                          >
                            {isEditing ? (
                               <Textarea
@@ -4655,9 +4655,11 @@ ${extractionFields}`
                     
                      {/* Actions column - Document management */}
                      <TableCell 
-                       className="p-0 overflow-hidden"
+                       className="p-0 overflow-hidden border-r-0"
                        style={{ 
-                         minWidth: "600px"
+                         width: "600px", 
+                         minWidth: "600px",
+                         maxWidth: "600px"
                        }}
                     >
                        <div className="bg-background border border-border rounded-md p-2 h-full min-h-[60px] flex flex-col gap-1 overflow-visible">
