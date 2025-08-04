@@ -195,14 +195,8 @@ function restoreSnipSession(retryCount = 0) {
       createNavigationControlPanel();
       updateSnipCounter();
       
-      // Show preview if there are captures and function exists
-      if (snipSession.captures.length > 0 && typeof toggleSnipPreview === 'function') {
-        // Ensure preview panel is visible
-        const previewPanel = document.getElementById('runsheetpro-snip-preview');
-        if (previewPanel && previewPanel.style.display !== 'flex') {
-          toggleSnipPreview();
-        }
-      }
+      // No preview needed - session continues until finished
+      console.log('🔧 RunsheetPro Extension: Snip session restored with', snipSession.captures.length, 'captures');
       
       showNotification(`Snip session restored! ${snipSession.captures.length} captures so far. Continue snipping or finish when done.`, 'info');
       console.log('🔧 RunsheetPro Extension: Navigate mode restoration complete');
@@ -217,13 +211,8 @@ function restoreSnipSession(retryCount = 0) {
       createSnipControlPanel();
       updateSnipCounter();
       
-      if (snipSession.captures.length > 0 && typeof toggleSnipPreview === 'function') {
-        // Ensure preview panel is visible
-        const previewPanel = document.getElementById('runsheetpro-snip-preview');
-        if (previewPanel && previewPanel.style.display !== 'flex') {
-          toggleSnipPreview();
-        }
-      }
+      // No preview needed - session continues until finished
+      console.log('🔧 RunsheetPro Extension: Scroll snip session restored with', snipSession.captures.length, 'captures');
       
       showNotification(`Scroll snip session restored! ${snipSession.captures.length} captures so far.`, 'info');
       console.log('🔧 RunsheetPro Extension: Scroll mode restoration complete');

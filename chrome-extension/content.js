@@ -3196,10 +3196,15 @@ async function captureSelectedArea(left, top, width, height) {
             saveExtensionState();
           }
           
-          // Update counter
+          // Update counter for all modes
           updateSnipCounter();
           
           showNotification(`Snip ${capturedSnips.length} captured!`, 'success');
+          
+          // For navigate mode, hide crosshairs after capture but keep session active
+          if (snipMode === 'navigate') {
+            hideSnipModeForNavigation();
+          }
           
           // Handle single mode - just store the snip locally, don't save to database yet
           if (snipMode === 'single') {
@@ -3259,44 +3264,74 @@ async function captureSelectedArea(left, top, width, height) {
 
 // Update snip counter
 function updateSnipCounter() {
+  // Use session captures count for navigate/scroll modes, capturedSnips for single mode
+  const totalSnips = (snipMode === 'navigate' || snipMode === 'scroll') ? 
+    snipSession.captures.length : capturedSnips.length;
+  
   const counter = document.getElementById('snip-counter');
   if (counter) {
-    counter.textContent = `Snips captured: ${capturedSnips.length}`;
+    counter.textContent = `Snips captured: ${totalSnips}`;
   }
   
   // Also update navigation panel counter
   const navCounter = document.getElementById('nav-snip-counter');
   if (navCounter) {
-    navCounter.textContent = `Snips captured: ${capturedSnips.length}`;
-  }
-  
-  // Also update the preview if it's visible
-  const previewPanel = document.getElementById('runsheetpro-snip-preview');
-  if (previewPanel && previewPanel.style.display === 'flex') {
-    updateSnipPreview();
+    navCounter.textContent = `Snips captured: ${totalSnips}`;
   }
 }
 
 // Finish snipping process
 async function finishSnipping() {
-  if (capturedSnips.length === 0) {
+  // Use session captures for navigate/scroll modes, capturedSnips for single mode
+  const snipsToProcess = (snipMode === 'navigate' || snipMode === 'scroll') ? 
+    snipSession.captures : capturedSnips;
+  
+  if (snipsToProcess.length === 0) {
     showNotification('No snips captured', 'error');
     return;
   }
   
   try {
-    showNotification('Processing snips...', 'info');
+    showNotification(`Processing ${snipsToProcess.length} snips...`, 'info');
     
-    // Combine snips vertically
-    const combinedBlob = await combineSnipsVertically(capturedSnips);
+    // Store the combined snip locally for the current row
+    let finalBlob;
+    if (snipsToProcess.length === 1) {
+      finalBlob = snipsToProcess[0].blob;
+    } else {
+      // Combine snips vertically
+      finalBlob = await combineSnipsVertically(snipsToProcess);
+    }
     
-    // Upload to Supabase Storage
-    const uploadResult = await uploadSnipToStorage(combinedBlob);
+    // Store locally for "Add to Row" functionality
+    window.currentCapturedSnip = finalBlob;
+    window.currentSnipFilename = `snip_session_${Date.now()}.png`;
     
-    // Link to current runsheet row
-    await linkSnipToRunsheet(uploadResult.url);
+    // Update the Document File Name field in the UI
+    const input = document.querySelector(`input[data-column="Document File Name"]`);
+    if (input) {
+      input.value = window.currentSnipFilename;
+    }
     
-    showNotification('Snips combined and linked successfully!', 'success');
+    // Show file indication in the document header
+    const headerContainer = document.querySelector('.document-header-container');
+    if (headerContainer) {
+      const uploadInterface = headerContainer.querySelector('.upload-interface');
+      const documentInterface = headerContainer.querySelector('.document-interface');
+      const filenameText = headerContainer.querySelector('.filename-text');
+      
+      if (uploadInterface && documentInterface && filenameText) {
+        uploadInterface.style.display = 'none';
+        documentInterface.style.display = 'flex';
+        filenameText.textContent = window.currentSnipFilename;
+        headerContainer.style.border = '1px solid hsl(var(--border, 214 32% 91%))';
+      }
+    }
+    
+    // Update screenshot indicator
+    updateScreenshotIndicator(true);
+    
+    showNotification(`✅ ${snipsToProcess.length} snips combined and ready! Fill in data and click "Add to Row" to save everything.`, 'success');
     
   } catch (error) {
     console.error('Error finishing snipping:', error);
@@ -3314,17 +3349,16 @@ function cancelSnipping() {
 
 // Hide snip mode temporarily for navigation
 function hideSnipModeForNavigation() {
+  // Only hide the overlay crosshairs for navigation, but keep session active
   if (snipOverlay) {
     snipOverlay.style.display = 'none';
   }
   
-  if (snipControlPanel) {
-    snipControlPanel.remove();
-    snipControlPanel = null;
+  // Don't remove the control panel - keep it for session persistence
+  // Just ensure navigation panel exists
+  if (!document.getElementById('runsheetpro-nav-controls')) {
+    createNavigationControlPanel();
   }
-  
-  // Create navigation control panel
-  createNavigationControlPanel();
 }
 
 // Create navigation control panel with snip again option
@@ -3387,7 +3421,7 @@ function createNavigationControlPanel() {
   `;
   
   snipAgainButton.addEventListener('click', () => {
-    navPanel.remove();
+    // Don't remove the nav panel - just resume snip mode to add another snip to session
     resumeSnipMode();
   });
   
@@ -3445,14 +3479,15 @@ function resumeSnipMode() {
     capturedSnips = [...snipSession.captures];
   }
   
+  // Show the crosshairs overlay for selection
   if (snipOverlay) {
     snipOverlay.style.display = 'block';
   } else {
     createSnipOverlay();
   }
   
-  createSnipControlPanel();
-  showNotification('Snip mode resumed! Drag to select another area.', 'info');
+  // Don't create a separate control panel - session persists with navigation panel
+  showNotification('Ready for next snip! Drag to select area.', 'info');
 }
 
 // Cleanup snip mode
@@ -3474,6 +3509,11 @@ function cleanupSnipMode() {
   const navPanel = document.getElementById('runsheetpro-nav-controls');
   if (navPanel) {
     navPanel.remove();
+  }
+  
+  // Clear snip session and save state
+  if (typeof cleanupSnipSession === 'function') {
+    cleanupSnipSession();
   }
 }
 
