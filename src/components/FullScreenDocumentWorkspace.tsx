@@ -317,6 +317,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
       }
 
       // Call the analyze-document function
+      console.log('🚀 Starting document analysis...');
       const { data, error } = await supabase.functions.invoke('analyze-document', {
         body: {
           prompt: `Extract information from this document for the following fields:\n${extractionFields}`,
@@ -324,8 +325,10 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
         },
       });
 
+      console.log('📡 Supabase function response:', { data, error });
+
       if (error) {
-        console.error('Analysis error:', error);
+        console.error('❌ Analysis error:', error);
         toast({
           title: "Analysis failed",
           description: error.message || "Could not analyze the document",
@@ -401,10 +404,15 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
         });
       }
     } catch (error) {
-      console.error('Analysis failed:', error);
+      console.error('❌ Analysis failed with exception:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
       toast({
         title: "Analysis failed",
-        description: "An error occurred during document analysis",
+        description: `An error occurred during document analysis: ${error.message}`,
         variant: "destructive"
       });
     } finally {
