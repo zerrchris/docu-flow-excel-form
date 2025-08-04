@@ -1117,6 +1117,8 @@ function createSingleEntryView(content) {
   const headerRow = document.createElement('div');
   headerRow.className = 'table-row header-row';
   headerRow.style.cssText = `
+    display: flex !important;
+    width: fit-content !important;
     height: 18px !important;
     min-height: 18px !important;
     max-height: 18px !important;
@@ -1576,6 +1578,11 @@ function createSingleEntryView(content) {
   // Create editable data row (show first row of data)
   const dataRow = document.createElement('div');
   dataRow.className = 'table-row editable-row';
+  dataRow.style.cssText = `
+    display: flex !important;
+    width: fit-content !important;
+    min-height: 2rem !important;
+  `;
   dataRow.dataset.rowIndex = nextRowIndex;
   
   runsheetData.columns.forEach((column, colIndex) => {
@@ -1954,12 +1961,12 @@ function createSingleEntryView(content) {
 
 // Function to update table width to eliminate extra space
 function updateTableWidth() {
-  const table = document.querySelector('#runsheetpro-runsheet-frame .table');
+  const table = document.querySelector('#runsheetpro-runsheet-frame .runsheet-table');
   if (!table) return;
   
   // Calculate total width needed for all columns
   let totalWidth = 0;
-  const headerCells = table.querySelectorAll('.table-row:first-child .table-cell');
+  const headerCells = table.querySelectorAll('.header-row .table-cell');
   headerCells.forEach((cell, index) => {
     const storedWidth = localStorage.getItem(`runsheetpro-column-width-${index}`) || '120';
     totalWidth += parseInt(storedWidth);
@@ -1970,11 +1977,15 @@ function updateTableWidth() {
   table.style.minWidth = `${totalWidth}px`;
   table.style.maxWidth = `${totalWidth}px`;
   
-  // Also update the container to fit exactly
-  const container = document.querySelector('#runsheetpro-runsheet-frame .table');
-  if (container && container.parentElement) {
-    container.parentElement.style.width = 'fit-content';
-  }
+  // Update all rows to match exact width
+  const rows = table.querySelectorAll('.table-row');
+  rows.forEach(row => {
+    row.style.width = `${totalWidth}px`;
+    row.style.minWidth = `${totalWidth}px`;
+    row.style.maxWidth = `${totalWidth}px`;
+  });
+  
+  console.log('🔧 RunsheetPro Extension: Updated table width to', totalWidth, 'px');
 }
 
 // Create full runsheet view (shows all data)
