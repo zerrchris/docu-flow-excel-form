@@ -3260,6 +3260,12 @@ function updateSnipCounter() {
     counter.textContent = `Snips captured: ${capturedSnips.length}`;
   }
   
+  // Also update navigation panel counter
+  const navCounter = document.getElementById('nav-snip-counter');
+  if (navCounter) {
+    navCounter.textContent = `Snips captured: ${capturedSnips.length}`;
+  }
+  
   // Also update the preview if it's visible
   const previewPanel = document.getElementById('runsheetpro-snip-preview');
   if (previewPanel && previewPanel.style.display === 'flex') {
@@ -3319,6 +3325,14 @@ function hideSnipModeForNavigation() {
 
 // Create navigation control panel with snip again option
 function createNavigationControlPanel() {
+  // Remove any existing navigation panel first
+  const existingPanel = document.getElementById('runsheetpro-nav-controls');
+  if (existingPanel) {
+    console.log('🔧 RunsheetPro Extension: Removing existing navigation panel');
+    existingPanel.remove();
+  }
+  
+  console.log('🔧 RunsheetPro Extension: Creating navigation control panel');
   const navPanel = document.createElement('div');
   navPanel.id = 'runsheetpro-nav-controls';
   
@@ -3342,6 +3356,7 @@ function createNavigationControlPanel() {
   
   // Snip counter
   const counter = document.createElement('span');
+  counter.id = 'nav-snip-counter'; // Add ID for updates
   counter.style.cssText = `
     font-size: 14px !important;
     color: #374151 !important;
@@ -3416,6 +3431,7 @@ function createNavigationControlPanel() {
   navPanel.appendChild(cancelButton);
   
   document.body.appendChild(navPanel);
+  console.log('🔧 RunsheetPro Extension: Navigation control panel created and appended to DOM');
 }
 
 // Resume snip mode after navigation
