@@ -2970,6 +2970,8 @@ function createSnipOverlay() {
     currentX = startX;
     currentY = startY;
     
+    console.log('🔧 RunsheetPro Extension: Mouse down at:', { startX, startY });
+    
     selectionRect.style.left = startX + 'px';
     selectionRect.style.top = startY + 'px';
     selectionRect.style.width = '0px';
@@ -3004,6 +3006,11 @@ function createSnipOverlay() {
     const top = Math.min(startY, currentY);
     const width = Math.abs(currentX - startX);
     const height = Math.abs(currentY - startY);
+    
+    console.log('🔧 RunsheetPro Extension: Selection coordinates:', { 
+      startX, startY, currentX, currentY, 
+      left, top, width, height 
+    });
     
     // Allow any size selection - no minimum size restriction
     
