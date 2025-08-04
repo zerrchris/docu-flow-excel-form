@@ -195,14 +195,26 @@ const DocumentProcessor: React.FC = () => {
     
     console.log('🔄 DocumentProcessor: Navigation state effect triggered', {
       selectedRunsheet: selectedRunsheet?.id,
+      selectedRunsheetName: selectedRunsheet?.name,
       loadedRef: loadedRunsheetRef.current,
-      hasSpreadsheetData: spreadsheetData.length > 0
+      hasSpreadsheetData: spreadsheetData.length > 0,
+      activeRunsheetName: activeRunsheet?.name,
+      locationState: location.state
     });
     
     // Use ref to prevent infinite loops - only load each runsheet once
     if (selectedRunsheet && loadedRunsheetRef.current !== selectedRunsheet.id) {
       console.log('📋 Loading selected runsheet:', selectedRunsheet);
       loadedRunsheetRef.current = selectedRunsheet.id;
+      
+      // Set active runsheet immediately
+      setActiveRunsheet({
+        id: selectedRunsheet.id,
+        name: selectedRunsheet.name,
+        data: selectedRunsheet.data || [],
+        columns: selectedRunsheet.columns || [],
+        columnInstructions: selectedRunsheet.column_instructions || {}
+      });
       
       // Only load runsheet data if we don't already have spreadsheet data (to prevent data loss)
       if (selectedRunsheet.data && Array.isArray(selectedRunsheet.data) && spreadsheetData.length === 0) {
