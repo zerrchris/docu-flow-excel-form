@@ -196,8 +196,12 @@ function restoreSnipSession(retryCount = 0) {
       updateSnipCounter();
       
       // Show preview if there are captures and function exists
-      if (snipSession.captures.length > 0 && typeof showSnipPreview === 'function') {
-        showSnipPreview();
+      if (snipSession.captures.length > 0 && typeof toggleSnipPreview === 'function') {
+        // Ensure preview panel is visible
+        const previewPanel = document.getElementById('runsheetpro-snip-preview');
+        if (previewPanel && previewPanel.style.display !== 'flex') {
+          toggleSnipPreview();
+        }
       }
       
       showNotification(`Snip session restored! ${snipSession.captures.length} captures so far. Continue snipping or finish when done.`, 'info');
@@ -210,11 +214,15 @@ function restoreSnipSession(retryCount = 0) {
         console.log('🔧 RunsheetPro Extension: Restored', capturedSnips.length, 'captured snips');
       }
       
-      showScrollSnipControls();
+      createSnipControlPanel();
       updateSnipCounter();
       
-      if (snipSession.captures.length > 0 && typeof showSnipPreview === 'function') {
-        showSnipPreview();
+      if (snipSession.captures.length > 0 && typeof toggleSnipPreview === 'function') {
+        // Ensure preview panel is visible
+        const previewPanel = document.getElementById('runsheetpro-snip-preview');
+        if (previewPanel && previewPanel.style.display !== 'flex') {
+          toggleSnipPreview();
+        }
       }
       
       showNotification(`Scroll snip session restored! ${snipSession.captures.length} captures so far.`, 'info');
