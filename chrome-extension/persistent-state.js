@@ -175,6 +175,11 @@ function restoreSnipSession() {
   
   // Show appropriate controls based on mode
   if (snipSession.mode === 'navigate') {
+    // Restore captured snips to the current session
+    if (snipSession.captures && snipSession.captures.length > 0) {
+      capturedSnips = [...snipSession.captures];
+    }
+    
     createNavigationControlPanel();
     updateSnipCounter();
     
@@ -185,6 +190,11 @@ function restoreSnipSession() {
     
     showNotification(`Snip session restored! ${snipSession.captures.length} captures so far. Continue snipping or finish when done.`, 'info');
   } else if (snipSession.mode === 'scroll') {
+    // Restore captured snips to the current session
+    if (snipSession.captures && snipSession.captures.length > 0) {
+      capturedSnips = [...snipSession.captures];
+    }
+    
     showScrollSnipControls();
     updateSnipCounter();
     

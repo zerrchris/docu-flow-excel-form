@@ -3176,6 +3176,18 @@ async function captureSelectedArea(left, top, width, height) {
             height: height
           });
           
+          // Also add to persistent session for navigation/scroll modes
+          if (snipMode === 'navigate' || snipMode === 'scroll') {
+            snipSession.captures.push({
+              blob: blob,
+              timestamp: Date.now(),
+              width: width,
+              height: height
+            });
+            // Save session to storage
+            saveExtensionState();
+          }
+          
           // Update counter
           updateSnipCounter();
           
@@ -3404,6 +3416,11 @@ function createNavigationControlPanel() {
 
 // Resume snip mode after navigation
 function resumeSnipMode() {
+  // Restore captured snips from session
+  if (snipSession.active && snipSession.captures.length > 0) {
+    capturedSnips = [...snipSession.captures];
+  }
+  
   if (snipOverlay) {
     snipOverlay.style.display = 'block';
   } else {
