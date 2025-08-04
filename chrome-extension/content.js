@@ -652,13 +652,16 @@ async function addRowToSheet() {
       currentRowIndex = result.row_index + 1;
       updateRowNavigationUI();
       
-      // Clear all input fields and textareas for next entry
+  // Clear all input fields and textareas for next entry
       inputs.forEach(input => {
-        input.value = '';
-        // Auto-resize textareas after clearing
-        if (input.tagName === 'TEXTAREA') {
-          input.style.height = 'auto';
-          input.style.height = Math.max(32, input.scrollHeight) + 'px';
+        // Only clear if it's not a hidden field or Document File Name field
+        if (input.type !== 'hidden' && input.dataset.column !== 'Document File Name') {
+          input.value = '';
+          // Auto-resize textareas after clearing
+          if (input.tagName === 'TEXTAREA') {
+            input.style.height = 'auto';
+            input.style.height = Math.max(32, input.scrollHeight) + 'px';
+          }
         }
       });
       
@@ -1507,13 +1510,18 @@ function createSingleEntryView(content) {
       allCells.forEach(c => {
         c.style.width = `${width}px`;
         c.style.minWidth = `${width}px`;
+        c.style.maxWidth = `${width}px`;
       });
+      
+      // Save the width preference
+      localStorage.setItem(`runsheetpro-column-width-${index}`, width);
     });
     
     document.addEventListener('mouseup', () => {
       if (isResizing) {
         isResizing = false;
         document.body.style.cursor = '';
+        document.body.style.userSelect = '';
       }
     });
     
@@ -1770,7 +1778,7 @@ function createSingleEntryView(content) {
     } else if (e.key === 'Tab' && !e.shiftKey) {
       // Tab moves to screenshot button
       e.preventDefault();
-      const screenshotBtn = document.querySelector('.action-area .screenshot-btn');
+      const screenshotBtn = document.querySelector('.table-action-area .screenshot-btn');
       if (screenshotBtn) {
         screenshotBtn.focus();
       }
@@ -1860,13 +1868,13 @@ function createSingleEntryView(content) {
     
     switch (type) {
       case 'area':
-        startAreaCapture();
+        startSnipMode('single');
         break;
       case 'single':
-        captureSingleScreenshot();
+        startSnipMode('single');
         break;
       case 'session':
-        startScreenshotSession();
+        startSnipMode('navigate');
         break;
     }
   });
@@ -1912,8 +1920,9 @@ function createSingleEntryView(content) {
   const tableContainer = document.createElement('div');
   tableContainer.style.cssText = `
     display: flex !important;
-    width: 100% !important;
+    width: fit-content !important;
     align-items: stretch !important;
+    max-width: 100% !important;
   `;
   
   tableContainer.appendChild(table);
@@ -1924,6 +1933,25 @@ function createSingleEntryView(content) {
   setTimeout(() => {
     updateTableWidth();
   }, 0);
+}
+
+// Function to update table width to eliminate extra space
+function updateTableWidth() {
+  const table = document.querySelector('#runsheetpro-runsheet-frame .table');
+  if (!table) return;
+  
+  // Calculate total width needed for all columns
+  let totalWidth = 0;
+  const headerCells = table.querySelectorAll('.table-row:first-child .table-cell');
+  headerCells.forEach((cell, index) => {
+    const storedWidth = localStorage.getItem(`runsheetpro-column-width-${index}`) || '120';
+    totalWidth += parseInt(storedWidth);
+  });
+  
+  // Set the table width to match total column widths
+  table.style.width = `${totalWidth}px`;
+  table.style.minWidth = `${totalWidth}px`;
+  table.style.maxWidth = `${totalWidth}px`;
 }
 
 // Create full runsheet view (shows all data)
