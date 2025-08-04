@@ -15,7 +15,7 @@ serve(async (req) => {
   }
 
   try {
-    const { prompt, imageData, systemMessage = "You are a document analysis assistant. CRITICAL: Only extract information that is clearly visible and readable in the document image. If information is not present, missing, illegible, or unclear, respond with 'N/A' or leave blank. Do not infer, guess, or hallucinate any information. Only use what you can actually see." } = await req.json();
+    const { prompt, imageData, systemMessage = "You are a document analysis assistant. CRITICAL: Only extract information that is clearly visible and readable in the document image. If information is not present, missing, illegible, or unclear, respond with 'N/A' or leave blank. Do not infer, guess, or hallucinate any information. Only use what you can actually see. IMPORTANT: Return your response as a valid JSON object with field names as keys and extracted values as values. Do not include any markdown formatting, explanations, or additional text - just the JSON object." } = await req.json();
 
     if (!prompt || !imageData) {
       return new Response(

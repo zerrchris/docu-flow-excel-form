@@ -320,7 +320,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
       console.log('🚀 Starting document analysis...');
       const { data, error } = await supabase.functions.invoke('analyze-document', {
         body: {
-          prompt: `Extract information from this document for the following fields:\n${extractionFields}`,
+          prompt: `Extract information from this document for the following fields and return as valid JSON:\n${extractionFields}\n\nReturn only a JSON object with field names as keys and extracted values as values. Do not include any markdown, explanations, or additional text.`,
           imageData
         },
       });
