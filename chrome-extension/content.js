@@ -729,6 +729,11 @@ async function addRowToSheet() {
         window.currentDisplayRowIndex = nextRowIndex + 1;
       }
       
+      // Clear any saved form data since we just submitted it
+      if (typeof chrome !== 'undefined' && chrome.storage) {
+        chrome.storage.local.remove(['extension_form_data']);
+      }
+      
       // Refresh the current view (both single and full views)
       refreshCurrentView();
     } else {
@@ -2381,11 +2386,16 @@ function switchViewMode(newMode) {
       } else {
         createSingleEntryView(content);
         
-        // Restore form data when switching back to single view
+        // Only restore form data if we're switching back from a different mode
+        // AND the user hasn't just added a row (which clears the form data)
         setTimeout(() => {
-          if (typeof restoreFormData === 'function') {
-            restoreFormData();
-          }
+          chrome.storage.local.get(['extension_form_data']).then((result) => {
+            if (result.extension_form_data && Object.keys(result.extension_form_data).length > 0) {
+              if (typeof restoreFormData === 'function') {
+                restoreFormData();
+              }
+            }
+          });
         }, 100);
       }
     }
