@@ -1955,7 +1955,6 @@ function updateTableWidth() {
     container.parentElement.style.width = 'fit-content';
   }
 }
-}
 
 // Create full runsheet view (shows all data)
 function createFullRunsheetView(content) {
