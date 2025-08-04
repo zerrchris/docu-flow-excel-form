@@ -2574,6 +2574,10 @@ async function init() {
       // Restore the active runsheet
       activeRunsheet = storedData.active_runsheet;
       
+      // Find the next available blank row for data entry
+      currentRowIndex = findNextAvailableRow(activeRunsheet);
+      console.log('🔧 RunsheetPro Extension: Set currentRowIndex to next available row:', currentRowIndex);
+      
       // Create and show the frame with the restored runsheet
       createRunsheetFrame();
       if (runsheetFrame) {
@@ -2582,7 +2586,7 @@ async function init() {
         setupFrameEventListeners();
       }
       
-      showNotification(`Restored runsheet: ${activeRunsheet.name}`, 'success');
+      showNotification(`Restored runsheet: ${activeRunsheet.name} (Row ${currentRowIndex + 1})`, 'success');
     }
   } else {
     console.log('🔧 RunsheetPro Extension: User not authenticated, button will show sign-in prompt');
