@@ -2135,7 +2135,8 @@ function createFullRunsheetView(content) {
         if (confirm('This will replace the existing document/screenshot. Continue?')) {
           const originalRowIndex = currentRowIndex;
           currentRowIndex = rowIndex;
-          startSnipMode();
+          // Skip warning since we already confirmed replacement
+          showSnipModeSelector(false); // Pass false to skip overwrite check
           currentRowIndex = originalRowIndex; // Restore original row index
         }
       });
@@ -2160,7 +2161,8 @@ function createFullRunsheetView(content) {
       addBtn.addEventListener('click', () => {
         const originalRowIndex = currentRowIndex;
         currentRowIndex = rowIndex;
-        startSnipMode();
+        // Skip warning since we already know there's no document
+        showSnipModeSelector(false); // Pass false to skip overwrite check
         currentRowIndex = originalRowIndex; // Restore original row index
       });
       
@@ -2325,7 +2327,7 @@ async function openCurrentRunsheetInApp() {
 // Start snip mode (select area to capture) - show mode selector first
 function startSnipMode() {
   console.log('🔧 RunsheetPro Extension: startSnipMode() called without parameters - showing selector');
-  showSnipModeSelector();
+  showSnipModeSelector(true); // Use default behavior (show overwrite warning)
 }
 
 // Capture selected area
@@ -2594,7 +2596,7 @@ async function init() {
 // =============================================================================
 
 // Show snip mode selector modal
-function showSnipModeSelector() {
+function showSnipModeSelector(skipOverwriteCheck = true) {
   console.log('🔧 RunsheetPro Extension: showSnipModeSelector() called');
   // Remove any existing selector
   const existingSelector = document.getElementById('runsheetpro-snip-selector');
@@ -2703,17 +2705,17 @@ function showSnipModeSelector() {
   // Add event listeners
   document.getElementById('single-snip-option').addEventListener('click', () => {
     overlay.remove();
-    startSnipModeWithMode('single');
+    startSnipModeWithMode('single', skipOverwriteCheck);
   });
 
   document.getElementById('scroll-snip-option').addEventListener('click', () => {
     overlay.remove();
-    startSnipModeWithMode('scroll');
+    startSnipModeWithMode('scroll', skipOverwriteCheck);
   });
 
   document.getElementById('navigate-snip-option').addEventListener('click', () => {
     overlay.remove();
-    startSnipModeWithMode('navigate');
+    startSnipModeWithMode('navigate', skipOverwriteCheck);
   });
 
   document.getElementById('cancel-snip-selector').addEventListener('click', () => {
@@ -2964,11 +2966,11 @@ function loadSelectedRunsheet(runsheetData) {
 }
 
 // Start snip mode with specific mode
-function startSnipModeWithMode(mode = 'single') {
+function startSnipModeWithMode(mode = 'single', skipOverwriteCheck = false) {
   if (isSnipMode) return;
   
-  // Check if there's already a file for this row and warn user
-  if (activeRunsheet && activeRunsheet.data && activeRunsheet.data[currentRowIndex]) {
+  // Check if there's already a file for this row and warn user (unless skipping)
+  if (!skipOverwriteCheck && activeRunsheet && activeRunsheet.data && activeRunsheet.data[currentRowIndex]) {
     const currentRow = activeRunsheet.data[currentRowIndex];
     const hasExistingFile = currentRow['Document File Name'] || currentRow['screenshot_url'];
     
