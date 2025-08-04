@@ -2386,17 +2386,8 @@ function switchViewMode(newMode) {
       } else {
         createSingleEntryView(content);
         
-        // Only restore form data if we're switching back from a different mode
-        // AND the user hasn't just added a row (which clears the form data)
-        setTimeout(() => {
-          chrome.storage.local.get(['extension_form_data']).then((result) => {
-            if (result.extension_form_data && Object.keys(result.extension_form_data).length > 0) {
-              if (typeof restoreFormData === 'function') {
-                restoreFormData();
-              }
-            }
-          });
-        }, 100);
+        // Single entry mode should ALWAYS start blank for new data entry
+        // Never restore form data - this is for entering NEW rows
       }
     }
     updateViewModeButton();
