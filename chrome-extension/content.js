@@ -2880,12 +2880,12 @@ function startSnipModeWithMode(mode = 'single') {
   if (isSnipMode) return;
   
   // Check if there's already a file for this row and warn user
-  if (mode === 'single' && activeRunsheet && activeRunsheet.data && activeRunsheet.data[currentRowIndex]) {
+  if (activeRunsheet && activeRunsheet.data && activeRunsheet.data[currentRowIndex]) {
     const currentRow = activeRunsheet.data[currentRowIndex];
     const hasExistingFile = currentRow['Document File Name'] || currentRow['screenshot_url'];
     
     if (hasExistingFile) {
-      const confirmOverwrite = confirm('A screenshot already exists for this row. Taking a new screenshot will replace the existing one. Continue?');
+      const confirmOverwrite = confirm('A document/screenshot already exists for this row. Taking a new screenshot will replace the existing file. Continue?');
       if (!confirmOverwrite) {
         return;
       }
@@ -3891,23 +3891,29 @@ async function analyzeCurrentScreenshot() {
 function viewCurrentScreenshot() {
   console.log('🔧 RunsheetPro Extension: Viewing current screenshot');
   
-  // Get screenshot from current data or captured snip
+  // Get screenshot from current row data
   let screenshotData = null;
   let screenshotSource = '';
   
-  if (window.currentCapturedSnip) {
-    screenshotData = window.currentCapturedSnip;
-    screenshotSource = 'captured';
-  } else if (activeRunsheet.data && activeRunsheet.data[currentRowIndex]) {
-    screenshotData = activeRunsheet.data[currentRowIndex]['screenshot_url'];
+  if (activeRunsheet && activeRunsheet.data && activeRunsheet.data[currentRowIndex]) {
+    const currentRow = activeRunsheet.data[currentRowIndex];
+    screenshotData = currentRow['screenshot_url'] || currentRow['Document File Name'];
     screenshotSource = 'stored';
-  } else if (captures.length > 0) {
-    screenshotData = captures[captures.length - 1];
-    screenshotSource = 'recent';
+  }
+  
+  // Fallback to captured snip or recent captures
+  if (!screenshotData) {
+    if (window.currentCapturedSnip) {
+      screenshotData = window.currentCapturedSnip;
+      screenshotSource = 'captured';
+    } else if (captures.length > 0) {
+      screenshotData = captures[captures.length - 1];
+      screenshotSource = 'recent';
+    }
   }
 
   if (!screenshotData) {
-    showNotification('No screenshot available to view', 'error');
+    showNotification('No document/screenshot available to view for this row', 'error');
     return;
   }
 
