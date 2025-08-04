@@ -3005,10 +3005,7 @@ function createSnipOverlay() {
     const width = Math.abs(currentX - startX);
     const height = Math.abs(currentY - startY);
     
-    if (width < 10 || height < 10) {
-      showNotification('Selection too small, please try again', 'error');
-      return;
-    }
+    // Allow any size selection - no minimum size restriction
     
     // Hide overlay temporarily for clean capture
     snipOverlay.style.display = 'none';
