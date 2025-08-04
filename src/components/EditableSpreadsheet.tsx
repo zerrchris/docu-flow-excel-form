@@ -224,7 +224,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [showNamingSettings, setShowNamingSettings] = useState(false);
   const [inlineViewerRow, setInlineViewerRow] = useState<number | null>(null);
   const [fullScreenWorkspace, setFullScreenWorkspace] = useState<{ runsheetId: string; rowIndex: number } | null>(null);
-  const [showDocumentFileNameColumn, setShowDocumentFileNameColumn] = useState(true);
+  const [showDocumentFileNameColumn, setShowDocumentFileNameColumn] = useState(false); // Set to false by default - column removed
   
   // Listen for document upload save requests
   React.useEffect(() => {
@@ -2729,9 +2729,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   // Calculate total table width
   const getTotalTableWidth = () => {
     const dataColumnsWidth = columns.reduce((total, column) => total + getColumnWidth(column), 0);
-    const documentFileNameWidth = showDocumentFileNameColumn ? 350 : 0;
-    const actionsColumnWidth = 600; // Minimum width for actions column (Document Linker)
-    return dataColumnsWidth + documentFileNameWidth + actionsColumnWidth;
+    const actionsColumnWidth = 600; // Fixed width for actions column (Document Linker)
+    return dataColumnsWidth + actionsColumnWidth;
   };
 
   // Column resize handlers
@@ -4415,44 +4414,23 @@ ${extractionFields}`
                      </ContextMenu>
                    </TableHead>
                  ))}
-                
-                 {/* Document File Name column header - conditionally visible */}
-                 {showDocumentFileNameColumn && (
-                   <TableHead 
-                     className="font-bold text-center border-r border-border relative p-0 bg-muted/50"
-                     style={{ width: "200px", minWidth: "200px" }}
-                   >
-                     <div className="w-full h-full px-4 py-2 flex flex-col items-center justify-center">
-                       <span className="font-bold">Document File Name</span>
-                     </div>
-                   </TableHead>
-                 )}
-                 
-                 {/* Actions column header - not draggable */}
+                  
+                  {/* Actions column header - not draggable */}
                   <TableHead 
-                    className="font-bold text-center relative p-0 bg-muted/50 border-r-0"
+                    className="font-bold text-center relative p-0 bg-muted/50"
                     style={{ width: "600px", minWidth: "600px" }}
                    >
-                   <div className="w-full h-full px-4 py-2 flex flex-col gap-1">
-                     <Button
-                       variant="outline"
-                       size="sm"
-                       onClick={() => setShowDocumentFileNameColumn(!showDocumentFileNameColumn)}
-                       className="text-xs"
-                     >
-                       {showDocumentFileNameColumn ? <EyeOff className="h-3 w-3 mr-1" /> : <Eye className="h-3 w-3 mr-1" />}
-                       {showDocumentFileNameColumn ? 'Hide' : 'Show'} File Name Column
-                     </Button>
-                       <Button
-                         variant="outline"
-                         size="sm"
-                         onClick={() => setShowDocumentNamingDialog(true)}
-                         className="text-xs"
-                       >
-                        <Sparkles className="h-3 w-3 mr-1 text-purple-600" />
-                         Smart File Name Settings
-                      </Button>
-                   </div>
+                    <div className="w-full h-full px-4 py-2 flex flex-col gap-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowDocumentNamingDialog(true)}
+                          className="text-xs"
+                        >
+                         <Sparkles className="h-3 w-3 mr-1 text-purple-600" />
+                          Smart File Name Settings
+                        </Button>
+                    </div>
                  </TableHead>
                </TableRow>
              </TableHeader>
@@ -4464,8 +4442,8 @@ ${extractionFields}`
                       <React.Fragment key={`row-${rowIndex}`}>
                         {/* Show inline document viewer above this row if it's selected */}
                        {inlineViewerRow === rowIndex && (
-                      <TableRow>
-                        <TableCell colSpan={columns.length + (showDocumentFileNameColumn ? 1 : 0) + 1} className="p-0 border-0">
+                       <TableRow>
+                         <TableCell colSpan={columns.length + 1} className="p-0 border-0">
                           <InlineDocumentViewer
                             runsheetId={currentRunsheetId || ''}
                             rowIndex={rowIndex}
@@ -4555,8 +4533,8 @@ ${extractionFields}`
                      );
                     })}
                     
-                     {/* Document File Name column - conditionally visible */}
-                     {showDocumentFileNameColumn && (() => {
+                     
+                      {/* Actions column - Document management */}
                        const column = 'Document File Name';
                        const isSelected = selectedCell?.rowIndex === rowIndex && selectedCell?.column === column;
                        const isEditing = editingCell?.rowIndex === rowIndex && editingCell?.column === column;
@@ -4645,23 +4623,16 @@ ${extractionFields}`
                                 title={documentMap.get(rowIndex)?.stored_filename || row[column] || ''}
                               >
                                 <span className="truncate block w-full text-left">
-                                  {documentMap.get(rowIndex)?.stored_filename || row[column] || ''}
-                                </span>
-                              </div>
-                           )}
-                         </TableCell>
-                       );
-                     })()}
-                    
-                     {/* Actions column - Document management */}
-                     <TableCell 
-                       className="p-0 overflow-hidden border-r-0"
-                       style={{ 
-                         width: "600px", 
-                         minWidth: "600px",
-                         maxWidth: "600px"
-                       }}
-                    >
+                     
+                      {/* Actions column - Document management */}
+                      <TableCell 
+                        className="p-0 overflow-hidden"
+                        style={{ 
+                          width: "600px", 
+                          minWidth: "600px",
+                          maxWidth: "600px"
+                        }}
+                     >
                        <div className="bg-background border border-border rounded-md p-2 h-full min-h-[60px] flex flex-col gap-1 overflow-visible">
                          <DocumentLinker
                            key={`${rowIndex}-${row['Document File Name']}`}
