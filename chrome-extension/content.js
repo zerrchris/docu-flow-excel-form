@@ -765,6 +765,10 @@ function loadRunsheet(runsheet) {
   
   activeRunsheet = runsheet;
   
+  // Find the next available blank row for data entry
+  currentRowIndex = findNextAvailableRow(runsheet);
+  console.log('🔧 RunsheetPro Extension: Set currentRowIndex to next available row:', currentRowIndex);
+  
   // Save state when setting active runsheet
   if (typeof saveExtensionState === 'function') {
     saveExtensionState();
@@ -792,7 +796,7 @@ function loadRunsheet(runsheet) {
     setupFrameEventListeners();
   }
   
-  showNotification(`Loaded runsheet: ${runsheet.name}`, 'success');
+  showNotification(`Loaded runsheet: ${runsheet.name} (Row ${currentRowIndex + 1})`, 'success');
 }
 
 // Toggle runsheet frame visibility
