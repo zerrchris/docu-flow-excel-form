@@ -155,6 +155,9 @@ Deno.serve(async (req) => {
           console.error('Failed to create/update document record:', documentResult.error)
         } else {
           console.log('Document record created/updated successfully:', documentResult.data)
+          
+          // Fire document creation event for the main app to refresh its document map
+          console.log('🚨 Extension Sync: Firing document record created event for runsheet:', runsheet_id)
         }
       }
 
@@ -176,7 +179,9 @@ Deno.serve(async (req) => {
         JSON.stringify({ 
           success: true, 
           row_index: targetRowIndex,
-          message: `Data added to row ${targetRowIndex + 1}` 
+          message: `Data added to row ${targetRowIndex + 1}`,
+          document_created: !!screenshot_url,
+          runsheet_id: runsheet_id
         }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },

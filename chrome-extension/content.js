@@ -684,6 +684,22 @@ async function addRowToSheet() {
     if (result.success) {
       showNotification(`Row ${result.row_index + 1} added successfully!`, 'success');
       
+      // If a document was created, fire an event for the main app to refresh its document map
+      if (result.document_created) {
+        console.log('🚨 Extension: Firing document record created event for runsheet:', result.runsheet_id);
+        const event = new CustomEvent('documentRecordCreated', {
+          detail: {
+            runsheetId: result.runsheet_id,
+            rowIndex: result.row_index,
+            allPossibleIds: {
+              activeRunsheetId: result.runsheet_id,
+              finalRunsheetId: result.runsheet_id
+            }
+          }
+        });
+        window.dispatchEvent(event);
+      }
+      
       // Update current row index to move to next row
       currentRowIndex = result.row_index + 1;
       updateRowNavigationUI();
