@@ -1923,7 +1923,21 @@ function createSingleEntryView(content) {
   
   tableContainer.appendChild(table);
   tableContainer.appendChild(actionArea);
-  content.appendChild(tableContainer);
+  
+  // Wrap in horizontal scroll container
+  const scrollContainer = document.createElement('div');
+  scrollContainer.style.cssText = `
+    width: 100% !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    padding-bottom: 2px !important;
+  `;
+  
+  scrollContainer.appendChild(tableContainer);
+  content.appendChild(scrollContainer);
+  
+  console.log('🔧 RunsheetPro Extension: Single entry view created with action buttons');
+  console.log('🔧 RunsheetPro Extension: Action area contains:', actionArea.children.length, 'buttons');
   
   // Update table width after creating all cells
   setTimeout(() => {
