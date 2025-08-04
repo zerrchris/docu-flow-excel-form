@@ -2638,7 +2638,8 @@ function debounce(func, wait) {
 }
 
 // Initialize extension with state restoration
-initializeExtensionWithStateRestore();
+init();
+
 function initializeExtension() {
   console.log('🔧 RunsheetPro Extension: Starting initializeExtension() function');
   
