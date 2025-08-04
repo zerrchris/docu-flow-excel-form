@@ -1674,12 +1674,8 @@ function createSingleEntryView(content) {
           const isLastEditableCell = editableCells[editableCells.length - 1] === cell;
           
           if (isLastEditableCell) {
-            // Focus the add row button in the Document File Name cell
-            const documentCell = allCells.find(c => {
-              const input = c.querySelector('input[data-column="Document File Name"]');
-              return input !== null;
-            });
-            const addButton = documentCell?.querySelector('.add-row-btn');
+            // Focus the add row button
+            const addButton = document.querySelector('.table-action-area .add-row-btn');
             if (addButton) {
               addButton.focus();
             }
@@ -1722,39 +1718,37 @@ function createSingleEntryView(content) {
   
   table.appendChild(dataRow);
   
-  // Create action area to the right of the table
+  // Create action area immediately adjacent to the table
   const actionArea = document.createElement('div');
   actionArea.className = 'table-action-area';
   actionArea.style.cssText = `
     display: flex !important;
-    flex-direction: column !important;
     gap: 8px !important;
     padding: 8px !important;
-    min-width: 200px !important;
-    border-left: 2px solid hsl(var(--border, 214 32% 91%)) !important;
-    background: hsl(var(--muted, 210 40% 96%) / 0.3) !important;
-    align-items: stretch !important;
-    justify-content: center !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    flex-shrink: 0 !important;
   `;
   
   // Add Row button
   const addRowBtn = document.createElement('button');
   addRowBtn.className = 'add-row-btn';
-  addRowBtn.textContent = 'Add to Row';
+  addRowBtn.textContent = 'Add Row to Runsheet';
   addRowBtn.style.cssText = `
     background: hsl(var(--primary, 215 80% 40%)) !important;
     color: hsl(var(--primary-foreground, 210 40% 98%)) !important;
     border: 1px solid hsl(var(--primary, 215 80% 40%)) !important;
     border-radius: 4px !important;
-    padding: 10px 16px !important;
+    padding: 8px 12px !important;
     font-size: 12px !important;
     cursor: pointer !important;
-    width: 100% !important;
     font-weight: 500 !important;
     transition: all 0.2s ease !important;
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
   `;
   addRowBtn.tabIndex = 0;
-  addRowBtn.title = 'Add this row data to the sheet';
+  addRowBtn.title = 'Add this row data to the runsheet';
   
   // Event handlers for Add Row button
   addRowBtn.addEventListener('click', () => {
@@ -1789,7 +1783,7 @@ function createSingleEntryView(content) {
   const screenshotContainer = document.createElement('div');
   screenshotContainer.style.cssText = `
     position: relative !important;
-    width: 100% !important;
+    flex-shrink: 0 !important;
   `;
   
   // Screenshot dropdown button
@@ -1801,16 +1795,17 @@ function createSingleEntryView(content) {
     color: white !important;
     border: none !important;
     border-radius: 6px !important;
-    padding: 10px 16px !important;
+    padding: 8px 12px !important;
     font-size: 12px !important;
     cursor: pointer !important;
-    width: 100% !important;
     font-weight: 500 !important;
     transition: all 0.2s ease !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
     gap: 4px !important;
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
   `;
   screenshotBtn.tabIndex = 0;
   screenshotBtn.title = 'Choose screenshot method';
@@ -1916,12 +1911,12 @@ function createSingleEntryView(content) {
   actionArea.appendChild(addRowBtn);
   actionArea.appendChild(screenshotContainer);
   
-  // Create container that holds both table and action area
+  // Create container that holds table and action area side by side
   const tableContainer = document.createElement('div');
   tableContainer.style.cssText = `
     display: flex !important;
+    align-items: flex-start !important;
     width: fit-content !important;
-    align-items: stretch !important;
     max-width: 100% !important;
   `;
   
