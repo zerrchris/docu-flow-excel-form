@@ -2730,7 +2730,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const getTotalTableWidth = () => {
     const dataColumnsWidth = columns.reduce((total, column) => total + getColumnWidth(column), 0);
     const documentFileNameWidth = showDocumentFileNameColumn ? 350 : 0;
-    const actionsColumnWidth = 450; // Fixed width for actions column (Document Linker)
+    const actionsColumnWidth = 600; // Fixed width for actions column (Document Linker)
     // Add some padding to prevent cramped layout
     return dataColumnsWidth + documentFileNameWidth + actionsColumnWidth + 40;
   };
@@ -4658,9 +4658,9 @@ ${extractionFields}`
                     <TableCell 
                       className="border-r border-border last:border-r-0 p-0 overflow-hidden"
                       style={{ 
-                        width: "450px", 
-                        minWidth: "450px",
-                        maxWidth: "450px"
+                        width: "600px", 
+                        minWidth: "600px",
+                        maxWidth: "600px"
                       }}
                     >
                        <div className="bg-background border border-border rounded-md p-2 h-full min-h-[60px] flex flex-col gap-1 overflow-visible">
