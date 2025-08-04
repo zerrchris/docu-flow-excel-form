@@ -1094,6 +1094,12 @@ function createSingleEntryView(content) {
   // Create dynamic table based on runsheet data
   const table = document.createElement('div');
   table.className = 'runsheet-table';
+  table.style.cssText = `
+    display: flex !important;
+    flex-direction: column !important;
+    border: none !important;
+    width: fit-content !important;
+  `;
   
   // Get runsheet data or use defaults
   const runsheetData = activeRunsheet || {
@@ -1915,10 +1921,11 @@ function createSingleEntryView(content) {
     display: flex !important;
     align-items: stretch !important;
     width: fit-content !important;
-    max-width: 100% !important;
+    max-width: none !important;
     border: 1px solid hsl(var(--border, 214 32% 91%)) !important;
     border-radius: 4px !important;
-    overflow: hidden !important;
+    overflow: visible !important;
+    position: relative !important;
   `;
   
   tableContainer.appendChild(table);
