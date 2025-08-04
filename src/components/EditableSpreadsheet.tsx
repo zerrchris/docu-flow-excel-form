@@ -4340,7 +4340,7 @@ ${extractionFields}`
         <div 
           ref={containerRef}
           className="border rounded-md bg-background relative h-[750px] mx-6"
-          style={{ overflow: 'auto', width: `${getTotalTableWidth()}px`, maxWidth: '100%' }}
+          style={{ overflow: 'auto', width: `${getTotalTableWidth()}px` }}
         >
           <div style={{ width: `${getTotalTableWidth()}px` }}>
             <Table className="border-collapse" style={{ tableLayout: 'fixed', width: `${getTotalTableWidth()}px` }}>
