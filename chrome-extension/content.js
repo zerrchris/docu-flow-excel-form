@@ -2363,6 +2363,11 @@ function createFullRunsheetView(content) {
 function switchViewMode(newMode) {
   if (newMode === currentViewMode) return;
   
+  // Save current form data before switching views
+  if (typeof saveCurrentFormData === 'function') {
+    saveCurrentFormData();
+  }
+  
   currentViewMode = newMode;
   chrome.storage.local.set({ viewMode: newMode });
   
@@ -2375,6 +2380,14 @@ function switchViewMode(newMode) {
         createFullRunsheetView(content);
       } else {
         createSingleEntryView(content);
+        
+        // Restore form data when switching back to single view
+        setTimeout(() => {
+          if (typeof restoreFormData === 'function') {
+            restoreFormData();
+          }
+        }, 100);
+      }
       }
     }
     updateViewModeButton();
