@@ -4663,7 +4663,7 @@ ${extractionFields}`
                         maxWidth: "450px"
                       }}
                     >
-                       <div className="bg-background border border-border rounded-md p-2 h-full min-h-[60px] flex items-center overflow-hidden">
+                       <div className="bg-background border border-border rounded-md p-2 h-full min-h-[60px] flex flex-col gap-1 overflow-visible">
                          <DocumentLinker
                            key={`${rowIndex}-${row['Document File Name']}`}
                            runsheetId={currentRunsheetId || ''}
