@@ -41,10 +41,17 @@ async function checkAuth() {
 // Create the floating runsheet button
 function createRunsheetButton() {
   console.log('🔧 RunsheetPro Extension: createRunsheetButton() called');
+  console.log('🔧 RunsheetPro Extension: Current button element:', runsheetButton);
   
   if (runsheetButton) {
-    console.log('🔧 RunsheetPro Extension: Button already exists, skipping creation');
-    return; // Already exists
+    console.log('🔧 RunsheetPro Extension: Button already exists, checking if attached to DOM');
+    if (document.body && document.body.contains(runsheetButton)) {
+      console.log('🔧 RunsheetPro Extension: Button exists and is in DOM, skipping creation');
+      return;
+    } else {
+      console.log('🔧 RunsheetPro Extension: Button exists but not in DOM, recreating');
+      runsheetButton = null;
+    }
   }
   
   console.log('🔧 RunsheetPro Extension: Creating new runsheet button');
@@ -235,10 +242,19 @@ function showSignInPopup() {
   });
 }
     }
-  });
+  
+  console.log('🔧 RunsheetPro Extension: About to append button to document.body');
+  console.log('🔧 RunsheetPro Extension: document.body exists:', !!document.body);
+  console.log('🔧 RunsheetPro Extension: document.readyState:', document.readyState);
+  
+  if (!document.body) {
+    console.error('🔧 RunsheetPro Extension: document.body is not available, cannot append button');
+    return;
+  }
   
   document.body.appendChild(runsheetButton);
   console.log('🔧 RunsheetPro Extension: Runsheet button created and added to DOM');
+  console.log('🔧 RunsheetPro Extension: Button is in DOM:', document.body.contains(runsheetButton));
 }
 
 // Show quick create dialog
@@ -2638,9 +2654,6 @@ function debounce(func, wait) {
 }
 
 // Initialize extension with state restoration
-init();
-
-function initializeExtension() {
   console.log('🔧 RunsheetPro Extension: Starting initializeExtension() function');
   
   // Check if extension is disabled
