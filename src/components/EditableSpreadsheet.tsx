@@ -652,7 +652,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       console.log('🔄 Cleaning up real-time subscription');
       supabase.removeChannel(channel);
     };
-  }, [currentRunsheetId, user, onDataChange, onColumnChange, onColumnInstructionsChange, toast]);
+  }, [currentRunsheetId, user]);
 
   // Update runsheet name when initialRunsheetName prop changes
   useEffect(() => {
