@@ -727,7 +727,22 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             console.log('🔍 EditableSpreadsheet: Fetching updated document map for runsheet:', activeRunsheetId);
             const documents = await DocumentService.getDocumentMapForRunsheet(activeRunsheetId);
             console.log('🔧 EditableSpreadsheet: New document map:', documents);
-            updateDocumentMap(documents);
+            console.log('🔧 EditableSpreadsheet: Document map size:', documents.size);
+            
+            // Force update the document map and trigger re-render
+            updateDocumentMap(new Map(documents));
+            
+            // Force refresh any cached image elements
+            setTimeout(() => {
+              const images = document.querySelectorAll('img[src*="supabase"]');
+              images.forEach((img: Element) => {
+                const htmlImg = img as HTMLImageElement;
+                const src = htmlImg.src;
+                htmlImg.src = '';
+                htmlImg.src = src + '?t=' + Date.now();
+              });
+              console.log('🔧 EditableSpreadsheet: Force refreshed', images.length, 'cached images');
+            }, 100);
             
             // Don't refresh runsheet data when document processor just added data locally
             // The local data is more current than the database at this point
@@ -744,10 +759,20 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     console.log('🔧 EditableSpreadsheet: Setting up document record created event listener for activeRunsheetId:', currentRunsheet?.id || currentRunsheetId);
     window.addEventListener('documentRecordCreated', handleDocumentRecordCreated as EventListener);
     
+    // Also listen for postMessage events from extension
+    const handlePostMessage = (event: MessageEvent) => {
+      if (event.data && event.data.type === 'documentRecordCreated') {
+        console.log('🚨 EditableSpreadsheet: PostMessage received from extension:', event.data.detail);
+        handleDocumentRecordCreated(new CustomEvent('documentRecordCreated', { detail: event.data.detail }));
+      }
+    };
+    window.addEventListener('message', handlePostMessage);
+    
     
     return () => {
       console.log('🔧 EditableSpreadsheet: Removing document record created event listener');
       window.removeEventListener('documentRecordCreated', handleDocumentRecordCreated as EventListener);
+      window.removeEventListener('message', handlePostMessage);
     };
   }, [user, currentRunsheetId]); // Removed currentRunsheet to prevent constant re-runs
 

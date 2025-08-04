@@ -687,17 +687,44 @@ async function addRowToSheet() {
       // If a document was created, fire an event for the main app to refresh its document map
       if (result.document_created) {
         console.log('🚨 Extension: Firing document record created event for runsheet:', result.runsheet_id);
-        const event = new CustomEvent('documentRecordCreated', {
-          detail: {
-            runsheetId: result.runsheet_id,
-            rowIndex: result.row_index,
-            allPossibleIds: {
-              activeRunsheetId: result.runsheet_id,
-              finalRunsheetId: result.runsheet_id
-            }
-          }
+        console.log('🚨 Extension: Event details:', {
+          runsheetId: result.runsheet_id,
+          rowIndex: result.row_index,
+          document_created: result.document_created
         });
+        
+        // Fire event in different ways to ensure it reaches the main app
+        const eventDetail = {
+          runsheetId: result.runsheet_id,
+          rowIndex: result.row_index,
+          allPossibleIds: {
+            activeRunsheetId: result.runsheet_id,
+            finalRunsheetId: result.runsheet_id
+          }
+        };
+        
+        // Method 1: Direct window event
+        const event = new CustomEvent('documentRecordCreated', { detail: eventDetail });
         window.dispatchEvent(event);
+        console.log('🚨 Extension: Event dispatched to window');
+        
+        // Method 2: PostMessage to parent (in case of iframe)
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage({
+            type: 'documentRecordCreated',
+            detail: eventDetail
+          }, '*');
+          console.log('🚨 Extension: Event posted to parent window');
+        }
+        
+        // Method 3: PostMessage to opener (in case of popup)
+        if (window.opener) {
+          window.opener.postMessage({
+            type: 'documentRecordCreated',
+            detail: eventDetail
+          }, '*');
+          console.log('🚨 Extension: Event posted to opener window');
+        }
       }
       
       // Update current row index to move to next row
