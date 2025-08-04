@@ -1724,10 +1724,12 @@ function createSingleEntryView(content) {
   actionArea.style.cssText = `
     display: flex !important;
     gap: 8px !important;
-    padding: 8px !important;
+    padding: 0 8px !important;
     align-items: center !important;
     justify-content: flex-start !important;
     flex-shrink: 0 !important;
+    height: 100% !important;
+    min-height: 50px !important;
   `;
   
   // Add Row button
@@ -1871,13 +1873,16 @@ function createSingleEntryView(content) {
   actionArea.appendChild(addRowBtn);
   actionArea.appendChild(screenshotContainer);
   
-  // Create container that holds table and action area side by side
+  // Create container that holds table and action area side by side with no extra space
   const tableContainer = document.createElement('div');
   tableContainer.style.cssText = `
     display: flex !important;
-    align-items: flex-start !important;
+    align-items: stretch !important;
     width: fit-content !important;
     max-width: 100% !important;
+    border: 1px solid hsl(var(--border, 214 32% 91%)) !important;
+    border-radius: 4px !important;
+    overflow: hidden !important;
   `;
   
   tableContainer.appendChild(table);
@@ -1903,10 +1908,17 @@ function updateTableWidth() {
     totalWidth += parseInt(storedWidth);
   });
   
-  // Set the table width to match total column widths
+  // Set the table width to exactly match total column widths
   table.style.width = `${totalWidth}px`;
   table.style.minWidth = `${totalWidth}px`;
   table.style.maxWidth = `${totalWidth}px`;
+  
+  // Also update the container to fit exactly
+  const container = document.querySelector('#runsheetpro-runsheet-frame .table');
+  if (container && container.parentElement) {
+    container.parentElement.style.width = 'fit-content';
+  }
+}
 }
 
 // Create full runsheet view (shows all data)
