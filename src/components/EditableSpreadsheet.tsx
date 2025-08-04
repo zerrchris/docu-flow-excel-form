@@ -2691,7 +2691,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     const dataColumnsWidth = columns.reduce((total, column) => total + getColumnWidth(column), 0);
     const documentFileNameWidth = showDocumentFileNameColumn ? 200 : 0;
     const actionsColumnWidth = 200; // Fixed width for actions column
-    return dataColumnsWidth + documentFileNameWidth + actionsColumnWidth;
+    // Add some padding to prevent cramped layout
+    return dataColumnsWidth + documentFileNameWidth + actionsColumnWidth + 40;
   };
 
   // Column resize handlers
@@ -4300,10 +4301,10 @@ ${extractionFields}`
         <div 
           ref={containerRef}
           className="border rounded-md bg-background relative h-[750px] mx-6"
-          style={{ overflow: 'auto' }}
+          style={{ overflow: 'auto', width: 'fit-content', maxWidth: '100%' }}
         >
-          <div className="min-w-fit">
-            <Table className="border-collapse w-full" style={{ minWidth: `${getTotalTableWidth()}px` }}>
+          <div style={{ width: `${getTotalTableWidth()}px` }}>
+            <Table className="border-collapse" style={{ tableLayout: 'fixed', width: `${getTotalTableWidth()}px` }}>
             {/* Sticky Header */}
             <TableHeader className="sticky top-0 z-40 bg-background border-b-2 shadow-sm"
               style={{ boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
@@ -4341,9 +4342,16 @@ ${extractionFields}`
                               </div>
                              {/* Resize handle */}
                              <div
-                               className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/30 bg-border/50"
-                               onMouseDown={(e) => handleMouseDown(e, column)}
-                               onClick={(e) => e.stopPropagation()}
+                               className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-primary/50 bg-border/30 transition-colors z-10"
+                               onMouseDown={(e) => {
+                                 e.stopPropagation();
+                                 e.preventDefault();
+                                 handleMouseDown(e, column);
+                               }}
+                               onClick={(e) => {
+                                 e.stopPropagation();
+                                 e.preventDefault();
+                               }}
                              />
                            </div>
                          </ContextMenuTrigger>
