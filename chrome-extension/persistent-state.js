@@ -175,7 +175,7 @@ function restoreSnipSession() {
   
   // Show appropriate controls based on mode
   if (snipSession.mode === 'navigate') {
-    showNavigateSnipControls();
+    createNavigationControlPanel();
     updateSnipCounter();
     
     // Show preview if there are captures
