@@ -2730,7 +2730,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const getTotalTableWidth = () => {
     const dataColumnsWidth = columns.reduce((total, column) => total + getColumnWidth(column), 0);
     const documentFileNameWidth = showDocumentFileNameColumn ? 350 : 0;
-    const actionsColumnWidth = 500; // Fixed width for actions column (Document Linker)
+    const actionsColumnWidth = 600; // Fixed width for actions column (Document Linker) - increased to show all buttons
     return dataColumnsWidth + documentFileNameWidth + actionsColumnWidth;
   };
 
@@ -4431,7 +4431,7 @@ ${extractionFields}`
                  {/* Actions column header - not draggable */}
                   <TableHead 
                     className="font-bold text-center relative p-0 bg-muted/50"
-                    style={{ width: "500px", minWidth: "500px" }}
+                    style={{ width: "600px", minWidth: "600px" }}
                    >
                    <div className="w-full h-full px-4 py-2 flex flex-col gap-1">
                      <Button
@@ -4657,9 +4657,9 @@ ${extractionFields}`
                      <TableCell 
                        className="p-0 overflow-hidden"
                        style={{ 
-                         width: "500px", 
-                         minWidth: "500px",
-                         maxWidth: "500px"
+                         width: "600px", 
+                         minWidth: "600px",
+                         maxWidth: "600px"
                        }}
                     >
                        <div className="bg-background border border-border rounded-md p-2 h-full min-h-[60px] flex flex-col gap-1 overflow-visible">
