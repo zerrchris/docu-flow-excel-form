@@ -4567,13 +4567,14 @@ ${extractionFields}`
                        return (
                          <TableCell 
                            key={`${rowIndex}-${column}`}
-                           className={`border-r border-border p-0 cursor-text`}
-                           style={{ 
-                             width: "200px", 
-                             minWidth: "200px",
-                             height: isEditing ? 'fit-content' : `${getRowHeight(rowIndex)}px`,
-                             minHeight: isEditing ? '60px' : `${getRowHeight(rowIndex)}px`
-                           }}
+                            className={`border-r border-border p-0 cursor-text overflow-hidden`}
+                            style={{ 
+                              width: "350px", 
+                              minWidth: "350px",
+                              maxWidth: "350px",
+                              height: isEditing ? 'fit-content' : `${getRowHeight(rowIndex)}px`,
+                              minHeight: isEditing ? '60px' : `${getRowHeight(rowIndex)}px`
+                            }}
                             onClick={(e) => handleCellClick(rowIndex, column, e)}
                             onDoubleClick={() => handleCellDoubleClick(rowIndex, column)}
                            tabIndex={isSelected ? 0 : -1}
@@ -4629,22 +4630,25 @@ ${extractionFields}`
                                 autoFocus
                               />
                            ) : (
-                             <div
-                               data-cell={`${rowIndex}-${column}`}
-                               className={`w-full h-full min-h-[2rem] py-2 px-3 flex items-start transition-colors whitespace-pre-wrap select-none
-                                 ${isSelected 
-                                   ? 'bg-primary/20 border-2 border-primary ring-2 ring-primary/20' 
-                                   : isInRange
-                                   ? 'bg-primary/10 border-2 border-primary/50'
-                                   : 'hover:bg-muted/50 border-2 border-transparent'
-                                 } text-left justify-start`}
-                               onMouseDown={(e) => handleCellMouseDown(e, rowIndex, column)}
-                               onMouseEnter={() => handleMouseEnter(rowIndex, column)}
-                               onMouseUp={handleMouseUp}
-                               onKeyDown={(e) => handleKeyDown(e, rowIndex, column)}
-                             >
-                                {documentMap.get(rowIndex)?.stored_filename || row[column] || ''}
-                             </div>
+                              <div
+                                data-cell={`${rowIndex}-${column}`}
+                                className={`w-full h-full min-h-[2rem] py-2 px-3 flex items-center transition-colors select-none overflow-hidden
+                                  ${isSelected 
+                                    ? 'bg-primary/20 border-2 border-primary ring-2 ring-primary/20' 
+                                    : isInRange
+                                    ? 'bg-primary/10 border-2 border-primary/50'
+                                    : 'hover:bg-muted/50 border-2 border-transparent'
+                                  }`}
+                                onMouseDown={(e) => handleCellMouseDown(e, rowIndex, column)}
+                                onMouseEnter={() => handleMouseEnter(rowIndex, column)}
+                                onMouseUp={handleMouseUp}
+                                onKeyDown={(e) => handleKeyDown(e, rowIndex, column)}
+                                title={documentMap.get(rowIndex)?.stored_filename || row[column] || ''}
+                              >
+                                <span className="truncate block w-full text-left">
+                                  {documentMap.get(rowIndex)?.stored_filename || row[column] || ''}
+                                </span>
+                              </div>
                            )}
                          </TableCell>
                        );
