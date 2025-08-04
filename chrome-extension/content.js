@@ -1777,34 +1777,116 @@ function createSingleEntryView(content) {
     }
   });
   
-  // Screenshot button
+  // Screenshot dropdown container
+  const screenshotContainer = document.createElement('div');
+  screenshotContainer.style.cssText = `
+    position: relative !important;
+    width: 100% !important;
+  `;
+  
+  // Screenshot dropdown button
   const screenshotBtn = document.createElement('button');
   screenshotBtn.className = 'screenshot-btn';
-  screenshotBtn.innerHTML = '📷 Screenshot';
+  screenshotBtn.innerHTML = '📸 Screenshot ⌄';
   screenshotBtn.style.cssText = `
-    background: hsl(var(--secondary, 210 40% 96%)) !important;
-    color: hsl(var(--secondary-foreground, 222 47% 11%)) !important;
-    border: 1px solid hsl(var(--border, 214 32% 91%)) !important;
-    border-radius: 4px !important;
+    background: linear-gradient(135deg, hsl(215 80% 40%), hsl(230 60% 60%)) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 6px !important;
     padding: 10px 16px !important;
     font-size: 12px !important;
     cursor: pointer !important;
     width: 100% !important;
     font-weight: 500 !important;
     transition: all 0.2s ease !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 4px !important;
   `;
   screenshotBtn.tabIndex = 0;
-  screenshotBtn.title = 'Take a screenshot';
+  screenshotBtn.title = 'Choose screenshot method';
   
-  screenshotBtn.addEventListener('click', () => {
-    console.log('Screenshot button clicked');
-    startSnipMode();
+  // Screenshot dropdown menu
+  const screenshotDropdown = document.createElement('div');
+  screenshotDropdown.style.cssText = `
+    position: absolute !important;
+    bottom: 100% !important;
+    left: 0 !important;
+    right: 0 !important;
+    background: white !important;
+    border: 1px solid hsl(var(--border, 214 32% 91%)) !important;
+    border-radius: 6px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    z-index: 1000 !important;
+    display: none !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    margin-bottom: 4px !important;
+  `;
+  
+  screenshotDropdown.innerHTML = `
+    <div style="padding: 8px 0;">
+      <button class="screenshot-option" data-type="area" style="width: 100%; text-align: left; padding: 8px 12px; border: none; background: none; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 8px;">
+        🎯 <span><strong>Area Capture</strong><br><small style="color: #666; font-size: 10px;">Select specific area</small></span>
+      </button>
+      <button class="screenshot-option" data-type="single" style="width: 100%; text-align: left; padding: 8px 12px; border: none; background: none; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 8px;">
+        📸 <span><strong>Single Screenshot</strong><br><small style="color: #666; font-size: 10px;">Capture current screen</small></span>
+      </button>
+      <button class="screenshot-option" data-type="session" style="width: 100%; text-align: left; padding: 8px 12px; border: none; background: none; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 8px;">
+        📋 <span><strong>Multi-Page Session</strong><br><small style="color: #666; font-size: 10px;">Capture multiple pages</small></span>
+      </button>
+    </div>
+  `;
+  
+  // Toggle dropdown
+  screenshotBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isVisible = screenshotDropdown.style.display === 'block';
+    screenshotDropdown.style.display = isVisible ? 'none' : 'block';
   });
   
+  // Close dropdown when clicking outside
+  document.addEventListener('click', () => {
+    screenshotDropdown.style.display = 'none';
+  });
+  
+  // Handle screenshot option clicks
+  screenshotDropdown.addEventListener('click', (e) => {
+    const option = e.target.closest('.screenshot-option');
+    if (!option) return;
+    
+    const type = option.dataset.type;
+    screenshotDropdown.style.display = 'none';
+    
+    switch (type) {
+      case 'area':
+        startAreaCapture();
+        break;
+      case 'single':
+        captureSingleScreenshot();
+        break;
+      case 'session':
+        startScreenshotSession();
+        break;
+    }
+  });
+  
+  // Hover effects for dropdown options
+  screenshotDropdown.querySelectorAll('.screenshot-option').forEach(option => {
+    option.addEventListener('mouseenter', () => {
+      option.style.backgroundColor = 'hsl(var(--accent, 210 40% 98%))';
+    });
+    option.addEventListener('mouseleave', () => {
+      option.style.backgroundColor = 'transparent';
+    });
+  });
+  
+  // Keyboard navigation
   screenshotBtn.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      startSnipMode();
+      const isVisible = screenshotDropdown.style.display === 'block';
+      screenshotDropdown.style.display = isVisible ? 'none' : 'block';
     } else if (e.key === 'Tab' && e.shiftKey) {
       // Shift+Tab moves back to add row button
       e.preventDefault();
@@ -1820,8 +1902,11 @@ function createSingleEntryView(content) {
     }
   });
   
+  screenshotContainer.appendChild(screenshotBtn);
+  screenshotContainer.appendChild(screenshotDropdown);
+  
   actionArea.appendChild(addRowBtn);
-  actionArea.appendChild(screenshotBtn);
+  actionArea.appendChild(screenshotContainer);
   
   // Create container that holds both table and action area
   const tableContainer = document.createElement('div');
