@@ -1786,10 +1786,10 @@ function createSingleEntryView(content) {
     flex-shrink: 0 !important;
   `;
   
-  // Screenshot dropdown button
+  // Screenshot button (no dropdown - goes directly to snip options)
   const screenshotBtn = document.createElement('button');
   screenshotBtn.className = 'screenshot-btn';
-  screenshotBtn.innerHTML = '📸 Screenshot ⌄';
+  screenshotBtn.innerHTML = '📸 Screenshot';
   screenshotBtn.style.cssText = `
     background: linear-gradient(135deg, hsl(215 80% 40%), hsl(230 60% 60%)) !important;
     color: white !important;
@@ -1841,55 +1841,16 @@ function createSingleEntryView(content) {
     </div>
   `;
   
-  // Toggle dropdown
-  screenshotBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    const isVisible = screenshotDropdown.style.display === 'block';
-    screenshotDropdown.style.display = isVisible ? 'none' : 'block';
+  // Screenshot button click handler - goes directly to snip mode selector
+  screenshotBtn.addEventListener('click', () => {
+    showSnipModeSelector();
   });
   
-  // Close dropdown when clicking outside
-  document.addEventListener('click', () => {
-    screenshotDropdown.style.display = 'none';
-  });
-  
-  // Handle screenshot option clicks
-  screenshotDropdown.addEventListener('click', (e) => {
-    const option = e.target.closest('.screenshot-option');
-    if (!option) return;
-    
-    const type = option.dataset.type;
-    screenshotDropdown.style.display = 'none';
-    
-    switch (type) {
-      case 'area':
-        startSnipMode('single');
-        break;
-      case 'single':
-        startSnipMode('single');
-        break;
-      case 'session':
-        startSnipMode('navigate');
-        break;
-    }
-  });
-  
-  // Hover effects for dropdown options
-  screenshotDropdown.querySelectorAll('.screenshot-option').forEach(option => {
-    option.addEventListener('mouseenter', () => {
-      option.style.backgroundColor = 'hsl(var(--accent, 210 40% 98%))';
-    });
-    option.addEventListener('mouseleave', () => {
-      option.style.backgroundColor = 'transparent';
-    });
-  });
-  
-  // Keyboard navigation
+  // Keyboard navigation for screenshot button
   screenshotBtn.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      const isVisible = screenshotDropdown.style.display === 'block';
-      screenshotDropdown.style.display = isVisible ? 'none' : 'block';
+      showSnipModeSelector();
     } else if (e.key === 'Tab' && e.shiftKey) {
       // Shift+Tab moves back to add row button
       e.preventDefault();
@@ -1906,7 +1867,6 @@ function createSingleEntryView(content) {
   });
   
   screenshotContainer.appendChild(screenshotBtn);
-  screenshotContainer.appendChild(screenshotDropdown);
   
   actionArea.appendChild(addRowBtn);
   actionArea.appendChild(screenshotContainer);
