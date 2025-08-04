@@ -903,7 +903,7 @@ function createRunsheetFrame() {
       ` : ''}
     </span>
     <div class="frame-controls">
-      <button id="screenshot-btn" class="control-btn" style="background: green !important; color: white !important;">📷 Screenshot Options</button>
+      ${currentViewMode === 'single' ? '<button id="screenshot-btn" class="control-btn" style="background: green !important; color: white !important;">📷 Screenshot Options</button>' : ''}
       <button id="open-app-btn" class="control-btn">🚀 Open in App</button>
       <button id="view-mode-btn" class="control-btn">${currentViewMode === 'single' ? '📋 Quick View' : '📝 Back to Entry'}</button>
       <button id="select-runsheet-btn" class="control-btn">📄 Select Sheet</button>
