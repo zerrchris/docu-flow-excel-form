@@ -693,7 +693,6 @@ async function addRowToSheet() {
           document_created: result.document_created
         });
         
-        // Fire event in different ways to ensure it reaches the main app
         const eventDetail = {
           runsheetId: result.runsheet_id,
           rowIndex: result.row_index,
@@ -703,28 +702,13 @@ async function addRowToSheet() {
           }
         };
         
-        // Method 1: Direct window event
-        const event = new CustomEvent('documentRecordCreated', { detail: eventDetail });
-        window.dispatchEvent(event);
-        console.log('🚨 Extension: Event dispatched to window');
-        
-        // Method 2: PostMessage to parent (in case of iframe)
-        if (window.parent && window.parent !== window) {
-          window.parent.postMessage({
-            type: 'documentRecordCreated',
-            detail: eventDetail
-          }, '*');
-          console.log('🚨 Extension: Event posted to parent window');
-        }
-        
-        // Method 3: PostMessage to opener (in case of popup)
-        if (window.opener) {
-          window.opener.postMessage({
-            type: 'documentRecordCreated',
-            detail: eventDetail
-          }, '*');
-          console.log('🚨 Extension: Event posted to opener window');
-        }
+        // Use postMessage to communicate with main app (content script -> page)
+        window.postMessage({
+          type: 'EXTENSION_DOCUMENT_CREATED',
+          detail: eventDetail,
+          source: 'runsheet-extension'
+        }, '*');
+        console.log('🚨 Extension: PostMessage sent to main app');
       }
       
       // Update current row index to move to next row

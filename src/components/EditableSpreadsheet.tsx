@@ -761,7 +761,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     
     // Also listen for postMessage events from extension
     const handlePostMessage = (event: MessageEvent) => {
-      if (event.data && event.data.type === 'documentRecordCreated') {
+      // Only process messages from our extension
+      if (event.data && event.data.source === 'runsheet-extension' && event.data.type === 'EXTENSION_DOCUMENT_CREATED') {
         console.log('🚨 EditableSpreadsheet: PostMessage received from extension:', event.data.detail);
         handleDocumentRecordCreated(new CustomEvent('documentRecordCreated', { detail: event.data.detail }));
       }
