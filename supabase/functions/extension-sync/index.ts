@@ -99,6 +99,12 @@ Deno.serve(async (req) => {
         // We need to extract: user_id/snips/filename.png
         const baseUrl = `${supabaseUrl}/storage/v1/object/public/documents/`
         const filePath = screenshot_url.replace(baseUrl, '')
+        
+        console.log('URL parsing debug:', {
+          screenshot_url,
+          baseUrl,
+          extractedFilePath: filePath
+        })
 
         console.log('Creating document record:', {
           filename,
