@@ -691,8 +691,8 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                   />
                 ) : (
                   <span 
-                    className="text-sm font-medium truncate cursor-pointer hover:text-primary max-w-[400px] block" 
-                    style={{ maxWidth: '400px' }}
+                    className="text-sm font-medium truncate cursor-pointer hover:text-primary max-w-[600px] block" 
+                    style={{ maxWidth: '600px' }}
                     title={filename}
                     onClick={() => {
                       setEditedFilename(filename);
@@ -706,7 +706,7 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
             )}
           </div>
           {!isEditingName && (
-            <div className="flex items-center gap-1 flex-wrap">
+            <div className="flex items-center gap-1 flex-nowrap flex-shrink-0">
               {/* Show Analyze button only for spreadsheet uploads with stored file */}
               {isSpreadsheetUpload && uploadedFile && onAnalyzeDocument && (
                 <Button
