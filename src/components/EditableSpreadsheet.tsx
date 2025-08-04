@@ -4502,35 +4502,50 @@ ${extractionFields}`
                           onDoubleClick={() => handleCellDoubleClick(rowIndex, column)}
                           tabIndex={isSelected ? 0 : -1}
                        >
-                         {isEditing ? (
-                            <Textarea
-                              ref={textareaRef}
-                              value={cellValue}
-                              onChange={(e) => setCellValue(e.target.value)}
-                              onKeyDown={(e) => {
-                                // Allow Shift+Enter for line breaks, but handle Tab/Enter/Escape/Arrow keys
-                                if ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Tab' || e.key === 'Escape' || 
-                                    ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
-                                  handleInputKeyDown(e);
-                                }
-                              }}
-                              className={`w-full border-2 border-primary rounded-none bg-background focus:ring-0 focus:outline-none resize-y p-2 ${
-                                columnAlignments[column] === 'center' ? 'text-center' : 
-                                columnAlignments[column] === 'right' ? 'text-right' : 'text-left'
-                              }`}
-                              style={{ 
-                                minHeight: '60px',
-                                width: '100%',
-                                height: 'auto',
-                                overflow: 'hidden'
-                              }}
-                              onInput={(e) => {
-                                // Auto-resize textarea based on content
-                                const target = e.target as HTMLTextAreaElement;
-                                target.style.height = 'auto';
-                                target.style.height = Math.max(60, target.scrollHeight) + 'px';
-                              }}
-                            />
+                          {isEditing ? (
+                             <Textarea
+                               ref={textareaRef}
+                               value={cellValue}
+                               onChange={(e) => setCellValue(e.target.value)}
+                               onKeyDown={(e) => {
+                                 // Allow Shift+Enter for line breaks, but handle Tab/Enter/Escape/Arrow keys
+                                 if ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Tab' || e.key === 'Escape' || 
+                                     ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                                   handleInputKeyDown(e);
+                                 }
+                               }}
+                               onBlur={() => {
+                                 // Save the cell value when clicking away from the cell
+                                 if (editingCell) {
+                                   setData(prev => {
+                                     const newData = [...prev];
+                                     newData[editingCell.rowIndex] = {
+                                       ...newData[editingCell.rowIndex],
+                                       [editingCell.column]: cellValue
+                                     };
+                                     return newData;
+                                   });
+                                   setEditingCell(null);
+                                   setCellValue('');
+                                 }
+                               }}
+                               className={`w-full border-2 border-primary rounded-none bg-background focus:ring-0 focus:outline-none resize-y p-2 ${
+                                 columnAlignments[column] === 'center' ? 'text-center' : 
+                                 columnAlignments[column] === 'right' ? 'text-right' : 'text-left'
+                               }`}
+                               style={{ 
+                                 minHeight: '60px',
+                                 width: '100%',
+                                 height: 'auto',
+                                 overflow: 'hidden'
+                               }}
+                               onInput={(e) => {
+                                 // Auto-resize textarea based on content
+                                 const target = e.target as HTMLTextAreaElement;
+                                 target.style.height = 'auto';
+                                 target.style.height = Math.max(60, target.scrollHeight) + 'px';
+                               }}
+                             />
                          ) : (
                            <div
                              data-cell={`${rowIndex}-${column}`}
