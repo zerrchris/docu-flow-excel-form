@@ -168,7 +168,7 @@ function cleanupSnipSession() {
 }
 
 // Restore snip session after page navigation
-function restoreSnipSession() {
+function restoreSnipSession(retryCount = 0) {
   if (!snipSession.active) {
     console.log('🔧 RunsheetPro Extension: No active snip session to restore');
     return;
@@ -195,8 +195,8 @@ function restoreSnipSession() {
       createNavigationControlPanel();
       updateSnipCounter();
       
-      // Show preview if there are captures
-      if (snipSession.captures.length > 0) {
+      // Show preview if there are captures and function exists
+      if (snipSession.captures.length > 0 && typeof showSnipPreview === 'function') {
         showSnipPreview();
       }
       
@@ -213,7 +213,7 @@ function restoreSnipSession() {
       showScrollSnipControls();
       updateSnipCounter();
       
-      if (snipSession.captures.length > 0) {
+      if (snipSession.captures.length > 0 && typeof showSnipPreview === 'function') {
         showSnipPreview();
       }
       
@@ -222,11 +222,15 @@ function restoreSnipSession() {
     }
   } catch (error) {
     console.error('🔧 RunsheetPro Extension: Error restoring snip session:', error);
-    // Try again after a longer delay
-    setTimeout(() => {
-      console.log('🔧 RunsheetPro Extension: Retrying snip session restoration');
-      restoreSnipSession();
-    }, 2000);
+    // Try again after a longer delay, but limit retries
+    if (retryCount < 3) {
+      setTimeout(() => {
+        console.log('🔧 RunsheetPro Extension: Retrying snip session restoration, attempt', retryCount + 1);
+        restoreSnipSession(retryCount + 1);
+      }, 2000);
+    } else {
+      console.error('🔧 RunsheetPro Extension: Max retries reached, giving up on snip session restoration');
+    }
   }
 }
 
