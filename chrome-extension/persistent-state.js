@@ -287,5 +287,8 @@ async function initializeExtensionWithStateRestore() {
   }
 }
 
-// Call initialization when script loads
-initializeExtensionWithStateRestore();
+// Initialize when content script loads
+console.log('🔧 RunsheetPro Extension: Persistent state script loaded');
+
+// Don't auto-initialize from here - let content.js handle it
+// The content.js will call this when needed

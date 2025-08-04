@@ -104,7 +104,9 @@ function createRunsheetButton() {
         showRunsheetSelector();
       } else {
         showSignInPopup();
-}
+      }
+    }
+  });
 
 // Show sign-in popup
 function showSignInPopup() {
