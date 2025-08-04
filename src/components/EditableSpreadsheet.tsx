@@ -224,7 +224,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [showNamingSettings, setShowNamingSettings] = useState(false);
   const [inlineViewerRow, setInlineViewerRow] = useState<number | null>(null);
   const [fullScreenWorkspace, setFullScreenWorkspace] = useState<{ runsheetId: string; rowIndex: number } | null>(null);
-  const [showDocumentFileNameColumn, setShowDocumentFileNameColumn] = useState(false); // Set to false by default - column removed
+  const [showDocumentFileNameColumn, setShowDocumentFileNameColumn] = useState(true);
   
   // Listen for document upload save requests
   React.useEffect(() => {
@@ -2730,7 +2730,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const getTotalTableWidth = () => {
     const dataColumnsWidth = columns.reduce((total, column) => total + getColumnWidth(column), 0);
     const documentFileNameWidth = showDocumentFileNameColumn ? 350 : 0;
-    const actionsColumnWidth = 600; // Minimum width for actions column
+    const actionsColumnWidth = 600; // Fixed width for actions column (Document Linker) - increased to show all buttons
     return dataColumnsWidth + documentFileNameWidth + actionsColumnWidth;
   };
 
@@ -4340,7 +4340,7 @@ ${extractionFields}`
         <div 
           ref={containerRef}
           className="border rounded-md bg-background relative h-[750px] mx-6"
-          style={{ overflow: 'auto', width: `${getTotalTableWidth()}px` }}
+          style={{ overflow: 'auto', width: `${getTotalTableWidth()}px`, maxWidth: '100%' }}
         >
           <div style={{ width: `${getTotalTableWidth()}px` }}>
             <Table className="border-collapse" style={{ tableLayout: 'fixed', width: `${getTotalTableWidth()}px` }}>
@@ -4415,23 +4415,44 @@ ${extractionFields}`
                      </ContextMenu>
                    </TableHead>
                  ))}
-                  
-                  {/* Actions column header - not draggable */}
-                  <TableHead 
-                    className="font-bold text-center relative p-0 bg-muted/50 border-r-0"
-                    style={{ minWidth: "600px" }}
+                
+                 {/* Document File Name column header - conditionally visible */}
+                 {showDocumentFileNameColumn && (
+                   <TableHead 
+                     className="font-bold text-center border-r border-border relative p-0 bg-muted/50"
+                     style={{ width: "200px", minWidth: "200px" }}
                    >
-                    <div className="w-full h-full px-4 py-2 flex flex-col gap-1">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setShowDocumentNamingDialog(true)}
-                          className="text-xs"
-                        >
-                         <Sparkles className="h-3 w-3 mr-1 text-purple-600" />
-                          Smart File Name Settings
-                        </Button>
-                    </div>
+                     <div className="w-full h-full px-4 py-2 flex flex-col items-center justify-center">
+                       <span className="font-bold">Document File Name</span>
+                     </div>
+                   </TableHead>
+                 )}
+                 
+                 {/* Actions column header - not draggable */}
+                  <TableHead 
+                    className="font-bold text-center relative p-0 bg-muted/50"
+                    style={{ width: "600px", minWidth: "600px" }}
+                   >
+                   <div className="w-full h-full px-4 py-2 flex flex-col gap-1">
+                     <Button
+                       variant="outline"
+                       size="sm"
+                       onClick={() => setShowDocumentFileNameColumn(!showDocumentFileNameColumn)}
+                       className="text-xs"
+                     >
+                       {showDocumentFileNameColumn ? <EyeOff className="h-3 w-3 mr-1" /> : <Eye className="h-3 w-3 mr-1" />}
+                       {showDocumentFileNameColumn ? 'Hide' : 'Show'} File Name Column
+                     </Button>
+                       <Button
+                         variant="outline"
+                         size="sm"
+                         onClick={() => setShowDocumentNamingDialog(true)}
+                         className="text-xs"
+                       >
+                        <Sparkles className="h-3 w-3 mr-1 text-purple-600" />
+                         Smart File Name Settings
+                      </Button>
+                   </div>
                  </TableHead>
                </TableRow>
              </TableHeader>
@@ -4443,8 +4464,8 @@ ${extractionFields}`
                       <React.Fragment key={`row-${rowIndex}`}>
                         {/* Show inline document viewer above this row if it's selected */}
                        {inlineViewerRow === rowIndex && (
-                       <TableRow>
-                         <TableCell colSpan={columns.length + 1} className="p-0 border-0">
+                      <TableRow>
+                        <TableCell colSpan={columns.length + (showDocumentFileNameColumn ? 1 : 0) + 1} className="p-0 border-0">
                           <InlineDocumentViewer
                             runsheetId={currentRunsheetId || ''}
                             rowIndex={rowIndex}
@@ -4534,8 +4555,8 @@ ${extractionFields}`
                      );
                     })}
                     
-                     
-                      {/* Actions column - Document management */}
+                     {/* Document File Name column - conditionally visible */}
+                     {showDocumentFileNameColumn && (() => {
                        const column = 'Document File Name';
                        const isSelected = selectedCell?.rowIndex === rowIndex && selectedCell?.column === column;
                        const isEditing = editingCell?.rowIndex === rowIndex && editingCell?.column === column;
@@ -4543,19 +4564,19 @@ ${extractionFields}`
                        const isInRange = isCellInRange(rowIndex, columnIndex);
                        
                        return (
-                          <TableCell 
-                            key={`${rowIndex}-${column}`}
-                             className={`border-r-0 p-0 cursor-text overflow-hidden`}
-                             style={{ 
-                               width: "350px", 
-                               minWidth: "350px",
-                               maxWidth: "350px",
-                               height: isEditing ? 'fit-content' : `${getRowHeight(rowIndex)}px`,
-                               minHeight: isEditing ? '60px' : `${getRowHeight(rowIndex)}px`
-                             }}
-                             onClick={(e) => handleCellClick(rowIndex, column, e)}
-                             onDoubleClick={() => handleCellDoubleClick(rowIndex, column)}
-                            tabIndex={isSelected ? 0 : -1}
+                         <TableCell 
+                           key={`${rowIndex}-${column}`}
+                            className={`border-r border-border p-0 cursor-text overflow-hidden`}
+                            style={{ 
+                              width: "350px", 
+                              minWidth: "350px",
+                              maxWidth: "350px",
+                              height: isEditing ? 'fit-content' : `${getRowHeight(rowIndex)}px`,
+                              minHeight: isEditing ? '60px' : `${getRowHeight(rowIndex)}px`
+                            }}
+                            onClick={(e) => handleCellClick(rowIndex, column, e)}
+                            onDoubleClick={() => handleCellDoubleClick(rowIndex, column)}
+                           tabIndex={isSelected ? 0 : -1}
                          >
                            {isEditing ? (
                               <Textarea
@@ -4618,96 +4639,29 @@ ${extractionFields}`
                                     : 'hover:bg-muted/50 border-2 border-transparent'
                                   }`}
                                 onMouseDown={(e) => handleCellMouseDown(e, rowIndex, column)}
-                                 onMouseEnter={() => handleMouseEnter(rowIndex, column)}
-                                 onMouseUp={handleMouseUp}
-                                 onKeyDown={(e) => handleKeyDown(e, rowIndex, column)}
-                                 title={documentMap.get(rowIndex)?.stored_filename || row[column] || ''}
-                               >
-                                 <span className="truncate block w-full text-left">
-                                   {documentMap.get(rowIndex)?.stored_filename || row[column] || ''}
-                                 </span>
-                               </div>
-                             )}
-                           </TableCell>
-                          );
-                     
-                         {/* Document File Name column - conditionally visible */}
-                      {showDocumentFileNameColumn && (() => {
-                        const column = 'Document File Name';
-                        const isSelected = selectedCell?.rowIndex === rowIndex && selectedCell?.column === column;
-                        const isEditing = editingCell?.rowIndex === rowIndex && editingCell?.column === column;
-                        const columnIndex = columns.length;
-                        const isInRange = isCellInRange(rowIndex, columnIndex);
-                        
-                        return (
-                          <TableCell 
-                            key={`${rowIndex}-${column}`}
-                            className={`border-r border-border p-0 cursor-text overflow-hidden`}
-                            style={{ 
-                              width: "350px", 
-                              minWidth: "350px",
-                              maxWidth: "350px",
-                              height: isEditing ? 'fit-content' : `${getRowHeight(rowIndex)}px`,
-                              minHeight: isEditing ? '60px' : `${getRowHeight(rowIndex)}px`
-                            }}
-                            onClick={(e) => handleCellClick(rowIndex, column, e)}
-                            onDoubleClick={() => handleCellDoubleClick(rowIndex, column)}
-                            tabIndex={isSelected ? 0 : -1}
-                          >
-                            {isEditing ? (
-                              <Input
-                                ref={(el) => {
-                                  if (el && isEditing) {
-                                    setTimeout(() => {
-                                      el.focus();
-                                      el.select();
-                                    }, 0);
-                                  }
-                                }}
-                                value={cellValue}
-                                onChange={(e) => setCellValue(e.target.value)}
-                                onBlur={handleCellEdit}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
-                                    e.preventDefault();
-                                    handleCellEdit();
-                                  } else if (e.key === 'Escape') {
-                                    setEditingCell(null);
-                                    setCellValue('');
-                                  }
-                                }}
-                                className="w-full h-full border-0 rounded-none focus:ring-0 focus:border-0 bg-white"
-                                style={{ minHeight: '60px' }}
-                              />
-                            ) : (
-                              <div
-                                data-cell={`${rowIndex}-${column}`}
-                                className={`w-full h-full min-h-[2rem] py-2 px-3 flex items-center transition-colors select-none overflow-hidden
-                                  ${isSelected 
-                                    ? 'bg-primary/20 border-2 border-primary ring-2 ring-primary/20' 
-                                    : isInRange
-                                    ? 'bg-primary/10 border-2 border-primary/50'
-                                    : 'hover:bg-muted/30'
-                                  }
-                                `}
-                                style={{ minHeight: `${getRowHeight(rowIndex)}px` }}
+                                onMouseEnter={() => handleMouseEnter(rowIndex, column)}
+                                onMouseUp={handleMouseUp}
+                                onKeyDown={(e) => handleKeyDown(e, rowIndex, column)}
+                                title={documentMap.get(rowIndex)?.stored_filename || row[column] || ''}
                               >
-                                <span className="truncate text-xs">
-                                  {documentMap.get(rowIndex)?.stored_filename || row['Document File Name'] || ''}
+                                <span className="truncate block w-full text-left">
+                                  {documentMap.get(rowIndex)?.stored_filename || row[column] || ''}
                                 </span>
                               </div>
-                            )}
-                          </TableCell>
-                        );
-                      })()}
-                     
-                      {/* Actions column - Document management */}
-                      <TableCell 
-                        className="p-0 overflow-hidden border-r-0"
-                        style={{ 
-                          minWidth: "600px"
-                        }}
-                     >
+                           )}
+                         </TableCell>
+                       );
+                     })()}
+                    
+                     {/* Actions column - Document management */}
+                     <TableCell 
+                       className="p-0 overflow-hidden"
+                       style={{ 
+                         width: "600px", 
+                         minWidth: "600px",
+                         maxWidth: "600px"
+                       }}
+                    >
                        <div className="bg-background border border-border rounded-md p-2 h-full min-h-[60px] flex flex-col gap-1 overflow-visible">
                          <DocumentLinker
                            key={`${rowIndex}-${row['Document File Name']}`}
