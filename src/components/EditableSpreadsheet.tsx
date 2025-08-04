@@ -2730,7 +2730,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const getTotalTableWidth = () => {
     const dataColumnsWidth = columns.reduce((total, column) => total + getColumnWidth(column), 0);
     const documentFileNameWidth = showDocumentFileNameColumn ? 350 : 0;
-    const actionsColumnWidth = 200; // Fixed width for actions column
+    const actionsColumnWidth = 450; // Fixed width for actions column (Document Linker)
     // Add some padding to prevent cramped layout
     return dataColumnsWidth + documentFileNameWidth + actionsColumnWidth + 40;
   };
@@ -4654,22 +4654,27 @@ ${extractionFields}`
                        );
                      })()}
                     
-                    {/* Actions column - Document management */}
-                   <TableCell 
-                     className="border-r border-border last:border-r-0 p-2"
-                     style={{ width: "200px", minWidth: "200px" }}
-                   >
-                      <DocumentLinker
-                        key={`${rowIndex}-${row['Document File Name']}`}
-                        runsheetId={currentRunsheetId || ''}
-                        rowIndex={rowIndex}
-                        currentFilename={documentMap.get(rowIndex)?.stored_filename || row['Document File Name']}
-                        documentPath={(() => {
-                          const dbPath = documentMap.get(rowIndex)?.file_path;
-                          const storagePath = row['Storage Path'];
-                          return dbPath || storagePath;
-                        })()}
-                        existingDocumentUrl={row['Document File Name'] && row['Document File Name'].trim() !== '' ? 'exists' : undefined}
+                     {/* Actions column - Document management */}
+                    <TableCell 
+                      className="border-r border-border last:border-r-0 p-0 overflow-hidden"
+                      style={{ 
+                        width: "450px", 
+                        minWidth: "450px",
+                        maxWidth: "450px"
+                      }}
+                    >
+                       <div className="bg-background border border-border rounded-md p-2 h-full min-h-[60px] flex items-center overflow-hidden">
+                         <DocumentLinker
+                           key={`${rowIndex}-${row['Document File Name']}`}
+                           runsheetId={currentRunsheetId || ''}
+                           rowIndex={rowIndex}
+                           currentFilename={documentMap.get(rowIndex)?.stored_filename || row['Document File Name']}
+                           documentPath={(() => {
+                             const dbPath = documentMap.get(rowIndex)?.file_path;
+                             const storagePath = row['Storage Path'];
+                             return dbPath || storagePath;
+                           })()}
+                           existingDocumentUrl={row['Document File Name'] && row['Document File Name'].trim() !== '' ? 'exists' : undefined}
                         onDocumentLinked={(filename) => {
                            console.log('🔧 EditableSpreadsheet: onDocumentLinked called with filename:', filename);
                            console.log('🔧 EditableSpreadsheet: Current row data before update:', data[rowIndex]);
@@ -4728,9 +4733,10 @@ ${extractionFields}`
                           }}
                           isSpreadsheetUpload={true}
                           autoAnalyze={false}
-                          rowData={row}
-                        />
-                      </TableCell>
+                           rowData={row}
+                         />
+                       </div>
+                       </TableCell>
                       
                       {/* Row resize handle */}
                       <div
