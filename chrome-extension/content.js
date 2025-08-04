@@ -1605,7 +1605,7 @@ function createSingleEntryView(content) {
       // Create hidden input to store the filename value but don't display it
       const input = document.createElement('input');
       input.type = 'hidden';
-      input.value = runsheetData.data[currentRowIndex]?.[column] || '';
+      input.value = ''; // Always start blank for new data entry
       input.dataset.field = column.toLowerCase().replace(/\s+/g, '_').replace(/[^\w]/g, '');
       input.dataset.column = column;
       
@@ -1613,7 +1613,7 @@ function createSingleEntryView(content) {
     } else {
       // Other columns use textarea for multi-line support
       const textarea = document.createElement('textarea');
-      textarea.value = runsheetData.data[currentRowIndex]?.[column] || '';
+      textarea.value = ''; // Always start blank for new data entry
       textarea.dataset.field = column.toLowerCase().replace(/\s+/g, '_').replace(/[^\w]/g, '');
       textarea.dataset.column = column;
       
