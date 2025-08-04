@@ -683,7 +683,20 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         console.log('Loading documents for runsheet:', currentRunsheetId);
         const documents = await DocumentService.getDocumentMapForRunsheet(currentRunsheetId);
         console.log('Loaded documents:', documents);
+        console.log('Document map entries:', Array.from(documents.entries()));
         updateDocumentMap(documents);
+        
+        // Force refresh any cached images to ensure we see the latest versions
+        setTimeout(() => {
+          const images = document.querySelectorAll('img[src*="supabase"]');
+          images.forEach((img: Element) => {
+            const htmlImg = img as HTMLImageElement;
+            const src = htmlImg.src;
+            htmlImg.src = '';
+            htmlImg.src = src + '?t=' + Date.now();
+          });
+          console.log('🔧 EditableSpreadsheet: Force refreshed', images.length, 'cached images');
+        }, 100);
       } catch (error) {
         console.error('Error loading documents:', error);
       }
@@ -761,6 +774,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     
     // Also listen for postMessage events from extension
     const handlePostMessage = (event: MessageEvent) => {
+      console.log('🔧 EditableSpreadsheet: Received postMessage:', event.data);
       // Only process messages from our extension
       if (event.data && event.data.source === 'runsheet-extension' && event.data.type === 'EXTENSION_DOCUMENT_CREATED') {
         console.log('🚨 EditableSpreadsheet: PostMessage received from extension:', event.data.detail);
@@ -2715,7 +2729,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   // Calculate total table width
   const getTotalTableWidth = () => {
     const dataColumnsWidth = columns.reduce((total, column) => total + getColumnWidth(column), 0);
-    const documentFileNameWidth = showDocumentFileNameColumn ? 200 : 0;
+    const documentFileNameWidth = showDocumentFileNameColumn ? 350 : 0;
     const actionsColumnWidth = 200; // Fixed width for actions column
     // Add some padding to prevent cramped layout
     return dataColumnsWidth + documentFileNameWidth + actionsColumnWidth + 40;
