@@ -1694,114 +1694,146 @@ function createSingleEntryView(content) {
       cell.appendChild(textarea);
     }
     
-    // Document File Name special handling - Create full-width Add Row button only
     if (column === 'Document File Name') {
-      // Create main button container that spans full cell width
-      const buttonContainer = document.createElement('div');
-      buttonContainer.style.cssText = `
+      // Just the hidden input - no buttons in this column
+      const docCell = document.createElement('div');
+      docCell.style.cssText = `
         display: flex !important;
-        width: 100% !important;
-        padding: 4px !important;
-        box-sizing: border-box !important;
+        align-items: center !important;
+        justify-content: center !important;
+        color: hsl(var(--muted-foreground, 215 16% 47%)) !important;
+        font-size: 10px !important;
+        font-style: italic !important;
       `;
-      
-      // Full-width Add Row button
-      const addRowBtn = document.createElement('button');
-      addRowBtn.className = 'add-row-btn';
-      addRowBtn.textContent = 'Add to Row';
-      addRowBtn.style.cssText = `
-        background: hsl(var(--primary, 215 80% 40%)) !important;
-        color: hsl(var(--primary-foreground, 210 40% 98%)) !important;
-        border: 1px solid hsl(var(--primary, 215 80% 40%)) !important;
-        border-radius: 4px !important;
-        padding: 8px 12px !important;
-        font-size: 12px !important;
-        cursor: pointer !important;
-        width: 100% !important;
-        font-weight: 500 !important;
-        transition: all 0.2s ease !important;
-      `;
-      addRowBtn.tabIndex = 0; // Can be tabbed to
-      addRowBtn.title = 'Add this row data to the sheet';
-      
-      // Event handler
-      addRowBtn.addEventListener('click', () => {
-        addRowToSheet();
-      });
-      
-      addRowBtn.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          addRowToSheet();
-        } else if (e.key === 'Tab' && e.shiftKey) {
-          // Shift+Tab moves back to the last textarea field (since Document File Name input is hidden)
-          e.preventDefault();
-          const lastTextareaCell = Array.from(dataRow.children).reverse().find(cell => 
-            cell.querySelector('textarea') && !cell.querySelector('[data-column="Document File Name"]')
-          );
-          const lastTextarea = lastTextareaCell?.querySelector('textarea');
-          if (lastTextarea) {
-            lastTextarea.focus();
-          }
-        } else if (e.key === 'Tab' && !e.shiftKey) {
-          // Tab moves to first field in next row or wraps to first field
-          e.preventDefault();
-          const firstCell = dataRow.children[0];
-          const firstTextarea = firstCell.querySelector('textarea');
-          const firstInput = firstCell.querySelector('input');
-          if (firstTextarea) {
-            firstTextarea.focus();
-          } else if (firstInput) {
-            firstInput.focus();
-          }
-        }
-      });
-      
-      buttonContainer.appendChild(addRowBtn);
-      
-      // Add screenshot button container below the Add to Row button
-      const screenshotContainer = document.createElement('div');
-      screenshotContainer.style.cssText = `
-        display: flex !important;
-        gap: 4px !important;
-        width: 100% !important;
-        margin-top: 4px !important;
-      `;
-      
-      // Screenshot button
-      const screenshotBtn = document.createElement('button');
-      screenshotBtn.innerHTML = '📷 Screenshot';
-      screenshotBtn.style.cssText = `
-        background: hsl(var(--secondary, 210 40% 96%)) !important;
-        color: hsl(var(--secondary-foreground, 222 47% 11%)) !important;
-        border: 1px solid hsl(var(--border, 214 32% 91%)) !important;
-        border-radius: 4px !important;
-        padding: 6px 10px !important;
-        font-size: 11px !important;
-        cursor: pointer !important;
-        flex: 1 !important;
-        font-weight: 500 !important;
-        transition: all 0.2s ease !important;
-      `;
-      screenshotBtn.title = 'Take a screenshot';
-      
-      screenshotBtn.addEventListener('click', () => {
-        console.log('Screenshot button clicked');
-        startSnipMode();
-      });
-      
-      screenshotContainer.appendChild(screenshotBtn);
-      
-      buttonContainer.appendChild(screenshotContainer);
-      
-      cell.appendChild(buttonContainer);
+      docCell.textContent = 'File linked via actions →';
+      cell.appendChild(docCell);
     }
     
     dataRow.appendChild(cell);
   });
   
   table.appendChild(dataRow);
-  content.appendChild(table);
+  
+  // Create action area to the right of the table
+  const actionArea = document.createElement('div');
+  actionArea.className = 'table-action-area';
+  actionArea.style.cssText = `
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    padding: 8px !important;
+    min-width: 200px !important;
+    border-left: 2px solid hsl(var(--border, 214 32% 91%)) !important;
+    background: hsl(var(--muted, 210 40% 96%) / 0.3) !important;
+    align-items: stretch !important;
+    justify-content: center !important;
+  `;
+  
+  // Add Row button
+  const addRowBtn = document.createElement('button');
+  addRowBtn.className = 'add-row-btn';
+  addRowBtn.textContent = 'Add to Row';
+  addRowBtn.style.cssText = `
+    background: hsl(var(--primary, 215 80% 40%)) !important;
+    color: hsl(var(--primary-foreground, 210 40% 98%)) !important;
+    border: 1px solid hsl(var(--primary, 215 80% 40%)) !important;
+    border-radius: 4px !important;
+    padding: 10px 16px !important;
+    font-size: 12px !important;
+    cursor: pointer !important;
+    width: 100% !important;
+    font-weight: 500 !important;
+    transition: all 0.2s ease !important;
+  `;
+  addRowBtn.tabIndex = 0;
+  addRowBtn.title = 'Add this row data to the sheet';
+  
+  // Event handlers for Add Row button
+  addRowBtn.addEventListener('click', () => {
+    addRowToSheet();
+  });
+  
+  addRowBtn.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      addRowToSheet();
+    } else if (e.key === 'Tab' && e.shiftKey) {
+      // Shift+Tab moves back to the last textarea field
+      e.preventDefault();
+      const lastTextareaCell = Array.from(dataRow.children).reverse().find(cell => 
+        cell.querySelector('textarea')
+      );
+      const lastTextarea = lastTextareaCell?.querySelector('textarea');
+      if (lastTextarea) {
+        lastTextarea.focus();
+      }
+    } else if (e.key === 'Tab' && !e.shiftKey) {
+      // Tab moves to screenshot button
+      e.preventDefault();
+      const screenshotBtn = document.querySelector('.action-area .screenshot-btn');
+      if (screenshotBtn) {
+        screenshotBtn.focus();
+      }
+    }
+  });
+  
+  // Screenshot button
+  const screenshotBtn = document.createElement('button');
+  screenshotBtn.className = 'screenshot-btn';
+  screenshotBtn.innerHTML = '📷 Screenshot';
+  screenshotBtn.style.cssText = `
+    background: hsl(var(--secondary, 210 40% 96%)) !important;
+    color: hsl(var(--secondary-foreground, 222 47% 11%)) !important;
+    border: 1px solid hsl(var(--border, 214 32% 91%)) !important;
+    border-radius: 4px !important;
+    padding: 10px 16px !important;
+    font-size: 12px !important;
+    cursor: pointer !important;
+    width: 100% !important;
+    font-weight: 500 !important;
+    transition: all 0.2s ease !important;
+  `;
+  screenshotBtn.tabIndex = 0;
+  screenshotBtn.title = 'Take a screenshot';
+  
+  screenshotBtn.addEventListener('click', () => {
+    console.log('Screenshot button clicked');
+    startSnipMode();
+  });
+  
+  screenshotBtn.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      startSnipMode();
+    } else if (e.key === 'Tab' && e.shiftKey) {
+      // Shift+Tab moves back to add row button
+      e.preventDefault();
+      addRowBtn.focus();
+    } else if (e.key === 'Tab' && !e.shiftKey) {
+      // Tab wraps to first field
+      e.preventDefault();
+      const firstCell = dataRow.children[0];
+      const firstTextarea = firstCell.querySelector('textarea');
+      if (firstTextarea) {
+        firstTextarea.focus();
+      }
+    }
+  });
+  
+  actionArea.appendChild(addRowBtn);
+  actionArea.appendChild(screenshotBtn);
+  
+  // Create container that holds both table and action area
+  const tableContainer = document.createElement('div');
+  tableContainer.style.cssText = `
+    display: flex !important;
+    width: 100% !important;
+    align-items: stretch !important;
+  `;
+  
+  tableContainer.appendChild(table);
+  tableContainer.appendChild(actionArea);
+  content.appendChild(tableContainer);
   
   // Update table width after creating all cells
   setTimeout(() => {
@@ -4296,17 +4328,16 @@ function updateTableWidth() {
     totalWidth += cellWidth;
   });
   
-  // Set table and row widths
-  const minWidth = Math.max(totalWidth, 800); // Minimum 800px
-  table.style.width = `${minWidth}px`;
-  table.style.minWidth = `${minWidth}px`;
+  // Set table width to fit content (no extra space)
+  table.style.width = `${totalWidth}px`;
+  table.style.minWidth = `${totalWidth}px`;
   
   // Update all rows to match
   const rows = document.querySelectorAll('.table-row');
   rows.forEach(row => {
-    row.style.width = `${minWidth}px`;
-    row.style.minWidth = `${minWidth}px`;
+    row.style.width = `${totalWidth}px`;
+    row.style.minWidth = `${totalWidth}px`;
   });
   
-  console.log('🔧 RunsheetPro Extension: Updated table width to', minWidth, 'px');
+  console.log('🔧 RunsheetPro Extension: Updated table width to', totalWidth, 'px');
 }
