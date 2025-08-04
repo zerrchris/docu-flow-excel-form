@@ -645,7 +645,7 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
           e.preventDefault(); // Prevent default behavior
         }}
       >
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2 flex-1">
             {isImageUrl ? (
               <div className="flex items-center gap-2 flex-1">
@@ -705,7 +705,7 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
             )}
           </div>
           {!isEditingName && (
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 flex-wrap">
               {/* Show Analyze button only for spreadsheet uploads with stored file */}
               {isSpreadsheetUpload && uploadedFile && onAnalyzeDocument && (
                 <Button
