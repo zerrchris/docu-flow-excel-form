@@ -177,6 +177,10 @@ function restoreSnipSession(retryCount = 0) {
   console.log('🔧 RunsheetPro Extension: Restoring snip session', snipSession);
   
   try {
+    // Restore snip mode globally
+    snipMode = snipSession.mode;
+    console.log('🔧 RunsheetPro Extension: Restored snipMode to:', snipMode);
+    
     // Show appropriate controls based on mode
     if (snipSession.mode === 'navigate') {
       // Restore captured snips to the current session

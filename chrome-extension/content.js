@@ -3203,6 +3203,7 @@ async function captureSelectedArea(left, top, width, height) {
           
           // For navigate mode, hide crosshairs after capture but keep session active
           if (snipMode === 'navigate') {
+            console.log('🔧 RunsheetPro Extension: Navigate mode - hiding crosshairs and showing nav panel');
             hideSnipModeForNavigation();
           }
           
