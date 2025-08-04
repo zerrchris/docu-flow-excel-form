@@ -691,8 +691,8 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                   />
                 ) : (
                   <span 
-                    className="text-sm font-medium truncate cursor-pointer hover:text-primary max-w-[600px] block" 
-                    style={{ maxWidth: '600px' }}
+                    className="text-sm font-medium truncate cursor-pointer hover:text-primary max-w-[350px] block" 
+                    style={{ maxWidth: '350px' }}
                     title={filename}
                     onClick={() => {
                       setEditedFilename(filename);
