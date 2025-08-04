@@ -244,8 +244,6 @@ function showSignInPopup() {
       submitBtn.disabled = false;
     }
   });
-}
-    }
   
   console.log('🔧 RunsheetPro Extension: About to append button to document.body');
   console.log('🔧 RunsheetPro Extension: document.body exists:', !!document.body);
