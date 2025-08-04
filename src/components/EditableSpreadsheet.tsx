@@ -4430,10 +4430,10 @@ ${extractionFields}`
                  )}
                  
                  {/* Actions column header - not draggable */}
-                 <TableHead 
-                   className="font-bold text-center border-r border-border relative p-0 last:border-r-0 bg-muted/50"
-                   style={{ width: "200px", minWidth: "200px" }}
-                 >
+                  <TableHead 
+                    className="font-bold text-center border-r border-border relative p-0 last:border-r-0 bg-muted/50"
+                    style={{ width: "800px", minWidth: "800px" }}
+                  >
                    <div className="w-full h-full px-4 py-2 flex flex-col gap-1">
                      <Button
                        variant="outline"
