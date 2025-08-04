@@ -1246,6 +1246,12 @@ Image: [base64 image data]`;
 
   // Add current form data to spreadsheet
   const addToSpreadsheet = async (dataToAdd?: Record<string, string>) => {
+    console.log('🔧 DocumentProcessor: addToSpreadsheet called');
+    console.log('🔧 DocumentProcessor: dataToAdd:', dataToAdd);
+    console.log('🔧 DocumentProcessor: formData:', formData);
+    console.log('🔧 DocumentProcessor: activeRunsheet:', activeRunsheet);
+    console.log('🔧 DocumentProcessor: location.state:', location.state);
+    
     // Check localStorage for active runsheet as fallback
     let runsheetId = activeRunsheet?.id || location.state?.runsheet?.id;
     
@@ -1256,11 +1262,14 @@ Image: [base64 image data]`;
           const parsed = JSON.parse(storedRunsheet);
           runsheetId = parsed.id;
           setActiveRunsheet(parsed);
+          console.log('🔧 DocumentProcessor: Found runsheet in localStorage:', parsed);
         }
       } catch (error) {
-        // Silent error handling
+        console.error('🔧 DocumentProcessor: Error parsing localStorage runsheet:', error);
       }
     }
+    
+    console.log('🔧 DocumentProcessor: Final runsheetId before processing:', runsheetId);
     
     if (!runsheetId || runsheetId.startsWith('temp-')) {
       // We need a proper saved runsheet to add documents
@@ -1375,18 +1384,24 @@ Image: [base64 image data]`;
     const finalData = filteredData;
     
     console.log('🔧 DEBUG: finalData before spreadsheet addition:', finalData);
+    console.log('🔧 DEBUG: Current spreadsheetData before update:', spreadsheetData);
+    console.log('🔧 DEBUG: documentMap before update:', documentMap);
     
     console.log('Original analyzed data:', targetData);
     console.log('Filtered data to match current columns:', finalData);
     console.log('Current columns (unchanged):', columns);
     
     setSpreadsheetData(prev => {
+      console.log('🔧 DEBUG: Inside setSpreadsheetData callback, prev:', prev);
+      
       // Find the first row that is both empty in spreadsheet data AND has no linked document
       const firstEmptyRowIndex = prev.findIndex((row, index) => {
         const isDataEmpty = Object.values(row).every(value => value.trim() === '');
         const hasLinkedDocument = documentMap.has(index);
         return isDataEmpty && !hasLinkedDocument;
       });
+      
+      console.log('🔧 DEBUG: firstEmptyRowIndex:', firstEmptyRowIndex);
       
       let newData;
       let targetRowIndex;
@@ -1395,14 +1410,19 @@ Image: [base64 image data]`;
         newData = [...prev];
         newData[firstEmptyRowIndex] = { ...finalData };
         targetRowIndex = firstEmptyRowIndex;
+        console.log('🔧 DEBUG: Inserting into existing row:', firstEmptyRowIndex);
       } else {
         // If no empty row found, append to the end
         newData = [...prev, { ...finalData }];
         targetRowIndex = prev.length; // New row index is the current length
+        console.log('🔧 DEBUG: Appending new row at index:', targetRowIndex);
       }
+      
+      console.log('🔧 DEBUG: newData after update:', newData);
       
       // If data contains a storage path, create a document record
       if (finalData['Storage Path']) {
+        console.log('🔧 DEBUG: Creating document record for targetRowIndex:', targetRowIndex);
         createDocumentRecord(finalData, targetRowIndex);
       }
       

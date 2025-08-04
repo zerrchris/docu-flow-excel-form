@@ -76,10 +76,16 @@ const BatchDocumentRow: React.FC<BatchDocumentRowProps> = ({
   };
 
   const handleAddToSpreadsheet = async () => {
+    console.log('🔧 BatchDocumentRow: handleAddToSpreadsheet called');
+    console.log('🔧 BatchDocumentRow: formData:', formData);
+    
     setIsUploading(true);
     try {
+      console.log('🔧 BatchDocumentRow: Starting file upload to storage');
+      
       // Upload file to storage
       const fileResult = await uploadFileToStorage(file, 'documents', 'batch-processed');
+      console.log('🔧 BatchDocumentRow: File upload result:', fileResult);
       
       // Add file information to the form data
       // Use user-specified filename if provided, otherwise use uploaded filename
@@ -94,7 +100,12 @@ const BatchDocumentRow: React.FC<BatchDocumentRowProps> = ({
         'Storage Path': fileResult.path
       };
       
+      console.log('🔧 BatchDocumentRow: Final data to send to spreadsheet:', dataWithFile);
+      console.log('🔧 BatchDocumentRow: About to call onAddToSpreadsheet');
+      
       await onAddToSpreadsheet(dataWithFile);
+      
+      console.log('🔧 BatchDocumentRow: onAddToSpreadsheet completed, removing from batch');
       onRemove(); // Remove this row after adding to spreadsheet
       
       toast({
@@ -102,12 +113,16 @@ const BatchDocumentRow: React.FC<BatchDocumentRowProps> = ({
         description: `Document "${file.name}" processed and uploaded successfully.`,
       });
     } catch (error) {
-      console.error('Error uploading file:', error);
+      console.error('🔧 BatchDocumentRow: Error uploading file:', error);
       toast({
         title: "Upload Error",
         description: `Failed to upload "${file.name}". Adding data without file.`,
         variant: "destructive",
       });
+      
+      console.log('🔧 BatchDocumentRow: Fallback - adding to spreadsheet without file upload');
+      console.log('🔧 BatchDocumentRow: Fallback data:', formData);
+      
       // Still add to spreadsheet but without file data
       await onAddToSpreadsheet(formData);
       onRemove();
