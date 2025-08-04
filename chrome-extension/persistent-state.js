@@ -169,40 +169,64 @@ function cleanupSnipSession() {
 
 // Restore snip session after page navigation
 function restoreSnipSession() {
-  if (!snipSession.active) return;
+  if (!snipSession.active) {
+    console.log('🔧 RunsheetPro Extension: No active snip session to restore');
+    return;
+  }
   
-  console.log('🔧 RunsheetPro Extension: Restoring snip session');
+  console.log('🔧 RunsheetPro Extension: Restoring snip session', snipSession);
   
-  // Show appropriate controls based on mode
-  if (snipSession.mode === 'navigate') {
-    // Restore captured snips to the current session
-    if (snipSession.captures && snipSession.captures.length > 0) {
-      capturedSnips = [...snipSession.captures];
+  try {
+    // Show appropriate controls based on mode
+    if (snipSession.mode === 'navigate') {
+      // Restore captured snips to the current session
+      if (snipSession.captures && snipSession.captures.length > 0) {
+        capturedSnips = [...snipSession.captures];
+        console.log('🔧 RunsheetPro Extension: Restored', capturedSnips.length, 'captured snips');
+      }
+      
+      // Check if navigation panel already exists
+      const existingPanel = document.getElementById('runsheetpro-nav-controls');
+      if (existingPanel) {
+        console.log('🔧 RunsheetPro Extension: Navigation panel already exists, removing old one');
+        existingPanel.remove();
+      }
+      
+      createNavigationControlPanel();
+      updateSnipCounter();
+      
+      // Show preview if there are captures
+      if (snipSession.captures.length > 0) {
+        showSnipPreview();
+      }
+      
+      showNotification(`Snip session restored! ${snipSession.captures.length} captures so far. Continue snipping or finish when done.`, 'info');
+      console.log('🔧 RunsheetPro Extension: Navigate mode restoration complete');
+      
+    } else if (snipSession.mode === 'scroll') {
+      // Restore captured snips to the current session
+      if (snipSession.captures && snipSession.captures.length > 0) {
+        capturedSnips = [...snipSession.captures];
+        console.log('🔧 RunsheetPro Extension: Restored', capturedSnips.length, 'captured snips');
+      }
+      
+      showScrollSnipControls();
+      updateSnipCounter();
+      
+      if (snipSession.captures.length > 0) {
+        showSnipPreview();
+      }
+      
+      showNotification(`Scroll snip session restored! ${snipSession.captures.length} captures so far.`, 'info');
+      console.log('🔧 RunsheetPro Extension: Scroll mode restoration complete');
     }
-    
-    createNavigationControlPanel();
-    updateSnipCounter();
-    
-    // Show preview if there are captures
-    if (snipSession.captures.length > 0) {
-      showSnipPreview();
-    }
-    
-    showNotification(`Snip session restored! ${snipSession.captures.length} captures so far. Continue snipping or finish when done.`, 'info');
-  } else if (snipSession.mode === 'scroll') {
-    // Restore captured snips to the current session
-    if (snipSession.captures && snipSession.captures.length > 0) {
-      capturedSnips = [...snipSession.captures];
-    }
-    
-    showScrollSnipControls();
-    updateSnipCounter();
-    
-    if (snipSession.captures.length > 0) {
-      showSnipPreview();
-    }
-    
-    showNotification(`Scroll snip session restored! ${snipSession.captures.length} captures so far.`, 'info');
+  } catch (error) {
+    console.error('🔧 RunsheetPro Extension: Error restoring snip session:', error);
+    // Try again after a longer delay
+    setTimeout(() => {
+      console.log('🔧 RunsheetPro Extension: Retrying snip session restoration');
+      restoreSnipSession();
+    }, 2000);
   }
 }
 
@@ -242,10 +266,13 @@ async function initializeExtensionWithStateRestore() {
     
     // If we had an active snip session, restore it
     if (snipSession.active) {
-      console.log('🔧 RunsheetPro Extension: Restoring active snip session');
+      console.log('🔧 RunsheetPro Extension: Restoring active snip session', snipSession);
       setTimeout(() => {
+        console.log('🔧 RunsheetPro Extension: Attempting to restore snip session after timeout');
         restoreSnipSession();
-      }, 500); // Give UI time to initialize
+      }, 1000); // Increased timeout to give more time for page to stabilize
+    } else {
+      console.log('🔧 RunsheetPro Extension: No active snip session to restore');
     }
     
   } catch (error) {
