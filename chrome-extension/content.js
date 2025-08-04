@@ -1484,11 +1484,14 @@ function createSingleEntryView(content) {
     let startWidth = 0;
     
     resizeHandle.addEventListener('mousedown', (e) => {
+      console.log('Column resize handle clicked');
       isResizing = true;
       startX = e.clientX;
       startWidth = parseInt(document.defaultView.getComputedStyle(cell).width, 10);
       document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
       e.preventDefault();
+      e.stopPropagation();
     });
     
     document.addEventListener('mousemove', (e) => {
