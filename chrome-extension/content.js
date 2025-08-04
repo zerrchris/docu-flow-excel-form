@@ -2079,7 +2079,95 @@ function createFullRunsheetView(content) {
       row.appendChild(td);
     });
 
-    // No action column needed in quick view - data is added from single entry view
+    // Add action column with screenshot functionality
+    const actionTd = document.createElement('td');
+    actionTd.style.cssText = `
+      padding: 2px !important;
+      text-align: center !important;
+      min-width: 80px !important;
+      max-width: 80px !important;
+      width: 80px !important;
+      border-right: 1px solid hsl(var(--border, 214 32% 91%)) !important;
+      vertical-align: middle !important;
+    `;
+
+    // Check if this row has a document/screenshot
+    const hasDocument = rowData['Document File Name'] || rowData['screenshot_url'];
+    
+    if (hasDocument) {
+      // Show view button and indicator
+      const viewBtn = document.createElement('button');
+      viewBtn.innerHTML = '👁️';
+      viewBtn.title = 'View document/screenshot';
+      viewBtn.style.cssText = `
+        background: hsl(var(--muted, 210 40% 96%)) !important;
+        color: hsl(var(--foreground, 222 47% 11%)) !important;
+        border: 1px solid hsl(var(--border, 214 32% 91%)) !important;
+        padding: 4px 6px !important;
+        border-radius: 3px !important;
+        cursor: pointer !important;
+        font-size: 11px !important;
+        margin-right: 4px !important;
+      `;
+      
+      viewBtn.addEventListener('click', () => {
+        // Temporarily set currentRowIndex to this row for viewing
+        const originalRowIndex = currentRowIndex;
+        currentRowIndex = rowIndex;
+        viewCurrentScreenshot();
+        currentRowIndex = originalRowIndex; // Restore original row index
+      });
+      
+      const addBtn = document.createElement('button');
+      addBtn.innerHTML = '📷+';
+      addBtn.title = 'Replace document/screenshot';
+      addBtn.style.cssText = `
+        background: hsl(var(--destructive, 0 84% 60%)) !important;
+        color: white !important;
+        border: 1px solid hsl(var(--destructive, 0 84% 60%)) !important;
+        padding: 4px 6px !important;
+        border-radius: 3px !important;
+        cursor: pointer !important;
+        font-size: 11px !important;
+      `;
+      
+      addBtn.addEventListener('click', () => {
+        if (confirm('This will replace the existing document/screenshot. Continue?')) {
+          const originalRowIndex = currentRowIndex;
+          currentRowIndex = rowIndex;
+          startSnipMode();
+          currentRowIndex = originalRowIndex; // Restore original row index
+        }
+      });
+      
+      actionTd.appendChild(viewBtn);
+      actionTd.appendChild(addBtn);
+    } else {
+      // Show add screenshot button
+      const addBtn = document.createElement('button');
+      addBtn.innerHTML = '📷+';
+      addBtn.title = 'Add screenshot';
+      addBtn.style.cssText = `
+        background: hsl(var(--primary, 215 80% 40%)) !important;
+        color: white !important;
+        border: 1px solid hsl(var(--primary, 215 80% 40%)) !important;
+        padding: 4px 8px !important;
+        border-radius: 3px !important;
+        cursor: pointer !important;
+        font-size: 11px !important;
+      `;
+      
+      addBtn.addEventListener('click', () => {
+        const originalRowIndex = currentRowIndex;
+        currentRowIndex = rowIndex;
+        startSnipMode();
+        currentRowIndex = originalRowIndex; // Restore original row index
+      });
+      
+      actionTd.appendChild(addBtn);
+    }
+    
+    row.appendChild(actionTd);
 
     tbody.appendChild(row);
   });
