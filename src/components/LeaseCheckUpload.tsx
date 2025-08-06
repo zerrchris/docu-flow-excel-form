@@ -82,7 +82,7 @@ export const LeaseCheckUpload: React.FC<LeaseCheckUploadProps> = ({ onDocumentUp
           description: `${file.name} has been processed`,
         });
       } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls') || file.type.includes('spreadsheet')) {
-        // Handle Excel files
+        // Handle Excel files with proper multi-line cell support
         const XLSX = await import('xlsx');
         const arrayBuffer = await file.arrayBuffer();
         const workbook = XLSX.read(arrayBuffer, { type: 'array' });
@@ -91,14 +91,25 @@ export const LeaseCheckUpload: React.FC<LeaseCheckUploadProps> = ({ onDocumentUp
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
         
-        // Convert to JSON
-        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        // Convert to JSON with proper handling of multi-line cells
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { 
+          header: 1,
+          raw: false, // This preserves formatting including line breaks
+          defval: '' // Default value for empty cells
+        });
         
-        // Format as text for analysis
+        // Format as text for analysis with proper cell content preservation
         let formattedText = `EXCEL FILE: ${file.name}\n\n`;
         jsonData.forEach((row: any, index: number) => {
           if (row.length > 0) {
-            formattedText += `ROW ${index + 1}: ${row.join(' | ')}\n`;
+            // Join cells with pipe separator, but preserve line breaks within cells
+            const rowText = row.map((cell: any) => {
+              if (cell === null || cell === undefined) return '';
+              // Convert cell to string and replace internal line breaks with special marker
+              return String(cell).replace(/\n/g, '||NEWLINE||');
+            }).join(' | ');
+            
+            formattedText += `ROW ${index + 1}: ${rowText}\n`;
           }
         });
         

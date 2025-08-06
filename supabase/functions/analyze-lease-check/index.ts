@@ -207,24 +207,32 @@ function parseRunsheetRows(documentText: string): RunsheetRow[] {
   // Parse data rows
   for (const line of lines) {
     if (line.includes('ROW ') && !line.includes('ROW 1:')) {
-      const rowData = line.substring(line.indexOf(': ') + 2).split(' | ');
+      const rowDataText = line.substring(line.indexOf(': ') + 2);
+      const rowData = rowDataText.split(' | ').map(cell => {
+        // Restore line breaks that were preserved during Excel processing
+        return cell.replace(/\|\|NEWLINE\|\|/g, '\n').trim();
+      });
+      
       console.log(`Processing ROW data: ${line.substring(0, 30)}...`);
       
       if (rowData.length > 0) {
         const row: any = {};
         headers.forEach((header, index) => {
-          row[header.trim()] = rowData[index]?.trim() || '';
+          row[header.trim()] = rowData[index] || '';
         });
         rows.push(row as RunsheetRow);
         console.log(`Added row: ${row['Instrument Type']} - ${row['Grantor(s)']} to ${row['Grantee(s)']}`);
       }
     } else if (!line.includes('ROW ') && line.includes('|') && headers.length > 0) {
       // Try to parse as direct pipe-separated data
-      const rowData = line.split(' | ');
+      const rowData = line.split(' | ').map(cell => {
+        return cell.replace(/\|\|NEWLINE\|\|/g, '\n').trim();
+      });
+      
       if (rowData.length >= headers.length - 2) { // Allow some flexibility
         const row: any = {};
         headers.forEach((header, index) => {
-          row[header.trim()] = rowData[index]?.trim() || '';
+          row[header.trim()] = rowData[index] || '';
         });
         
         // Only add if it looks like actual data (not header row)
