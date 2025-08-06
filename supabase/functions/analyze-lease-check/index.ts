@@ -66,7 +66,7 @@ serve(async (req) => {
       );
     }
 
-    console.log('Processing runsheet document...');
+    console.log('Processing runsheet document with enhanced AI analysis...');
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
