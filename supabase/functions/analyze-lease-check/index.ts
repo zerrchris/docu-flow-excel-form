@@ -914,30 +914,40 @@ async function analyzeWithAI(documentText: string): Promise<any> {
   }
 
   try {
-    // Enhanced prompt with specific North Dakota expertise
+    // Enhanced prompt with specific North Dakota expertise and thorough extraction
     const prompt = `You are an expert mineral rights analyst specializing in North Dakota oil and gas runsheets. 
 
-CRITICAL INSTRUCTIONS:
-1. Extract ALL mineral owners from the runsheet data
-2. Calculate precise fractional interests (like 25.00000000%)
-3. Determine lease status: "Appears Open", "Last Lease of Record", or "Expired (Potential HBP)"
-4. Find the most recent lease for each owner
-5. Extract legal description and total acres
-6. Identify any well information
+CRITICAL INSTRUCTIONS - READ CAREFULLY:
+1. Extract EVERY SINGLE mineral owner mentioned in the runsheet - do not skip anyone
+2. Find ALL fractional interests and percentages - check deeds, probate distributions, and transfers
+3. Calculate precise ownership percentages that total exactly 100%
+4. Determine lease status for each owner: "Appears Open", "Last Lease of Record", or "Expired (Potential HBP)"
+5. Find the most recent lease for each owner with complete details
+6. Extract the exact legal description and total acres
+7. Look for any well information or production notes
+
+EXAMPLE OWNERS TO LOOK FOR:
+- Banks, FCBs, trust companies
+- Individual names with addresses  
+- Family trusts and estates
+- LLCs and corporations
+- Any entity that received mineral interests
+
+The runsheet may contain 5-15+ different owners. Find them ALL.
 
 RUNSHEET DATA:
 ${documentText}
 
-Analyze this data as an expert would and return ONLY valid JSON in this exact format:
+Analyze this data thoroughly as an expert would and return ONLY valid JSON in this exact format:
 {
   "prospect": "Legal description from runsheet",
-  "totalAcres": 80,
+  "totalAcres": 312.08,
   "reportFormat": "ai_analyzed", 
   "owners": [
     {
       "name": "Exact owner name from runsheet",
       "interests": "XX.XXXXXXXX%",
-      "netAcres": 20.0000000,
+      "netAcres": 156.04000000,
       "leaseholdStatus": "Appears Open or Last Lease of Record or Expired (Potential HBP)",
       "lastLeaseOfRecord": {
         "lessor": "lessor name",
