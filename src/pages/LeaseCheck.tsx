@@ -9,6 +9,7 @@ import { LeaseCheckUpload } from '@/components/LeaseCheckUpload';
 import { LeaseCheckReport } from '@/components/LeaseCheckReport';
 import { ProductionModal } from '@/components/ProductionModal';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface MineralOwner {
   name: string;
@@ -71,20 +72,21 @@ const LeaseCheck = () => {
 
     setIsProcessing(true);
     try {
-      // Call our lease check analysis API
-      const response = await fetch('/api/analyze-lease-check', {
-        method: 'POST',
+      // Call our lease check analysis edge function
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const response = await supabase.functions.invoke('analyze-lease-check', {
+        body: { documentText },
         headers: {
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token}`,
         },
-        body: JSON.stringify({ documentText }),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to analyze document');
+      if (response.error) {
+        throw new Error(response.error.message || 'Failed to analyze document');
       }
 
-      const data = await response.json();
+      const data = response.data;
       setLeaseCheckData(data);
 
       // Check if we need production information

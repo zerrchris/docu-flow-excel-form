@@ -136,6 +136,36 @@ export type Database = {
           },
         ]
       }
+      lease_check_analyses: {
+        Row: {
+          analysis_data: Json
+          created_at: string
+          document_text: string
+          id: string
+          prospect: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          analysis_data: Json
+          created_at?: string
+          document_text: string
+          id?: string
+          prospect: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          analysis_data?: Json
+          created_at?: string
+          document_text?: string
+          id?: string
+          prospect?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
