@@ -139,7 +139,7 @@ export const LeaseCheckReport: React.FC<LeaseCheckReportProps> = ({ data, onNewA
         Number: index + 1,
         MineralOwner: owner.name,
         Interests: owner.interests,
-        NetAcres: owner.netAcres,
+        NetAcres: typeof owner.netAcres === 'number' ? owner.netAcres : parseFloat(owner.netAcres || '0'),
         LeaseholdStatus: owner.leaseholdStatus,
         LastLease_Lessor: owner.lastLeaseOfRecord?.lessor || '',
         LastLease_Lessee: owner.lastLeaseOfRecord?.lessee || '',
@@ -282,7 +282,7 @@ export const LeaseCheckReport: React.FC<LeaseCheckReportProps> = ({ data, onNewA
                       {owner.interests}
                     </TableCell>
                     <TableCell className="text-right font-mono">
-                      {owner.netAcres.toFixed(7)}
+                      {typeof owner.netAcres === 'number' ? owner.netAcres.toFixed(7) : parseFloat(owner.netAcres || '0').toFixed(7)}
                     </TableCell>
                     <TableCell>
                       <div className="space-y-2">
