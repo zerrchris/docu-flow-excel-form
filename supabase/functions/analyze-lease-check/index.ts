@@ -85,40 +85,50 @@ serve(async (req) => {
       );
     }
 
-    // Check if this is structured runsheet data - be more flexible with detection
-    const isStructuredData = documentText.includes('EXCEL FILE:') || 
-                            documentText.includes('ROW 1:') ||
-                            documentText.includes('Book and Page') ||
-                            documentText.includes('Instrument Type') ||
-                            documentText.includes('Grantor(s)') ||
-                            documentText.includes('Grantee(s)') ||
-                            (documentText.includes('|') && documentText.split('\n').length > 10);
-    
-    console.log(`Document detection: isStructured=${isStructuredData}`);
-    console.log(`Document preview: ${documentText.substring(0, 200)}...`);
+    // Simplified approach: Use AI analysis for all documents
+    console.log('Using AI-first analysis approach...');
+    console.log(`Document preview: ${documentText.substring(0, 300)}...`);
     
     let analysisResult;
     
-    // Try structured parsing first, fall back to AI if it fails
-    if (isStructuredData) {
-      console.log('Attempting structured parsing...');
-      try {
-        analysisResult = analyzeStructuredRunsheet(documentText);
-        
-        // If structured parsing returns default/unknown data, try AI analysis
-        if (analysisResult.owners.length === 1 && 
-            analysisResult.owners[0].name.includes('Unknown')) {
-          console.log('Structured parsing returned unknown data, trying AI analysis...');
-          analysisResult = await analyzeWithAI(documentText);
-        }
-      } catch (error) {
-        console.error('Structured parsing failed:', error);
-        console.log('Falling back to AI analysis...');
-        analysisResult = await analyzeWithAI(documentText);
-      }
-    } else {
-      console.log('Processing with AI analysis...');
+    try {
+      // Try AI analysis first - it's more flexible and reliable
       analysisResult = await analyzeWithAI(documentText);
+      
+      // Only use structured parsing as a fallback if AI fails completely
+      if (!analysisResult || analysisResult.owners[0]?.name?.includes('Analysis Error')) {
+        console.log('AI analysis failed, trying structured parsing as fallback...');
+        
+        const isStructuredData = documentText.includes('|') || documentText.includes('ROW');
+        if (isStructuredData) {
+          analysisResult = analyzeStructuredRunsheet(documentText);
+        }
+      }
+    } catch (error) {
+      console.error('AI analysis failed:', error);
+      
+      // Try structured parsing as last resort
+      try {
+        console.log('Attempting structured parsing as final fallback...');
+        analysisResult = analyzeStructuredRunsheet(documentText);
+      } catch (structuredError) {
+        console.error('All analysis methods failed:', structuredError);
+        analysisResult = {
+          prospect: "Analysis Failed",
+          totalAcres: 0,
+          reportFormat: "error",
+          owners: [{
+            name: "Upload Error - Please contact support",
+            interests: "100.00000000%",
+            netAcres: 0,
+            leaseholdStatus: "System Error",
+            lastLeaseOfRecord: undefined,
+            listedAcreage: "0.0000000 mi"
+          }],
+          wells: ["Analysis system error"],
+          limitationsAndExceptions: "System could not process document. Please contact support."
+        };
+      }
     }
 
     // Save analysis to database
@@ -895,55 +905,60 @@ function generateExpertLimitationsAndExceptions(rows: RunsheetRow[]): string {
 }
 
 async function analyzeWithAI(documentText: string): Promise<any> {
-  console.log('Using AI analysis for runsheet document...');
+  console.log('Starting AI analysis of runsheet document...');
   
   const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
   if (!openAIApiKey) {
-    console.log('OpenAI API key not available, using fallback analysis');
+    console.error('OpenAI API key not configured');
     return generateFallbackAnalysis(documentText);
   }
 
   try {
-    const prompt = `You are an expert in mineral rights, oil and gas leases, and runsheet analysis for land in North Dakota. 
+    // Enhanced prompt with specific North Dakota expertise
+    const prompt = `You are an expert mineral rights analyst specializing in North Dakota oil and gas runsheets. 
 
-Analyze this runsheet document and extract:
-1. Legal description and acres
-2. Current mineral owners with fractional interests 
-3. Lease status for each owner (Appears Open, Last Lease of Record, or Expired Potential HBP)
-4. Last lease details if any
-5. Well information
-6. Limitations and exceptions
+CRITICAL INSTRUCTIONS:
+1. Extract ALL mineral owners from the runsheet data
+2. Calculate precise fractional interests (like 25.00000000%)
+3. Determine lease status: "Appears Open", "Last Lease of Record", or "Expired (Potential HBP)"
+4. Find the most recent lease for each owner
+5. Extract legal description and total acres
+6. Identify any well information
 
-Document:
+RUNSHEET DATA:
 ${documentText}
 
-Return as JSON with this exact structure:
+Analyze this data as an expert would and return ONLY valid JSON in this exact format:
 {
-  "prospect": "legal description",
-  "totalAcres": number,
+  "prospect": "Legal description from runsheet",
+  "totalAcres": 80,
   "reportFormat": "ai_analyzed", 
   "owners": [
     {
-      "name": "owner name",
-      "interests": "percentage like 25.00000000%",
-      "netAcres": number,
-      "leaseholdStatus": "status",
+      "name": "Exact owner name from runsheet",
+      "interests": "XX.XXXXXXXX%",
+      "netAcres": 20.0000000,
+      "leaseholdStatus": "Appears Open or Last Lease of Record or Expired (Potential HBP)",
       "lastLeaseOfRecord": {
-        "lessor": "name",
-        "lessee": "name", 
-        "dated": "date",
-        "term": "term",
-        "expiration": "date",
-        "recorded": "date",
-        "documentNumber": "number"
+        "lessor": "lessor name",
+        "lessee": "lessee name", 
+        "dated": "MM/DD/YYYY",
+        "term": "X years",
+        "expiration": "MM/DD/YYYY",
+        "recorded": "MM/DD/YYYY",
+        "documentNumber": "document reference"
       },
-      "listedAcreage": "acres with mi suffix"
+      "listedAcreage": "XX.XXXXXXX mi"
     }
   ],
-  "wells": ["well info"],
-  "limitationsAndExceptions": "text"
-}`;
+  "wells": ["well information from runsheet"],
+  "limitationsAndExceptions": "Any limitations noted in the records"
+}
 
+RETURN ONLY THE JSON - NO OTHER TEXT.`;
+
+    console.log('Sending request to OpenAI...');
+    
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -953,23 +968,49 @@ Return as JSON with this exact structure:
       body: JSON.stringify({
         model: 'gpt-4o',
         messages: [
-          { role: 'system', content: 'You are an expert mineral rights analyst. Always return valid JSON.' },
+          { 
+            role: 'system', 
+            content: 'You are an expert North Dakota mineral rights analyst. Return only valid JSON responses. Never include explanatory text outside the JSON.' 
+          },
           { role: 'user', content: prompt }
         ],
-        temperature: 0.1,
+        temperature: 0.1, // Low temperature for consistency
         max_tokens: 4000
       }),
     });
 
     if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.status}`);
+      console.error(`OpenAI API error: ${response.status} ${response.statusText}`);
+      return generateFallbackAnalysis(documentText);
     }
 
     const data = await response.json();
-    const aiResult = JSON.parse(data.choices[0].message.content);
+    console.log('OpenAI response received');
     
-    console.log('AI analysis completed successfully');
-    return aiResult;
+    let aiResult;
+    try {
+      // Clean the response to ensure it's valid JSON
+      let content = data.choices[0].message.content.trim();
+      
+      // Remove any markdown formatting
+      content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+      
+      // Parse the JSON
+      aiResult = JSON.parse(content);
+      console.log('AI analysis completed successfully');
+      
+      // Validate the result has required fields
+      if (!aiResult.owners || !Array.isArray(aiResult.owners) || aiResult.owners.length === 0) {
+        throw new Error('AI response missing owners data');
+      }
+      
+      return aiResult;
+      
+    } catch (parseError) {
+      console.error('Failed to parse AI response:', parseError);
+      console.error('Raw response:', data.choices[0].message.content);
+      return generateFallbackAnalysis(documentText);
+    }
 
   } catch (error) {
     console.error('AI analysis failed:', error);
