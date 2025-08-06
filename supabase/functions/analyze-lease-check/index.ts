@@ -132,16 +132,25 @@ serve(async (req) => {
 });
 
 function analyzeStructuredRunsheet(documentText: string): StructuredLeaseCheckResult {
-  console.log('Analyzing structured runsheet data...');
+  console.log('Analyzing structured runsheet data with expert mineral rights methodology...');
   
   // Parse the structured runsheet data
   const rows = parseRunsheetRows(documentText);
   
-  // Extract prospect information
+  // Extract prospect information and identify subdivided tracts
   const prospectInfo = extractProspectInfo(rows, documentText);
+  const subdivisions = parseSubdivisions(prospectInfo.legalDescription);
   
-  // Build ownership chain following the methodology from the sample report
-  const currentOwners = buildCompleteOwnershipChain(rows, prospectInfo.legalDescription);
+  console.log(`Processing ${subdivisions.length} subdivision(s) as distinct entries`);
+  
+  // Build ownership chain using expert mineral rights analysis
+  const currentOwners = buildExpertOwnershipChain(rows, prospectInfo.legalDescription, subdivisions);
+  
+  // Prompt for production information if needed
+  const needsProductionData = currentOwners.some(owner => 
+    owner.leaseholdStatus === 'Expired (Potential HBP)' || 
+    (owner.lastLeaseOfRecord && !owner.lastLeaseOfRecord.expiration.includes('Unknown'))
+  );
   
   return {
     prospect: prospectInfo.description,
@@ -149,7 +158,8 @@ function analyzeStructuredRunsheet(documentText: string): StructuredLeaseCheckRe
     reportFormat: "structured",
     owners: currentOwners,
     wells: extractWellInformation(rows),
-    limitationsAndExceptions: generateLimitationsAndExceptions(rows)
+    limitationsAndExceptions: generateExpertLimitationsAndExceptions(rows),
+    needsProductionData
   };
 }
 
@@ -218,45 +228,69 @@ function calculateAcresFromDescription(description: string): number {
   return 80; // Default
 }
 
-function buildCompleteOwnershipChain(rows: RunsheetRow[], targetLegal: string): MineralOwner[] {
-  console.log('Building ownership chain for:', targetLegal);
+function buildExpertOwnershipChain(rows: RunsheetRow[], targetLegal: string, subdivisions: string[]): MineralOwner[] {
+  console.log('Building expert ownership chain for:', targetLegal);
   
-  // Step 1: Find the final distribution (PRD) that shows current owners
-  const prdRow = rows.find(row => 
-    row['Instrument Type'] === 'PRD' && 
-    row['Grantee(s)'].includes('(') // Contains fractional interests
+  const ownershipMap = new Map<string, any>();
+  
+  // Step 1: Find initial patent/grant (establish chain of title)
+  const patents = rows.filter(row => 
+    row['Instrument Type']?.toLowerCase().includes('patent') && 
+    row['Description']?.includes(targetLegal.split('-')[2]?.split(':')[0]) // Match section
   );
-  
-  if (prdRow) {
-    return parseOwnershipFromPRD(prdRow, rows, targetLegal);
+
+  if (patents.length > 0) {
+    const patent = patents[0];
+    const initialOwner = patent['Grantee(s)'] || 'Unknown';
+    ownershipMap.set(initialOwner, {
+      name: initialOwner,
+      interest: '1/1',
+      source: 'Patent',
+      acquisitionDate: patent['Recorded'] || patent['Dated'],
+      active: true
+    });
   }
+
+  // Step 2: Process all transfers chronologically to trace ownership
+  const transfers = rows.filter(row => 
+    ['WD', 'QCD', 'PRD', 'PRMD', 'County Deed'].includes(row['Instrument Type']) &&
+    row['Description']?.includes(targetLegal.split('-')[2]?.split(':')[0])
+  ).sort((a, b) => {
+    const dateA = parseDate(a['Recorded'] || a['Dated'] || '0');
+    const dateB = parseDate(b['Recorded'] || b['Dated'] || '0');
+    return dateA - dateB;
+  });
+
+  // Process each transfer to build complete ownership chain
+  for (const transfer of transfers) {
+    processExpertOwnershipTransfer(transfer, ownershipMap, targetLegal);
+  }
+
+  // Step 3: Determine current lease status using expert methodology
+  const currentOwners: MineralOwner[] = [];
   
-  // Step 2: If no PRD, look for most recent ownership transfers
-  const recentTransfers = rows
-    .filter(row => ['QCD', 'WD', 'PRD'].includes(row['Instrument Type']) && row['Grantee(s)'])
-    .slice(-5); // Last 5 transfers
-  
-  const owners: MineralOwner[] = [];
-  
-  for (const transfer of recentTransfers) {
-    const grantees = parseGrantees(transfer['Grantee(s)']);
-    
-    for (const grantee of grantees) {
-      const leaseStatus = findCurrentLeaseStatus(grantee.name, rows, targetLegal);
+  for (const [ownerName, ownerData] of ownershipMap) {
+    if (ownerData.active !== false) {
+      const leaseAnalysis = determineExpertLeaseStatus(ownerName, rows, targetLegal);
+      const lastLease = findMostRecentValidLease(ownerName, rows, targetLegal);
       
-      owners.push({
-        name: grantee.name,
-        interests: grantee.interest || '100.00000000%',
-        netAcres: calculateNetAcres(grantee.interest || '100%', 80),
-        leaseholdStatus: leaseStatus.status,
-        lastLeaseOfRecord: leaseStatus.lease,
-        landsConveredOnLease: leaseStatus.lands,
-        listedAcreage: leaseStatus.acreage
+      // Apply expert rules: assume mineral ownership when lease is present unless contradicted
+      const hasLease = lastLease !== null;
+      const hasDeedOnly = ownerData.source === 'Deed' && !hasLease;
+      
+      currentOwners.push({
+        name: ownerName,
+        interests: convertToPercentage(ownerData.interest || '1/1'),
+        netAcres: calculateNetAcresFromInterest(ownerData.interest || '1/1', 80),
+        leaseholdStatus: hasDeedOnly ? 'Appears Open (Deed-only interest)' : leaseAnalysis.status,
+        lastLeaseOfRecord: lastLease,
+        landsConveredOnLease: lastLease?.landsConvered,
+        listedAcreage: ownerData.listedAcreage || calculateListedAcreage(ownerData.interest, 80)
       });
     }
   }
-  
-  return owners;
+
+  return currentOwners.length > 0 ? currentOwners : generateDefaultOwner(targetLegal);
 }
 
 function parseOwnershipFromPRD(prdRow: RunsheetRow, rows: RunsheetRow[], targetLegal: string): MineralOwner[] {
@@ -339,64 +373,79 @@ function calculateNetAcres(interest: string, totalAcres: number): number {
   return totalAcres;
 }
 
-function findCurrentLeaseStatus(ownerName: string, rows: RunsheetRow[], targetLegal: string): any {
-  // Find OGL leases by this owner or their predecessors
+function determineExpertLeaseStatus(ownerName: string, rows: RunsheetRow[], targetLegal: string): { status: string, details?: string } {
+  console.log(`Expert lease analysis for: ${ownerName}`);
+  
   const ownerVariations = generateNameVariations(ownerName);
   
-  const ogleases = rows.filter(row => 
-    row['Instrument Type'] === 'OGL' && 
+  // Find all OGL leases involving this owner or predecessors
+  const ownersLeases = rows.filter(row => 
+    row['Instrument Type'] === 'OGL' &&
     ownerVariations.some(variation => 
-      row['Grantor(s)'].toLowerCase().includes(variation.toLowerCase())
-    )
-  );
-  
-  if (ogleases.length === 0) {
+      row['Grantor(s)']?.toLowerCase().includes(variation.toLowerCase())
+    ) &&
+    row['Description']?.toLowerCase().includes(targetLegal.toLowerCase())
+  ).sort((a, b) => {
+    const dateA = parseDate(a['Recorded'] || a['Dated'] || '0');
+    const dateB = parseDate(b['Recorded'] || b['Dated'] || '0');
+    return dateB - dateA; // Most recent first
+  });
+
+  if (ownersLeases.length === 0) {
     return { 
       status: 'Appears Open', 
-      lease: null, 
-      lands: [], 
-      acreage: '80.00 mi' 
+      details: 'No lease records found for this owner' 
     };
   }
+
+  const mostRecentLease = ownersLeases[0];
   
-  // Get the most recent lease
-  const lastLease = ogleases[ogleases.length - 1];
-  
-  // Check if this lease has been released
-  const leaseDoc = lastLease['Instrument Number'] || lastLease['Book and Page'] || '';
-  const releases = rows.filter(row => 
-    row['Instrument Type'] === 'Release OGL' && 
-    (row['Comments']?.includes(leaseDoc) || 
-     row['Grantor(s)']?.includes(lastLease['Grantee(s)']))
+  // Check for releases
+  const releases = rows.filter(row =>
+    row['Instrument Type']?.includes('Release') &&
+    row['Description']?.toLowerCase().includes(targetLegal.toLowerCase()) &&
+    (row['Grantor(s)']?.toLowerCase().includes(mostRecentLease['Grantee(s)']?.toLowerCase() || '') ||
+     row['Comments']?.toLowerCase().includes(mostRecentLease['Grantee(s)']?.toLowerCase() || ''))
   );
-  
+
   if (releases.length > 0) {
-    return { 
-      status: 'Appears Open', 
-      lease: null, 
-      lands: [], 
-      acreage: '80.00 mi' 
-    };
+    const releaseDate = parseDate(releases[releases.length - 1]['Recorded'] || '0');
+    const leaseDate = parseDate(mostRecentLease['Recorded'] || '0');
+    
+    if (releaseDate > leaseDate) {
+      return { 
+        status: 'Appears Open', 
+        details: 'Most recent lease has been released' 
+      };
+    }
   }
-  
-  // Parse lease details
-  const lessee = lastLease['Grantee(s)'] || '';
-  const comments = lastLease['Comments'] || '';
-  const description = lastLease['Description'] || '';
-  
-  return {
-    status: 'Last Lease of Record',
-    lease: {
-      lessor: lastLease['Grantor(s)'] || '',
-      lessee: lessee,
-      dated: formatDate(lastLease['Dated']),
-      term: extractTermFromComments(comments),
-      expiration: calculateExpiration(lastLease['Dated'], comments),
-      recorded: formatDate(lastLease['Recorded']),
-      documentNumber: lastLease['Instrument Number'] || lastLease['Book and Page'] || ''
-    },
-    lands: [formatLegalDescription(description)],
-    acreage: '80.00 mi'
+
+  // Calculate lease expiration with expert methodology
+  const leaseExpiration = calculateExpertLeaseExpiration(mostRecentLease);
+  if (leaseExpiration.date) {
+    const now = new Date();
+    const expDate = new Date(leaseExpiration.date);
+    
+    if (expDate < now) {
+      // Check for potential HBP
+      const hbpAnalysis = analyzeHBPPotential(ownerName, rows, targetLegal, expDate);
+      
+      return { 
+        status: hbpAnalysis.isLikely ? 'Expired (Potential HBP)' : 'Appears Open', 
+        details: `Primary term expired ${leaseExpiration.formatted}. ${hbpAnalysis.reasoning}` 
+      };
+    } else {
+      return { 
+        status: 'Last Lease of Record', 
+        details: `Active lease until ${leaseExpiration.formatted}` 
+      };
+    }
+  }
+
+  // If expiration cannot be determined, require production information
+  return { 
+    status: 'Last Lease of Record', 
+    details: 'Active lease - expiration requires production verification' 
   };
 }
 
@@ -482,31 +531,263 @@ function extractWellInformation(rows: RunsheetRow[]): string[] {
   return wellInfo;
 }
 
-function generateLimitationsAndExceptions(rows: RunsheetRow[]): string {
+// Helper functions for expert mineral rights analysis
+function parseSubdivisions(legalDescription: string): string[] {
+  const subdivisionPattern = /([NESW]+\d*[NESW]*\d*)/g;
+  const matches = legalDescription.match(subdivisionPattern) || [];
+  return matches.map(match => match.trim());
+}
+
+function processExpertOwnershipTransfer(transfer: RunsheetRow, ownershipMap: Map<string, any>, targetLegal: string): void {
+  const grantor = transfer['Grantor(s)'] || '';
+  const grantee = transfer['Grantee(s)'] || '';
+  const instrumentType = transfer['Instrument Type'];
+  
+  if (instrumentType === 'PRD' || instrumentType === 'PRMD') {
+    // Process probate distribution with expert fractional analysis
+    const grantees = parseGranteesWithFractions(grantee);
+    
+    grantees.forEach(granteeData => {
+      if (granteeData.name) {
+        ownershipMap.set(granteeData.name, {
+          name: granteeData.name,
+          interest: granteeData.interest || '1/1',
+          source: 'Probate',
+          acquisitionDate: transfer['Recorded'] || transfer['Dated'],
+          active: true,
+          address: extractMostRecentAddress(granteeData.name, ownershipMap)
+        });
+      }
+    });
+    
+    // Mark grantor as inactive
+    if (ownershipMap.has(grantor)) {
+      ownershipMap.get(grantor).active = false;
+    }
+  } else {
+    // Regular deed transfer
+    if (ownershipMap.has(grantor)) {
+      ownershipMap.get(grantor).active = false;
+    }
+    
+    ownershipMap.set(grantee, {
+      name: grantee,
+      interest: '1/1',
+      source: 'Deed',
+      acquisitionDate: transfer['Recorded'] || transfer['Dated'],
+      active: true,
+      address: extractAddressFromRecord(transfer)
+    });
+  }
+}
+
+function parseGranteesWithFractions(granteeText: string): Array<{name: string, interest?: string}> {
+  const grantees: Array<{name: string, interest?: string}> = [];
+  const lines = granteeText.split('\n').filter(line => line.trim());
+  
+  for (const line of lines) {
+    if (line.includes('(') && line.includes(')')) {
+      const name = line.substring(0, line.indexOf('(')).trim();
+      const interestMatch = line.match(/\(([^)]+)\)/);
+      const interest = interestMatch ? interestMatch[1] : undefined;
+      
+      if (name) {
+        grantees.push({ name, interest });
+      }
+    } else if (line.trim() && !line.includes('*TIC') && !line.includes('Remainderman')) {
+      // Handle life estates and remaindermen
+      if (line.includes('Life estate')) {
+        const name = line.substring(0, line.indexOf('Life estate')).trim();
+        grantees.push({ name, interest: 'Life Estate' });
+      } else {
+        grantees.push({ name: line.trim() });
+      }
+    }
+  }
+  
+  return grantees;
+}
+
+function analyzeHBPPotential(ownerName: string, rows: RunsheetRow[], targetLegal: string, expirationDate: Date): { isLikely: boolean, reasoning: string } {
+  const wells = extractWellInformation(rows);
+  
+  if (wells.length > 0 && wells[0] !== 'No well information found in record') {
+    return {
+      isLikely: true,
+      reasoning: `${wells.length} well(s) noted in record. Production data required to determine HBP status.`
+    };
+  }
+  
+  // Check for production-related documents
+  const productionDocs = rows.filter(row => 
+    (row['Comments'] || '').toLowerCase().includes('production') ||
+    (row['Comments'] || '').toLowerCase().includes('royalty') ||
+    (row['Instrument Type'] || '').toLowerCase().includes('division order')
+  );
+  
+  if (productionDocs.length > 0) {
+    return {
+      isLikely: true,
+      reasoning: 'Production-related documents found. HBP status requires verification.'
+    };
+  }
+  
+  return {
+    isLikely: false,
+    reasoning: 'No wells or production documents noted. Lease likely expired and acreage returned to open status.'
+  };
+}
+
+function calculateExpertLeaseExpiration(lease: RunsheetRow): { date: string | null, formatted: string } {
+  const comments = lease['Comments'] || '';
+  const termMatch = comments.match(/(\d+)\s*year/i);
+  const dated = lease['Dated'];
+  
+  if (termMatch && dated) {
+    const years = parseInt(termMatch[1]);
+    const leaseYear = parseInt(dated);
+    
+    if (!isNaN(leaseYear) && !isNaN(years)) {
+      const expirationYear = leaseYear + years;
+      // Use October 26 as default expiration date (common in ND)
+      return {
+        date: `${expirationYear}-10-26`,
+        formatted: `10/26/${expirationYear}`
+      };
+    }
+  }
+  
+  return { date: null, formatted: 'Requires production verification' };
+}
+
+function findMostRecentValidLease(ownerName: string, rows: RunsheetRow[], targetLegal: string): any {
+  const ownerVariations = generateNameVariations(ownerName);
+  
+  const leases = rows.filter(row => 
+    row['Instrument Type'] === 'OGL' &&
+    ownerVariations.some(variation => 
+      row['Grantor(s)']?.toLowerCase().includes(variation.toLowerCase())
+    ) &&
+    row['Description']?.toLowerCase().includes(targetLegal.toLowerCase())
+  ).sort((a, b) => {
+    const dateA = parseDate(a['Recorded'] || a['Dated'] || '0');
+    const dateB = parseDate(b['Recorded'] || b['Dated'] || '0');
+    return dateB - dateA;
+  });
+
+  if (leases.length === 0) return null;
+
+  const lease = leases[0];
+  const comments = lease['Comments'] || '';
+  const expiration = calculateExpertLeaseExpiration(lease);
+  
+  return {
+    lessor: lease['Grantor(s)'] || '',
+    lessee: lease['Grantee(s)'] || '',
+    dated: formatDate(lease['Dated']),
+    term: extractTermFromComments(comments),
+    expiration: expiration.formatted,
+    recorded: formatDate(lease['Recorded']),
+    documentNumber: lease['Instrument Number'] || lease['Book and Page'] || '',
+    landsConvered: [formatLegalDescription(lease['Description'] || '')]
+  };
+}
+
+function extractMostRecentAddress(ownerName: string, ownershipMap: Map<string, any>): string {
+  // In a real implementation, this would extract addresses from the most recent records
+  return ''; // Placeholder - addresses would need to be parsed from document details
+}
+
+function extractAddressFromRecord(transfer: RunsheetRow): string {
+  // In a real implementation, this would extract addresses from transfer documents
+  return ''; // Placeholder - addresses would need to be parsed from document details
+}
+
+function calculateListedAcreage(interest: string, totalAcres: number): string {
+  const netAcres = calculateNetAcresFromInterest(interest, totalAcres);
+  return `${netAcres.toFixed(7)} mi`;
+}
+
+function calculateNetAcresFromInterest(interest: string, totalAcres: number): number {
+  try {
+    if (interest.includes('/')) {
+      const [num, den] = interest.split('/').map(n => parseFloat(n.trim()));
+      return (num / den) * totalAcres;
+    }
+    if (interest.includes('%')) {
+      const percentage = parseFloat(interest.replace('%', ''));
+      return (percentage / 100) * totalAcres;
+    }
+    return totalAcres;
+  } catch {
+    return totalAcres;
+  }
+}
+
+function generateDefaultOwner(targetLegal: string): MineralOwner[] {
+  return [{
+    name: 'Unknown Owner - Requires Additional Research',
+    interests: '100.00000000%',
+    netAcres: 80,
+    leaseholdStatus: 'Unknown - Manual Review Required',
+    lastLeaseOfRecord: undefined,
+    listedAcreage: '80.0000000 mi'
+  }];
+}
+
+function parseDate(dateStr: string): number {
+  if (!dateStr) return 0;
+  
+  const num = parseInt(dateStr);
+  if (!isNaN(num)) {
+    if (num < 10000 && num > 1800) return new Date(num, 0, 1).getTime();
+  }
+  
+  const date = new Date(dateStr);
+  return isNaN(date.getTime()) ? 0 : date.getTime();
+}
+
+function generateExpertLimitationsAndExceptions(rows: RunsheetRow[]): string {
   const limitations: string[] = [];
   
-  // Check for specific issues from the runsheet
+  // Tax deed analysis
   const taxDeeds = rows.filter(row => row['Instrument Type'] === 'Tax Deed');
   if (taxDeeds.length > 0) {
-    limitations.push('Subject to prior tax deed proceedings');
+    limitations.push('Subject to potential tax deed limitations and statutory redemption periods under North Dakota law');
   }
   
+  // Foreclosure analysis
   const foreclosures = rows.filter(row => 
-    (row['Comments'] || '').toLowerCase().includes('foreclosure')
+    (row['Comments'] || '').toLowerCase().includes('foreclosure') ||
+    row['Instrument Type']?.toLowerCase().includes('foreclosure')
   );
   if (foreclosures.length > 0) {
-    limitations.push('Subject to prior foreclosure proceedings');
+    limitations.push('Subject to foreclosure proceedings and potential redemption rights');
   }
   
-  const mineralReservations = rows.filter(row => 
+  // Mineral reservation analysis
+  const reservations = rows.filter(row => 
     (row['Comments'] || '').toLowerCase().includes('reservation') ||
-    (row['Comments'] || '').toLowerCase().includes('reserved')
+    (row['Comments'] || '').toLowerCase().includes('reserved') ||
+    (row['Comments'] || '').toLowerCase().includes('except')
   );
-  if (mineralReservations.length > 0) {
-    limitations.push('Subject to mineral reservations as noted in record');
+  if (reservations.length > 0) {
+    limitations.push('Subject to mineral reservations and exceptions as noted in conveyances');
   }
   
-  limitations.push('Title subject to all prior unreleased liens, encumbrances, and reservations of record');
+  // Correction documents
+  const corrections = rows.filter(row => 
+    row['Instrument Type']?.toLowerCase().includes('correction') ||
+    (row['Comments'] || '').toLowerCase().includes('correction')
+  );
+  if (corrections.length > 0) {
+    limitations.push('Subject to title corrections and clarifications noted in record');
+  }
+  
+  // Standard limitations
+  limitations.push('Title subject to all easements, restrictions, reservations, and covenants of record');
+  limitations.push('Subject to all valid liens, encumbrances, and claims not specifically released');
+  limitations.push('Mineral ownership subject to all valid outstanding oil and gas leases');
   
   return limitations.join('. ');
 }
