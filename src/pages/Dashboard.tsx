@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { FileText, Camera, FolderOpen, Upload, Users, Settings, Plus, Cloud, Columns } from 'lucide-react';
+import { FileText, Camera, FolderOpen, Upload, Users, Settings, Plus, Cloud, Columns, Search } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
@@ -102,6 +102,12 @@ const Dashboard: React.FC = () => {
       description: "Load a previously saved runsheet",
       icon: FolderOpen,
       action: "open-dialog"
+    },
+    {
+      title: "Lease Check Analyzer",
+      description: "Analyze oil and gas runsheet documents for lease status and mineral ownership",
+      icon: Search,
+      path: "/lease-check"
     },
     {
       title: "Upload Runsheet",
