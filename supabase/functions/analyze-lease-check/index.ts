@@ -106,7 +106,7 @@ serve(async (req) => {
     }
 
     // Simplified approach: Use AI analysis for all documents
-    console.log('Using AI-first analysis approach...');
+    console.log('Using enhanced AI-first analysis approach with v2.0 interactive system...');
     console.log(`Document preview: ${documentText.substring(0, 300)}...`);
     
     let analysisResult;
