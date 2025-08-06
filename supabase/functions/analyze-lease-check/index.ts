@@ -933,73 +933,81 @@ async function analyzeWithAI(documentText: string): Promise<any> {
   }
 
   try {
-    // Enhanced prompt with oil & gas land surveying fundamentals and multi-tract detection
-    const enhancedPrompt = `You are an expert oil and gas landman specializing in runsheet analysis and lease status determination. You have extensive knowledge of:
+    // Enhanced prompt with patent-based tract identification
+    const enhancedPrompt = `You are an expert oil and gas landman specializing in runsheet analysis. You understand that every tract's mineral ownership must trace back to original government patents.
 
-1. **Oil & Gas Land Surveying Fundamentals:**
-   - A section = 640 acres
-   - Quarter section (1/4) = 160 acres  
-   - Half section (1/2) = 320 acres
-   - Quarter-quarter section (1/16) = 40 acres
-   - Use these standards to calculate gross acreage from legal descriptions
+FIRST PRIORITY - IDENTIFY THE TRACT:
+1. Identify the specific legal description being analyzed
+2. Look for patents that cover this legal description (may be multiple patents for combined lands)
+3. Confirm this is a valid tract for analysis
 
-2. **Multiple Tract Detection:**
-   - Look for different legal descriptions within the same document
-   - Separate ownership may exist for different tracts
-   - Create separate analyses for each distinct tract of land
-   - Each tract should have its own ownership breakdown
+FUNDAMENTAL LAND KNOWLEDGE:
+- Full Section = 640 acres
+- Quarter Section (NE, NW, SE, SW) = 160 acres each  
+- Half Section (N2, S2, E2, W2) = 320 acres each
+- Quarter-Quarter (NENE, NENW, etc.) = 40 acres each
+- Lots are irregular parcels with specific acreage
 
-3. **Mineral Ownership Analysis:**
-   - Extract ALL mineral owners (could be 1 to hundreds)
-   - Calculate precise fractional interests and net acreage per owner
-   - Determine leasehold status for each owner
-   - Identify lease terms, expiration dates, and current status
+ANALYSIS APPROACH:
+1. Extract the main legal description being analyzed
+2. Identify underlying patents for this tract
+3. Determine if user confirmation is needed for the legal description
+4. Extract ALL mineral owners and their ownership chains
+5. Calculate precise fractional interests and net acreage
+6. Determine current leasehold status
 
-Analyze this runsheet document and return a JSON response with this EXACT structure:
+Analyze this runsheet document and return a JSON response:
 
 {
-  "prospect": "Overall prospect name or description",
-  "reportFormat": "ai_analyzed_multi_tract",
+  "prospect": "Legal description identified for analysis",
+  "reportFormat": "ai_analyzed_multi_tract", 
+  "requiresConfirmation": boolean (true if legal description needs user verification),
+  "confirmationMessage": "Is this the legal description you want analyzed: [legal description]?",
+  "patents": ["List of patents covering this tract"],
   "hasMultipleTracts": boolean,
   "tracts": [
     {
-      "tractId": "Tract 1" or descriptive name,
-      "legalDescription": "Legal description for this specific tract",
-      "totalAcres": number (calculated from legal description) OR "Requires manual input - [reason]",
-      "grossAcreageNote": "Explanation if acreage calculation is unclear",
-      "needsManualAcres": boolean (true if totalAcres is a string),
+      "tractId": "Descriptive name for this tract",
+      "legalDescription": "Specific legal description", 
+      "totalAcres": number OR "Requires manual input - [reason]",
+      "grossAcreageNote": "Explanation if unclear",
+      "needsManualAcres": boolean,
+      "patents": ["Patents covering this specific tract"],
       "owners": [
         {
-          "name": "Owner name",
-          "interests": "Percentage or fraction",
+          "name": "Owner name from chain of title",
+          "interests": "Percentage or fraction", 
           "netAcres": number,
           "leaseholdStatus": "Leased|Open/Unleased|Expired (Potential HBP)|Last Lease of Record|Unknown",
+          "acquisitionSource": "Patent|Deed|Probate|etc",
           "lastLeaseOfRecord": {
             "lessor": "Lessor name",
-            "lessee": "Lessee name", 
-            "dated": "Date executed",
+            "lessee": "Lessee name",
+            "dated": "Date executed", 
             "term": "Primary term",
             "expiration": "Expiration date",
             "recorded": "Recording date",
             "documentNumber": "Document reference"
           },
           "landsConveredOnLease": ["Legal descriptions covered"],
-          "listedAcreage": "Acreage listed on lease if different"
+          "listedAcreage": "Acreage on lease if different"
         }
       ],
-      "wells": ["Well information if any"],
+      "wells": ["Well information"],
       "limitationsAndExceptions": "Tract-specific limitations"
     }
   ],
-  "overallLimitationsAndExceptions": "Overall document limitations and exceptions"
+  "overallLimitationsAndExceptions": "Overall limitations"
 }
 
 RUNSHEET DATA:
 ${documentText}
 
-IMPORTANT: If legal descriptions suggest multiple separate tracts of land with potentially different ownership, create separate tract entries. If ownership appears to be the same across all described lands, combine into a single tract.
-
-If you cannot determine gross acreage with confidence, set needsManualAcres to true and provide an explanation.
+IMPORTANT: 
+- If multiple distinct legal descriptions exist, create separate tracts
+- If unclear what legal description to analyze, set requiresConfirmation to true
+- Every owner should trace back to a patent source
+- If you cannot determine gross acreage confidently, set needsManualAcres to true
 
 RETURN ONLY THE JSON - NO OTHER TEXT.`;
 
