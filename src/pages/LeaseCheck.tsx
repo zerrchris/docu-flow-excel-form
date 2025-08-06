@@ -35,6 +35,17 @@ export interface Tract {
   owners: MineralOwner[];
 }
 
+export interface TractData {
+  tractId: string;
+  legalDescription: string;
+  totalAcres: number | string;
+  grossAcreageNote?: string;
+  needsManualAcres?: boolean;
+  owners: MineralOwner[];
+  wells?: string[];
+  limitationsAndExceptions: string;
+}
+
 export interface LeaseCheckData {
   prospect: string;
   totalAcres: number;
@@ -42,6 +53,10 @@ export interface LeaseCheckData {
   owners: MineralOwner[];
   wells: string[];
   limitationsAndExceptions: string;
+  // New multi-tract format
+  hasMultipleTracts?: boolean;
+  tracts?: TractData[];
+  overallLimitationsAndExceptions?: string;
 }
 
 const LeaseCheck = () => {
@@ -51,6 +66,8 @@ const LeaseCheck = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showProductionModal, setShowProductionModal] = useState(false);
   const [pendingTracts, setPendingTracts] = useState<string[]>([]);
+  const [selectedTractIndex, setSelectedTractIndex] = useState(0);
+  const [manualAcres, setManualAcres] = useState<{ [tractId: string]: number }>({});
   const { toast } = useToast();
 
   const handleDocumentUpload = (text: string) => {
@@ -98,8 +115,22 @@ const LeaseCheck = () => {
       console.log('Setting lease check data:', data);
       setLeaseCheckData(data);
 
-      // Check if we need production information (new structure has owners directly)
-      if (data.owners && data.owners.length > 0) {
+      // Handle both old single-tract and new multi-tract formats
+      if (data.hasMultipleTracts && data.tracts) {
+        // Multi-tract format - check if any need production info
+        const needsProduction = data.tracts.some((tract: TractData) => 
+          tract.owners.some((owner: MineralOwner) => 
+            owner.leaseholdStatus === 'Unknown' || 
+            (owner.lastLeaseOfRecord && !owner.lastLeaseOfRecord.expiration)
+          )
+        );
+
+        if (needsProduction) {
+          setPendingTracts(data.tracts.map((tract: TractData) => tract.tractId));
+          setShowProductionModal(true);
+        }
+      } else if (data.owners && data.owners.length > 0) {
+        // Single tract format (legacy)
         const needsProduction = data.owners.some((owner: MineralOwner) => 
           owner.leaseholdStatus === 'Unknown' || 
           (owner.lastLeaseOfRecord && !owner.lastLeaseOfRecord.expiration)
@@ -129,12 +160,33 @@ const LeaseCheck = () => {
   };
 
   const handleProductionUpdate = (productionData: Record<string, string>) => {
-    // For now, just close the modal since the new structure handles production differently
     setShowProductionModal(false);
     toast({
       title: "Updated",
       description: "Production information noted",
     });
+  };
+
+  const updateTractAcres = (tractId: string, acres: number) => {
+    setManualAcres(prev => ({ ...prev, [tractId]: acres }));
+  };
+
+  const getCurrentTractData = () => {
+    if (!leaseCheckData) return null;
+    
+    if (leaseCheckData.hasMultipleTracts && leaseCheckData.tracts) {
+      return leaseCheckData.tracts[selectedTractIndex];
+    }
+    
+    // Convert legacy format to tract format for display
+    return {
+      tractId: "Main Tract",
+      legalDescription: leaseCheckData.prospect,
+      totalAcres: leaseCheckData.totalAcres,
+      owners: leaseCheckData.owners,
+      wells: leaseCheckData.wells || [],
+      limitationsAndExceptions: leaseCheckData.limitationsAndExceptions
+    };
   };
 
   return (
@@ -200,9 +252,15 @@ const LeaseCheck = () => {
           {leaseCheckData && (
             <LeaseCheckReport 
               data={leaseCheckData}
+              selectedTractIndex={selectedTractIndex}
+              onTractChange={setSelectedTractIndex}
+              manualAcres={manualAcres}
+              onUpdateAcres={updateTractAcres}
               onNewAnalysis={() => {
                 setLeaseCheckData(null);
                 setDocumentText('');
+                setSelectedTractIndex(0);
+                setManualAcres({});
                 setActiveTab('upload');
               }}
             />

@@ -39,6 +39,25 @@ interface MineralOwner {
   listedAcreage?: string;
 }
 
+interface TractData {
+  tractId: string;
+  legalDescription: string;
+  totalAcres: number | string;
+  grossAcreageNote?: string;
+  needsManualAcres?: boolean;
+  owners: MineralOwner[];
+  wells?: string[];
+  limitationsAndExceptions: string;
+}
+
+interface LeaseCheckResponse {
+  prospect: string;
+  reportFormat: string;
+  hasMultipleTracts: boolean;
+  tracts: TractData[];
+  overallLimitationsAndExceptions?: string;
+}
+
 interface StructuredLeaseCheckResult {
   prospect: string;
   totalAcres: number;
@@ -914,71 +933,73 @@ async function analyzeWithAI(documentText: string): Promise<any> {
   }
 
   try {
-    // Enhanced prompt with oil & gas land surveying fundamentals
-    const prompt = `You are an expert mineral rights analyst specializing in North Dakota oil and gas runsheets with extensive knowledge of U.S. land surveying.
+    // Enhanced prompt with oil & gas land surveying fundamentals and multi-tract detection
+    const enhancedPrompt = `You are an expert oil and gas landman specializing in runsheet analysis and lease status determination. You have extensive knowledge of:
 
-FUNDAMENTAL LAND KNOWLEDGE YOU MUST USE:
-- Full Section = 640 acres
-- Quarter Section (NE, NW, SE, SW) = 160 acres each
-- Half Section (N2, S2, E2, W2) = 320 acres each
-- Quarter-Quarter (NENE, NENW, etc.) = 40 acres each
-- Lots are irregular parcels with specific acreage listed
-- Legal descriptions show exactly what lands are covered
+1. **Oil & Gas Land Surveying Fundamentals:**
+   - A section = 640 acres
+   - Quarter section (1/4) = 160 acres  
+   - Half section (1/2) = 320 acres
+   - Quarter-quarter section (1/16) = 40 acres
+   - Use these standards to calculate gross acreage from legal descriptions
 
-CRITICAL ANALYSIS REQUIREMENTS:
-1. Extract EVERY mineral owner mentioned - could be 1 owner or 100+ owners
-2. Calculate precise fractional interests that total exactly 100%
-3. Determine gross acreage from legal descriptions using standard surveying rules
-4. If gross acreage is unclear from legal description, note "Gross acreage requires verification"
-5. Find lease status for each owner: "Appears Open", "Last Lease of Record", or "Expired (Potential HBP)"
-6. Extract complete lease details with exact dates and terms
+2. **Multiple Tract Detection:**
+   - Look for different legal descriptions within the same document
+   - Separate ownership may exist for different tracts
+   - Create separate analyses for each distinct tract of land
+   - Each tract should have its own ownership breakdown
 
-OWNERSHIP SOURCES TO EXAMINE:
-- Patent deeds (original government grants)
-- Warranty deeds, quit claim deeds
-- Probate distributions (PRD, PRMD)
-- Mineral deeds
-- Trust assignments
-- Corporate transfers
+3. **Mineral Ownership Analysis:**
+   - Extract ALL mineral owners (could be 1 to hundreds)
+   - Calculate precise fractional interests and net acreage per owner
+   - Determine leasehold status for each owner
+   - Identify lease terms, expiration dates, and current status
 
-LEASE ANALYSIS:
-- Find OGL (Oil & Gas Lease) records
-- Check for lease releases
-- Calculate expiration dates from term + dated
-- Note Pugh clauses and production status
+Analyze this runsheet document and return a JSON response with this EXACT structure:
+
+{
+  "prospect": "Overall prospect name or description",
+  "reportFormat": "ai_analyzed_multi_tract",
+  "hasMultipleTracts": boolean,
+  "tracts": [
+    {
+      "tractId": "Tract 1" or descriptive name,
+      "legalDescription": "Legal description for this specific tract",
+      "totalAcres": number (calculated from legal description) OR "Requires manual input - [reason]",
+      "grossAcreageNote": "Explanation if acreage calculation is unclear",
+      "needsManualAcres": boolean (true if totalAcres is a string),
+      "owners": [
+        {
+          "name": "Owner name",
+          "interests": "Percentage or fraction",
+          "netAcres": number,
+          "leaseholdStatus": "Leased|Open/Unleased|Expired (Potential HBP)|Last Lease of Record|Unknown",
+          "lastLeaseOfRecord": {
+            "lessor": "Lessor name",
+            "lessee": "Lessee name", 
+            "dated": "Date executed",
+            "term": "Primary term",
+            "expiration": "Expiration date",
+            "recorded": "Recording date",
+            "documentNumber": "Document reference"
+          },
+          "landsConveredOnLease": ["Legal descriptions covered"],
+          "listedAcreage": "Acreage listed on lease if different"
+        }
+      ],
+      "wells": ["Well information if any"],
+      "limitationsAndExceptions": "Tract-specific limitations"
+    }
+  ],
+  "overallLimitationsAndExceptions": "Overall document limitations and exceptions"
+}
 
 RUNSHEET DATA:
 ${documentText}
 
-If you cannot determine gross acreage from the legal description, include this in your response: "grossAcreageNote": "Requires verification - legal description unclear"
+IMPORTANT: If legal descriptions suggest multiple separate tracts of land with potentially different ownership, create separate tract entries. If ownership appears to be the same across all described lands, combine into a single tract.
 
-Return ONLY valid JSON:
-{
-  "prospect": "Legal description from runsheet",
-  "totalAcres": "calculated from legal description using surveying rules",
-  "grossAcreageNote": "Include if acreage calculation unclear",
-  "reportFormat": "ai_analyzed", 
-  "owners": [
-    {
-      "name": "Exact owner name from runsheet",
-      "interests": "XX.XXXXXXXX%",
-      "netAcres": "calculated using (percentage × gross acres)",
-      "leaseholdStatus": "Appears Open or Last Lease of Record or Expired (Potential HBP)",
-      "lastLeaseOfRecord": {
-        "lessor": "lessor name",
-        "lessee": "lessee name", 
-        "dated": "MM/DD/YYYY",
-        "term": "X years",
-        "expiration": "MM/DD/YYYY",
-        "recorded": "MM/DD/YYYY",
-        "documentNumber": "document reference"
-      },
-      "listedAcreage": "XX.XXXXXXX mi"
-    }
-  ],
-  "wells": ["well information from runsheet"],
-  "limitationsAndExceptions": "Any limitations noted in the records"
-}
+If you cannot determine gross acreage with confidence, set needsManualAcres to true and provide an explanation.
 
 RETURN ONLY THE JSON - NO OTHER TEXT.`;
 
@@ -997,7 +1018,7 @@ RETURN ONLY THE JSON - NO OTHER TEXT.`;
             role: 'system', 
             content: 'You are an expert North Dakota mineral rights analyst. Return only valid JSON responses. Never include explanatory text outside the JSON.' 
           },
-          { role: 'user', content: prompt }
+          { role: 'user', content: enhancedPrompt }
         ],
         temperature: 0.1, // Low temperature for consistency
         max_tokens: 4000
