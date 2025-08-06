@@ -107,45 +107,211 @@ serve(async (req) => {
 });
 
 async function analyzeDocument(documentText: string) {
-  const lines = documentText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+  console.log('Starting AI-powered lease chain analysis...');
   
-  console.log('Starting comprehensive lease chain analysis...');
+  const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+  if (!openAIApiKey) {
+    throw new Error('OpenAI API key not configured');
+  }
+
+  // Use OpenAI to analyze the document and extract structured ownership data
+  const aiAnalysis = await analyzeWithOpenAI(documentText, openAIApiKey);
   
-  // Extract prospect name
-  const prospect = extractProspect(lines);
-  
-  // Extract legal descriptions and acres
-  const tracts = extractTracts(lines);
-  
-  // Build ownership chains for each tract
-  const processedTracts = tracts.map(tract => {
-    console.log(`Processing ownership chain for tract: ${tract.legalDescription}`);
-    const owners = buildOwnershipChain(lines, tract.legalDescription);
-    return {
-      ...tract,
-      owners
-    };
+  // Process the AI analysis into our expected format
+  return processAIAnalysis(aiAnalysis, documentText);
+}
+
+async function analyzeWithOpenAI(documentText: string, apiKey: string) {
+  const prompt = `
+You are a legal expert specializing in oil and gas lease analysis. Analyze this runsheet document and extract ownership information following these rules:
+
+CRITICAL OWNERSHIP TRACKING RULES:
+1. If someone leased minerals, assume they owned mineral rights at that time
+2. Track all conveyances forward chronologically to find current owners
+3. If someone received mineral conveyances but never leased, assume they own mineral interest
+4. Determine current lease status (active, expired, held by production)
+5. Track ownership chains through multiple transfers
+
+EXTRACT THE FOLLOWING INFORMATION:
+
+1. PROSPECT: Identify the prospect/section name
+
+2. TRACTS: For each legal description, extract:
+   - Legal description (Township, Range, Section)
+   - Acres
+   
+3. OWNERSHIP CHAINS: For each tract, build complete ownership history:
+   - Original lessors (assume they owned minerals if they leased)
+   - All subsequent conveyances and transfers
+   - Current mineral owners after following the chain
+   - Lease status for each current owner
+
+4. LEASE ANALYSIS: For each current owner:
+   - Current status: "Leased", "Open/Unleased", or "Expired (Potential HBP)"
+   - Last lease details if any (lessor, lessee, date, term, expiration)
+   - Held by production status
+   - Pugh clause presence
+   
+5. WELLS: Extract any well or production information
+
+Return the analysis as a JSON object with this structure:
+{
+  "prospect": "string",
+  "totalAcres": number,
+  "tracts": [
+    {
+      "legalDescription": "string",
+      "acres": number,
+      "owners": [
+        {
+          "name": "string",
+          "address": "string",
+          "vestingSource": "string describing how they acquired ownership",
+          "status": "Leased|Open/Unleased|Expired (Potential HBP)",
+          "lastLease": {
+            "lessor": "string",
+            "lessee": "string", 
+            "dated": "string",
+            "term": "string",
+            "expiration": "string",
+            "recordedDoc": "string"
+          } || null,
+          "pughClause": "string",
+          "heldByProduction": "string",
+          "notes": "string explaining ownership chain and current status"
+        }
+      ]
+    }
+  ],
+  "wells": ["string array of well/production info"],
+  "limitationsAndExceptions": "string"
+}
+
+DOCUMENT TO ANALYZE:
+${documentText}
+`;
+
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'gpt-4.1-2025-04-14',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a legal expert in oil and gas lease analysis. Always return valid JSON. Follow ownership chains chronologically. Assume lessors owned mineral rights.'
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      temperature: 0.1,
+      max_tokens: 4000
+    }),
   });
 
-  // Calculate summary statistics
-  const totalAcres = processedTracts.reduce((sum, tract) => sum + tract.acres, 0);
-  const openInterests = processedTracts.reduce((count, tract) => 
-    count + tract.owners.filter(owner => 
-      owner.status === 'Open/Unleased' || owner.status === 'Expired (Potential HBP)'
-    ).length, 0
-  );
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`OpenAI API error: ${error}`);
+  }
 
-  const wells = extractWells(lines);
+  const data = await response.json();
+  const analysisText = data.choices[0].message.content;
+  
+  console.log('OpenAI analysis completed');
+  
+  try {
+    return JSON.parse(analysisText);
+  } catch (parseError) {
+    console.error('Failed to parse OpenAI response as JSON:', analysisText);
+    // Fallback to basic analysis if AI response isn't valid JSON
+    return await fallbackAnalysis(documentText);
+  }
+}
+
+async function processAIAnalysis(aiAnalysis: any, originalText: string) {
+  // Calculate derived metrics
+  const openInterests = aiAnalysis.tracts?.reduce((count: number, tract: any) => 
+    count + (tract.owners?.filter((owner: any) => 
+      owner.status === 'Open/Unleased' || owner.status === 'Expired (Potential HBP)'
+    ).length || 0), 0) || 0;
+
+  const earliestExpiring = findEarliestExpiringFromAI(aiAnalysis.tracts || []);
+  const unresearchedLeases = calculateUnresearchedLeasesFromAI(aiAnalysis.tracts || []);
+
+  return {
+    prospect: aiAnalysis.prospect || 'Unknown Prospect',
+    totalAcres: aiAnalysis.totalAcres || 0,
+    tracts: aiAnalysis.tracts || [],
+    openInterests,
+    earliestExpiring,
+    unresearchedLeases,
+    wells: aiAnalysis.wells || [],
+    limitationsAndExceptions: aiAnalysis.limitationsAndExceptions || 
+      "AI-powered analysis with ownership chain tracking. Assumes parties who leased owned mineral interests. Tracks conveyances forward to determine current ownership status."
+  };
+}
+
+function findEarliestExpiringFromAI(tracts: any[]): string | undefined {
+  let earliestDate: Date | null = null;
+  let earliestLease: string | undefined;
+  
+  for (const tract of tracts) {
+    for (const owner of tract.owners || []) {
+      if (owner.lastLease?.expiration) {
+        const expirationDate = new Date(owner.lastLease.expiration);
+        if (!earliestDate || expirationDate < earliestDate) {
+          earliestDate = expirationDate;
+          earliestLease = `${owner.lastLease.lessee} - ${owner.lastLease.expiration}`;
+        }
+      }
+    }
+  }
+  
+  return earliestLease;
+}
+
+function calculateUnresearchedLeasesFromAI(tracts: any[]): number {
+  let unresearched = 0;
+  for (const tract of tracts) {
+    for (const owner of tract.owners || []) {
+      if (owner.notes?.includes('requires verification') || 
+          owner.status === 'Expired (Potential HBP)') {
+        unresearched++;
+      }
+    }
+  }
+  return unresearched;
+}
+
+async function fallbackAnalysis(documentText: string) {
+  console.log('Using fallback analysis due to AI parsing error');
+  const lines = documentText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
   
   return {
-    prospect,
-    totalAcres,
-    tracts: processedTracts,
-    openInterests,
-    earliestExpiring: findEarliestExpiring(processedTracts),
-    unresearchedLeases: calculateUnresearchedLeases(processedTracts),
-    wells,
-    limitationsAndExceptions: "Analysis includes ownership chain tracking. Assumes parties who leased owned mineral interests. Tracks conveyances forward to determine current ownership status."
+    prospect: extractProspect(lines),
+    totalAcres: 160, // Default estimate
+    tracts: [{
+      legalDescription: 'Legal description requires manual review',
+      acres: 160,
+      owners: [{
+        name: 'AI analysis failed - manual review required',
+        address: 'Address not extracted',
+        vestingSource: 'Requires manual title research',
+        status: 'Open/Unleased' as const,
+        pughClause: 'Unknown',
+        heldByProduction: 'Unknown',
+        notes: 'AI analysis encountered an error. Please review document manually.'
+      }]
+    }],
+    openInterests: 1,
+    unresearchedLeases: 1,
+    wells: [],
+    limitationsAndExceptions: "AI analysis failed. Manual review required for accurate ownership determination."
   };
 }
 
