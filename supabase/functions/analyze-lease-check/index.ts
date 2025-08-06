@@ -982,8 +982,6 @@ Return ONLY valid JSON:
 
 RETURN ONLY THE JSON - NO OTHER TEXT.`;
 
-RETURN ONLY THE JSON - NO OTHER TEXT.`;
-
     console.log('Sending request to OpenAI...');
     
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
