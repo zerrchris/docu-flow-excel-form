@@ -45,12 +45,21 @@ export const LeaseCheckUpload: React.FC<LeaseCheckUploadProps> = ({ onDocumentUp
 
   const handleFile = async (file: File) => {
     try {
-      const text = await file.text();
-      onDocumentUpload(text);
-      toast({
-        title: "File uploaded successfully",
-        description: `${file.name} has been processed`,
-      });
+      // For now, only accept plain text files to avoid binary file corruption
+      if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
+        const text = await file.text();
+        onDocumentUpload(text);
+        toast({
+          title: "File uploaded successfully",
+          description: `${file.name} has been processed`,
+        });
+      } else {
+        toast({
+          title: "Unsupported file type",
+          description: "Please upload a .txt file or paste the document text directly into the text area below.",
+          variant: "destructive"
+        });
+      }
     } catch (error) {
       console.error('Error reading file:', error);
       toast({
@@ -102,7 +111,7 @@ export const LeaseCheckUpload: React.FC<LeaseCheckUploadProps> = ({ onDocumentUp
                   Drop your runsheet document here
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Supports .txt, .docx, .pdf and other text files
+                  Currently supports .txt files only. For other formats, copy and paste the text content below.
                 </p>
               </div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -111,7 +120,7 @@ export const LeaseCheckUpload: React.FC<LeaseCheckUploadProps> = ({ onDocumentUp
               <Input
                 type="file"
                 onChange={handleFileInput}
-                accept=".txt,.docx,.pdf,.doc"
+                accept=".txt"
                 className="max-w-xs"
               />
             </div>
