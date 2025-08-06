@@ -99,11 +99,25 @@ serve(async (req) => {
     
     let analysisResult;
     
+    // Try structured parsing first, fall back to AI if it fails
     if (isStructuredData) {
-      console.log('Processing structured runsheet data...');
-      analysisResult = analyzeStructuredRunsheet(documentText);
+      console.log('Attempting structured parsing...');
+      try {
+        analysisResult = analyzeStructuredRunsheet(documentText);
+        
+        // If structured parsing returns default/unknown data, try AI analysis
+        if (analysisResult.owners.length === 1 && 
+            analysisResult.owners[0].name.includes('Unknown')) {
+          console.log('Structured parsing returned unknown data, trying AI analysis...');
+          analysisResult = await analyzeWithAI(documentText);
+        }
+      } catch (error) {
+        console.error('Structured parsing failed:', error);
+        console.log('Falling back to AI analysis...');
+        analysisResult = await analyzeWithAI(documentText);
+      }
     } else {
-      console.log('Processing unstructured document with AI...');
+      console.log('Processing with AI analysis...');
       analysisResult = await analyzeWithAI(documentText);
     }
 
@@ -881,10 +895,90 @@ function generateExpertLimitationsAndExceptions(rows: RunsheetRow[]): string {
 }
 
 async function analyzeWithAI(documentText: string): Promise<any> {
-  console.log('Fallback to AI analysis - this should not happen for properly formatted runsheets');
-  console.log(`Document sample: ${documentText.substring(0, 500)}`);
+  console.log('Using AI analysis for runsheet document...');
   
-  // Instead of requiring OpenAI, try to do basic parsing if it looks like structured data
+  const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+  if (!openAIApiKey) {
+    console.log('OpenAI API key not available, using fallback analysis');
+    return generateFallbackAnalysis(documentText);
+  }
+
+  try {
+    const prompt = `You are an expert in mineral rights, oil and gas leases, and runsheet analysis for land in North Dakota. 
+
+Analyze this runsheet document and extract:
+1. Legal description and acres
+2. Current mineral owners with fractional interests 
+3. Lease status for each owner (Appears Open, Last Lease of Record, or Expired Potential HBP)
+4. Last lease details if any
+5. Well information
+6. Limitations and exceptions
+
+Document:
+${documentText}
+
+Return as JSON with this exact structure:
+{
+  "prospect": "legal description",
+  "totalAcres": number,
+  "reportFormat": "ai_analyzed", 
+  "owners": [
+    {
+      "name": "owner name",
+      "interests": "percentage like 25.00000000%",
+      "netAcres": number,
+      "leaseholdStatus": "status",
+      "lastLeaseOfRecord": {
+        "lessor": "name",
+        "lessee": "name", 
+        "dated": "date",
+        "term": "term",
+        "expiration": "date",
+        "recorded": "date",
+        "documentNumber": "number"
+      },
+      "listedAcreage": "acres with mi suffix"
+    }
+  ],
+  "wells": ["well info"],
+  "limitationsAndExceptions": "text"
+}`;
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        messages: [
+          { role: 'system', content: 'You are an expert mineral rights analyst. Always return valid JSON.' },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.1,
+        max_tokens: 4000
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`OpenAI API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const aiResult = JSON.parse(data.choices[0].message.content);
+    
+    console.log('AI analysis completed successfully');
+    return aiResult;
+
+  } catch (error) {
+    console.error('AI analysis failed:', error);
+    return generateFallbackAnalysis(documentText);
+  }
+}
+
+function generateFallbackAnalysis(documentText: string): any {
+  // Try basic parsing if it looks like structured data
   if (documentText.includes('|') || documentText.includes('\t')) {
     console.log('Attempting basic structured parsing as fallback...');
     
@@ -899,20 +993,20 @@ async function analyzeWithAI(documentText: string): Promise<any> {
     }
   }
   
-  // Return a more helpful default response
+  // Return helpful error response
   return {
-    prospect: "Document Upload Issue",
+    prospect: "Analysis Error - Document Format Issue",
     totalAcres: 0,
-    reportFormat: "unstructured",
+    reportFormat: "error",
     owners: [{
-      name: "Analysis Error - Document Format Not Recognized",
+      name: "Document Parsing Failed",
       interests: "100.00000000%",
       netAcres: 0,
-      leaseholdStatus: "Please check document format and try again",
+      leaseholdStatus: "Manual Review Required - Upload Issue",
       lastLeaseOfRecord: undefined,
       listedAcreage: "0.0000000 mi"
     }],
-    wells: ["Document format not recognized. Please ensure your runsheet includes pipe-separated data with headers."],
-    limitationsAndExceptions: "Unable to analyze document format. Please upload a properly formatted Excel runsheet or ensure your text includes the required column headers (Book and Page, Instrument Type, Grantor(s), Grantee(s), Description, etc.)."
+    wells: ["Document format could not be processed. Please check the upload format."],
+    limitationsAndExceptions: "Unable to analyze document. Please ensure your Excel file has proper column headers (Book and Page, Instrument Type, Grantor(s), Grantee(s), Description, Comments) or try pasting the text directly."
   };
 }
