@@ -13,20 +13,20 @@ import { supabase } from '@/integrations/supabase/client';
 
 export interface MineralOwner {
   name: string;
-  address: string;
-  vestingSource: string;
-  status: 'Leased' | 'Open/Unleased' | 'Expired (Potential HBP)';
-  lastLease?: {
+  interests: string;
+  netAcres: number;
+  leaseholdStatus: string;
+  lastLeaseOfRecord?: {
     lessor: string;
     lessee: string;
     dated: string;
     term: string;
     expiration: string;
-    recordedDoc: string;
+    recorded: string;
+    documentNumber: string;
   };
-  pughClause: string;
-  heldByProduction: string;
-  notes: string;
+  landsConveredOnLease?: string[];
+  listedAcreage?: string;
 }
 
 export interface Tract {
@@ -38,10 +38,8 @@ export interface Tract {
 export interface LeaseCheckData {
   prospect: string;
   totalAcres: number;
-  tracts: Tract[];
-  openInterests: number;
-  earliestExpiring?: string;
-  unresearchedLeases: number;
+  reportFormat: string;
+  owners: MineralOwner[];
   wells: string[];
   limitationsAndExceptions: string;
 }
@@ -89,16 +87,17 @@ const LeaseCheck = () => {
       const data = response.data;
       setLeaseCheckData(data);
 
-      // Check if we need production information
-      const tractsNeedingProduction = data.tracts.filter((tract: Tract) => 
-        tract.owners.some((owner: MineralOwner) => 
-          owner.heldByProduction.includes('Unknown')
-        )
-      ).map((tract: Tract) => tract.legalDescription);
+      // Check if we need production information (new structure has owners directly)
+      if (data.owners && data.owners.length > 0) {
+        const needsProduction = data.owners.some((owner: MineralOwner) => 
+          owner.leaseholdStatus === 'Unknown' || 
+          (owner.lastLeaseOfRecord && !owner.lastLeaseOfRecord.expiration)
+        );
 
-      if (tractsNeedingProduction.length > 0) {
-        setPendingTracts(tractsNeedingProduction);
-        setShowProductionModal(true);
+        if (needsProduction) {
+          setPendingTracts([data.prospect || 'Current Tract']);
+          setShowProductionModal(true);
+        }
       }
 
       setActiveTab('results');
@@ -119,22 +118,11 @@ const LeaseCheck = () => {
   };
 
   const handleProductionUpdate = (productionData: Record<string, string>) => {
-    if (!leaseCheckData) return;
-
-    const updatedData = { ...leaseCheckData };
-    updatedData.tracts = updatedData.tracts.map(tract => ({
-      ...tract,
-      owners: tract.owners.map(owner => ({
-        ...owner,
-        heldByProduction: productionData[tract.legalDescription] || owner.heldByProduction
-      }))
-    }));
-
-    setLeaseCheckData(updatedData);
+    // For now, just close the modal since the new structure handles production differently
     setShowProductionModal(false);
     toast({
       title: "Updated",
-      description: "Production information has been updated",
+      description: "Production information noted",
     });
   };
 

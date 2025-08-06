@@ -44,7 +44,8 @@ export const LeaseCheckReport: React.FC<LeaseCheckReportProps> = ({ data, onNewA
   const { toast } = useToast();
   
   // Check if this is the new structured format
-  const isStructuredFormat = (data as any).reportFormat === 'structured';
+  const isStructuredFormat = (data as any).reportFormat === 'structured' || 
+    ('owners' in data && Array.isArray(data.owners) && !('tracts' in data));
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -148,28 +149,8 @@ export const LeaseCheckReport: React.FC<LeaseCheckReportProps> = ({ data, onNewA
         ListedAcreage: owner.listedAcreage || ''
       })) || [];
     } else {
-      // Original format
-      const originalData = data as LeaseCheckData;
-      const spreadsheetData: any[] = [];
-      
-      originalData.tracts.forEach(tract => {
-        tract.owners.forEach(owner => {
-          spreadsheetData.push({
-            Tract: tract.legalDescription,
-            Acres: tract.acres,
-            MineralOwner: owner.name,
-            Address: owner.address,
-            VestingSource: owner.vestingSource,
-            LeaseStatus: owner.status,
-            LastLeaseDetails: owner.lastLease ? JSON.stringify(owner.lastLease) : '',
-            PughClause: owner.pughClause,
-            HeldByProduction: owner.heldByProduction,
-            Notes: owner.notes
-          });
-        });
-      });
-
-      return spreadsheetData;
+      // Return empty array for old format since we now use structured format
+      return [];
     }
   };
 
