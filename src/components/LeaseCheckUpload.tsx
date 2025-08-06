@@ -74,7 +74,6 @@ export const LeaseCheckUpload: React.FC<LeaseCheckUploadProps> = ({ onDocumentUp
 
   const handleFile = async (file: File) => {
     try {
-      // For now, only accept plain text files to avoid binary file corruption
       if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
         const text = await file.text();
         onDocumentUpload(text);
@@ -82,10 +81,36 @@ export const LeaseCheckUpload: React.FC<LeaseCheckUploadProps> = ({ onDocumentUp
           title: "File uploaded successfully",
           description: `${file.name} has been processed`,
         });
+      } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls') || file.type.includes('spreadsheet')) {
+        // Handle Excel files
+        const XLSX = await import('xlsx');
+        const arrayBuffer = await file.arrayBuffer();
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+        
+        // Get the first worksheet
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        
+        // Convert to JSON
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        
+        // Format as text for analysis
+        let formattedText = `EXCEL FILE: ${file.name}\n\n`;
+        jsonData.forEach((row: any, index: number) => {
+          if (row.length > 0) {
+            formattedText += `ROW ${index + 1}: ${row.join(' | ')}\n`;
+          }
+        });
+        
+        onDocumentUpload(formattedText);
+        toast({
+          title: "Excel file uploaded successfully",
+          description: `${file.name} has been processed`,
+        });
       } else {
         toast({
           title: "Unsupported file type",
-          description: "Please upload a .txt file or paste the document text directly into the text area below.",
+          description: "Please upload a .txt or .xlsx/.xls file, or paste the document text directly into the text area below.",
           variant: "destructive"
         });
       }
@@ -241,7 +266,7 @@ export const LeaseCheckUpload: React.FC<LeaseCheckUploadProps> = ({ onDocumentUp
                   Drop your runsheet document here
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Supports .txt files. For Excel runsheets, use the "Import from Existing Runsheet" option above.
+                  Supports .txt and Excel (.xlsx/.xls) files. You can also import saved runsheets using the option above.
                 </p>
               </div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -250,7 +275,7 @@ export const LeaseCheckUpload: React.FC<LeaseCheckUploadProps> = ({ onDocumentUp
               <Input
                 type="file"
                 onChange={handleFileInput}
-                accept=".txt"
+                accept=".txt,.xlsx,.xls"
                 className="max-w-xs"
               />
             </div>
