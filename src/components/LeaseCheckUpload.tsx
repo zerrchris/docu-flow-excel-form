@@ -241,7 +241,7 @@ export const LeaseCheckUpload: React.FC<LeaseCheckUploadProps> = ({ onDocumentUp
                   Drop your runsheet document here
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Currently supports .txt files only. For other formats, copy and paste the text content below.
+                  Supports .txt files. For Excel runsheets, use the "Import from Existing Runsheet" option above.
                 </p>
               </div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
