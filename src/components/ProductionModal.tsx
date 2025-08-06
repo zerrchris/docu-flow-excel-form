@@ -83,8 +83,11 @@ export const ProductionModal: React.FC<ProductionModalProps> = ({
             <Card key={index}>
               <CardHeader>
                 <CardTitle className="text-base">
-                  Tract {index + 1}: {tract}
+                  {tract}
                 </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Check for production on the above legal description
+                </p>
               </CardHeader>
               <CardContent>
                 <Textarea
