@@ -1059,8 +1059,30 @@ RETURN ONLY THE JSON - NO OTHER TEXT.`;
       aiResult = JSON.parse(content);
       console.log('AI analysis completed successfully');
       
-      // Validate the result has required fields
+      // Handle different response structures - check for both owners and currentHolders
+      let owners = aiResult.owners;
+      if (!owners && aiResult.tracts && aiResult.tracts.length > 0 && aiResult.tracts[0].currentHolders) {
+        console.log('Converting currentHolders to owners format');
+        owners = aiResult.tracts[0].currentHolders.map(holder => ({
+          name: holder.name,
+          interests: holder.acreageNote || "Interest details from analysis",
+          netAcres: aiResult.tracts[0].totalAcres || 0,
+          leaseholdStatus: holder.status || "See analysis",
+          listedAcreage: holder.acreageNote || "From document analysis"
+        }));
+        
+        // Update the response structure
+        aiResult.owners = owners;
+        aiResult.reportFormat = "ai_analyzed_interactive";
+        aiResult.prospect = aiResult.prospect || "From analysis";
+        aiResult.totalAcres = aiResult.tracts[0].totalAcres || 0;
+        aiResult.wells = aiResult.tracts[0].wells || [];
+        aiResult.limitationsAndExceptions = aiResult.tracts[0].limitationsAndExceptions || aiResult.overallLimitationsAndExceptions || "";
+      }
+
+      // Validate we have owners data
       if (!aiResult.owners || !Array.isArray(aiResult.owners) || aiResult.owners.length === 0) {
+        console.error('AI response missing owners data, available keys:', Object.keys(aiResult));
         throw new Error('AI response missing owners data');
       }
       
