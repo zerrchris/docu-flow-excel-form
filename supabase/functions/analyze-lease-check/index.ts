@@ -169,11 +169,15 @@ function parseRunsheetRows(documentText: string): RunsheetRow[] {
   
   let headers: string[] = [];
   
+  console.log(`Parsing document with ${lines.length} lines`);
+  
   for (const line of lines) {
     if (line.includes('ROW 1:')) {
       headers = line.replace('ROW 1: ', '').split(' | ');
+      console.log(`Found headers: ${JSON.stringify(headers)}`);
     } else if (line.includes('ROW ') && !line.includes('ROW 1:')) {
       const rowData = line.substring(line.indexOf(': ') + 2).split(' | ');
+      console.log(`Processing row: ${line.substring(0, 20)}...`);
       
       if (headers.length > 0 && rowData.length > 0) {
         const row: any = {};
@@ -181,10 +185,12 @@ function parseRunsheetRows(documentText: string): RunsheetRow[] {
           row[header.trim()] = rowData[index]?.trim() || '';
         });
         rows.push(row as RunsheetRow);
+        console.log(`Added row with grantor: ${row['Grantor(s)']}, grantee: ${row['Grantee(s)']}, type: ${row['Instrument Type']}`);
       }
     }
   }
   
+  console.log(`Parsed ${rows.length} total rows`);
   return rows;
 }
 
@@ -229,19 +235,30 @@ function calculateAcresFromDescription(description: string): number {
 }
 
 function buildExpertOwnershipChain(rows: RunsheetRow[], targetLegal: string, subdivisions: string[]): MineralOwner[] {
-  console.log('Building expert ownership chain for:', targetLegal);
+  console.log(`Building expert ownership chain for: ${targetLegal}`);
+  console.log(`Total rows to analyze: ${rows.length}`);
   
   const ownershipMap = new Map<string, any>();
   
   // Step 1: Find initial patent/grant (establish chain of title)
-  const patents = rows.filter(row => 
-    row['Instrument Type']?.toLowerCase().includes('patent') && 
-    row['Description']?.includes(targetLegal.split('-')[2]?.split(':')[0]) // Match section
-  );
+  const patents = rows.filter(row => {
+    const instrumentType = row['Instrument Type']?.toLowerCase() || '';
+    const description = row['Description'] || '';
+    const sectionMatch = targetLegal.split('-')[2]?.split(':')[0];
+    
+    console.log(`Checking row: type=${instrumentType}, desc=${description.substring(0, 30)}...`);
+    
+    return instrumentType.includes('patent') && 
+           description.includes(sectionMatch || '');
+  });
+
+  console.log(`Found ${patents.length} patents`);
 
   if (patents.length > 0) {
     const patent = patents[0];
     const initialOwner = patent['Grantee(s)'] || 'Unknown';
+    console.log(`Initial patent owner: ${initialOwner}`);
+    
     ownershipMap.set(initialOwner, {
       name: initialOwner,
       interest: '1/1',
@@ -252,25 +269,41 @@ function buildExpertOwnershipChain(rows: RunsheetRow[], targetLegal: string, sub
   }
 
   // Step 2: Process all transfers chronologically to trace ownership
-  const transfers = rows.filter(row => 
-    ['WD', 'QCD', 'PRD', 'PRMD', 'County Deed'].includes(row['Instrument Type']) &&
-    row['Description']?.includes(targetLegal.split('-')[2]?.split(':')[0])
-  ).sort((a, b) => {
+  const transfers = rows.filter(row => {
+    const instrumentType = row['Instrument Type']?.toLowerCase() || '';
+    const description = row['Description'] || '';
+    const sectionMatch = targetLegal.split('-')[2]?.split(':')[0];
+    
+    const isTransfer = ['wd', 'qcd', 'prd', 'prmd', 'county deed'].includes(instrumentType);
+    const matchesSection = description.includes(sectionMatch || '');
+    
+    if (isTransfer && matchesSection) {
+      console.log(`Found transfer: ${instrumentType} - ${row['Grantor(s)']} to ${row['Grantee(s)']}`);
+    }
+    
+    return isTransfer && matchesSection;
+  }).sort((a, b) => {
     const dateA = parseDate(a['Recorded'] || a['Dated'] || '0');
     const dateB = parseDate(b['Recorded'] || b['Dated'] || '0');
     return dateA - dateB;
   });
 
+  console.log(`Found ${transfers.length} transfers to process`);
+
   // Process each transfer to build complete ownership chain
   for (const transfer of transfers) {
+    console.log(`Processing transfer: ${transfer['Instrument Type']} from ${transfer['Grantor(s)']} to ${transfer['Grantee(s)']}`);
     processExpertOwnershipTransfer(transfer, ownershipMap, targetLegal);
   }
+
+  console.log(`Active owners in map: ${Array.from(ownershipMap.keys()).filter(key => ownershipMap.get(key).active !== false).length}`);
 
   // Step 3: Determine current lease status using expert methodology
   const currentOwners: MineralOwner[] = [];
   
   for (const [ownerName, ownerData] of ownershipMap) {
     if (ownerData.active !== false) {
+      console.log(`Analyzing lease status for owner: ${ownerName}`);
       const leaseAnalysis = determineExpertLeaseStatus(ownerName, rows, targetLegal);
       const lastLease = findMostRecentValidLease(ownerName, rows, targetLegal);
       
@@ -290,6 +323,7 @@ function buildExpertOwnershipChain(rows: RunsheetRow[], targetLegal: string, sub
     }
   }
 
+  console.log(`Final owners count: ${currentOwners.length}`);
   return currentOwners.length > 0 ? currentOwners : generateDefaultOwner(targetLegal);
 }
 
