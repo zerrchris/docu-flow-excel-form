@@ -1,10 +1,12 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Upload, FileText, AlertCircle } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Upload, FileText, AlertCircle, Table } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface LeaseCheckUploadProps {
   onDocumentUpload: (text: string) => void;
@@ -13,7 +15,34 @@ interface LeaseCheckUploadProps {
 export const LeaseCheckUpload: React.FC<LeaseCheckUploadProps> = ({ onDocumentUpload }) => {
   const [dragActive, setDragActive] = useState(false);
   const [textInput, setTextInput] = useState('');
+  const [runsheets, setRunsheets] = useState<any[]>([]);
+  const [selectedRunsheet, setSelectedRunsheet] = useState<string>('');
+  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+
+  // Fetch user's runsheets on component mount
+  useEffect(() => {
+    fetchRunsheets();
+  }, []);
+
+  const fetchRunsheets = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('runsheets')
+        .select('id, name, created_at, data')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setRunsheets(data || []);
+    } catch (error) {
+      console.error('Error fetching runsheets:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load your runsheets",
+        variant: "destructive"
+      });
+    }
+  };
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -70,6 +99,60 @@ export const LeaseCheckUpload: React.FC<LeaseCheckUploadProps> = ({ onDocumentUp
     }
   };
 
+  const handleRunsheetImport = async () => {
+    if (!selectedRunsheet) {
+      toast({
+        title: "Error",
+        description: "Please select a runsheet to import",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const runsheet = runsheets.find(r => r.id === selectedRunsheet);
+      if (!runsheet) throw new Error('Runsheet not found');
+
+      // Convert runsheet data to text format for analysis
+      const runsheetText = formatRunsheetForAnalysis(runsheet);
+      onDocumentUpload(runsheetText);
+      
+      toast({
+        title: "Runsheet imported successfully",
+        description: `${runsheet.name} has been loaded for lease check analysis`,
+      });
+    } catch (error) {
+      console.error('Error importing runsheet:', error);
+      toast({
+        title: "Error",
+        description: "Failed to import runsheet. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatRunsheetForAnalysis = (runsheet: any) => {
+    // Convert runsheet data to a formatted text that can be analyzed
+    let formattedText = `RUNSHEET: ${runsheet.name}\n\n`;
+    
+    if (runsheet.data && Array.isArray(runsheet.data)) {
+      runsheet.data.forEach((row: any, index: number) => {
+        formattedText += `ENTRY ${index + 1}:\n`;
+        Object.entries(row).forEach(([key, value]) => {
+          if (value && value !== '') {
+            formattedText += `${key}: ${value}\n`;
+          }
+        });
+        formattedText += '\n';
+      });
+    }
+    
+    return formattedText;
+  };
+
   const handleTextSubmit = () => {
     if (textInput.trim()) {
       onDocumentUpload(textInput);
@@ -82,6 +165,53 @@ export const LeaseCheckUpload: React.FC<LeaseCheckUploadProps> = ({ onDocumentUp
 
   return (
     <div className="space-y-6">
+      {/* Import from Existing Runsheets */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Table className="w-5 h-5" />
+            Import from Existing Runsheet
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Select a runsheet to analyze:</label>
+            <Select value={selectedRunsheet} onValueChange={setSelectedRunsheet}>
+              <SelectTrigger>
+                <SelectValue placeholder="Choose a runsheet..." />
+              </SelectTrigger>
+              <SelectContent>
+                {runsheets.map((runsheet) => (
+                  <SelectItem key={runsheet.id} value={runsheet.id}>
+                    {runsheet.name} ({runsheet.data?.length || 0} entries)
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button 
+            onClick={handleRunsheetImport}
+            disabled={!selectedRunsheet || loading}
+            className="w-full"
+          >
+            {loading ? 'Importing...' : 'Import Runsheet for Analysis'}
+          </Button>
+          {runsheets.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center">
+              No runsheets found. Create a runsheet first or upload a local document below.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      <div className="flex items-center justify-center">
+        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+          <div className="h-px bg-border flex-1" />
+          <span>or</span>
+          <div className="h-px bg-border flex-1" />
+        </div>
+      </div>
+
       {/* File Upload Area */}
       <Card>
         <CardHeader>
