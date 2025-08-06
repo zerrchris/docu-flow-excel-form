@@ -933,68 +933,72 @@ async function analyzeWithAI(documentText: string): Promise<any> {
   }
 
   try {
-    // Enhanced prompt with patent-based tract identification
-    const enhancedPrompt = `You are an expert oil and gas landman specializing in runsheet analysis. You understand that every tract's mineral ownership must trace back to original government patents.
+    // Enhanced prompt with current interest holders option and clarification system
+    const enhancedPrompt = `You are an expert oil and gas landman specializing in runsheet analysis. You understand that complete patent-to-present ownership data is often unavailable.
 
-FIRST PRIORITY - IDENTIFY THE TRACT:
-1. Identify the specific legal description being analyzed
-2. Look for patents that cover this legal description (may be multiple patents for combined lands)
-3. Confirm this is a valid tract for analysis
+ANALYSIS OPTIONS:
+1. **Full Ownership Analysis** - If complete patent-to-present data is available
+2. **Current Interest Holders** - If incomplete data, focus on who holds interests TODAY
 
-FUNDAMENTAL LAND KNOWLEDGE:
-- Full Section = 640 acres
-- Quarter Section (NE, NW, SE, SW) = 160 acres each  
-- Half Section (N2, S2, E2, W2) = 320 acres each
-- Quarter-Quarter (NENE, NENW, etc.) = 40 acres each
-- Lots are irregular parcels with specific acreage
+EVALUATION PROCESS:
+1. Assess data completeness from patents to present
+2. If incomplete, offer "Current Interest Holders" analysis
+3. Ask clarifying questions if needed before proceeding
+4. Identify current leaseholders and unleased mineral owners
 
-ANALYSIS APPROACH:
-1. Extract the main legal description being analyzed
-2. Identify underlying patents for this tract
-3. Determine if user confirmation is needed for the legal description
-4. Extract ALL mineral owners and their ownership chains
-5. Calculate precise fractional interests and net acreage
-6. Determine current leasehold status
+CLARIFICATION QUESTIONS (when needed):
+- "Is this the correct legal description to analyze: [description]?"
+- "Should I focus on current interest holders since patent data is incomplete?"
+- "Are there specific time periods or owners you want me to focus on?"
 
-Analyze this runsheet document and return a JSON response:
+Analyze this runsheet and return JSON:
 
 {
-  "prospect": "Legal description identified for analysis",
-  "reportFormat": "ai_analyzed_multi_tract", 
-  "requiresConfirmation": boolean (true if legal description needs user verification),
-  "confirmationMessage": "Is this the legal description you want analyzed: [legal description]?",
-  "patents": ["List of patents covering this tract"],
-  "hasMultipleTracts": boolean,
+  "analysisType": "full_ownership" OR "current_interest_holders" OR "needs_clarification",
+  "clarificationNeeded": boolean,
+  "questions": ["List of questions for user if clarification needed"],
+  "dataCompleteness": "complete|partial|minimal",
+  "recommendedApproach": "Description of recommended analysis approach",
+  "prospect": "Legal description",
+  "reportFormat": "ai_analyzed_interactive",
   "tracts": [
     {
-      "tractId": "Descriptive name for this tract",
-      "legalDescription": "Specific legal description", 
-      "totalAcres": number OR "Requires manual input - [reason]",
-      "grossAcreageNote": "Explanation if unclear",
+      "tractId": "Descriptive tract name",
+      "legalDescription": "Specific legal description",
+      "totalAcres": number OR "Requires manual input",
       "needsManualAcres": boolean,
-      "patents": ["Patents covering this specific tract"],
-      "owners": [
+      "analysisType": "full_ownership" OR "current_interest_holders",
+      "dataAvailable": "Description of what data is available for this tract",
+      
+      // For current_interest_holders analysis:
+      "currentHolders": [
         {
-          "name": "Owner name from chain of title",
-          "interests": "Percentage or fraction", 
-          "netAcres": number,
-          "leaseholdStatus": "Leased|Open/Unleased|Expired (Potential HBP)|Last Lease of Record|Unknown",
-          "acquisitionSource": "Patent|Deed|Probate|etc",
-          "lastLeaseOfRecord": {
-            "lessor": "Lessor name",
-            "lessee": "Lessee name",
-            "dated": "Date executed", 
-            "term": "Primary term",
-            "expiration": "Expiration date",
-            "recorded": "Recording date",
-            "documentNumber": "Document reference"
-          },
-          "landsConveredOnLease": ["Legal descriptions covered"],
-          "listedAcreage": "Acreage on lease if different"
+          "name": "Current interest holder name",
+          "interestType": "Lessee|Mineral Owner|Assignee",
+          "source": "Last lease of record|Mineral deed|Assignment",
+          "documentDate": "Date of document",
+          "documentNumber": "Recording reference",
+          "status": "Current Lessee|Unleased Mineral Owner|Assignee",
+          "originalLease": "Reference to original lease if applicable",
+          "conveyanceAfterLease": "Any assignments after lease",
+          "acreageNote": "Acreage if specifically mentioned"
         }
       ],
+      
+      // For full_ownership analysis (when complete data available):
+      "owners": [
+        {
+          "name": "Owner name",
+          "interests": "Calculated percentage",
+          "netAcres": number,
+          "acquisitionSource": "Patent|Deed|Probate",
+          "leaseholdStatus": "Status",
+          "lastLeaseOfRecord": { /* lease details */ }
+        }
+      ],
+      
       "wells": ["Well information"],
-      "limitationsAndExceptions": "Tract-specific limitations"
+      "limitationsAndExceptions": "Tract limitations"
     }
   ],
   "overallLimitationsAndExceptions": "Overall limitations"
@@ -1003,11 +1007,12 @@ Analyze this runsheet document and return a JSON response:
 RUNSHEET DATA:
 ${documentText}
 
-IMPORTANT: 
-- If multiple distinct legal descriptions exist, create separate tracts
-- If unclear what legal description to analyze, set requiresConfirmation to true
-- Every owner should trace back to a patent source
-- If you cannot determine gross acreage confidently, set needsManualAcres to true
+INSTRUCTIONS:
+- If data appears incomplete from patents to present, recommend "current_interest_holders" analysis
+- If legal description is unclear, ask for clarification
+- If multiple possible interpretations exist, ask questions
+- Focus on TODAY'S interest holders when data is incomplete
+- Show WHO owns interests rather than trying to calculate percentages from incomplete data
 
 RETURN ONLY THE JSON - NO OTHER TEXT.`;
 
