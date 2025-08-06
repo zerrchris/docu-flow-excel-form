@@ -109,17 +109,23 @@ serve(async (req) => {
 async function analyzeDocument(documentText: string) {
   const lines = documentText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
   
+  console.log('Starting comprehensive lease chain analysis...');
+  
   // Extract prospect name
   const prospect = extractProspect(lines);
   
   // Extract legal descriptions and acres
   const tracts = extractTracts(lines);
   
-  // Extract mineral owners and lease information
-  const processedTracts = tracts.map(tract => ({
-    ...tract,
-    owners: extractOwnersForTract(lines, tract.legalDescription)
-  }));
+  // Build ownership chains for each tract
+  const processedTracts = tracts.map(tract => {
+    console.log(`Processing ownership chain for tract: ${tract.legalDescription}`);
+    const owners = buildOwnershipChain(lines, tract.legalDescription);
+    return {
+      ...tract,
+      owners
+    };
+  });
 
   // Calculate summary statistics
   const totalAcres = processedTracts.reduce((sum, tract) => sum + tract.acres, 0);
@@ -137,9 +143,9 @@ async function analyzeDocument(documentText: string) {
     tracts: processedTracts,
     openInterests,
     earliestExpiring: findEarliestExpiring(processedTracts),
-    unresearchedLeases: 0, // Would need more sophisticated parsing
+    unresearchedLeases: calculateUnresearchedLeases(processedTracts),
     wells,
-    limitationsAndExceptions: "The information provided is limited to documents from the runsheet. Examiner cannot attest to mis-indexed or omitted info."
+    limitationsAndExceptions: "Analysis includes ownership chain tracking. Assumes parties who leased owned mineral interests. Tracks conveyances forward to determine current ownership status."
   };
 }
 
@@ -178,51 +184,299 @@ function extractTracts(lines: string[]): Tract[] {
   return tracts;
 }
 
-function extractOwnersForTract(lines: string[], tractDescription: string): MineralOwner[] {
-  const owners: MineralOwner[] = [];
+// New comprehensive ownership chain analysis
+function buildOwnershipChain(lines: string[], tractDescription: string): MineralOwner[] {
+  const ownershipEvents = extractOwnershipEvents(lines);
+  const leaseEvents = extractLeaseEvents(lines);
   
-  // This is a simplified extraction - in practice, this would need more sophisticated parsing
-  // Look for patterns that indicate ownership information
+  console.log(`Found ${ownershipEvents.length} ownership events and ${leaseEvents.length} lease events`);
+  
+  // Build the ownership chain by following conveyances forward
+  const currentOwners = new Map<string, MineralOwner>();
+  
+  // Step 1: Process all lease events to establish initial ownership
+  // Assumption: If someone leased, they must have owned mineral rights
+  for (const lease of leaseEvents) {
+    if (!currentOwners.has(lease.lessor)) {
+      currentOwners.set(lease.lessor, {
+        name: lease.lessor,
+        address: extractAddressForPerson(lines, lease.lessor) || 'Address not found',
+        vestingSource: 'Inferred from lease - lessor must have owned mineral rights',
+        status: 'Leased',
+        lastLease: lease,
+        pughClause: extractPughClause(lines, lease.lessor),
+        heldByProduction: determineHBPStatus(lease, lines),
+        notes: `Original owner inferred from lease activity. Lease dated ${lease.dated}.`
+      });
+    }
+  }
+  
+  // Step 2: Process conveyances to track ownership transfers
+  for (const event of ownershipEvents) {
+    if (event.type === 'CONVEYANCE' || event.type === 'DEED') {
+      // If grantor had minerals, track them to grantee
+      if (currentOwners.has(event.grantor)) {
+        const originalOwner = currentOwners.get(event.grantor)!;
+        
+        // Create new owner entry for grantee
+        currentOwners.set(event.grantee, {
+          name: event.grantee,
+          address: extractAddressForPerson(lines, event.grantee) || 'Address not found',
+          vestingSource: `Conveyed from ${event.grantor} - ${event.documentInfo}`,
+          status: determineCurrentStatus(event.grantee, leaseEvents),
+          lastLease: findLatestLeaseForPerson(event.grantee, leaseEvents),
+          pughClause: extractPughClause(lines, event.grantee),
+          heldByProduction: originalOwner.heldByProduction, // Inherits HBP status
+          notes: `Minerals conveyed from ${event.grantor}. ${event.notes || ''}`
+        });
+        
+        // Update original owner's notes to show conveyance
+        originalOwner.notes += ` Conveyed minerals to ${event.grantee} via ${event.documentInfo}.`;
+      }
+    }
+  }
+  
+  // Step 3: Identify parties who received mineral conveyances but never leased
+  for (const event of ownershipEvents) {
+    if ((event.type === 'MINERAL_DEED' || event.notes?.toLowerCase().includes('mineral')) 
+        && !currentOwners.has(event.grantee)) {
+      currentOwners.set(event.grantee, {
+        name: event.grantee,
+        address: extractAddressForPerson(lines, event.grantee) || 'Address not found',
+        vestingSource: `Mineral conveyance from ${event.grantor} - ${event.documentInfo}`,
+        status: 'Open/Unleased',
+        pughClause: 'No',
+        heldByProduction: 'No',
+        notes: `Received mineral conveyance but never leased. Assumed to own mineral interest.`
+      });
+    }
+  }
+  
+  // Step 4: Check for lease expirations and update statuses
+  const currentDate = new Date();
+  for (const [name, owner] of currentOwners) {
+    if (owner.lastLease && owner.status === 'Leased') {
+      const expirationDate = new Date(owner.lastLease.expiration);
+      if (expirationDate < currentDate) {
+        // Check if held by production
+        const productionStatus = checkProductionStatus(lines, owner.lastLease);
+        owner.status = productionStatus ? 'Leased' : 'Expired (Potential HBP)';
+        owner.heldByProduction = productionStatus ? 'Yes - Active production' : 'Requires verification';
+        owner.notes += ` Lease expired ${owner.lastLease.expiration}. ${productionStatus ? 'Held by production.' : 'HBP status requires verification.'}`;
+      }
+    }
+  }
+  
+  return Array.from(currentOwners.values());
+}
+
+interface OwnershipEvent {
+  type: 'LEASE' | 'DEED' | 'CONVEYANCE' | 'MINERAL_DEED';
+  grantor: string;
+  grantee: string;
+  date: string;
+  documentInfo: string;
+  notes?: string;
+}
+
+function extractOwnershipEvents(lines: string[]): OwnershipEvent[] {
+  const events: OwnershipEvent[] = [];
   
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
+    const lowerLine = line.toLowerCase();
     
-    // Look for name patterns (capitalized words)
-    if (line.match(/^[A-Z][a-z]+ [A-Z][a-z]+/) && !line.includes('LEASE') && !line.includes('DEED')) {
-      const name = extractName(line);
-      const address = extractAddress(lines, i);
-      const vestingInfo = extractVestingInfo(lines, i);
-      const leaseInfo = extractLeaseInfo(lines, i);
+    // Look for deed patterns
+    if (lowerLine.includes('deed') || lowerLine.includes('convey') || lowerLine.includes('grant')) {
+      const grantor = extractGrantor(line, lines, i);
+      const grantee = extractGrantee(line, lines, i);
+      const date = extractDateFromLine(line);
+      const docInfo = extractDocumentInfo(line, lines, i);
       
-      if (name) {
-        owners.push({
-          name,
-          address: address || 'Address not found',
-          vestingSource: vestingInfo || 'Vesting source not specified',
-          status: leaseInfo ? 'Leased' : 'Open/Unleased',
-          lastLease: leaseInfo,
-          pughClause: 'No', // Would need specific parsing for Pugh clauses
-          heldByProduction: leaseInfo ? 'Unknown - requires production verification' : 'No',
-          notes: extractNotes(lines, i)
+      if (grantor && grantee) {
+        events.push({
+          type: lowerLine.includes('mineral') ? 'MINERAL_DEED' : 'DEED',
+          grantor,
+          grantee,
+          date: date || 'Date not found',
+          documentInfo: docInfo || 'Document info not found',
+          notes: extractNotesFromContext(lines, i)
         });
       }
     }
   }
   
-  // If no owners found, create a placeholder
-  if (owners.length === 0) {
-    owners.push({
-      name: 'Owner information requires manual review',
-      address: 'Address not found in document',
-      vestingSource: 'Requires title research',
-      status: 'Open/Unleased',
-      pughClause: 'No',
-      heldByProduction: 'Unknown - requires production verification',
-      notes: 'Manual extraction required for detailed ownership information'
-    });
+  return events;
+}
+
+function extractLeaseEvents(lines: string[]): LeaseRecord[] {
+  const leases: LeaseRecord[] = [];
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.toLowerCase().includes('lease') || line.toLowerCase().includes('lessor')) {
+      const lease = extractLeaseInfo(lines, i);
+      if (lease) {
+        leases.push(lease);
+      }
+    }
   }
   
-  return owners;
+  return leases;
+}
+
+function extractGrantor(line: string, lines: string[], index: number): string | null {
+  // Look for "from" patterns or grantor indicators
+  const fromMatch = line.match(/from\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]*\.?)*)/i);
+  if (fromMatch) return fromMatch[1];
+  
+  // Look in previous lines for grantor
+  for (let i = Math.max(0, index - 3); i < index; i++) {
+    const prevLine = lines[i];
+    if (prevLine.includes('Grantor:')) {
+      return prevLine.split('Grantor:')[1]?.trim() || null;
+    }
+  }
+  
+  return null;
+}
+
+function extractGrantee(line: string, lines: string[], index: number): string | null {
+  // Look for "to" patterns or grantee indicators
+  const toMatch = line.match(/to\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]*\.?)*)/i);
+  if (toMatch) return toMatch[1];
+  
+  // Look in following lines for grantee
+  for (let i = index; i < Math.min(lines.length, index + 3); i++) {
+    const nextLine = lines[i];
+    if (nextLine.includes('Grantee:')) {
+      return nextLine.split('Grantee:')[1]?.trim() || null;
+    }
+  }
+  
+  return null;
+}
+
+function extractDateFromLine(line: string): string | null {
+  const dateMatch = line.match(/(\d{1,2}\/\d{1,2}\/\d{4})/);
+  return dateMatch ? dateMatch[1] : null;
+}
+
+function extractDocumentInfo(line: string, lines: string[], index: number): string | null {
+  // Look for document numbers, recorded info
+  const docMatch = line.match(/(Document #\d+|MD:\s*\d+|Book \d+ Page \d+)/i);
+  if (docMatch) return docMatch[1];
+  
+  // Check surrounding lines
+  for (let i = Math.max(0, index - 2); i < Math.min(lines.length, index + 3); i++) {
+    const checkLine = lines[i];
+    const match = checkLine.match(/(Document #\d+|MD:\s*\d+|Book \d+ Page \d+)/i);
+    if (match) return match[1];
+  }
+  
+  return null;
+}
+
+function extractAddressForPerson(lines: string[], personName: string): string | null {
+  // Find the person's name and look for address in following lines
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].includes(personName)) {
+      return extractAddress(lines, i);
+    }
+  }
+  return null;
+}
+
+function determineCurrentStatus(personName: string, leases: LeaseRecord[]): 'Leased' | 'Open/Unleased' | 'Expired (Potential HBP)' {
+  const personLeases = leases.filter(lease => 
+    lease.lessor.includes(personName) || lease.lessee.includes(personName)
+  );
+  
+  if (personLeases.length === 0) return 'Open/Unleased';
+  
+  // Find most recent lease
+  const latestLease = personLeases.reduce((latest, current) => {
+    const latestDate = new Date(latest.dated);
+    const currentDate = new Date(current.dated);
+    return currentDate > latestDate ? current : latest;
+  });
+  
+  const expirationDate = new Date(latestLease.expiration);
+  const currentDate = new Date();
+  
+  if (expirationDate > currentDate) return 'Leased';
+  return 'Expired (Potential HBP)';
+}
+
+function findLatestLeaseForPerson(personName: string, leases: LeaseRecord[]): LeaseRecord | undefined {
+  const personLeases = leases.filter(lease => 
+    lease.lessor.includes(personName) || lease.lessee.includes(personName)
+  );
+  
+  if (personLeases.length === 0) return undefined;
+  
+  return personLeases.reduce((latest, current) => {
+    const latestDate = new Date(latest.dated);
+    const currentDate = new Date(current.dated);
+    return currentDate > latestDate ? current : latest;
+  });
+}
+
+function extractPughClause(lines: string[], personName: string): string {
+  for (const line of lines) {
+    if (line.includes(personName) && line.toLowerCase().includes('pugh')) {
+      return 'Yes - Pugh clause identified';
+    }
+  }
+  return 'No';
+}
+
+function determineHBPStatus(lease: LeaseRecord, lines: string[]): string {
+  // Check for production indicators
+  for (const line of lines) {
+    if (line.toLowerCase().includes('production') || 
+        line.toLowerCase().includes('producing') ||
+        line.toLowerCase().includes('well')) {
+      return 'Potentially held by production - requires verification';
+    }
+  }
+  return 'No production indicators found';
+}
+
+function checkProductionStatus(lines: string[], lease: LeaseRecord): boolean {
+  // Look for production indicators that would hold the lease
+  for (const line of lines) {
+    const lowerLine = line.toLowerCase();
+    if (lowerLine.includes('producing') || 
+        lowerLine.includes('active production') ||
+        (lowerLine.includes('well') && lowerLine.includes('active'))) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function extractNotesFromContext(lines: string[], index: number): string | undefined {
+  const contextLines = lines.slice(Math.max(0, index - 1), Math.min(lines.length, index + 2));
+  const notes = contextLines.filter(line => 
+    line.toLowerCase().includes('mineral') ||
+    line.toLowerCase().includes('royalty') ||
+    line.toLowerCase().includes('interest')
+  );
+  return notes.length > 0 ? notes.join('; ') : undefined;
+}
+
+function calculateUnresearchedLeases(tracts: Tract[]): number {
+  let unresearched = 0;
+  for (const tract of tracts) {
+    for (const owner of tract.owners) {
+      if (owner.notes.includes('requires verification') || 
+          owner.status === 'Expired (Potential HBP)') {
+        unresearched++;
+      }
+    }
+  }
+  return unresearched;
 }
 
 function extractName(line: string): string | null {
