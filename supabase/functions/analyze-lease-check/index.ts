@@ -85,8 +85,17 @@ serve(async (req) => {
       );
     }
 
-    // Check if this is structured runsheet data
-    const isStructuredData = documentText.includes('EXCEL FILE:') || documentText.includes('ROW 1:');
+    // Check if this is structured runsheet data - be more flexible with detection
+    const isStructuredData = documentText.includes('EXCEL FILE:') || 
+                            documentText.includes('ROW 1:') ||
+                            documentText.includes('Book and Page') ||
+                            documentText.includes('Instrument Type') ||
+                            documentText.includes('Grantor(s)') ||
+                            documentText.includes('Grantee(s)') ||
+                            (documentText.includes('|') && documentText.split('\n').length > 10);
+    
+    console.log(`Document detection: isStructured=${isStructuredData}`);
+    console.log(`Document preview: ${documentText.substring(0, 200)}...`);
     
     let analysisResult;
     
@@ -171,21 +180,58 @@ function parseRunsheetRows(documentText: string): RunsheetRow[] {
   
   console.log(`Parsing document with ${lines.length} lines`);
   
-  for (const line of lines) {
+  // Try to find headers in different formats
+  for (let i = 0; i < Math.min(lines.length, 10); i++) {
+    const line = lines[i];
+    
     if (line.includes('ROW 1:')) {
       headers = line.replace('ROW 1: ', '').split(' | ');
-      console.log(`Found headers: ${JSON.stringify(headers)}`);
-    } else if (line.includes('ROW ') && !line.includes('ROW 1:')) {
+      console.log(`Found ROW 1 headers: ${JSON.stringify(headers)}`);
+      break;
+    } else if (line.includes('Book and Page') && line.includes('|')) {
+      headers = line.split(' | ').map(h => h.trim());
+      console.log(`Found pipe-separated headers: ${JSON.stringify(headers)}`);
+      break;
+    } else if (line.includes('Book and Page') && line.includes('\t')) {
+      headers = line.split('\t').map(h => h.trim());
+      console.log(`Found tab-separated headers: ${JSON.stringify(headers)}`);
+      break;
+    }
+  }
+  
+  if (headers.length === 0) {
+    console.log('No headers found, using default headers');
+    headers = ['Book and Page', 'Instrument Number', 'Instrument Type', 'Dated', 'Recorded', 'Grantor(s)', 'Grantee(s)', 'Description', 'Comments'];
+  }
+  
+  // Parse data rows
+  for (const line of lines) {
+    if (line.includes('ROW ') && !line.includes('ROW 1:')) {
       const rowData = line.substring(line.indexOf(': ') + 2).split(' | ');
-      console.log(`Processing row: ${line.substring(0, 20)}...`);
+      console.log(`Processing ROW data: ${line.substring(0, 30)}...`);
       
-      if (headers.length > 0 && rowData.length > 0) {
+      if (rowData.length > 0) {
         const row: any = {};
         headers.forEach((header, index) => {
           row[header.trim()] = rowData[index]?.trim() || '';
         });
         rows.push(row as RunsheetRow);
-        console.log(`Added row with grantor: ${row['Grantor(s)']}, grantee: ${row['Grantee(s)']}, type: ${row['Instrument Type']}`);
+        console.log(`Added row: ${row['Instrument Type']} - ${row['Grantor(s)']} to ${row['Grantee(s)']}`);
+      }
+    } else if (!line.includes('ROW ') && line.includes('|') && headers.length > 0) {
+      // Try to parse as direct pipe-separated data
+      const rowData = line.split(' | ');
+      if (rowData.length >= headers.length - 2) { // Allow some flexibility
+        const row: any = {};
+        headers.forEach((header, index) => {
+          row[header.trim()] = rowData[index]?.trim() || '';
+        });
+        
+        // Only add if it looks like actual data (not header row)
+        if (row['Instrument Type'] && row['Instrument Type'] !== 'Instrument Type') {
+          rows.push(row as RunsheetRow);
+          console.log(`Added direct row: ${row['Instrument Type']} - ${row['Grantor(s)']} to ${row['Grantee(s)']}`);
+        }
       }
     }
   }
@@ -827,33 +873,38 @@ function generateExpertLimitationsAndExceptions(rows: RunsheetRow[]): string {
 }
 
 async function analyzeWithAI(documentText: string): Promise<any> {
-  // Fallback to AI analysis for unstructured documents
-  const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
-  if (!openAIApiKey) {
-    throw new Error('OpenAI API key not configured');
-  }
-
-  console.log('Using AI analysis for unstructured document...');
+  console.log('Fallback to AI analysis - this should not happen for properly formatted runsheets');
+  console.log(`Document sample: ${documentText.substring(0, 500)}`);
   
-  // Use simpler AI analysis for non-structured documents
+  // Instead of requiring OpenAI, try to do basic parsing if it looks like structured data
+  if (documentText.includes('|') || documentText.includes('\t')) {
+    console.log('Attempting basic structured parsing as fallback...');
+    
+    try {
+      const rows = parseRunsheetRows(documentText);
+      if (rows.length > 0) {
+        console.log('Fallback parsing succeeded, processing as structured data');
+        return analyzeStructuredRunsheet(documentText);
+      }
+    } catch (error) {
+      console.error('Fallback parsing failed:', error);
+    }
+  }
+  
+  // Return a more helpful default response
   return {
-    prospect: "AI Analysis Required",
+    prospect: "Document Upload Issue",
     totalAcres: 0,
-    tracts: [{
-      legalDescription: "Manual review required",
-      acres: 0,
-      owners: [{
-        name: "Analysis pending",
-        address: "",
-        vestingSource: "AI analysis for unstructured documents",
-        status: "Open/Unleased",
-        lastLease: null,
-        pughClause: "Unknown",
-        heldByProduction: "Unknown",
-        notes: "Upload structured runsheet data for detailed analysis"
-      }]
+    reportFormat: "unstructured",
+    owners: [{
+      name: "Analysis Error - Document Format Not Recognized",
+      interests: "100.00000000%",
+      netAcres: 0,
+      leaseholdStatus: "Please check document format and try again",
+      lastLeaseOfRecord: undefined,
+      listedAcreage: "0.0000000 mi"
     }],
-    wells: ["Upload structured runsheet for well analysis"],
-    limitationsAndExceptions: "This requires structured runsheet data for accurate analysis"
+    wells: ["Document format not recognized. Please ensure your runsheet includes pipe-separated data with headers."],
+    limitationsAndExceptions: "Unable to analyze document format. Please upload a properly formatted Excel runsheet or ensure your text includes the required column headers (Book and Page, Instrument Type, Grantor(s), Grantee(s), Description, etc.)."
   };
 }
