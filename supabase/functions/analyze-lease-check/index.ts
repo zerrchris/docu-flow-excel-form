@@ -914,40 +914,55 @@ async function analyzeWithAI(documentText: string): Promise<any> {
   }
 
   try {
-    // Enhanced prompt with specific North Dakota expertise and thorough extraction
-    const prompt = `You are an expert mineral rights analyst specializing in North Dakota oil and gas runsheets. 
+    // Enhanced prompt with oil & gas land surveying fundamentals
+    const prompt = `You are an expert mineral rights analyst specializing in North Dakota oil and gas runsheets with extensive knowledge of U.S. land surveying.
 
-CRITICAL INSTRUCTIONS - READ CAREFULLY:
-1. Extract EVERY SINGLE mineral owner mentioned in the runsheet - do not skip anyone
-2. Find ALL fractional interests and percentages - check deeds, probate distributions, and transfers
-3. Calculate precise ownership percentages that total exactly 100%
-4. Determine lease status for each owner: "Appears Open", "Last Lease of Record", or "Expired (Potential HBP)"
-5. Find the most recent lease for each owner with complete details
-6. Extract the exact legal description and total acres
-7. Look for any well information or production notes
+FUNDAMENTAL LAND KNOWLEDGE YOU MUST USE:
+- Full Section = 640 acres
+- Quarter Section (NE, NW, SE, SW) = 160 acres each
+- Half Section (N2, S2, E2, W2) = 320 acres each
+- Quarter-Quarter (NENE, NENW, etc.) = 40 acres each
+- Lots are irregular parcels with specific acreage listed
+- Legal descriptions show exactly what lands are covered
 
-EXAMPLE OWNERS TO LOOK FOR:
-- Banks, FCBs, trust companies
-- Individual names with addresses  
-- Family trusts and estates
-- LLCs and corporations
-- Any entity that received mineral interests
+CRITICAL ANALYSIS REQUIREMENTS:
+1. Extract EVERY mineral owner mentioned - could be 1 owner or 100+ owners
+2. Calculate precise fractional interests that total exactly 100%
+3. Determine gross acreage from legal descriptions using standard surveying rules
+4. If gross acreage is unclear from legal description, note "Gross acreage requires verification"
+5. Find lease status for each owner: "Appears Open", "Last Lease of Record", or "Expired (Potential HBP)"
+6. Extract complete lease details with exact dates and terms
 
-The runsheet may contain 5-15+ different owners. Find them ALL.
+OWNERSHIP SOURCES TO EXAMINE:
+- Patent deeds (original government grants)
+- Warranty deeds, quit claim deeds
+- Probate distributions (PRD, PRMD)
+- Mineral deeds
+- Trust assignments
+- Corporate transfers
+
+LEASE ANALYSIS:
+- Find OGL (Oil & Gas Lease) records
+- Check for lease releases
+- Calculate expiration dates from term + dated
+- Note Pugh clauses and production status
 
 RUNSHEET DATA:
 ${documentText}
 
-Analyze this data thoroughly as an expert would and return ONLY valid JSON in this exact format:
+If you cannot determine gross acreage from the legal description, include this in your response: "grossAcreageNote": "Requires verification - legal description unclear"
+
+Return ONLY valid JSON:
 {
   "prospect": "Legal description from runsheet",
-  "totalAcres": 312.08,
+  "totalAcres": "calculated from legal description using surveying rules",
+  "grossAcreageNote": "Include if acreage calculation unclear",
   "reportFormat": "ai_analyzed", 
   "owners": [
     {
       "name": "Exact owner name from runsheet",
       "interests": "XX.XXXXXXXX%",
-      "netAcres": 156.04000000,
+      "netAcres": "calculated using (percentage × gross acres)",
       "leaseholdStatus": "Appears Open or Last Lease of Record or Expired (Potential HBP)",
       "lastLeaseOfRecord": {
         "lessor": "lessor name",
@@ -964,6 +979,8 @@ Analyze this data thoroughly as an expert would and return ONLY valid JSON in th
   "wells": ["well information from runsheet"],
   "limitationsAndExceptions": "Any limitations noted in the records"
 }
+
+RETURN ONLY THE JSON - NO OTHER TEXT.`;
 
 RETURN ONLY THE JSON - NO OTHER TEXT.`;
 
