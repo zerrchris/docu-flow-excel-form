@@ -80,11 +80,22 @@ const LeaseCheck = () => {
         },
       });
 
+      console.log('Full response:', response);
+      console.log('Response data:', response.data);
+      console.log('Response error:', response.error);
+
       if (response.error) {
+        console.error('Supabase function error:', response.error);
         throw new Error(response.error.message || 'Failed to analyze document');
       }
 
+      if (!response.data) {
+        console.error('No data in response');
+        throw new Error('No data received from analysis');
+      }
+
       const data = response.data;
+      console.log('Setting lease check data:', data);
       setLeaseCheckData(data);
 
       // Check if we need production information (new structure has owners directly)
