@@ -85,12 +85,34 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
     parseDocumentIntoRows();
   }, [documentText]);
 
+  const cleanRowContent = (content: string): string => {
+    // Replace ||NEWLINE|| markers with actual line breaks
+    let cleaned = content.replace(/\|\|NEWLINE\|\|/g, '\n');
+    
+    // Remove carriage returns
+    cleaned = cleaned.replace(/\r/g, '');
+    
+    // Clean up multiple consecutive spaces
+    cleaned = cleaned.replace(/\s+/g, ' ');
+    
+    // If it looks like pipe-separated data, format it better
+    if (cleaned.includes(' | ')) {
+      const parts = cleaned.split(' | ').map(part => part.trim()).filter(part => part !== '');
+      if (parts.length > 1) {
+        // Format as structured data
+        return parts.join('\n• ');
+      }
+    }
+    
+    return cleaned.trim();
+  };
+
   const parseDocumentIntoRows = () => {
     const lines = documentText.split('\n').filter(line => line.trim() !== '');
     const parsedRows: DocumentRow[] = lines.map((line, index) => ({
       id: `row-${index}`,
       rowNumber: index + 1,
-      content: line.trim(),
+      content: cleanRowContent(line.trim()),
       parsed: false,
       status: 'pending'
     }));
@@ -400,8 +422,10 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
               <div className="text-sm font-medium text-muted-foreground mb-2">
                 Row {currentRow?.rowNumber} Content:
               </div>
-              <div className="p-3 bg-muted rounded text-sm font-mono">
-                {currentRow?.content}
+              <div className="p-3 bg-muted rounded text-sm">
+                <pre className="whitespace-pre-wrap font-sans leading-relaxed">
+                  {currentRow?.content}
+                </pre>
               </div>
             </div>
 
@@ -650,8 +674,11 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
                   {row.status === 'corrected' && <Edit className="w-4 h-4" />}
                   {row.status === 'pending' && <AlertCircle className="w-4 h-4" />}
                 </div>
-                <div className="text-xs opacity-75 truncate">
-                  {row.content.substring(0, 50)}...
+                <div className="text-xs opacity-75">
+                  <div className="truncate max-w-full">
+                    {cleanRowContent(row.content.substring(0, 80))}
+                    {row.content.length > 80 && '...'}
+                  </div>
                 </div>
               </div>
             ))}
