@@ -599,8 +599,8 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
           </CardContent>
         </Card>
 
-        {/* Two Column Layout - Fixed Height */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[60vh]">
+        {/* Two Column Layout - Auto Height with Min Height */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-[60vh]">
         {/* Current Row Analysis */}
         <Card className="flex flex-col h-full">
           <CardHeader>
