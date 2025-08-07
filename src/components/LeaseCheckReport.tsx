@@ -60,6 +60,7 @@ export const LeaseCheckReport: React.FC<LeaseCheckReportProps> = ({
   // Check if this is the new multi-tract format
   const isMultiTractFormat = (data as any).hasMultipleTracts && (data as any).tracts;
   const isStructuredFormat = (data as any).reportFormat === 'structured' || 
+    (data as any).reportFormat === 'ai_analyzed_interactive' ||
     ('owners' in data && Array.isArray(data.owners) && !('tracts' in data));
 
   const getCurrentTract = (): TractData | null => {
