@@ -558,7 +558,7 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-300px)]">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-500px)] min-h-[400px]">
         {/* Current Row Analysis */}
         <Card className="flex flex-col h-full">
           <CardHeader>
