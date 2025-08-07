@@ -130,7 +130,10 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
         if (savedRows && savedRows.length > 0) {
           setRows(savedRows);
           setCurrentRowIndex(savedIndex || 0);
-          setOngoingOwnership(savedOwnership || {
+          setOngoingOwnership(savedOwnership ? {
+            ...savedOwnership,
+            pendingTransfers: savedOwnership.pendingTransfers || []
+          } : {
             owners: [],
             pendingTransfers: [],
             totalSurfacePercentage: 0,
@@ -428,7 +431,10 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
     });
     
     setOngoingOwnership(prev => {
-      const updated = { ...prev };
+      const updated = { 
+        ...prev, 
+        pendingTransfers: prev.pendingTransfers || [] 
+      };
       
       // Handle patent documents - original government grants include both surface and minerals unless reserved
       if (analysis.documentType === 'Patent' && analysis.grantees && analysis.grantees.length > 0) {
@@ -797,7 +803,7 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
               };
               updated.owners.push(newOwner);
             }
-          });
+        });
         }
       }
 
@@ -822,8 +828,9 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
       }
 
       // Check if any new owners have pending transfers waiting for them
-      updated.owners.forEach((owner, index) => {
-        const ownerPendingTransfers = updated.pendingTransfers.filter(pt => 
+      if (updated.pendingTransfers && updated.pendingTransfers.length > 0) {
+        updated.owners.forEach((owner, index) => {
+          const ownerPendingTransfers = updated.pendingTransfers.filter(pt =>
           pt.grantorName.toLowerCase().includes(owner.name.toLowerCase()) ||
           owner.name.toLowerCase().includes(pt.grantorName.toLowerCase())
         );
@@ -880,7 +887,8 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
             !ownerPendingTransfers.some(opt => opt.documentReference === pt.documentReference)
           );
         }
-      });
+        });
+      }
 
       // Calculate total percentages
       updated.totalSurfacePercentage = updated.owners.reduce((sum, owner) => sum + owner.surfacePercentage, 0);
@@ -1408,7 +1416,7 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
                         })}
                         
                         {/* Show pending transfers */}
-                        {ongoingOwnership.pendingTransfers.length > 0 && (
+                        {ongoingOwnership.pendingTransfers && ongoingOwnership.pendingTransfers.length > 0 && (
                           <div className="mt-4">
                             <h4 className="text-sm font-medium text-amber-700 mb-2">Pending Transfers</h4>
                             {ongoingOwnership.pendingTransfers.map((transfer, index) => (
