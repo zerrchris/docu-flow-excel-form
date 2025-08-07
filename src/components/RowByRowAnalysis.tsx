@@ -433,6 +433,66 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
     handleNameMatchConfirmation(Object.keys(confirmedMatches).length > 0 ? confirmedMatches : undefined);
   };
 
+  // Function to parse land description and extract parcels
+  const parseLandDescription = (description: string): LandParcel[] => {
+    if (!description) return [];
+    
+    const parcels: LandParcel[] = [];
+    const desc = description.toLowerCase();
+    
+    // Common quarter patterns
+    const quarterPatterns = [
+      { pattern: /n[orth]*\s*e[ast]*\s*(?:1\/4|quarter)/gi, quarter: 'NE', acres: 40 },
+      { pattern: /n[orth]*\s*w[est]*\s*(?:1\/4|quarter)/gi, quarter: 'NW', acres: 40 },
+      { pattern: /s[outh]*\s*e[ast]*\s*(?:1\/4|quarter)/gi, quarter: 'SE', acres: 40 },
+      { pattern: /s[outh]*\s*w[est]*\s*(?:1\/4|quarter)/gi, quarter: 'SW', acres: 40 },
+      { pattern: /n[orth]*\s*(?:1\/2|half)/gi, quarter: 'N 1/2', acres: 80 },
+      { pattern: /s[outh]*\s*(?:1\/2|half)/gi, quarter: 'S 1/2', acres: 80 },
+      { pattern: /e[ast]*\s*(?:1\/2|half)/gi, quarter: 'E 1/2', acres: 80 },
+      { pattern: /w[est]*\s*(?:1\/2|half)/gi, quarter: 'W 1/2', acres: 80 }
+    ];
+    
+    // Extract section, township, range
+    const sectionMatch = description.match(/section\s+(\d+)/i);
+    const townshipMatch = description.match(/t(?:ownship)?\s*(\d+\s*[ns])/i);
+    const rangeMatch = description.match(/r(?:ange)?\s*(\d+\s*[ew])/i);
+    
+    const section = sectionMatch ? sectionMatch[1] : undefined;
+    const township = townshipMatch ? townshipMatch[1] : undefined;
+    const range = rangeMatch ? rangeMatch[1] : undefined;
+    
+    // Look for specific acre amounts mentioned
+    const acreMatch = description.match(/(\d+(?:\.\d+)?)\s*acres?/i);
+    const defaultAcres = acreMatch ? parseFloat(acreMatch[1]) : 40;
+    
+    // Find quarter matches
+    for (const { pattern, quarter, acres } of quarterPatterns) {
+      if (pattern.test(description)) {
+        parcels.push({
+          description: quarter,
+          acres: defaultAcres || acres,
+          section,
+          township,
+          range,
+          quarter
+        });
+      }
+    }
+    
+    // If no quarters found but there's a description, create a general parcel
+    if (parcels.length === 0 && description.trim()) {
+      parcels.push({
+        description: description.trim(),
+        acres: defaultAcres || 80,
+        section,
+        township,
+        range
+      });
+    }
+    
+    return parcels;
+  };
+
   const updateOngoingOwnership = (analysis: any, confirmedMatches?: Record<string, any>) => {
     console.log('Updating ownership with analysis:', analysis);
     console.log('Current total acres:', totalAcres);
@@ -455,7 +515,14 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
         const grantor = analysis.grantors?.[0] || 'USA';
         console.log('Processing patent for:', patentee, 'from:', grantor);
         
-        const effectiveAcres = totalAcres > 0 ? totalAcres : 80;
+        // Parse land description to get specific parcels
+        const landParcels = parseLandDescription(analysis.description || '');
+        const totalParcelAcres = landParcels.reduce((sum, parcel) => sum + parcel.acres, 0);
+        const effectiveAcres = totalParcelAcres > 0 ? totalParcelAcres : (totalAcres > 0 ? totalAcres : 80);
+        
+        // Add parcels to the ongoing ownership tracking
+        updated.landParcels = [...(updated.landParcels || []), ...landParcels];
+        updated.totalAcres = Math.max(updated.totalAcres, effectiveAcres);
         
         // Check if minerals are specifically reserved in the description
         const mineralsReserved = analysis.description && (
