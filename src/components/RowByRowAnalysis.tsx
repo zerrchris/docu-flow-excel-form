@@ -371,8 +371,11 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
     console.log('Updating ownership with analysis:', analysis);
     console.log('Current total acres:', totalAcres);
     
-    // Save previous state before updating
-    setPreviousOwnership(ongoingOwnership);
+    // Save previous state before updating - this ensures we can show the visual transfer
+    setPreviousOwnership({
+      ...ongoingOwnership,
+      lastUpdatedRow: currentRowIndex
+    });
     
     setOngoingOwnership(prev => {
       const updated = { ...prev };
