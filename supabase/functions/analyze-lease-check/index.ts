@@ -934,57 +934,98 @@ async function analyzeWithAI(documentText: string): Promise<any> {
   }
 
   try {
-    // Enhanced prompt for detailed lease analysis
-    const enhancedPrompt = `You are an expert oil and gas landman analyzing a runsheet. Extract detailed mineral ownership and leasehold information.
+    // Professional landman-style runsheet analysis prompt
+    const enhancedPrompt = `You are an expert North Dakota oil and gas landman performing a detailed runsheet analysis. Analyze this runsheet row by row, tracing ownership chains and extracting detailed lease information exactly as a professional landman would.
 
-REQUIRED OUTPUT FORMAT - Return JSON with this exact structure:
+ANALYSIS METHODOLOGY:
+1. **Parse each row** of the runsheet systematically
+2. **Trace ownership chains** from patents through all conveyances to current owners
+3. **Calculate precise ownership percentages** based on actual conveyances and mineral reservations shown
+4. **Extract detailed lease information** from all OGL (Oil and Gas Lease) entries
+5. **Determine current lease status** based on lease terms and expiration dates
+6. **Track vesting documents** for each owner's mineral rights
 
+REQUIRED OUTPUT FORMAT:
 {
-  "prospect": "Legal description from document",
-  "totalAcres": number,
-  "reportFormat": "ai_analyzed_interactive",
+  "prospect": "Legal description",
+  "totalAcres": 320,
+  "reportFormat": "ai_analyzed_interactive", 
   "owners": [
     {
-      "name": "Owner name with full address if available",
-      "interests": "Percentage (e.g., 50.00000000%)",
-      "netAcres": number,
-      "leaseholdStatus": "Current Lessee|Appears Leased|Appears Open|Unleased Mineral Owner|Expired",
-      "listedAcreage": "Acreage description",
-      "vestingDocument": "Document type and reference",
+      "name": "Full owner name with address if available",
+      "address": "Full address if shown in documents",
+      "acquisitionYear": "Year of acquisition (YYYY)",
+      "vestingDocuments": [
+        {
+          "type": "Document type (e.g., Sheriff's Deed, Warranty Deed, Mineral Deed)",
+          "reference": "Book/Page or Document Number",
+          "date": "Document date if available"
+        }
+      ],
+      "interests": "XX.XXXXXXXX%",
+      "netAcres": calculated_net_acres,
+      "leaseholdStatus": "Appears Leased|Appears Open|Current Lessee",
       "leaseDetails": {
-        "lessor": "Lessor name if leased",
-        "lessee": "Lessee name if leased", 
-        "dateLease": "Lease date",
-        "term": "Lease term (e.g., Five (5) Years)",
-        "expiration": "Expiration date",
-        "documentNumber": "Document number",
-        "royalty": "Royalty percentage",
-        "landsCovered": "Legal description of leased lands",
-        "listedAcreage": "Lease acreage",
-        "specialClauses": "Pugh clause, extensions, etc."
+        "currentLease": {
+          "lessor": "Lessor name",
+          "lessee": "Lessee name (include percentages if multiple lessees)",
+          "dated": "MM/DD/YYYY", 
+          "term": "Lease term description",
+          "expiration": "MM/DD/YYYY",
+          "recorded": "MM/DD/YYYY",
+          "documentNumber": "Document number",
+          "royalty": "XX%",
+          "specialClauses": ["Pugh Clause", "Other clauses"],
+          "landsCovered": "Legal description of leased lands",
+          "listedAcreage": "XXX.XX"
+        },
+        "lastLeaseOfRecord": {
+          // Same structure for expired leases
+        }
       }
     }
   ],
-  "wells": ["Well information"],
-  "limitationsAndExceptions": "Title limitations"
+  "wells": ["Production information if any"],
+  "limitationsAndExceptions": "Standard limitations"
 }
 
-ANALYSIS INSTRUCTIONS:
-1. Extract ALL mineral owners from the runsheet
-2. Calculate ownership percentages based on conveyances
-3. Determine current lease status for each owner:
-   - "Current Lessee" = Currently leased with active lease
-   - "Appears Leased" = Has current lease in effect
-   - "Appears Open" = Lease expired or no current lease
-   - "Unleased Mineral Owner" = Owns minerals but not currently leased
-4. For leased interests, extract full lease details including lessors, lessees, dates, terms, royalty
-5. Calculate net acres based on percentage and total acreage
-6. Include document numbers and references
+DETAILED INSTRUCTIONS:
 
-DOCUMENT TO ANALYZE:
+1. **ROW-BY-ROW ANALYSIS**: Examine each row in the runsheet chronologically. Look for:
+   - Patent deeds (original grants from USA)
+   - Warranty deeds, quit claim deeds, contracts for deed
+   - Sheriff's deeds or other judicial sales
+   - Oil and gas leases (OGL)
+   - Mineral deeds and mineral reservations
+   - Assignments and releases
+
+2. **OWNERSHIP CALCULATIONS**: 
+   - Start with 100% ownership from patents
+   - Apply any mineral reservations (e.g., "Excepting 50% of minerals")
+   - Track fractional conveyances through each deed
+   - Calculate final percentages for current owners
+   - Use precise decimal places (e.g., 2.80376826%)
+
+3. **LEASE EXTRACTION**: For each OGL entry, extract:
+   - Exact lessor and lessee names
+   - Lease date, term length, and calculated expiration
+   - Recording date and document number
+   - Royalty percentage
+   - Special clauses (Pugh, etc.)
+   - Specific legal description covered
+   - Listed acreage
+
+4. **CURRENT STATUS DETERMINATION**:
+   - "Appears Leased" = Active lease in effect
+   - "Appears Open" = No current lease or lease expired
+   - "Current Lessee" = Currently holds active lease
+
+5. **ADDRESS EXTRACTION**: Look for addresses in grantor/grantee fields or document descriptions
+
+RUNSHEET DATA TO ANALYZE:
 ${documentText}
 
-Return only valid JSON with no additional text or markdown formatting.`;
+Analyze this data systematically and return the detailed JSON structure with accurate ownership percentages, complete lease details, and proper vesting document references. Pay special attention to document numbers, dates, and mineral reservation language.`;
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
