@@ -69,6 +69,9 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
   onComplete,
   onCancel
 }) => {
+  // Create a unique storage key for this analysis session
+  const storageKey = `row-analysis-${prospect}-${documentText.slice(0, 50).replace(/\W/g, '')}`;
+  
   const [rows, setRows] = useState<DocumentRow[]>([]);
   const [currentRowIndex, setCurrentRowIndex] = useState(0);
   const [ongoingOwnership, setOngoingOwnership] = useState<OngoingOwnership>({
@@ -82,9 +85,47 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
   const [editedAnalysis, setEditedAnalysis] = useState<any>(null);
   const { toast } = useToast();
 
+  // Load saved progress on mount
   useEffect(() => {
+    const savedProgress = localStorage.getItem(storageKey);
+    if (savedProgress) {
+      try {
+        const { rows: savedRows, currentRowIndex: savedIndex, ongoingOwnership: savedOwnership } = JSON.parse(savedProgress);
+        if (savedRows && savedRows.length > 0) {
+          setRows(savedRows);
+          setCurrentRowIndex(savedIndex || 0);
+          setOngoingOwnership(savedOwnership || {
+            owners: [],
+            totalPercentage: 0,
+            totalAcres: totalAcres,
+            lastUpdatedRow: -1
+          });
+          toast({
+            title: "Progress Restored",
+            description: "Your previous analysis progress has been restored.",
+          });
+          return; // Don't parse document again if we have saved progress
+        }
+      } catch (error) {
+        console.error('Failed to restore progress:', error);
+      }
+    }
     parseDocumentIntoRows();
-  }, [documentText]);
+  }, [documentText, storageKey]);
+
+  // Save progress whenever state changes
+  useEffect(() => {
+    if (rows.length > 0) {
+      const progressData = {
+        rows,
+        currentRowIndex,
+        ongoingOwnership,
+        timestamp: Date.now()
+      };
+      localStorage.setItem(storageKey, JSON.stringify(progressData));
+    }
+  }, [rows, currentRowIndex, ongoingOwnership, storageKey]);
+
 
   const cleanRowContent = (content: string): string => {
     // Replace ||NEWLINE|| markers with actual line breaks
@@ -462,6 +503,22 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
     }
   };
 
+  const clearProgress = () => {
+    localStorage.removeItem(storageKey);
+    parseDocumentIntoRows();
+    setCurrentRowIndex(0);
+    setOngoingOwnership({
+      owners: [],
+      totalPercentage: 0,
+      totalAcres: totalAcres,
+      lastUpdatedRow: -1
+    });
+    toast({
+      title: "Progress Cleared",
+      description: "Analysis has been reset to start fresh.",
+    });
+  };
+
   const currentRow = rows[currentRowIndex];
   const isLastRow = currentRowIndex === rows.length - 1;
   const isFirstRow = currentRowIndex === 0;
@@ -474,6 +531,14 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
           <CardTitle className="flex items-center justify-between">
             <span>Row-by-Row Analysis: {prospect}</span>
             <div className="flex items-center gap-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearProgress}
+                className="text-xs"
+              >
+                Start Fresh
+              </Button>
               <Badge variant="outline">
                 Row {currentRowIndex + 1} of {rows.length}
               </Badge>
