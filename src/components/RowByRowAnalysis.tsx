@@ -1415,28 +1415,100 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
                           );
                         })}
                         
-                        {/* Show pending transfers */}
-                        {ongoingOwnership.pendingTransfers && ongoingOwnership.pendingTransfers.length > 0 && (
-                          <div className="mt-4">
-                            <h4 className="text-sm font-medium text-amber-700 mb-2">Pending Transfers</h4>
-                            {ongoingOwnership.pendingTransfers.map((transfer, index) => (
-                              <div key={index} className="p-3 bg-amber-50 border border-amber-200 rounded text-sm">
-                                <div className="font-medium flex items-center gap-2 text-amber-800">
-                                  {transfer.grantorName} → {transfer.granteeName}
-                                  <Badge variant="outline" className="text-xs border-amber-300 text-amber-700">
-                                    PENDING
-                                  </Badge>
-                                </div>
-                                <div className="text-xs text-amber-600 mt-1">
-                                  Surface: {transfer.surfacePercentage}% | Mineral: {transfer.mineralPercentage}%
-                                </div>
-                                <div className="text-xs text-amber-600">
-                                  Doc: {transfer.documentReference}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                         {/* Show pending transfers */}
+                         {ongoingOwnership.pendingTransfers && ongoingOwnership.pendingTransfers.length > 0 && (
+                           <div className="mt-4">
+                             <h4 className="text-sm font-medium text-amber-700 mb-2">Pending Transfers</h4>
+                             {ongoingOwnership.pendingTransfers.map((transfer, index) => (
+                               <div key={index} className="p-3 bg-amber-50 border border-amber-200 rounded text-sm">
+                                 <div className="font-medium flex items-center gap-2 text-amber-800">
+                                   {transfer.grantorName} → {transfer.granteeName}
+                                   <Badge variant="outline" className="text-xs border-amber-300 text-amber-700">
+                                     PENDING
+                                   </Badge>
+                                 </div>
+                                 <div className="text-xs text-amber-600 mt-1">
+                                   Surface: {transfer.surfacePercentage}% | Mineral: {transfer.mineralPercentage}%
+                                 </div>
+                                 <div className="text-xs text-amber-600">
+                                   Doc: {transfer.documentReference}
+                                 </div>
+                               </div>
+                             ))}
+                           </div>
+                         )}
+                         
+                         {/* AKA Party Combination Button */}
+                         <div className="mt-4">
+                           <Button 
+                             variant="outline" 
+                             size="sm"
+                             onClick={() => {
+                               // Find potential AKA parties (similar names)
+                               const potentialAKAs = ongoingOwnership.owners
+                                 .map((owner, index) => ({ ...owner, originalIndex: index }))
+                                 .filter((owner, index, array) => 
+                                   array.some((other, otherIndex) => 
+                                     otherIndex !== index &&
+                                     (owner.name.toLowerCase().includes(other.name.toLowerCase()) ||
+                                      other.name.toLowerCase().includes(owner.name.toLowerCase()) ||
+                                      // Check for common patterns like "John Smith" vs "Smith, John"
+                                      owner.name.split(/[\s,]+/).some(part => 
+                                        other.name.split(/[\s,]+/).some(otherPart => 
+                                          part.length > 2 && otherPart.length > 2 && 
+                                          part.toLowerCase() === otherPart.toLowerCase()
+                                        )
+                                      ))
+                                   )
+                                 );
+                               
+                               if (potentialAKAs.length === 0) {
+                                 alert('No potential AKA parties found in current ownership.');
+                                 return;
+                               }
+                               
+                               // Simple implementation - combine first two potential AKAs
+                               const first = potentialAKAs[0];
+                               const second = potentialAKAs.find(p => p.originalIndex !== first.originalIndex);
+                               
+                               if (second) {
+                                 const combinedName = prompt(
+                                   `Combine "${first.name}" and "${second.name}"?\n\nEnter the preferred name:`,
+                                   first.name
+                                 );
+                                 
+                                 if (combinedName && combinedName.trim()) {
+                                   setOngoingOwnership(prev => {
+                                     const updated = { ...prev };
+                                     const combinedOwner = {
+                                       ...first,
+                                       name: combinedName.trim(),
+                                       surfacePercentage: first.surfacePercentage + second.surfacePercentage,
+                                       mineralPercentage: first.mineralPercentage + second.mineralPercentage
+                                     };
+                                     
+                                     updated.owners = updated.owners
+                                       .filter((_, index) => index !== first.originalIndex && index !== second.originalIndex)
+                                       .concat([combinedOwner]);
+                                     
+                                     updated.totalSurfacePercentage = updated.owners.reduce((sum, owner) => sum + owner.surfacePercentage, 0);
+                                     updated.totalMineralPercentage = updated.owners.reduce((sum, owner) => sum + owner.mineralPercentage, 0);
+                                     
+                                     return updated;
+                                   });
+                                   
+                                   toast({
+                                     title: "AKA Parties Combined",
+                                     description: `Combined "${first.name}" and "${second.name}" into "${combinedName.trim()}"`
+                                   });
+                                 }
+                               }
+                             }}
+                             className="text-xs"
+                           >
+                             Combine AKA Parties
+                           </Button>
+                         </div>
                       </>
                     )}
                  </div>
