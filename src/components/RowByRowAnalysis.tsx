@@ -505,7 +505,11 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
                 {currentRow.analysis.grantees && currentRow.analysis.grantees.length > 0 && (
                   <div>
                     <span className="font-medium text-sm">Grantees:</span>
-                    <div className="text-sm">{currentRow.analysis.grantees.join(', ')}</div>
+                    <div className="text-sm">
+                      {currentRow.analysis.grantees.map((grantee, index) => 
+                        `${index + 1}. ${grantee}`
+                      ).join(', ')}
+                    </div>
                   </div>
                 )}
 
