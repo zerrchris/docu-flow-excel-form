@@ -621,6 +621,31 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
           let grantorSurfacePercentage = 100;
           let grantorMineralPercentage = 100;
           
+          // Check for mineral reservations in the description
+          let reservedMineralPercentage = 0;
+          if (analysis.description) {
+            const desc = analysis.description.toLowerCase();
+            
+            // Look for common reservation patterns
+            const reservationPatterns = [
+              /reserving.*?(\d+\/\d+).*?mineral/i,
+              /except.*?(\d+\/\d+).*?mineral/i,
+              /saving.*?(\d+\/\d+).*?mineral/i,
+              /mineral.*?(\d+\/\d+).*?reserved/i,
+              /undivided\s+(\d+\/\d+).*?mineral.*?reserved/i
+            ];
+            
+            for (const pattern of reservationPatterns) {
+              const match = analysis.description.match(pattern);
+              if (match) {
+                const [numerator, denominator] = match[1].split('/').map(Number);
+                reservedMineralPercentage = (numerator / denominator) * 100;
+                console.log(`Found mineral reservation: ${match[1]} = ${reservedMineralPercentage}%`);
+                break;
+              }
+            }
+          }
+          
           if (grantorName) {
             const grantorIndex = updated.owners.findIndex(o => 
               o.name.toLowerCase().includes(grantorName.toLowerCase()) ||
@@ -630,7 +655,28 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
             if (grantorIndex >= 0) {
               grantorSurfacePercentage = updated.owners[grantorIndex].surfacePercentage;
               grantorMineralPercentage = updated.owners[grantorIndex].mineralPercentage;
-              updated.owners.splice(grantorIndex, 1);
+              
+              // If there's a mineral reservation, keep that portion for the grantor
+              if (reservedMineralPercentage > 0) {
+                const reservedMinerals = (reservedMineralPercentage / 100) * grantorMineralPercentage;
+                const effectiveAcres = totalAcres > 0 ? totalAcres : 80;
+                const reservedNetMineralAcres = (reservedMinerals / 100) * effectiveAcres;
+                
+                updated.owners[grantorIndex] = {
+                  ...updated.owners[grantorIndex],
+                  surfacePercentage: 0, // Surface is transferred
+                  mineralPercentage: reservedMinerals, // Keep reserved minerals
+                  netSurfaceAcres: 0,
+                  netMineralAcres: reservedNetMineralAcres,
+                  acquisitionDocument: analysis.recordingReference || analysis.documentNumber || updated.owners[grantorIndex].acquisitionDocument
+                };
+                
+                // Reduce the mineral percentage available for transfer
+                grantorMineralPercentage -= reservedMinerals;
+              } else {
+                // No reservation, remove grantor completely
+                updated.owners.splice(grantorIndex, 1);
+              }
             }
           }
           
