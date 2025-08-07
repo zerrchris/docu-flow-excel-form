@@ -845,10 +845,10 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
                                        TRANSFERRED
                                      </Badge>
                                    </div>
-                                   <div className="flex justify-between text-xs text-red-500 line-through">
-                                     <span>Surface: {prevOwner.surfacePercentage.toFixed(2)}%</span>
-                                     <span>Mineral: {prevOwner.mineralPercentage.toFixed(2)}%</span>
-                                   </div>
+                                    <div className="flex justify-between text-xs text-red-500 line-through">
+                                      <span>Surface: {(prevOwner.surfacePercentage || 0).toFixed(2)}%</span>
+                                      <span>Mineral: {(prevOwner.mineralPercentage || 0).toFixed(2)}%</span>
+                                    </div>
                                  </div>
                                );
                              }
@@ -897,14 +897,14 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
                                )}
                              </div>
                              <div className="space-y-1 text-xs text-muted-foreground">
-                               <div className="flex justify-between">
-                                 <span>Surface: {owner.surfacePercentage.toFixed(2)}%</span>
-                                 <span>{owner.netSurfaceAcres.toFixed(2)} acres</span>
-                               </div>
-                               <div className="flex justify-between">
-                                 <span>Mineral: {owner.mineralPercentage.toFixed(2)}%</span>
-                                 <span>{owner.netMineralAcres.toFixed(2)} acres</span>
-                               </div>
+                                <div className="flex justify-between">
+                                  <span>Surface: {(owner.surfacePercentage || 0).toFixed(2)}%</span>
+                                  <span>{(owner.netSurfaceAcres || 0).toFixed(2)} acres</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span>Mineral: {(owner.mineralPercentage || 0).toFixed(2)}%</span>
+                                  <span>{(owner.netMineralAcres || 0).toFixed(2)} acres</span>
+                                </div>
                              </div>
                              <div className="flex items-center gap-2 mt-1">
                                <Badge 
