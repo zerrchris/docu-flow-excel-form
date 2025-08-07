@@ -511,13 +511,23 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
           const netMineralAcres = (mineralPercentagePerGrantee / 100) * effectiveAcres;
           
           analysis.grantees.forEach((grantee: string) => {
-            const existingOwnerIndex = updated.owners.findIndex(o => 
-              o.name.toLowerCase().trim() === grantee.toLowerCase().trim()
-            );
+            // Check if this grantee matches an existing owner (including confirmed matches)
+            let matchedOwner = null;
+            if (confirmedMatches && confirmedMatches[grantee]) {
+              matchedOwner = updated.owners.find(o => o.name === confirmedMatches[grantee].name);
+            } else {
+              matchedOwner = updated.owners.find(o => 
+                o.name.toLowerCase().trim() === grantee.toLowerCase().trim()
+              );
+            }
             
-            if (existingOwnerIndex >= 0) {
+            if (matchedOwner) {
+              const existingOwnerIndex = updated.owners.findIndex(o => o.name === matchedOwner.name);
               updated.owners[existingOwnerIndex] = {
                 ...updated.owners[existingOwnerIndex],
+                name: confirmedMatches && confirmedMatches[grantee] && confirmedMatches[grantee].name !== grantee 
+                  ? `${matchedOwner.name} AKA ${grantee}` 
+                  : matchedOwner.name,
                 mineralPercentage: updated.owners[existingOwnerIndex].mineralPercentage + mineralPercentagePerGrantee,
                 netMineralAcres: updated.owners[existingOwnerIndex].netMineralAcres + netMineralAcres,
                 acquisitionDocument: analysis.recordingReference || analysis.documentNumber || updated.owners[existingOwnerIndex].acquisitionDocument
@@ -571,13 +581,23 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
           const netSurfaceAcres = (surfacePercentagePerGrantee / 100) * effectiveAcres;
           
           analysis.grantees.forEach((grantee: string) => {
-            const existingOwnerIndex = updated.owners.findIndex(o => 
-              o.name.toLowerCase().trim() === grantee.toLowerCase().trim()
-            );
+            // Check if this grantee matches an existing owner (including confirmed matches)
+            let matchedOwner = null;
+            if (confirmedMatches && confirmedMatches[grantee]) {
+              matchedOwner = updated.owners.find(o => o.name === confirmedMatches[grantee].name);
+            } else {
+              matchedOwner = updated.owners.find(o => 
+                o.name.toLowerCase().trim() === grantee.toLowerCase().trim()
+              );
+            }
             
-            if (existingOwnerIndex >= 0) {
+            if (matchedOwner) {
+              const existingOwnerIndex = updated.owners.findIndex(o => o.name === matchedOwner.name);
               updated.owners[existingOwnerIndex] = {
                 ...updated.owners[existingOwnerIndex],
+                name: confirmedMatches && confirmedMatches[grantee] && confirmedMatches[grantee].name !== grantee 
+                  ? `${matchedOwner.name} AKA ${grantee}` 
+                  : matchedOwner.name,
                 surfacePercentage: updated.owners[existingOwnerIndex].surfacePercentage + surfacePercentagePerGrantee,
                 netSurfaceAcres: updated.owners[existingOwnerIndex].netSurfaceAcres + netSurfaceAcres,
                 acquisitionDocument: analysis.recordingReference || analysis.documentNumber || updated.owners[existingOwnerIndex].acquisitionDocument
@@ -622,13 +642,23 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
           const netMineralAcres = (mineralPercentagePerGrantee / 100) * effectiveAcres;
           
           analysis.grantees.forEach((grantee: string) => {
-            const existingOwnerIndex = updated.owners.findIndex(o => 
-              o.name.toLowerCase().trim() === grantee.toLowerCase().trim()
-            );
+            // Check if this grantee matches an existing owner (including confirmed matches)
+            let matchedOwner = null;
+            if (confirmedMatches && confirmedMatches[grantee]) {
+              matchedOwner = updated.owners.find(o => o.name === confirmedMatches[grantee].name);
+            } else {
+              matchedOwner = updated.owners.find(o => 
+                o.name.toLowerCase().trim() === grantee.toLowerCase().trim()
+              );
+            }
             
-            if (existingOwnerIndex >= 0) {
+            if (matchedOwner) {
+              const existingOwnerIndex = updated.owners.findIndex(o => o.name === matchedOwner.name);
               updated.owners[existingOwnerIndex] = {
                 ...updated.owners[existingOwnerIndex],
+                name: confirmedMatches && confirmedMatches[grantee] && confirmedMatches[grantee].name !== grantee 
+                  ? `${matchedOwner.name} AKA ${grantee}` 
+                  : matchedOwner.name,
                 surfacePercentage: updated.owners[existingOwnerIndex].surfacePercentage + surfacePercentagePerGrantee,
                 mineralPercentage: updated.owners[existingOwnerIndex].mineralPercentage + mineralPercentagePerGrantee,
                 netSurfaceAcres: updated.owners[existingOwnerIndex].netSurfaceAcres + netSurfaceAcres,
