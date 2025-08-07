@@ -228,63 +228,71 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
       }
       // Handle other ownership transfers (deeds, etc.)
       else if (analysis.ownershipChange && analysis.grantees) {
+        // First, find the grantor's current ownership to determine what's being transferred
+        let ownershipToTransfer = 100; // Default assumption
+        let grantorIndex = -1;
+        
+        if (analysis.grantors && analysis.grantors.length > 0) {
+          const grantorName = analysis.grantors[0];
+          grantorIndex = updated.owners.findIndex(o => 
+            o.name.toLowerCase().includes(grantorName.toLowerCase()) ||
+            grantorName.toLowerCase().includes(o.name.toLowerCase())
+          );
+          
+          if (grantorIndex >= 0) {
+            ownershipToTransfer = updated.owners[grantorIndex].percentage;
+            console.log(`Found grantor ${grantorName} with ${ownershipToTransfer}% ownership`);
+            // Remove the grantor since they're transferring their interest
+            updated.owners.splice(grantorIndex, 1);
+          }
+        }
+        
+        // Determine how to split the ownership among grantees
+        const numberOfGrantees = analysis.grantees.length;
+        let ownershipPerGrantee = ownershipToTransfer;
+        
+        // Check if the description indicates even split
+        if (analysis.description && analysis.description.toLowerCase().includes('split evenly') && numberOfGrantees > 1) {
+          ownershipPerGrantee = ownershipToTransfer / numberOfGrantees;
+          console.log(`Splitting ${ownershipToTransfer}% evenly among ${numberOfGrantees} grantees = ${ownershipPerGrantee}% each`);
+        } else if (analysis.percentageChange) {
+          ownershipPerGrantee = analysis.percentageChange;
+        } else if (numberOfGrantees > 1 && !analysis.percentageChange) {
+          // If multiple grantees but no explicit split mentioned, assume equal division
+          ownershipPerGrantee = ownershipToTransfer / numberOfGrantees;
+          console.log(`Multiple grantees, assuming equal split: ${ownershipPerGrantee}% each`);
+        }
+        
+        // Add each grantee with their portion
         analysis.grantees.forEach((grantee: string) => {
           const existingOwnerIndex = updated.owners.findIndex(o => 
             o.name.toLowerCase().includes(grantee.toLowerCase()) ||
             grantee.toLowerCase().includes(o.name.toLowerCase())
           );
           
-          // Determine percentage - if specified use it, otherwise try to infer
-          let ownershipPercentage = analysis.percentageChange;
-          
-          // If no percentage specified, we need to make assumptions based on document type
-          if (!ownershipPercentage) {
-            if (analysis.documentType === 'WD' || analysis.documentType === 'QCD') {
-              // For deeds without specified percentage, assume transfer of full interest from grantor
-              if (analysis.grantors && analysis.grantors.length > 0) {
-                const grantorName = analysis.grantors[0];
-                const grantorIndex = updated.owners.findIndex(o => 
-                  o.name.toLowerCase().includes(grantorName.toLowerCase()) ||
-                  grantorName.toLowerCase().includes(o.name.toLowerCase())
-                );
-                
-                if (grantorIndex >= 0) {
-                  ownershipPercentage = updated.owners[grantorIndex].percentage;
-                  // Remove the grantor or reduce their ownership
-                  updated.owners.splice(grantorIndex, 1);
-                } else {
-                  // If grantor not found in current ownership, assume 100% transfer
-                  ownershipPercentage = 100;
-                }
-              } else {
-                ownershipPercentage = 100;
-              }
-            } else if (analysis.documentType === 'MD') {
-              // Mineral deed - assume 100% of minerals unless specified
-              ownershipPercentage = 100;
-            } else {
-              // Default assumption
-              ownershipPercentage = 100;
-            }
-          }
+          const effectiveAcres = totalAcres > 0 ? totalAcres : 80;
+          const netAcres = (ownershipPerGrantee / 100) * effectiveAcres;
           
           if (existingOwnerIndex >= 0) {
-            // Update existing owner
+            // Update existing owner (add to their existing percentage)
             updated.owners[existingOwnerIndex] = {
               ...updated.owners[existingOwnerIndex],
-              percentage: ownershipPercentage,
-              netAcres: (ownershipPercentage / 100) * totalAcres,
+              percentage: updated.owners[existingOwnerIndex].percentage + ownershipPerGrantee,
+              netAcres: updated.owners[existingOwnerIndex].netAcres + netAcres,
               acquisitionDocument: analysis.recordingReference || analysis.documentNumber || updated.owners[existingOwnerIndex].acquisitionDocument
             };
+            console.log(`Updated existing owner ${grantee} to ${updated.owners[existingOwnerIndex].percentage}%`);
           } else {
             // Add new owner
-            updated.owners.push({
+            const newOwner = {
               name: grantee,
-              percentage: ownershipPercentage,
-              netAcres: (ownershipPercentage / 100) * totalAcres,
+              percentage: ownershipPerGrantee,
+              netAcres: netAcres,
               acquisitionDocument: analysis.recordingReference || analysis.documentNumber,
-              currentLeaseStatus: 'unknown'
-            });
+              currentLeaseStatus: 'unknown' as const
+            };
+            updated.owners.push(newOwner);
+            console.log(`Added new owner ${grantee} with ${ownershipPerGrantee}%`);
           }
         });
       }
