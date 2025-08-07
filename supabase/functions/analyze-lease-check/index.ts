@@ -1006,6 +1006,15 @@ DETAILED INSTRUCTIONS:
    - Calculate final percentages for current owners
    - Use precise decimal places (e.g., 2.80376826%)
 
+3. **CONTRACT FOR DEED vs WARRANTY DEED DISTINCTION**:
+   - **Contract for Deed**: Original owner retains legal title until warranty deed is delivered
+     - Both the contract vendee (purchaser) AND the original owner may be subject to lease obligations
+     - List both parties as potential lessors if no warranty deed has been recorded
+     - Note: "Subject to contract for deed - both parties may have leasing rights"
+   - **Warranty Deed**: Full ownership transfer is complete upon recording
+     - Only the grantee has leasing rights
+   - If a contract for deed is followed by a warranty deed, the warranty deed completes the transfer
+
 3. **LEASE EXTRACTION**: For each OGL entry, extract:
    - Exact lessor and lessee names
    - Lease date, term length, and calculated expiration
