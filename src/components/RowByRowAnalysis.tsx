@@ -388,7 +388,14 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
         }
       }
 
-      updated.totalPercentage = updated.owners.reduce((sum, owner) => sum + owner.percentage, 0);
+      // Calculate total percentages separately for surface and mineral rights
+      const surfaceOwners = updated.owners.filter(o => o.rightType === 'surface' || o.rightType === 'both');
+      const mineralOwners = updated.owners.filter(o => o.rightType === 'mineral' || o.rightType === 'both');
+      const surfacePercentage = surfaceOwners.reduce((sum, owner) => sum + owner.percentage, 0);
+      const mineralPercentage = mineralOwners.reduce((sum, owner) => sum + owner.percentage, 0);
+      
+      // For display purposes, show the higher of the two percentages or 100% if both exist
+      updated.totalPercentage = Math.max(surfacePercentage, mineralPercentage);
       updated.lastUpdatedRow = currentRowIndex;
       
       console.log('Final updated ownership:', updated);
