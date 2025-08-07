@@ -93,6 +93,8 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
     totalAcres: totalAcres,
     lastUpdatedRow: -1
   });
+  // Store ownership state at each row for navigation
+  const [ownershipHistory, setOwnershipHistory] = useState<Record<number, OngoingOwnership>>({});
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [editingRow, setEditingRow] = useState<string | null>(null);
   const [editedAnalysis, setEditedAnalysis] = useState<any>(null);
@@ -105,7 +107,12 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
     const savedProgress = localStorage.getItem(storageKey);
     if (savedProgress) {
       try {
-        const { rows: savedRows, currentRowIndex: savedIndex, ongoingOwnership: savedOwnership } = JSON.parse(savedProgress);
+        const { 
+          rows: savedRows, 
+          currentRowIndex: savedIndex, 
+          ongoingOwnership: savedOwnership,
+          ownershipHistory: savedHistory 
+        } = JSON.parse(savedProgress);
         if (savedRows && savedRows.length > 0) {
           setRows(savedRows);
           setCurrentRowIndex(savedIndex || 0);
@@ -116,6 +123,7 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
             totalAcres: totalAcres || 0,
             lastUpdatedRow: -1
           });
+          setOwnershipHistory(savedHistory || {});
           toast({
             title: "Progress Restored",
             description: "Your previous analysis progress has been restored.",
@@ -136,11 +144,12 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
         rows,
         currentRowIndex,
         ongoingOwnership,
+        ownershipHistory,
         timestamp: Date.now()
       };
       localStorage.setItem(storageKey, JSON.stringify(progressData));
     }
-  }, [rows, currentRowIndex, ongoingOwnership, storageKey]);
+  }, [rows, currentRowIndex, ongoingOwnership, ownershipHistory, storageKey]);
 
   const cleanRowContent = (content: string): string => {
     // Replace ||NEWLINE|| markers with actual line breaks
@@ -759,6 +768,12 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
   };
 
   const approveCurrentRow = () => {
+    // Store current ownership state before moving to next row
+    setOwnershipHistory(prev => ({
+      ...prev,
+      [currentRowIndex]: { ...ongoingOwnership }
+    }));
+    
     const updatedRows = [...rows];
     updatedRows[currentRowIndex] = {
       ...updatedRows[currentRowIndex],
@@ -1361,6 +1376,11 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
                         size="sm"
                         onClick={(e) => {
                           e.stopPropagation();
+                          // Check if we need to restore ownership state when going to a previous row
+                          if (index < currentRowIndex && ownershipHistory[index]) {
+                            setOngoingOwnership(ownershipHistory[index]);
+                            console.log(`Restored ownership state to row ${index}`);
+                          }
                           setCurrentRowIndex(index);
                         }}
                         className="h-6 px-2 text-xs"
