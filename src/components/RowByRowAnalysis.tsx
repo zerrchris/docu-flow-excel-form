@@ -179,12 +179,16 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
   };
 
   const updateOngoingOwnership = (analysis: any) => {
+    console.log('Updating ownership with analysis:', analysis);
+    console.log('Current total acres:', totalAcres);
+    
     setOngoingOwnership(prev => {
       const updated = { ...prev };
       
       // Handle patent documents - original government grants should be 100%
       if (analysis.documentType === 'Patent' && analysis.grantees && analysis.grantees.length > 0) {
         const patentee = analysis.grantees[0];
+        console.log('Processing patent for:', patentee);
         
         // For patents, grant 100% ownership to the patentee
         const existingOwnerIndex = updated.owners.findIndex(o => 
@@ -192,23 +196,34 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
           patentee.toLowerCase().includes(o.name.toLowerCase())
         );
         
+        // Use a default of 80 acres if totalAcres is 0 (common section size for E2SE4)
+        const effectiveAcres = totalAcres > 0 ? totalAcres : 80;
+        
         if (existingOwnerIndex >= 0) {
           // Update existing owner to 100%
           updated.owners[existingOwnerIndex] = {
             ...updated.owners[existingOwnerIndex],
             percentage: 100,
-            netAcres: totalAcres,
+            netAcres: effectiveAcres,
             acquisitionDocument: analysis.recordingReference || analysis.documentNumber
           };
+          console.log('Updated existing owner:', updated.owners[existingOwnerIndex]);
         } else {
           // Add new owner with 100%
-          updated.owners.push({
+          const newOwner = {
             name: patentee,
             percentage: 100,
-            netAcres: totalAcres,
+            netAcres: effectiveAcres,
             acquisitionDocument: analysis.recordingReference || analysis.documentNumber,
-            currentLeaseStatus: 'unknown'
-          });
+            currentLeaseStatus: 'unknown' as const
+          };
+          updated.owners.push(newOwner);
+          console.log('Added new owner:', newOwner);
+        }
+        
+        // Update total acres if it was 0
+        if (updated.totalAcres === 0) {
+          updated.totalAcres = effectiveAcres;
         }
       }
       // Handle other ownership transfers (deeds, etc.)
@@ -296,6 +311,8 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
 
       updated.totalPercentage = updated.owners.reduce((sum, owner) => sum + owner.percentage, 0);
       updated.lastUpdatedRow = currentRowIndex;
+      
+      console.log('Final updated ownership:', updated);
       
       return updated;
     });
