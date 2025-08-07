@@ -1062,59 +1062,6 @@ Return only valid JSON with no additional text or markdown formatting.`;
     return generateFallbackAnalysis(documentText);
   }
 }
-    
-    let aiResult;
-    try {
-      // Clean the response to ensure it's valid JSON
-      let content = data.choices[0].message.content.trim();
-      
-      // Remove any markdown formatting
-      content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '');
-      
-      // Parse the JSON
-      aiResult = JSON.parse(content);
-      console.log('AI analysis completed successfully');
-      
-      // Handle different response structures - check for both owners and currentHolders
-      let owners = aiResult.owners;
-      if (!owners && aiResult.tracts && aiResult.tracts.length > 0 && aiResult.tracts[0].currentHolders) {
-        console.log('Converting currentHolders to owners format');
-        owners = aiResult.tracts[0].currentHolders.map(holder => ({
-          name: holder.name,
-          interests: holder.acreageNote || "Interest details from analysis",
-          netAcres: aiResult.tracts[0].totalAcres || 0,
-          leaseholdStatus: holder.status || "See analysis",
-          listedAcreage: holder.acreageNote || "From document analysis"
-        }));
-        
-        // Update the response structure
-        aiResult.owners = owners;
-        aiResult.reportFormat = "ai_analyzed_interactive";
-        aiResult.prospect = aiResult.prospect || "From analysis";
-        aiResult.totalAcres = aiResult.tracts[0].totalAcres || 0;
-        aiResult.wells = aiResult.tracts[0].wells || [];
-        aiResult.limitationsAndExceptions = aiResult.tracts[0].limitationsAndExceptions || aiResult.overallLimitationsAndExceptions || "";
-      }
-
-      // Validate we have owners data
-      if (!aiResult.owners || !Array.isArray(aiResult.owners) || aiResult.owners.length === 0) {
-        console.error('AI response missing owners data, available keys:', Object.keys(aiResult));
-        throw new Error('AI response missing owners data');
-      }
-      
-      return aiResult;
-      
-    } catch (parseError) {
-      console.error('Failed to parse AI response:', parseError);
-      console.error('Raw response:', data.choices[0].message.content);
-      return generateFallbackAnalysis(documentText);
-    }
-
-  } catch (error) {
-    console.error('AI analysis failed:', error);
-    return generateFallbackAnalysis(documentText);
-  }
-}
 
 function generateFallbackAnalysis(documentText: string): any {
   // Try basic parsing if it looks like structured data
