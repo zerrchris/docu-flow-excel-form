@@ -440,16 +440,16 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
     const parcels: LandParcel[] = [];
     const desc = description.toLowerCase();
     
-    // Common quarter patterns
+    // Common quarter patterns - corrected to proper acreage
     const quarterPatterns = [
-      { pattern: /n[orth]*\s*e[ast]*\s*(?:1\/4|quarter)/gi, quarter: 'NE', acres: 40 },
-      { pattern: /n[orth]*\s*w[est]*\s*(?:1\/4|quarter)/gi, quarter: 'NW', acres: 40 },
-      { pattern: /s[outh]*\s*e[ast]*\s*(?:1\/4|quarter)/gi, quarter: 'SE', acres: 40 },
-      { pattern: /s[outh]*\s*w[est]*\s*(?:1\/4|quarter)/gi, quarter: 'SW', acres: 40 },
-      { pattern: /n[orth]*\s*(?:1\/2|half)/gi, quarter: 'N 1/2', acres: 80 },
-      { pattern: /s[outh]*\s*(?:1\/2|half)/gi, quarter: 'S 1/2', acres: 80 },
-      { pattern: /e[ast]*\s*(?:1\/2|half)/gi, quarter: 'E 1/2', acres: 80 },
-      { pattern: /w[est]*\s*(?:1\/2|half)/gi, quarter: 'W 1/2', acres: 80 }
+      { pattern: /n[orth]*\s*e[ast]*\s*(?:1\/4|quarter)/gi, quarter: 'NE', acres: 160 },
+      { pattern: /n[orth]*\s*w[est]*\s*(?:1\/4|quarter)/gi, quarter: 'NW', acres: 160 },
+      { pattern: /s[outh]*\s*e[ast]*\s*(?:1\/4|quarter)/gi, quarter: 'SE', acres: 160 },
+      { pattern: /s[outh]*\s*w[est]*\s*(?:1\/4|quarter)/gi, quarter: 'SW', acres: 160 },
+      { pattern: /n[orth]*\s*(?:1\/2|half)/gi, quarter: 'N 1/2', acres: 320 },
+      { pattern: /s[outh]*\s*(?:1\/2|half)/gi, quarter: 'S 1/2', acres: 320 },
+      { pattern: /e[ast]*\s*(?:1\/2|half)/gi, quarter: 'E 1/2', acres: 320 },
+      { pattern: /w[est]*\s*(?:1\/2|half)/gi, quarter: 'W 1/2', acres: 320 }
     ];
     
     // Extract section, township, range
@@ -463,7 +463,7 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
     
     // Look for specific acre amounts mentioned
     const acreMatch = description.match(/(\d+(?:\.\d+)?)\s*acres?/i);
-    const defaultAcres = acreMatch ? parseFloat(acreMatch[1]) : 40;
+    const defaultAcres = acreMatch ? parseFloat(acreMatch[1]) : 160;
     
     // Find quarter matches
     for (const { pattern, quarter, acres } of quarterPatterns) {
@@ -483,7 +483,7 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
     if (parcels.length === 0 && description.trim()) {
       parcels.push({
         description: description.trim(),
-        acres: defaultAcres || 80,
+        acres: defaultAcres || 160,
         section,
         township,
         range
