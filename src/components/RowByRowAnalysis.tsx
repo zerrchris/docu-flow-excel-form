@@ -1324,8 +1324,10 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
                          </>
                        )}
                        
-                       {/* Show current owners with highlighting for new/changed ones */}
-                       {ongoingOwnership.owners.map((owner, index) => {
+                        {/* Show current owners with highlighting for new/changed ones */}
+                        {ongoingOwnership.owners
+                          .filter(owner => owner.surfacePercentage > 0 || owner.mineralPercentage > 0)
+                          .map((owner, index) => {
                          const wasNew = previousOwnership.owners.length > 0 && 
                            ongoingOwnership.lastUpdatedRow === currentRowIndex &&
                            !previousOwnership.owners.find(o => 
