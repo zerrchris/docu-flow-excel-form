@@ -32,6 +32,17 @@ export interface DocumentRow {
   status: 'pending' | 'analyzing' | 'analyzed' | 'corrected' | 'approved';
 }
 
+export interface PendingTransfer {
+  grantorName: string;
+  granteeName: string;
+  surfacePercentage: number;
+  mineralPercentage: number;
+  documentReference: string;
+  rowIndex: number;
+  transferType: 'full' | 'surface_only' | 'mineral_only';
+  reservedMineralPercentage?: number;
+}
+
 export interface OngoingOwnership {
   owners: Array<{
     name: string;
@@ -53,6 +64,7 @@ export interface OngoingOwnership {
       clauses?: string[];
     };
   }>;
+  pendingTransfers: PendingTransfer[];
   totalSurfacePercentage: number;
   totalMineralPercentage: number;
   totalAcres: number;
@@ -81,6 +93,7 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
   const [currentRowIndex, setCurrentRowIndex] = useState(0);
   const [ongoingOwnership, setOngoingOwnership] = useState<OngoingOwnership>({
     owners: [],
+    pendingTransfers: [],
     totalSurfacePercentage: 0,
     totalMineralPercentage: 0,
     totalAcres: totalAcres || 0,
@@ -88,6 +101,7 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
   });
   const [previousOwnership, setPreviousOwnership] = useState<OngoingOwnership>({
     owners: [],
+    pendingTransfers: [],
     totalSurfacePercentage: 0,
     totalMineralPercentage: 0,
     totalAcres: totalAcres,
@@ -118,6 +132,7 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
           setCurrentRowIndex(savedIndex || 0);
           setOngoingOwnership(savedOwnership || {
             owners: [],
+            pendingTransfers: [],
             totalSurfacePercentage: 0,
             totalMineralPercentage: 0,
             totalAcres: totalAcres || 0,
@@ -447,6 +462,7 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
               acquisitionDocument: 'Original Government Ownership',
               currentLeaseStatus: 'unknown' as const
             }],
+            pendingTransfers: [],
             totalSurfacePercentage: 100,
             totalMineralPercentage: mineralPercentage,
             totalAcres: effectiveAcres,
@@ -510,6 +526,22 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
                 netMineralAcres: 0,
                 acquisitionDocument: analysis.recordingReference || analysis.documentNumber || updated.owners[grantorIndex].acquisitionDocument
               };
+            } else {
+              // Grantor not found - create pending transfer for minerals only
+              console.log(`Grantor ${grantorName} not found - creating pending mineral transfer`);
+              analysis.grantees.forEach((grantee: string) => {
+                const pendingTransfer: PendingTransfer = {
+                  grantorName: grantorName,
+                  granteeName: grantee,
+                  surfacePercentage: 0, // Mineral deed only
+                  mineralPercentage: 100 / analysis.grantees.length, // Equal split among grantees
+                  documentReference: analysis.recordingReference || analysis.documentNumber || `Row ${currentRowIndex + 1}`,
+                  rowIndex: currentRowIndex,
+                  transferType: 'mineral_only'
+                };
+                updated.pendingTransfers.push(pendingTransfer);
+              });
+              return updated; // Skip the normal grantee processing since we created pending transfers
             }
           }
           
@@ -580,6 +612,22 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
                 // Remove grantor completely if they have no mineral rights
                 updated.owners.splice(grantorIndex, 1);
               }
+            } else {
+              // Grantor not found - create pending transfer for surface only
+              console.log(`Grantor ${grantorName} not found - creating pending surface transfer`);
+              analysis.grantees.forEach((grantee: string) => {
+                const pendingTransfer: PendingTransfer = {
+                  grantorName: grantorName,
+                  granteeName: grantee,
+                  surfacePercentage: 100 / analysis.grantees.length, // Equal split among grantees
+                  mineralPercentage: 0, // Surface deed only
+                  documentReference: analysis.recordingReference || analysis.documentNumber || `Row ${currentRowIndex + 1}`,
+                  rowIndex: currentRowIndex,
+                  transferType: 'surface_only'
+                };
+                updated.pendingTransfers.push(pendingTransfer);
+              });
+              return updated; // Skip the normal grantee processing since we created pending transfers
             }
           }
           
@@ -686,6 +734,23 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
                 // No reservation, remove grantor completely
                 updated.owners.splice(grantorIndex, 1);
               }
+            } else {
+              // Grantor not found - create pending transfer for both surface and minerals
+              console.log(`Grantor ${grantorName} not found - creating pending full transfer`);
+              analysis.grantees.forEach((grantee: string) => {
+                const pendingTransfer: PendingTransfer = {
+                  grantorName: grantorName,
+                  granteeName: grantee,
+                  surfacePercentage: 100 / analysis.grantees.length, // Equal split among grantees
+                  mineralPercentage: (100 - reservedMineralPercentage) / analysis.grantees.length,
+                  documentReference: analysis.recordingReference || analysis.documentNumber || `Row ${currentRowIndex + 1}`,
+                  rowIndex: currentRowIndex,
+                  transferType: 'full',
+                  reservedMineralPercentage: reservedMineralPercentage
+                };
+                updated.pendingTransfers.push(pendingTransfer);
+              });
+              return updated; // Skip the normal grantee processing since we created pending transfers
             }
           }
           
@@ -755,6 +820,67 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
           }
         }
       }
+
+      // Check if any new owners have pending transfers waiting for them
+      updated.owners.forEach((owner, index) => {
+        const ownerPendingTransfers = updated.pendingTransfers.filter(pt => 
+          pt.grantorName.toLowerCase().includes(owner.name.toLowerCase()) ||
+          owner.name.toLowerCase().includes(pt.grantorName.toLowerCase())
+        );
+
+        if (ownerPendingTransfers.length > 0) {
+          console.log(`Found ${ownerPendingTransfers.length} pending transfers for ${owner.name}`);
+          
+          ownerPendingTransfers.forEach(pendingTransfer => {
+            // Apply the pending transfer
+            const surfaceToTransfer = (pendingTransfer.surfacePercentage / 100) * owner.surfacePercentage;
+            const mineralToTransfer = (pendingTransfer.mineralPercentage / 100) * owner.mineralPercentage;
+            const effectiveAcres = totalAcres > 0 ? totalAcres : 80;
+            
+            // Reduce current owner's percentage
+            updated.owners[index] = {
+              ...updated.owners[index],
+              surfacePercentage: updated.owners[index].surfacePercentage - surfaceToTransfer,
+              mineralPercentage: updated.owners[index].mineralPercentage - mineralToTransfer,
+              netSurfaceAcres: ((updated.owners[index].surfacePercentage - surfaceToTransfer) / 100) * effectiveAcres,
+              netMineralAcres: ((updated.owners[index].mineralPercentage - mineralToTransfer) / 100) * effectiveAcres
+            };
+
+            // Find or create the grantee
+            const granteeIndex = updated.owners.findIndex(o => 
+              o.name.toLowerCase().trim() === pendingTransfer.granteeName.toLowerCase().trim()
+            );
+
+            if (granteeIndex >= 0) {
+              updated.owners[granteeIndex] = {
+                ...updated.owners[granteeIndex],
+                surfacePercentage: updated.owners[granteeIndex].surfacePercentage + surfaceToTransfer,
+                mineralPercentage: updated.owners[granteeIndex].mineralPercentage + mineralToTransfer,
+                netSurfaceAcres: updated.owners[granteeIndex].netSurfaceAcres + ((surfaceToTransfer / 100) * effectiveAcres),
+                netMineralAcres: updated.owners[granteeIndex].netMineralAcres + ((mineralToTransfer / 100) * effectiveAcres),
+                acquisitionDocument: pendingTransfer.documentReference
+              };
+            } else {
+              // Create new owner for the grantee
+              const newOwner = {
+                name: pendingTransfer.granteeName,
+                surfacePercentage: surfaceToTransfer,
+                mineralPercentage: mineralToTransfer,
+                netSurfaceAcres: (surfaceToTransfer / 100) * effectiveAcres,
+                netMineralAcres: (mineralToTransfer / 100) * effectiveAcres,
+                acquisitionDocument: pendingTransfer.documentReference,
+                currentLeaseStatus: 'unknown' as const
+              };
+              updated.owners.push(newOwner);
+            }
+          });
+
+          // Remove the processed pending transfers
+          updated.pendingTransfers = updated.pendingTransfers.filter(pt => 
+            !ownerPendingTransfers.some(opt => opt.documentReference === pt.documentReference)
+          );
+        }
+      });
 
       // Calculate total percentages
       updated.totalSurfacePercentage = updated.owners.reduce((sum, owner) => sum + owner.surfacePercentage, 0);
@@ -837,6 +963,7 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
     setCurrentRowIndex(0);
     setOngoingOwnership({
       owners: [],
+      pendingTransfers: [],
       totalSurfacePercentage: 0,
       totalMineralPercentage: 0,
       totalAcres: totalAcres,
@@ -1277,16 +1404,39 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
                                )}
                              </div>
                            </div>
-                         );
-                       })}
-                     </>
-                   )}
-                </div>
-              </div>
+                          );
+                        })}
+                        
+                        {/* Show pending transfers */}
+                        {ongoingOwnership.pendingTransfers.length > 0 && (
+                          <div className="mt-4">
+                            <h4 className="text-sm font-medium text-amber-700 mb-2">Pending Transfers</h4>
+                            {ongoingOwnership.pendingTransfers.map((transfer, index) => (
+                              <div key={index} className="p-3 bg-amber-50 border border-amber-200 rounded text-sm">
+                                <div className="font-medium flex items-center gap-2 text-amber-800">
+                                  {transfer.grantorName} → {transfer.granteeName}
+                                  <Badge variant="outline" className="text-xs border-amber-300 text-amber-700">
+                                    PENDING
+                                  </Badge>
+                                </div>
+                                <div className="text-xs text-amber-600 mt-1">
+                                  Surface: {transfer.surfacePercentage}% | Mineral: {transfer.mineralPercentage}%
+                                </div>
+                                <div className="text-xs text-amber-600">
+                                  Doc: {transfer.documentReference}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    )}
+                 </div>
+               </div>
 
-              <div className="text-xs text-muted-foreground">
-                Last updated: Row {ongoingOwnership.lastUpdatedRow + 1}
-              </div>
+               <div className="text-xs text-muted-foreground">
+                 Last updated: Row {ongoingOwnership.lastUpdatedRow + 1}
+               </div>
             </div>
           </CardContent>
         </Card>
