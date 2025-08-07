@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CheckCircle, XCircle, AlertCircle, ArrowRight, ArrowLeft, Eye, Edit, Save, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 export interface DocumentRow {
   id: string;
@@ -94,6 +95,7 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [editingRow, setEditingRow] = useState<string | null>(null);
   const [editedAnalysis, setEditedAnalysis] = useState<any>(null);
+  const [pendingNameMatches, setPendingNameMatches] = useState<any>(null);
   const { toast } = useToast();
 
   // Load saved progress on mount
@@ -210,8 +212,13 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
       };
       setRows(updatedRows);
 
-      // Update ongoing ownership if there's a change
+      // Check for potential name matches before updating ownership
       if (analysis.ownershipChange) {
+        const nameMatches = checkForNameMatches(analysis);
+        if (nameMatches) {
+          setPendingNameMatches({ analysis, matches: nameMatches });
+          return; // Don't update ownership yet, wait for user confirmation
+        }
         updateOngoingOwnership(analysis);
       }
 
@@ -231,7 +238,135 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
     }
   };
 
-  const updateOngoingOwnership = (analysis: any) => {
+  // Name matching functions
+  const getNameVariations = (name: string): string[] => {
+    const variations = [];
+    const cleaned = name.trim().toLowerCase();
+    
+    // Original name
+    variations.push(cleaned);
+    
+    // Remove middle names/initials
+    const parts = cleaned.split(/\s+/);
+    if (parts.length > 2) {
+      variations.push(`${parts[0]} ${parts[parts.length - 1]}`);
+    }
+    
+    // Common abbreviations and variations
+    const commonVariations: Record<string, string[]> = {
+      'william': ['bill', 'billy', 'will'],
+      'robert': ['bob', 'bobby', 'rob'],
+      'james': ['jim', 'jimmy'],
+      'john': ['jack', 'johnny'],
+      'elizabeth': ['beth', 'liz', 'betty'],
+      'margaret': ['maggie', 'peggy', 'meg'],
+      'catherine': ['kate', 'cathy', 'katie'],
+      'patricia': ['pat', 'patty', 'tricia'],
+      'michael': ['mike', 'mick'],
+      'richard': ['rick', 'dick', 'rich'],
+      'joseph': ['joe', 'joey'],
+      'charles': ['chuck', 'charlie'],
+      'edward': ['ed', 'eddie', 'ted'],
+      'thomas': ['tom', 'tommy']
+    };
+    
+    parts.forEach(part => {
+      if (commonVariations[part]) {
+        commonVariations[part].forEach(variation => {
+          const newName = cleaned.replace(part, variation);
+          variations.push(newName);
+        });
+      }
+    });
+    
+    return [...new Set(variations)];
+  };
+
+  const findPotentialMatches = (newName: string, existingOwners: any[]): any[] => {
+    const newNameVariations = getNameVariations(newName);
+    const matches = [];
+    
+    for (const owner of existingOwners) {
+      const ownerVariations = getNameVariations(owner.name);
+      
+      // Check for exact matches or variations
+      for (const newVar of newNameVariations) {
+        for (const ownerVar of ownerVariations) {
+          // Exact match
+          if (newVar === ownerVar) {
+            matches.push({ owner, confidence: 'high', reason: 'Exact name match' });
+            break;
+          }
+          
+          // Partial match (considering married names)
+          const newParts = newVar.split(/\s+/);
+          const ownerParts = ownerVar.split(/\s+/);
+          
+          // Same first name, different last name (possible marriage)
+          if (newParts[0] === ownerParts[0] && newParts.length >= 2 && ownerParts.length >= 2) {
+            if (newParts[newParts.length - 1] !== ownerParts[ownerParts.length - 1]) {
+              matches.push({ 
+                owner, 
+                confidence: 'medium', 
+                reason: 'Same first name, different last name (possible marriage)' 
+              });
+            }
+          }
+          
+          // Missing middle name/initial
+          if (newParts.length !== ownerParts.length) {
+            const shorterName = newParts.length < ownerParts.length ? newParts : ownerParts;
+            const longerName = newParts.length > ownerParts.length ? newParts : ownerParts;
+            
+            if (shorterName[0] === longerName[0] && 
+                shorterName[shorterName.length - 1] === longerName[longerName.length - 1]) {
+              matches.push({ 
+                owner, 
+                confidence: 'medium', 
+                reason: 'Missing middle name or initial' 
+              });
+            }
+          }
+        }
+      }
+    }
+    
+    // Remove duplicates
+    return matches.filter((match, index, self) => 
+      index === self.findIndex(m => m.owner.name === match.owner.name)
+    );
+  };
+
+  const checkForNameMatches = (analysis: any): any => {
+    if (!analysis.grantees || analysis.grantees.length === 0) return null;
+    
+    const potentialMatches = [];
+    
+    for (const grantee of analysis.grantees) {
+      const matches = findPotentialMatches(grantee, ongoingOwnership.owners);
+      if (matches.length > 0) {
+        potentialMatches.push({
+          newName: grantee,
+          matches
+        });
+      }
+    }
+    
+    return potentialMatches.length > 0 ? potentialMatches : null;
+  };
+
+  const handleNameMatchConfirmation = (matches: any[], confirmed: boolean) => {
+    if (confirmed) {
+      // User confirmed the matches, proceed with merging
+      updateOngoingOwnership(pendingNameMatches.analysis, matches);
+    } else {
+      // User rejected the matches, proceed as new owners
+      updateOngoingOwnership(pendingNameMatches.analysis);
+    }
+    setPendingNameMatches(null);
+  };
+
+  const updateOngoingOwnership = (analysis: any, confirmedMatches?: any[]) => {
     console.log('Updating ownership with analysis:', analysis);
     console.log('Current total acres:', totalAcres);
     
@@ -1045,6 +1180,67 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
         </Button>
       </div>
       </div>
+
+      {/* Name Matching Dialog */}
+      <Dialog open={!!pendingNameMatches} onOpenChange={() => setPendingNameMatches(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Potential Name Matches Found</DialogTitle>
+            <DialogDescription>
+              Some grantees might be the same people as existing owners. Please review and confirm if these are the same individuals:
+            </DialogDescription>
+          </DialogHeader>
+          
+          {pendingNameMatches && (
+            <div className="space-y-4">
+              {pendingNameMatches.matches.map((match: any, index: number) => (
+                <div key={index} className="border rounded-lg p-4 space-y-3">
+                  <div className="font-medium">
+                    New Grantee: <span className="text-primary">{match.newName}</span>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium text-muted-foreground">Potential matches:</div>
+                    {match.matches.map((potentialMatch: any, matchIndex: number) => (
+                      <div key={matchIndex} className="bg-muted p-3 rounded flex justify-between items-center">
+                        <div>
+                          <div className="font-medium">{potentialMatch.owner.name}</div>
+                          <div className="text-xs text-muted-foreground">
+                            Surface: {potentialMatch.owner.surfacePercentage}% | 
+                            Mineral: {potentialMatch.owner.mineralPercentage}%
+                          </div>
+                          <div className="text-xs text-blue-600 mt-1">
+                            {potentialMatch.reason}
+                          </div>
+                        </div>
+                        <Badge variant={potentialMatch.confidence === 'high' ? 'default' : 'secondary'}>
+                          {potentialMatch.confidence} confidence
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              
+              <div className="flex gap-3 pt-4 border-t">
+                <Button 
+                  onClick={() => handleNameMatchConfirmation(pendingNameMatches.matches, true)}
+                  className="flex-1"
+                >
+                  Yes, these are the same people (merge ownership)
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => handleNameMatchConfirmation(pendingNameMatches.matches, false)}
+                  className="flex-1"
+                >
+                  No, these are different people (add as new owners)
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
