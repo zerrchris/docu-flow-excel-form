@@ -81,7 +81,7 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
     owners: [],
     totalSurfacePercentage: 0,
     totalMineralPercentage: 0,
-    totalAcres: totalAcres,
+    totalAcres: totalAcres || 0,
     lastUpdatedRow: -1
   });
   const [previousOwnership, setPreviousOwnership] = useState<OngoingOwnership>({
@@ -109,7 +109,7 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
             owners: [],
             totalSurfacePercentage: 0,
             totalMineralPercentage: 0,
-            totalAcres: totalAcres,
+            totalAcres: totalAcres || 0,
             lastUpdatedRow: -1
           });
           toast({
@@ -805,18 +805,18 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
             <div className="h-full flex flex-col space-y-4">
               {/* Summary Stats - Fixed Height */}
               <div className="grid grid-cols-2 gap-4 text-sm flex-shrink-0">
-                <div>
-                  <span className="font-medium">Surface Rights:</span>
-                  <div className="text-lg font-bold">{ongoingOwnership.totalSurfacePercentage.toFixed(2)}%</div>
-                </div>
-                <div>
-                  <span className="font-medium">Mineral Rights:</span>
-                  <div className="text-lg font-bold">{ongoingOwnership.totalMineralPercentage.toFixed(2)}%</div>
-                </div>
-                <div className="col-span-2">
-                  <span className="font-medium">Total Acres:</span>
-                  <div className="text-lg font-bold">{ongoingOwnership.totalAcres}</div>
-                </div>
+                 <div>
+                   <span className="font-medium">Surface Rights:</span>
+                   <div className="text-lg font-bold">{(ongoingOwnership.totalSurfacePercentage || 0).toFixed(2)}%</div>
+                 </div>
+                 <div>
+                   <span className="font-medium">Mineral Rights:</span>
+                   <div className="text-lg font-bold">{(ongoingOwnership.totalMineralPercentage || 0).toFixed(2)}%</div>
+                 </div>
+                 <div className="col-span-2">
+                   <span className="font-medium">Total Acres:</span>
+                   <div className="text-lg font-bold">{ongoingOwnership.totalAcres || 0}</div>
+                 </div>
               </div>
 
               {/* Owners List - Scrollable */}
