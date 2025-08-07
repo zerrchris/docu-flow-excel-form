@@ -760,7 +760,7 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
             <CardTitle>Ongoing Ownership Summary</CardTitle>
           </CardHeader>
           <CardContent className="flex-1 overflow-y-auto">
-            <div className="space-y-4">
+            <div className="h-full flex flex-col space-y-4">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="font-medium">Total Percentage:</span>
@@ -772,9 +772,9 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
                 </div>
               </div>
 
-              <div>
+              <div className="flex-1 flex flex-col">
                 <div className="text-sm font-medium mb-2">Current Owners:</div>
-                <div className="space-y-2 max-h-60 overflow-y-auto">
+                <div className="flex-1 overflow-y-auto space-y-2 min-h-0">
                   {ongoingOwnership.owners.length === 0 ? (
                     <div className="text-sm text-muted-foreground text-center py-4">
                       No owners identified yet
