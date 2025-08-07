@@ -525,41 +525,44 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
   const isFirstRow = currentRowIndex === 0;
 
   return (
-    <div className="space-y-6">
-      {/* Progress Header */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>Row-by-Row Analysis: {prospect}</span>
-            <div className="flex items-center gap-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={clearProgress}
-                className="text-xs"
-              >
-                Start Fresh
-              </Button>
-              <Badge variant="outline">
-                Row {currentRowIndex + 1} of {rows.length}
-              </Badge>
-              <div className="text-sm text-muted-foreground">
-                Progress: {Math.round(((currentRowIndex + 1) / rows.length) * 100)}%
+    <>
+      {/* Main Analysis Section */}
+      <div className="space-y-6">
+        {/* Progress Header */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span>Row-by-Row Analysis: {prospect}</span>
+              <div className="flex items-center gap-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={clearProgress}
+                  className="text-xs"
+                >
+                  Start Fresh
+                </Button>
+                <Badge variant="outline">
+                  Row {currentRowIndex + 1} of {rows.length}
+                </Badge>
+                <div className="text-sm text-muted-foreground">
+                  Progress: {Math.round(((currentRowIndex + 1) / rows.length) * 100)}%
+                </div>
               </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="w-full bg-muted rounded-full h-2">
+              <div 
+                className="bg-primary h-2 rounded-full transition-all duration-300"
+                style={{ width: `${((currentRowIndex + 1) / rows.length) * 100}%` }}
+              />
             </div>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="w-full bg-muted rounded-full h-2">
-            <div 
-              className="bg-primary h-2 rounded-full transition-all duration-300"
-              style={{ width: `${((currentRowIndex + 1) / rows.length) * 100}%` }}
-            />
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-500px)] min-h-[400px]">
+        {/* Two Column Layout - Fixed Height */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[60vh]">
         {/* Current Row Analysis */}
         <Card className="flex flex-col h-full">
           <CardHeader>
@@ -931,6 +934,7 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
           Cancel Analysis
         </Button>
       </div>
-    </div>
+      </div>
+    </>
   );
 };
