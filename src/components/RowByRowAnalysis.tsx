@@ -376,12 +376,23 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
     setOngoingOwnership(prev => {
       const updated = { ...prev };
       
-      // Handle patent documents - original government grants should be 100% surface
+      // Handle patent documents - original government grants include both surface and minerals unless reserved
       if (analysis.documentType === 'Patent' && analysis.grantees && analysis.grantees.length > 0) {
         const patentee = analysis.grantees[0];
         console.log('Processing patent for:', patentee);
         
         const effectiveAcres = totalAcres > 0 ? totalAcres : 80;
+        
+        // Check if minerals are specifically reserved in the description
+        const mineralsReserved = analysis.description && (
+          analysis.description.toLowerCase().includes('reserving') ||
+          analysis.description.toLowerCase().includes('except') ||
+          analysis.description.toLowerCase().includes('minerals reserved') ||
+          analysis.description.toLowerCase().includes('mineral rights reserved')
+        );
+        
+        const mineralPercentage = mineralsReserved ? 0 : 100;
+        const netMineralAcres = mineralsReserved ? 0 : effectiveAcres;
         
         const existingOwnerIndex = updated.owners.findIndex(o => 
           o.name.toLowerCase().includes(patentee.toLowerCase()) ||
@@ -392,16 +403,18 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
           updated.owners[existingOwnerIndex] = {
             ...updated.owners[existingOwnerIndex],
             surfacePercentage: 100,
+            mineralPercentage: mineralPercentage,
             netSurfaceAcres: effectiveAcres,
+            netMineralAcres: netMineralAcres,
             acquisitionDocument: analysis.recordingReference || analysis.documentNumber
           };
         } else {
           const newOwner = {
             name: patentee,
             surfacePercentage: 100,
-            mineralPercentage: 0,
+            mineralPercentage: mineralPercentage,
             netSurfaceAcres: effectiveAcres,
-            netMineralAcres: 0,
+            netMineralAcres: netMineralAcres,
             acquisitionDocument: analysis.recordingReference || analysis.documentNumber,
             currentLeaseStatus: 'unknown' as const
           };
