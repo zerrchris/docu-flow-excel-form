@@ -17,6 +17,7 @@ export interface DocumentRow {
   analysis?: {
     documentType?: string;
     documentNumber?: string;
+    recordingReference?: string;
     grantors?: string[];
     grantees?: string[];
     ownershipChange?: boolean;
@@ -825,48 +826,107 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
         </Card>
       </div>
 
-      {/* All Rows Overview */}
-      <Card>
+      {/* All Rows Overview - Separate Section at Bottom */}
+      <Card className="mt-6">
         <CardHeader>
           <CardTitle>All Rows Overview</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-40 overflow-y-auto">
-            {rows.map((row, index) => (
-              <div
-                key={row.id}
-                className={`p-2 rounded text-sm cursor-pointer transition-colors ${
-                  index === currentRowIndex 
-                    ? 'bg-primary text-primary-foreground' 
-                    : row.status === 'approved' 
-                      ? 'bg-green-100 text-green-800'
-                      : row.status === 'analyzed' || row.status === 'corrected'
-                        ? 'bg-blue-100 text-blue-800'
-                        : 'bg-muted'
-                }`}
-                onClick={() => setCurrentRowIndex(index)}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-medium">Row {row.rowNumber}</span>
-                  {row.status === 'approved' && <CheckCircle className="w-4 h-4" />}
-                  {row.status === 'analyzed' && <Eye className="w-4 h-4" />}
-                  {row.status === 'corrected' && <Edit className="w-4 h-4" />}
-                  {row.status === 'pending' && <AlertCircle className="w-4 h-4" />}
-                </div>
-                <div className="text-xs opacity-75">
-                  <div className="truncate max-w-full">
-                    {cleanRowContent(row.content.substring(0, 80))}
-                    {row.content.length > 80 && '...'}
-                  </div>
-                </div>
-              </div>
-            ))}
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left p-2 w-16">Row</th>
+                  <th className="text-left p-2 w-24">Status</th>
+                  <th className="text-left p-2">Document Type</th>
+                  <th className="text-left p-2">Recording</th>
+                  <th className="text-left p-2">Date</th>
+                  <th className="text-left p-2">Grantor</th>
+                  <th className="text-left p-2">Grantee(s)</th>
+                  <th className="text-left p-2">Description</th>
+                  <th className="text-left p-2 w-20">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row, index) => (
+                  <tr 
+                    key={row.id}
+                    className={`border-b hover:bg-muted/50 cursor-pointer ${
+                      index === currentRowIndex ? 'bg-primary/10' : ''
+                    }`}
+                    onClick={() => setCurrentRowIndex(index)}
+                  >
+                    <td className="p-2 font-medium">{row.rowNumber}</td>
+                    <td className="p-2">
+                      <div className="flex items-center gap-1">
+                        {row.status === 'approved' && (
+                          <>
+                            <CheckCircle className="w-4 h-4 text-green-600" />
+                            <span className="text-green-600 text-xs">Approved</span>
+                          </>
+                        )}
+                        {row.status === 'analyzed' && (
+                          <>
+                            <Eye className="w-4 h-4 text-blue-600" />
+                            <span className="text-blue-600 text-xs">Analyzed</span>
+                          </>
+                        )}
+                        {row.status === 'corrected' && (
+                          <>
+                            <Edit className="w-4 h-4 text-orange-600" />
+                            <span className="text-orange-600 text-xs">Corrected</span>
+                          </>
+                        )}
+                        {row.status === 'pending' && (
+                          <>
+                            <AlertCircle className="w-4 h-4 text-gray-400" />
+                            <span className="text-gray-400 text-xs">Pending</span>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                    <td className="p-2">{row.analysis?.documentType || '-'}</td>
+                    <td className="p-2 text-xs">{row.analysis?.recordingReference || '-'}</td>
+                    <td className="p-2 text-xs">{row.analysis?.effectiveDate || '-'}</td>
+                    <td className="p-2 text-xs">{row.analysis?.grantors?.join(', ') || '-'}</td>
+                    <td className="p-2 text-xs max-w-48">
+                      {row.analysis?.grantees ? (
+                        <div className="truncate" title={row.analysis.grantees.join(', ')}>
+                          {row.analysis.grantees.length > 2 
+                            ? `${row.analysis.grantees.slice(0, 2).join(', ')} +${row.analysis.grantees.length - 2} more`
+                            : row.analysis.grantees.join(', ')
+                          }
+                        </div>
+                      ) : '-'}
+                    </td>
+                    <td className="p-2 text-xs max-w-64">
+                      <div className="truncate" title={row.analysis?.description || row.content}>
+                        {row.analysis?.description || cleanRowContent(row.content.substring(0, 60)) + '...'}
+                      </div>
+                    </td>
+                    <td className="p-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCurrentRowIndex(index);
+                        }}
+                        className="h-6 px-2 text-xs"
+                      >
+                        View
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </CardContent>
       </Card>
 
       {/* Cancel Button */}
-      <div className="flex justify-center">
+      <div className="flex justify-center mt-6">
         <Button variant="outline" onClick={onCancel}>
           Cancel Analysis
         </Button>
