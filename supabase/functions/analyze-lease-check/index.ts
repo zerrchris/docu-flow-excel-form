@@ -947,14 +947,16 @@ ANALYSIS METHODOLOGY:
 
 REQUIRED OUTPUT FORMAT:
 {
-  "prospect": "Legal description",
+  "prospect": "Overall legal description (e.g., Section 18, Township 158N, Range 102W)",
   "totalAcres": 320,
   "reportFormat": "ai_analyzed_interactive", 
   "owners": [
     {
       "name": "Full owner name with address if available",
-      "address": "Full address if shown in documents",
+      "address": "Full address if shown in documents", 
       "acquisitionYear": "Year of acquisition (YYYY)",
+      "specificLands": "NW 1/4 (or specific legal description this owner holds)",
+      "landAcres": 160,
       "vestingDocuments": [
         {
           "type": "Document type (e.g., Sheriff's Deed, Warranty Deed, Mineral Deed)",
@@ -989,9 +991,23 @@ REQUIRED OUTPUT FORMAT:
   "limitationsAndExceptions": "Standard limitations"
 }
 
+**CRITICAL TRACT SEPARATION RULE**: 
+- Each owner entry MUST include "specificLands" field showing exactly which quarter/half they own
+- If patents show NW 1/4 and NE 1/4 separately, create SEPARATE owner entries for each
+- DO NOT combine different legal descriptions under one owner entry
+- Track chain of title separately for each quarter/half section
+
 DETAILED INSTRUCTIONS:
 
-1. **ROW-BY-ROW ANALYSIS**: Examine each row in the runsheet chronologically. Look for:
+1. **LEGAL DESCRIPTION PARSING & TRACT SEPARATION**: 
+   - **CRITICAL**: Treat each distinct legal description as a SEPARATE TRACT
+   - NW 1/4, NE 1/4, SW 1/4, SE 1/4 are SEPARATE 160-acre tracts
+   - N 1/2, S 1/2, E 1/2, W 1/2 are SEPARATE 320-acre tracts
+   - Do NOT combine ownership for different quarters/halves
+   - Track ownership chains separately for each legal description
+   - Example: Patent for "NW 1/4" and separate patent for "NE 1/4" = TWO separate tracts
+
+2. **ROW-BY-ROW ANALYSIS**: Examine each row in the runsheet chronologically. Look for:
    - Patent deeds (original grants from USA)
    - Warranty deeds, quit claim deeds, contracts for deed
    - Sheriff's deeds or other judicial sales
@@ -999,11 +1015,11 @@ DETAILED INSTRUCTIONS:
    - Mineral deeds and mineral reservations
    - Assignments and releases
 
-2. **OWNERSHIP CALCULATIONS**: 
-   - Start with 100% ownership from patents
-   - Apply any mineral reservations (e.g., "Excepting 50% of minerals")
-   - Track fractional conveyances through each deed
-   - Calculate final percentages for current owners
+3. **OWNERSHIP CALCULATIONS**: 
+   - Start with 100% ownership from patents FOR EACH DISTINCT LEGAL DESCRIPTION
+   - Apply any mineral reservations (e.g., "Excepting 50% of minerals") TO THE SPECIFIC TRACT
+   - Track fractional conveyances through each deed FOR EACH TRACT SEPARATELY
+   - Calculate final percentages for current owners PER TRACT
    - Use precise decimal places (e.g., 2.80376826%)
 
 3. **CONTRACT FOR DEED vs WARRANTY DEED DISTINCTION**:
