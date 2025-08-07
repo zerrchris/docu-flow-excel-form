@@ -160,29 +160,92 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
     setOngoingOwnership(prev => {
       const updated = { ...prev };
       
-      // Apply ownership changes based on analysis
-      if (analysis.ownershipChange && analysis.grantees) {
-        // Handle ownership transfer
+      // Handle patent documents - original government grants should be 100%
+      if (analysis.documentType === 'Patent' && analysis.grantees && analysis.grantees.length > 0) {
+        const patentee = analysis.grantees[0];
+        
+        // For patents, grant 100% ownership to the patentee
+        const existingOwnerIndex = updated.owners.findIndex(o => 
+          o.name.toLowerCase().includes(patentee.toLowerCase()) ||
+          patentee.toLowerCase().includes(o.name.toLowerCase())
+        );
+        
+        if (existingOwnerIndex >= 0) {
+          // Update existing owner to 100%
+          updated.owners[existingOwnerIndex] = {
+            ...updated.owners[existingOwnerIndex],
+            percentage: 100,
+            netAcres: totalAcres,
+            acquisitionDocument: analysis.recordingReference || analysis.documentNumber
+          };
+        } else {
+          // Add new owner with 100%
+          updated.owners.push({
+            name: patentee,
+            percentage: 100,
+            netAcres: totalAcres,
+            acquisitionDocument: analysis.recordingReference || analysis.documentNumber,
+            currentLeaseStatus: 'unknown'
+          });
+        }
+      }
+      // Handle other ownership transfers (deeds, etc.)
+      else if (analysis.ownershipChange && analysis.grantees) {
         analysis.grantees.forEach((grantee: string) => {
           const existingOwnerIndex = updated.owners.findIndex(o => 
             o.name.toLowerCase().includes(grantee.toLowerCase()) ||
             grantee.toLowerCase().includes(o.name.toLowerCase())
           );
           
+          // Determine percentage - if specified use it, otherwise try to infer
+          let ownershipPercentage = analysis.percentageChange;
+          
+          // If no percentage specified, we need to make assumptions based on document type
+          if (!ownershipPercentage) {
+            if (analysis.documentType === 'WD' || analysis.documentType === 'QCD') {
+              // For deeds without specified percentage, assume transfer of full interest from grantor
+              if (analysis.grantors && analysis.grantors.length > 0) {
+                const grantorName = analysis.grantors[0];
+                const grantorIndex = updated.owners.findIndex(o => 
+                  o.name.toLowerCase().includes(grantorName.toLowerCase()) ||
+                  grantorName.toLowerCase().includes(o.name.toLowerCase())
+                );
+                
+                if (grantorIndex >= 0) {
+                  ownershipPercentage = updated.owners[grantorIndex].percentage;
+                  // Remove the grantor or reduce their ownership
+                  updated.owners.splice(grantorIndex, 1);
+                } else {
+                  // If grantor not found in current ownership, assume 100% transfer
+                  ownershipPercentage = 100;
+                }
+              } else {
+                ownershipPercentage = 100;
+              }
+            } else if (analysis.documentType === 'MD') {
+              // Mineral deed - assume 100% of minerals unless specified
+              ownershipPercentage = 100;
+            } else {
+              // Default assumption
+              ownershipPercentage = 100;
+            }
+          }
+          
           if (existingOwnerIndex >= 0) {
             // Update existing owner
             updated.owners[existingOwnerIndex] = {
               ...updated.owners[existingOwnerIndex],
-              percentage: analysis.percentageChange || updated.owners[existingOwnerIndex].percentage,
-              acquisitionDocument: analysis.documentNumber || updated.owners[existingOwnerIndex].acquisitionDocument
+              percentage: ownershipPercentage,
+              netAcres: (ownershipPercentage / 100) * totalAcres,
+              acquisitionDocument: analysis.recordingReference || analysis.documentNumber || updated.owners[existingOwnerIndex].acquisitionDocument
             };
           } else {
             // Add new owner
             updated.owners.push({
               name: grantee,
-              percentage: analysis.percentageChange || 0,
-              netAcres: (analysis.percentageChange || 0) * totalAcres / 100,
-              acquisitionDocument: analysis.documentNumber,
+              percentage: ownershipPercentage,
+              netAcres: (ownershipPercentage / 100) * totalAcres,
+              acquisitionDocument: analysis.recordingReference || analysis.documentNumber,
               currentLeaseStatus: 'unknown'
             });
           }
