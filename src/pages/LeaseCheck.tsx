@@ -6,10 +6,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Upload, FileText, Download } from 'lucide-react';
+import { Upload, FileText, Download, Eye } from 'lucide-react';
 import { LeaseCheckUpload } from '@/components/LeaseCheckUpload';
 import { LeaseCheckReport } from '@/components/LeaseCheckReport';
 import { ProductionModal } from '@/components/ProductionModal';
+import { RowByRowAnalysis, OngoingOwnership } from '@/components/RowByRowAnalysis';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -73,6 +74,9 @@ const LeaseCheck = () => {
   const [clarificationQuestions, setClarificationQuestions] = useState<string[]>([]);
   const [clarificationAnswers, setClarificationAnswers] = useState<string[]>([]);
   const [showClarificationDialog, setShowClarificationDialog] = useState(false);
+  const [showRowByRow, setShowRowByRow] = useState(false);
+  const [prospect, setProspect] = useState('');
+  const [totalAcres, setTotalAcres] = useState(0);
   const { toast } = useToast();
 
   const handleDocumentUpload = (text: string) => {
@@ -274,7 +278,7 @@ const LeaseCheck = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="upload">
             <Upload className="w-4 h-4 mr-2" />
             Upload
@@ -282,6 +286,10 @@ const LeaseCheck = () => {
           <TabsTrigger value="review">
             <FileText className="w-4 h-4 mr-2" />
             Review
+          </TabsTrigger>
+          <TabsTrigger value="row-by-row" disabled={!documentText.trim()}>
+            <Eye className="w-4 h-4 mr-2" />
+            Row Analysis
           </TabsTrigger>
           <TabsTrigger value="results" disabled={!leaseCheckData}>
             <Download className="w-4 h-4 mr-2" />
@@ -312,15 +320,74 @@ const LeaseCheck = () => {
                 >
                   Back to Upload
                 </Button>
-                <Button 
-                  onClick={processDocument}
-                  disabled={isProcessing || !documentText.trim()}
-                >
-                  {isProcessing ? 'Analyzing...' : 'Analyze Document'}
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline"
+                    onClick={() => {
+                      // Extract basic prospect info for row-by-row
+                      const lines = documentText.split('\n');
+                      const firstLine = lines[0] || '';
+                      setProspect(firstLine.includes('Township') ? firstLine : 'Unknown Prospect');
+                      setTotalAcres(0); // Will be determined during analysis
+                      setActiveTab('row-by-row');
+                    }}
+                    disabled={!documentText.trim()}
+                  >
+                    <Eye className="w-4 h-4 mr-2" />
+                    Step-by-Step Analysis
+                  </Button>
+                  <Button 
+                    onClick={processDocument}
+                    disabled={isProcessing || !documentText.trim()}
+                  >
+                    {isProcessing ? 'Analyzing...' : 'Full AI Analysis'}
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="row-by-row" className="space-y-6">
+          {documentText && (
+            <RowByRowAnalysis
+              documentText={documentText}
+              prospect={prospect}
+              totalAcres={totalAcres}
+              onComplete={(finalOwnership: OngoingOwnership) => {
+                // Convert to LeaseCheckData format
+                const convertedData: LeaseCheckData = {
+                  prospect: prospect,
+                  totalAcres: finalOwnership.totalAcres,
+                  reportFormat: 'ai_analyzed_interactive',
+                   owners: finalOwnership.owners.map(owner => ({
+                     name: owner.name,
+                     interests: `${owner.percentage.toFixed(8)}%`,
+                     netAcres: owner.netAcres,
+                     leaseholdStatus: owner.currentLeaseStatus === 'leased' ? 'Leased' : 
+                                    owner.currentLeaseStatus === 'open' ? 'Appears Open' :
+                                    owner.currentLeaseStatus === 'expired_hbp' ? 'Expired (Potential HBP)' : 'Unknown',
+                     lastLeaseOfRecord: owner.leaseDetails ? {
+                       ...owner.leaseDetails,
+                       recorded: owner.leaseDetails.dated || 'N/A' // Use dated as fallback for recorded
+                     } : undefined
+                   })),
+                  wells: [],
+                  limitationsAndExceptions: 'Row-by-row analysis completed'
+                };
+                setLeaseCheckData(convertedData);
+                setActiveTab('results');
+                toast({
+                  title: "Analysis Complete",
+                  description: "Row-by-row analysis has been completed successfully",
+                });
+              }}
+              onCancel={() => {
+                setActiveTab('review');
+                setShowRowByRow(false);
+              }}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="results" className="space-y-6">
