@@ -43,6 +43,15 @@ export interface PendingTransfer {
   reservedMineralPercentage?: number;
 }
 
+export interface LandParcel {
+  description: string;
+  acres: number;
+  section?: string;
+  township?: string;
+  range?: string;
+  quarter?: string;
+}
+
 export interface OngoingOwnership {
   owners: Array<{
     name: string;
@@ -53,6 +62,7 @@ export interface OngoingOwnership {
     acquisitionDocument?: string;
     currentLeaseStatus: 'leased' | 'open' | 'expired_hbp' | 'unknown';
     isBeingTransferred?: boolean; // Flag to show this owner is being transferred
+    landParcels?: LandParcel[]; // Track specific land parcels for this owner
     leaseDetails?: {
       lessor: string;
       lessee: string;
@@ -68,6 +78,7 @@ export interface OngoingOwnership {
   totalSurfacePercentage: number;
   totalMineralPercentage: number;
   totalAcres: number;
+  landParcels: LandParcel[]; // Track all land parcels in the analysis
   lastUpdatedRow: number;
 }
 
@@ -97,6 +108,7 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
     totalSurfacePercentage: 0,
     totalMineralPercentage: 0,
     totalAcres: totalAcres || 0,
+    landParcels: [],
     lastUpdatedRow: -1
   });
   const [previousOwnership, setPreviousOwnership] = useState<OngoingOwnership>({
@@ -105,6 +117,7 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
     totalSurfacePercentage: 0,
     totalMineralPercentage: 0,
     totalAcres: totalAcres,
+    landParcels: [],
     lastUpdatedRow: -1
   });
   // Store ownership state at each row for navigation
@@ -472,6 +485,7 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
             totalSurfacePercentage: 100,
             totalMineralPercentage: mineralPercentage,
             totalAcres: effectiveAcres,
+            landParcels: [],
             lastUpdatedRow: currentRowIndex
           });
         }
@@ -975,6 +989,7 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
       totalSurfacePercentage: 0,
       totalMineralPercentage: 0,
       totalAcres: totalAcres,
+      landParcels: [],
       lastUpdatedRow: -1
     });
     toast({
