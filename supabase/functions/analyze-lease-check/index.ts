@@ -934,50 +934,57 @@ async function analyzeWithAI(documentText: string): Promise<any> {
   }
 
   try {
-    // Enhanced prompt with current interest holders option and clarification system
-    const enhancedPrompt = `You are an expert oil and gas landman specializing in runsheet analysis. You understand that complete patent-to-present ownership data is often unavailable.
+    // Enhanced prompt for detailed lease analysis
+    const enhancedPrompt = `You are an expert oil and gas landman analyzing a runsheet. Extract detailed mineral ownership and leasehold information.
 
-ANALYSIS OPTIONS:
-1. **Full Ownership Analysis** - If complete patent-to-present data is available
-2. **Current Interest Holders** - If incomplete data, focus on who holds interests TODAY
-
-EVALUATION PROCESS:
-1. Assess data completeness from patents to present
-2. If incomplete, offer "Current Interest Holders" analysis
-3. Ask clarifying questions if needed before proceeding
-4. Identify current leaseholders and unleased mineral owners
-
-CLARIFICATION QUESTIONS (when needed):
-- "Is this the correct legal description to analyze: [description]?"
-- "Should I focus on current interest holders since patent data is incomplete?"
-- "Are there specific time periods or owners you want me to focus on?"
-
-Analyze this runsheet and return JSON:
+REQUIRED OUTPUT FORMAT - Return JSON with this exact structure:
 
 {
-  "analysisType": "full_ownership" OR "current_interest_holders" OR "needs_clarification",
-  "clarificationNeeded": boolean,
-  "questions": ["List of questions for user if clarification needed"],
-  "dataCompleteness": "complete|partial|minimal",
-  "recommendedApproach": "Description of recommended analysis approach",
-  "prospect": "Legal description",
+  "prospect": "Legal description from document",
+  "totalAcres": number,
   "reportFormat": "ai_analyzed_interactive",
-  "tracts": [
+  "owners": [
     {
-      "tractId": "Descriptive tract name",
-      "legalDescription": "Specific legal description",
-      "totalAcres": number OR "Requires manual input",
-      "needsManualAcres": boolean,
-      "analysisType": "full_ownership" OR "current_interest_holders",
-      "dataAvailable": "Description of what data is available for this tract",
-      
-      // For current_interest_holders analysis:
-      "currentHolders": [
-        {
-          "name": "Current interest holder name",
-          "interestType": "Lessee|Mineral Owner|Assignee",
-          "source": "Last lease of record|Mineral deed|Assignment",
-          "documentDate": "Date of document",
+      "name": "Owner name with full address if available",
+      "interests": "Percentage (e.g., 50.00000000%)",
+      "netAcres": number,
+      "leaseholdStatus": "Current Lessee|Appears Leased|Appears Open|Unleased Mineral Owner|Expired",
+      "listedAcreage": "Acreage description",
+      "vestingDocument": "Document type and reference",
+      "leaseDetails": {
+        "lessor": "Lessor name if leased",
+        "lessee": "Lessee name if leased", 
+        "dateLease": "Lease date",
+        "term": "Lease term (e.g., Five (5) Years)",
+        "expiration": "Expiration date",
+        "documentNumber": "Document number",
+        "royalty": "Royalty percentage",
+        "landsCovered": "Legal description of leased lands",
+        "listedAcreage": "Lease acreage",
+        "specialClauses": "Pugh clause, extensions, etc."
+      }
+    }
+  ],
+  "wells": ["Well information"],
+  "limitationsAndExceptions": "Title limitations"
+}
+
+ANALYSIS INSTRUCTIONS:
+1. Extract ALL mineral owners from the runsheet
+2. Calculate ownership percentages based on conveyances
+3. Determine current lease status for each owner:
+   - "Current Lessee" = Currently leased with active lease
+   - "Appears Leased" = Has current lease in effect
+   - "Appears Open" = Lease expired or no current lease
+   - "Unleased Mineral Owner" = Owns minerals but not currently leased
+4. For leased interests, extract full lease details including lessors, lessees, dates, terms, royalty
+5. Calculate net acres based on percentage and total acreage
+6. Include document numbers and references
+
+DOCUMENT TO ANALYZE:
+${documentText}
+
+Return only valid JSON with no additional text or markdown formatting.`;
           "documentNumber": "Recording reference",
           "status": "Current Lessee|Unleased Mineral Owner|Assignee",
           "originalLease": "Reference to original lease if applicable",
