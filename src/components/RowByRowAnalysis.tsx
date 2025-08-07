@@ -396,19 +396,23 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
         const mineralPercentage = mineralsReserved ? 0 : 100;
         const netMineralAcres = mineralsReserved ? 0 : effectiveAcres;
         
-        // For patents, always show the grantor (USA) as the previous owner being transferred
-        // Add USA as a temporary "previous owner" to show the transfer
+        // For patents, if this is the first owner, set up the previous ownership to show USA transfer
         if (updated.owners.length === 0) {
-          // Add USA as the initial owner that will be transferred
-          updated.owners.push({
-            name: grantor,
-            surfacePercentage: 100,
-            mineralPercentage: mineralPercentage,
-            netSurfaceAcres: effectiveAcres,
-            netMineralAcres: netMineralAcres,
-            acquisitionDocument: 'Original Government Ownership',
-            currentLeaseStatus: 'unknown' as const,
-            isBeingTransferred: true // Special flag to show this owner is being transferred
+          // Store the grantor (USA) as previous ownership to show the transfer
+          setPreviousOwnership({
+            owners: [{
+              name: grantor,
+              surfacePercentage: 100,
+              mineralPercentage: mineralPercentage,
+              netSurfaceAcres: effectiveAcres,
+              netMineralAcres: netMineralAcres,
+              acquisitionDocument: 'Original Government Ownership',
+              currentLeaseStatus: 'unknown' as const
+            }],
+            totalSurfacePercentage: 100,
+            totalMineralPercentage: mineralPercentage,
+            totalAcres: effectiveAcres,
+            lastUpdatedRow: currentRowIndex
           });
         }
         
@@ -437,12 +441,6 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
             currentLeaseStatus: 'unknown' as const
           };
           updated.owners.push(newOwner);
-        }
-        
-        // Remove the grantor (USA) after adding the grantee to show the completed transfer
-        const grantorIndex = updated.owners.findIndex(o => o.isBeingTransferred);
-        if (grantorIndex >= 0) {
-          updated.owners.splice(grantorIndex, 1);
         }
         
         if (updated.totalAcres === 0) {
