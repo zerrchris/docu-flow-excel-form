@@ -797,11 +797,11 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
         </Card>
 
         {/* Ongoing Ownership Summary */}
-        <Card className="flex flex-col h-full">
-          <CardHeader>
+        <Card className="flex flex-col h-[600px]">
+          <CardHeader className="flex-shrink-0">
             <CardTitle>Ongoing Ownership Summary</CardTitle>
           </CardHeader>
-          <CardContent className="flex-1 overflow-hidden">
+          <CardContent className="flex-1 overflow-hidden p-4">
             <div className="h-full flex flex-col space-y-4">
               {/* Summary Stats - Fixed Height */}
               <div className="grid grid-cols-2 gap-4 text-sm flex-shrink-0">
