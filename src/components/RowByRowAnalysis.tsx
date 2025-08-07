@@ -486,9 +486,9 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-300px)]">
         {/* Current Row Analysis */}
-        <Card>
+        <Card className="flex flex-col h-full">
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span>Current Row Analysis</span>
@@ -512,7 +512,7 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
               </div>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 flex-1 overflow-y-auto">
             {/* Row Content */}
             <div>
               <div className="text-sm font-medium text-muted-foreground mb-2">
@@ -683,11 +683,11 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
         </Card>
 
         {/* Ongoing Ownership Summary */}
-        <Card>
+        <Card className="flex flex-col h-full">
           <CardHeader>
             <CardTitle>Ongoing Ownership Summary</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex-1 overflow-y-auto">
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
