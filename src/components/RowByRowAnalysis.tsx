@@ -41,6 +41,7 @@ export interface OngoingOwnership {
     netMineralAcres: number;
     acquisitionDocument?: string;
     currentLeaseStatus: 'leased' | 'open' | 'expired_hbp' | 'unknown';
+    isBeingTransferred?: boolean; // Flag to show this owner is being transferred
     leaseDetails?: {
       lessor: string;
       lessee: string;
@@ -379,7 +380,8 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
       // Handle patent documents - original government grants include both surface and minerals unless reserved
       if (analysis.documentType === 'Patent' && analysis.grantees && analysis.grantees.length > 0) {
         const patentee = analysis.grantees[0];
-        console.log('Processing patent for:', patentee);
+        const grantor = analysis.grantors?.[0] || 'USA';
+        console.log('Processing patent for:', patentee, 'from:', grantor);
         
         const effectiveAcres = totalAcres > 0 ? totalAcres : 80;
         
@@ -393,6 +395,22 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
         
         const mineralPercentage = mineralsReserved ? 0 : 100;
         const netMineralAcres = mineralsReserved ? 0 : effectiveAcres;
+        
+        // For patents, always show the grantor (USA) as the previous owner being transferred
+        // Add USA as a temporary "previous owner" to show the transfer
+        if (updated.owners.length === 0) {
+          // Add USA as the initial owner that will be transferred
+          updated.owners.push({
+            name: grantor,
+            surfacePercentage: 100,
+            mineralPercentage: mineralPercentage,
+            netSurfaceAcres: effectiveAcres,
+            netMineralAcres: netMineralAcres,
+            acquisitionDocument: 'Original Government Ownership',
+            currentLeaseStatus: 'unknown' as const,
+            isBeingTransferred: true // Special flag to show this owner is being transferred
+          });
+        }
         
         const existingOwnerIndex = updated.owners.findIndex(o => 
           o.name.toLowerCase().includes(patentee.toLowerCase()) ||
@@ -419,6 +437,12 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
             currentLeaseStatus: 'unknown' as const
           };
           updated.owners.push(newOwner);
+        }
+        
+        // Remove the grantor (USA) after adding the grantee to show the completed transfer
+        const grantorIndex = updated.owners.findIndex(o => o.isBeingTransferred);
+        if (grantorIndex >= 0) {
+          updated.owners.splice(grantorIndex, 1);
         }
         
         if (updated.totalAcres === 0) {
@@ -1020,29 +1044,50 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
                              (o.surfacePercentage !== owner.surfacePercentage || o.mineralPercentage !== owner.mineralPercentage)
                            );
 
-                         return (
-                           <div 
-                             key={index} 
-                             className={`p-3 rounded text-sm ${
-                               wasNew 
-                                 ? 'bg-green-50 border border-green-200' 
-                                 : wasChanged 
-                                   ? 'bg-blue-50 border border-blue-200'
-                                   : 'bg-muted'
-                             }`}
-                           >
-                             <div className="font-medium flex items-center gap-2">
-                               {owner.name}
-                               {wasNew && (
-                                 <Badge variant="default" className="text-xs bg-green-600">
-                                   NEW
-                                 </Badge>
-                               )}
-                               {wasChanged && (
-                                 <Badge variant="default" className="text-xs bg-blue-600">
-                                   CHANGED
-                                 </Badge>
-                               )}
+                          // Special handling for owners being transferred
+                          if (owner.isBeingTransferred) {
+                            return (
+                              <div 
+                                key={index} 
+                                className="p-3 bg-red-50 border border-red-200 rounded text-sm opacity-75"
+                              >
+                                <div className="font-medium flex items-center gap-2 line-through text-red-600">
+                                  {owner.name}
+                                  <Badge variant="destructive" className="text-xs">
+                                    TRANSFERRED
+                                  </Badge>
+                                </div>
+                                <div className="flex justify-between text-xs text-red-500 line-through">
+                                  <span>Surface: {(owner.surfacePercentage || 0).toFixed(2)}%</span>
+                                  <span>Mineral: {(owner.mineralPercentage || 0).toFixed(2)}%</span>
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <div 
+                              key={index} 
+                              className={`p-3 rounded text-sm ${
+                                wasNew 
+                                  ? "bg-green-50 border border-green-200" 
+                                  : wasChanged 
+                                    ? "bg-blue-50 border border-blue-200"
+                                    : "bg-muted"
+                              }`}
+                            >
+                              <div className="font-medium flex items-center gap-2">
+                                {owner.name}
+                                {wasNew && (
+                                  <Badge variant="default" className="text-xs bg-green-600">
+                                    NEW
+                                  </Badge>
+                                )}
+                                {wasChanged && (
+                                  <Badge variant="default" className="text-xs bg-blue-600">
+                                    CHANGED
+                                  </Badge>
+                                )}
                              </div>
                              <div className="space-y-1 text-xs text-muted-foreground">
                                 <div className="flex justify-between">
