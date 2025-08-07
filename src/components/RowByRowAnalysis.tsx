@@ -81,6 +81,12 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
     totalAcres: totalAcres,
     lastUpdatedRow: -1
   });
+  const [previousOwnership, setPreviousOwnership] = useState<OngoingOwnership>({
+    owners: [],
+    totalPercentage: 0,
+    totalAcres: totalAcres,
+    lastUpdatedRow: -1
+  });
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [editingRow, setEditingRow] = useState<string | null>(null);
   const [editedAnalysis, setEditedAnalysis] = useState<any>(null);
@@ -224,6 +230,9 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
   const updateOngoingOwnership = (analysis: any) => {
     console.log('Updating ownership with analysis:', analysis);
     console.log('Current total acres:', totalAcres);
+    
+    // Save previous state before updating
+    setPreviousOwnership(ongoingOwnership);
     
     setOngoingOwnership(prev => {
       const updated = { ...prev };
@@ -781,45 +790,115 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
               <div className="flex-1 flex flex-col min-h-0">
                 <div className="text-sm font-medium mb-2 flex-shrink-0">Current Owners:</div>
                 <div className="flex-1 overflow-y-auto space-y-2 pr-2">
-                  {ongoingOwnership.owners.length === 0 ? (
-                    <div className="text-sm text-muted-foreground text-center py-4">
-                      No owners identified yet
-                    </div>
-                  ) : (
-                     ongoingOwnership.owners.map((owner, index) => (
-                       <div key={index} className="p-3 bg-muted rounded text-sm">
-                         <div className="font-medium flex items-center gap-2">
-                           {owner.name}
-                           {owner.rightType && (
-                             <Badge variant="outline" className="text-xs">
-                               {owner.rightType}
-                             </Badge>
-                           )}
-                         </div>
-                         <div className="flex justify-between text-xs text-muted-foreground">
-                           <span>{owner.percentage.toFixed(6)}%</span>
-                           <span>{owner.netAcres.toFixed(2)} acres</span>
-                         </div>
-                         <div className="flex items-center gap-2 mt-1">
-                           <Badge 
-                             variant={
-                               owner.currentLeaseStatus === 'leased' ? 'default' :
-                               owner.currentLeaseStatus === 'open' ? 'secondary' :
-                               owner.currentLeaseStatus === 'expired_hbp' ? 'destructive' : 'outline'
+                   {ongoingOwnership.owners.length === 0 ? (
+                     <div className="text-sm text-muted-foreground text-center py-4">
+                       No owners identified yet
+                     </div>
+                   ) : (
+                     <>
+                       {/* Show previous owners with strikethrough if they were removed */}
+                       {previousOwnership.owners.length > 0 && ongoingOwnership.lastUpdatedRow === currentRowIndex && (
+                         <>
+                           {previousOwnership.owners.map((prevOwner, index) => {
+                             const stillExists = ongoingOwnership.owners.find(o => 
+                               o.name.toLowerCase().trim() === prevOwner.name.toLowerCase().trim()
+                             );
+                             if (!stillExists) {
+                               return (
+                                 <div key={`prev-${index}`} className="p-3 bg-red-50 border border-red-200 rounded text-sm opacity-75">
+                                   <div className="font-medium flex items-center gap-2 line-through text-red-600">
+                                     {prevOwner.name}
+                                     {prevOwner.rightType && (
+                                       <Badge variant="outline" className="text-xs line-through">
+                                         {prevOwner.rightType}
+                                       </Badge>
+                                     )}
+                                     <Badge variant="destructive" className="text-xs">
+                                       TRANSFERRED
+                                     </Badge>
+                                   </div>
+                                   <div className="flex justify-between text-xs text-red-500 line-through">
+                                     <span>{prevOwner.percentage.toFixed(6)}%</span>
+                                     <span>{prevOwner.netAcres.toFixed(2)} acres</span>
+                                   </div>
+                                 </div>
+                               );
                              }
-                             className="text-xs"
+                             return null;
+                           })}
+                         </>
+                       )}
+                       
+                       {/* Show current owners with highlighting for new/changed ones */}
+                       {ongoingOwnership.owners.map((owner, index) => {
+                         const wasNew = previousOwnership.owners.length > 0 && 
+                           ongoingOwnership.lastUpdatedRow === currentRowIndex &&
+                           !previousOwnership.owners.find(o => 
+                             o.name.toLowerCase().trim() === owner.name.toLowerCase().trim()
+                           );
+                         
+                         const wasChanged = previousOwnership.owners.length > 0 && 
+                           ongoingOwnership.lastUpdatedRow === currentRowIndex &&
+                           previousOwnership.owners.find(o => 
+                             o.name.toLowerCase().trim() === owner.name.toLowerCase().trim() &&
+                             o.percentage !== owner.percentage
+                           );
+
+                         return (
+                           <div 
+                             key={index} 
+                             className={`p-3 rounded text-sm ${
+                               wasNew 
+                                 ? 'bg-green-50 border border-green-200' 
+                                 : wasChanged 
+                                   ? 'bg-blue-50 border border-blue-200'
+                                   : 'bg-muted'
+                             }`}
                            >
-                             {owner.currentLeaseStatus}
-                           </Badge>
-                           {owner.acquisitionDocument && (
-                             <span className="text-xs text-muted-foreground">
-                               Doc: {owner.acquisitionDocument}
-                             </span>
-                           )}
-                         </div>
-                       </div>
-                     ))
-                  )}
+                             <div className="font-medium flex items-center gap-2">
+                               {owner.name}
+                               {owner.rightType && (
+                                 <Badge variant="outline" className="text-xs">
+                                   {owner.rightType}
+                                 </Badge>
+                               )}
+                               {wasNew && (
+                                 <Badge variant="default" className="text-xs bg-green-600">
+                                   NEW
+                                 </Badge>
+                               )}
+                               {wasChanged && (
+                                 <Badge variant="default" className="text-xs bg-blue-600">
+                                   CHANGED
+                                 </Badge>
+                               )}
+                             </div>
+                             <div className="flex justify-between text-xs text-muted-foreground">
+                               <span>{owner.percentage.toFixed(6)}%</span>
+                               <span>{owner.netAcres.toFixed(2)} acres</span>
+                             </div>
+                             <div className="flex items-center gap-2 mt-1">
+                               <Badge 
+                                 variant={
+                                   owner.currentLeaseStatus === 'leased' ? 'default' :
+                                   owner.currentLeaseStatus === 'open' ? 'secondary' :
+                                   owner.currentLeaseStatus === 'expired_hbp' ? 'destructive' : 'outline'
+                                 }
+                                 className="text-xs"
+                               >
+                                 {owner.currentLeaseStatus}
+                               </Badge>
+                               {owner.acquisitionDocument && (
+                                 <span className="text-xs text-muted-foreground">
+                                   Doc: {owner.acquisitionDocument}
+                                 </span>
+                               )}
+                             </div>
+                           </div>
+                         );
+                       })}
+                     </>
+                   )}
                 </div>
               </div>
 
