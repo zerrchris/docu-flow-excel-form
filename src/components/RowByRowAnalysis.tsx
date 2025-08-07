@@ -228,6 +228,9 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
       }
       // Handle other ownership transfers (deeds, etc.)
       else if (analysis.ownershipChange && analysis.grantees) {
+        console.log('Processing ownership change for other deeds:', analysis);
+        console.log('Number of grantees found:', analysis.grantees?.length);
+        console.log('Grantees list:', analysis.grantees);
         // First, find the grantor's current ownership to determine what's being transferred
         let ownershipToTransfer = 100; // Default assumption
         let grantorIndex = -1;
