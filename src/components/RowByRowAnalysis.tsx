@@ -36,6 +36,7 @@ export interface OngoingOwnership {
     percentage: number;
     netAcres: number;
     acquisitionDocument?: string;
+    rightType?: 'surface' | 'mineral' | 'both';
     currentLeaseStatus: 'leased' | 'open' | 'expired_hbp' | 'unknown';
     leaseDetails?: {
       lessor: string;
@@ -231,6 +232,72 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
         console.log('Processing ownership change for other deeds:', analysis);
         console.log('Number of grantees found:', analysis.grantees?.length);
         console.log('Grantees list:', analysis.grantees);
+        
+        // For mineral deeds, handle differently than surface deeds
+        const isMineralDeed = analysis.documentType === 'MD';
+        
+        if (isMineralDeed) {
+          console.log('Processing mineral deed - grantor keeps surface, minerals split among grantees');
+          
+          // For mineral deeds: grantor keeps surface rights, minerals split among grantees
+          const grantorName = analysis.grantors?.[0];
+          if (grantorName) {
+            // Keep grantor with surface rights (100%)
+            const grantorIndex = updated.owners.findIndex(o => 
+              o.name.toLowerCase().includes(grantorName.toLowerCase()) ||
+              grantorName.toLowerCase().includes(o.name.toLowerCase())
+            );
+            
+            if (grantorIndex >= 0) {
+              // Update grantor to show they retain surface rights
+              updated.owners[grantorIndex] = {
+                ...updated.owners[grantorIndex],
+                rightType: 'surface',
+                acquisitionDocument: analysis.recordingReference || analysis.documentNumber || updated.owners[grantorIndex].acquisitionDocument
+              };
+            }
+          }
+          
+          // Add all grantees with equal mineral rights split
+          const numberOfGrantees = analysis.grantees.length;
+          const mineralPercentagePerGrantee = 100 / numberOfGrantees;
+          const effectiveAcres = totalAcres > 0 ? totalAcres : 80;
+          const netAcres = (mineralPercentagePerGrantee / 100) * effectiveAcres;
+          
+          console.log(`Mineral deed: splitting 100% minerals among ${numberOfGrantees} grantees = ${mineralPercentagePerGrantee}% each`);
+          
+          analysis.grantees.forEach((grantee: string, index: number) => {
+            console.log(`Processing grantee ${index + 1}: ${grantee}`);
+            
+            const existingOwnerIndex = updated.owners.findIndex(o => 
+              o.name.toLowerCase().trim() === grantee.toLowerCase().trim()
+            );
+            
+            if (existingOwnerIndex >= 0) {
+              // Update existing owner
+              updated.owners[existingOwnerIndex] = {
+                ...updated.owners[existingOwnerIndex],
+                percentage: updated.owners[existingOwnerIndex].percentage + mineralPercentagePerGrantee,
+                netAcres: updated.owners[existingOwnerIndex].netAcres + netAcres,
+                rightType: 'mineral',
+                acquisitionDocument: analysis.recordingReference || analysis.documentNumber || updated.owners[existingOwnerIndex].acquisitionDocument
+              };
+              console.log(`Updated existing mineral owner ${grantee} to ${updated.owners[existingOwnerIndex].percentage}%`);
+            } else {
+              // Add new mineral owner
+              const newOwner = {
+                name: grantee,
+                percentage: mineralPercentagePerGrantee,
+                netAcres: netAcres,
+                rightType: 'mineral' as const,
+                acquisitionDocument: analysis.recordingReference || analysis.documentNumber,
+                currentLeaseStatus: 'unknown' as const
+              };
+              updated.owners.push(newOwner);
+              console.log(`Added new mineral owner ${grantee} with ${mineralPercentagePerGrantee}%`);
+            }
+          });
+        } else {
         // First, find the grantor's current ownership to determine what's being transferred
         let ownershipToTransfer = 100; // Default assumption
         let grantorIndex = -1;
@@ -298,6 +365,7 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
             console.log(`Added new owner ${grantee} with ${ownershipPerGrantee}%`);
           }
         });
+        }
       }
 
       // Handle lease information
@@ -640,32 +708,39 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
                       No owners identified yet
                     </div>
                   ) : (
-                    ongoingOwnership.owners.map((owner, index) => (
-                      <div key={index} className="p-3 bg-muted rounded text-sm">
-                        <div className="font-medium">{owner.name}</div>
-                        <div className="flex justify-between text-xs text-muted-foreground">
-                          <span>{owner.percentage.toFixed(6)}%</span>
-                          <span>{owner.netAcres.toFixed(2)} acres</span>
-                        </div>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Badge 
-                            variant={
-                              owner.currentLeaseStatus === 'leased' ? 'default' :
-                              owner.currentLeaseStatus === 'open' ? 'secondary' :
-                              owner.currentLeaseStatus === 'expired_hbp' ? 'destructive' : 'outline'
-                            }
-                            className="text-xs"
-                          >
-                            {owner.currentLeaseStatus}
-                          </Badge>
-                          {owner.acquisitionDocument && (
-                            <span className="text-xs text-muted-foreground">
-                              Doc: {owner.acquisitionDocument}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    ))
+                     ongoingOwnership.owners.map((owner, index) => (
+                       <div key={index} className="p-3 bg-muted rounded text-sm">
+                         <div className="font-medium flex items-center gap-2">
+                           {owner.name}
+                           {owner.rightType && (
+                             <Badge variant="outline" className="text-xs">
+                               {owner.rightType}
+                             </Badge>
+                           )}
+                         </div>
+                         <div className="flex justify-between text-xs text-muted-foreground">
+                           <span>{owner.percentage.toFixed(6)}%</span>
+                           <span>{owner.netAcres.toFixed(2)} acres</span>
+                         </div>
+                         <div className="flex items-center gap-2 mt-1">
+                           <Badge 
+                             variant={
+                               owner.currentLeaseStatus === 'leased' ? 'default' :
+                               owner.currentLeaseStatus === 'open' ? 'secondary' :
+                               owner.currentLeaseStatus === 'expired_hbp' ? 'destructive' : 'outline'
+                             }
+                             className="text-xs"
+                           >
+                             {owner.currentLeaseStatus}
+                           </Badge>
+                           {owner.acquisitionDocument && (
+                             <span className="text-xs text-muted-foreground">
+                               Doc: {owner.acquisitionDocument}
+                             </span>
+                           )}
+                         </div>
+                       </div>
+                     ))
                   )}
                 </div>
               </div>
