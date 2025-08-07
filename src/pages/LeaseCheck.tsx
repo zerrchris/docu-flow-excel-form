@@ -362,8 +362,8 @@ const LeaseCheck = () => {
                   reportFormat: 'ai_analyzed_interactive',
                    owners: finalOwnership.owners.map(owner => ({
                      name: owner.name,
-                     interests: `${owner.percentage.toFixed(8)}%`,
-                     netAcres: owner.netAcres,
+                     interests: `Surface: ${owner.surfacePercentage.toFixed(2)}%, Mineral: ${owner.mineralPercentage.toFixed(2)}%`,
+                     netAcres: owner.netSurfaceAcres + owner.netMineralAcres,
                      leaseholdStatus: owner.currentLeaseStatus === 'leased' ? 'Leased' : 
                                     owner.currentLeaseStatus === 'open' ? 'Appears Open' :
                                     owner.currentLeaseStatus === 'expired_hbp' ? 'Expired (Potential HBP)' : 'Unknown',
