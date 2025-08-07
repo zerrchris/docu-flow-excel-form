@@ -97,6 +97,7 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
   const [editingRow, setEditingRow] = useState<string | null>(null);
   const [editedAnalysis, setEditedAnalysis] = useState<any>(null);
   const [pendingNameMatches, setPendingNameMatches] = useState<any>(null);
+  const [individualMatchSelections, setIndividualMatchSelections] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
 
   // Load saved progress on mount
@@ -356,18 +357,43 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
     return potentialMatches.length > 0 ? potentialMatches : null;
   };
 
-  const handleNameMatchConfirmation = (matches: any[], confirmed: boolean) => {
-    if (confirmed) {
-      // User confirmed the matches, proceed with merging
-      updateOngoingOwnership(pendingNameMatches.analysis, matches);
+  const handleNameMatchConfirmation = (confirmedMatches?: Record<string, any>) => {
+    if (confirmedMatches) {
+      // User confirmed specific matches, proceed with merging only those
+      updateOngoingOwnership(pendingNameMatches.analysis, confirmedMatches);
     } else {
-      // User rejected the matches, proceed as new owners
+      // User rejected all matches, proceed as new owners
       updateOngoingOwnership(pendingNameMatches.analysis);
     }
     setPendingNameMatches(null);
+    setIndividualMatchSelections({});
   };
 
-  const updateOngoingOwnership = (analysis: any, confirmedMatches?: any[]) => {
+  const handleIndividualMatchToggle = (newName: string, matchOwnerName: string, isSelected: boolean) => {
+    const key = `${newName}-${matchOwnerName}`;
+    setIndividualMatchSelections(prev => ({
+      ...prev,
+      [key]: isSelected
+    }));
+  };
+
+  const applyIndividualSelections = () => {
+    const confirmedMatches: Record<string, any> = {};
+    
+    // Build confirmed matches from individual selections
+    pendingNameMatches.matches.forEach((match: any) => {
+      match.matches.forEach((potentialMatch: any) => {
+        const key = `${match.newName}-${potentialMatch.owner.name}`;
+        if (individualMatchSelections[key]) {
+          confirmedMatches[match.newName] = potentialMatch.owner;
+        }
+      });
+    });
+    
+    handleNameMatchConfirmation(Object.keys(confirmedMatches).length > 0 ? confirmedMatches : undefined);
+  };
+
+  const updateOngoingOwnership = (analysis: any, confirmedMatches?: Record<string, any>) => {
     console.log('Updating ownership with analysis:', analysis);
     console.log('Current total acres:', totalAcres);
     
@@ -1284,58 +1310,81 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
 
       {/* Name Matching Dialog */}
       <Dialog open={!!pendingNameMatches} onOpenChange={() => setPendingNameMatches(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Potential Name Matches Found</DialogTitle>
             <DialogDescription>
-              Some grantees might be the same people as existing owners. Please review and confirm if these are the same individuals:
+              Some grantees might be the same people as existing owners. Please review each match individually:
             </DialogDescription>
           </DialogHeader>
           
           {pendingNameMatches && (
-            <div className="space-y-4">
+            <div className="space-y-6">
               {pendingNameMatches.matches.map((match: any, index: number) => (
                 <div key={index} className="border rounded-lg p-4 space-y-3">
-                  <div className="font-medium">
+                  <div className="font-medium text-lg">
                     New Grantee: <span className="text-primary">{match.newName}</span>
                   </div>
                   
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     <div className="text-sm font-medium text-muted-foreground">Potential matches:</div>
-                    {match.matches.map((potentialMatch: any, matchIndex: number) => (
-                      <div key={matchIndex} className="bg-muted p-3 rounded flex justify-between items-center">
-                        <div>
-                          <div className="font-medium">{potentialMatch.owner.name}</div>
-                          <div className="text-xs text-muted-foreground">
-                            Surface: {potentialMatch.owner.surfacePercentage}% | 
-                            Mineral: {potentialMatch.owner.mineralPercentage}%
+                    {match.matches.map((potentialMatch: any, matchIndex: number) => {
+                      const selectionKey = `${match.newName}-${potentialMatch.owner.name}`;
+                      const isSelected = individualMatchSelections[selectionKey] || false;
+                      
+                      return (
+                        <div key={matchIndex} className="bg-muted p-4 rounded flex justify-between items-center">
+                          <div className="flex-1">
+                            <div className="font-medium">{potentialMatch.owner.name}</div>
+                            <div className="text-sm text-muted-foreground">
+                              Surface: {potentialMatch.owner.surfacePercentage}% | 
+                              Mineral: {potentialMatch.owner.mineralPercentage}%
+                            </div>
+                            <div className="text-sm text-blue-600 mt-1">
+                              {potentialMatch.reason}
+                            </div>
                           </div>
-                          <div className="text-xs text-blue-600 mt-1">
-                            {potentialMatch.reason}
+                          <div className="flex items-center gap-3">
+                            <Badge variant={potentialMatch.confidence === 'high' ? 'default' : 'secondary'}>
+                              {potentialMatch.confidence} confidence
+                            </Badge>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                id={selectionKey}
+                                checked={isSelected}
+                                onChange={(e) => handleIndividualMatchToggle(
+                                  match.newName, 
+                                  potentialMatch.owner.name, 
+                                  e.target.checked
+                                )}
+                                className="w-4 h-4 text-primary border-2 border-muted-foreground rounded focus:ring-primary"
+                              />
+                              <label htmlFor={selectionKey} className="text-sm font-medium">
+                                Same person
+                              </label>
+                            </div>
                           </div>
                         </div>
-                        <Badge variant={potentialMatch.confidence === 'high' ? 'default' : 'secondary'}>
-                          {potentialMatch.confidence} confidence
-                        </Badge>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               ))}
               
               <div className="flex gap-3 pt-4 border-t">
                 <Button 
-                  onClick={() => handleNameMatchConfirmation(pendingNameMatches.matches, true)}
+                  onClick={applyIndividualSelections}
                   className="flex-1"
                 >
-                  Yes, these are the same people (merge ownership)
+                  Apply Selections
                 </Button>
                 <Button 
                   variant="outline" 
-                  onClick={() => handleNameMatchConfirmation(pendingNameMatches.matches, false)}
+                  onClick={() => handleNameMatchConfirmation()}
                   className="flex-1"
                 >
-                  No, these are different people (add as new owners)
+                  All are different people (add as new owners)
                 </Button>
               </div>
             </div>
