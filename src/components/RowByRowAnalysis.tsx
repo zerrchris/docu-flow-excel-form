@@ -1005,27 +1005,69 @@ export const RowByRowAnalysis: React.FC<RowByRowAnalysisProps> = ({
                        {/* Show previous owners with strikethrough if they were removed */}
                        {previousOwnership.owners.length > 0 && ongoingOwnership.lastUpdatedRow === currentRowIndex && (
                          <>
-                           {previousOwnership.owners.map((prevOwner, index) => {
-                             const stillExists = ongoingOwnership.owners.find(o => 
-                               o.name.toLowerCase().trim() === prevOwner.name.toLowerCase().trim()
-                             );
-                             if (!stillExists) {
-                               return (
-                                 <div key={`prev-${index}`} className="p-3 bg-red-50 border border-red-200 rounded text-sm opacity-75">
-                                   <div className="font-medium flex items-center gap-2 line-through text-red-600">
-                                     {prevOwner.name}
-                                     <Badge variant="destructive" className="text-xs">
-                                       TRANSFERRED
-                                     </Badge>
-                                   </div>
+                            {previousOwnership.owners.map((prevOwner, index) => {
+                              const currentOwner = ongoingOwnership.owners.find(o => 
+                                o.name.toLowerCase().trim() === prevOwner.name.toLowerCase().trim()
+                              );
+                              
+                              // Show completely transferred owners (no longer exists)
+                              if (!currentOwner) {
+                                return (
+                                  <div key={`prev-${index}`} className="p-3 bg-red-50 border border-red-200 rounded text-sm opacity-75">
+                                    <div className="font-medium flex items-center gap-2 line-through text-red-600">
+                                      {prevOwner.name}
+                                      <Badge variant="destructive" className="text-xs">
+                                        TRANSFERRED
+                                      </Badge>
+                                    </div>
                                     <div className="flex justify-between text-xs text-red-500 line-through">
                                       <span>Surface: {(prevOwner.surfacePercentage || 0).toFixed(2)}%</span>
                                       <span>Mineral: {(prevOwner.mineralPercentage || 0).toFixed(2)}%</span>
                                     </div>
-                                 </div>
-                               );
-                             }
-                             return null;
+                                  </div>
+                                );
+                              }
+                              
+                              // Show partially transferred owners (surface or mineral rights changed)
+                              const surfaceChanged = currentOwner.surfacePercentage !== prevOwner.surfacePercentage;
+                              const mineralChanged = currentOwner.mineralPercentage !== prevOwner.mineralPercentage;
+                              
+                              if (surfaceChanged || mineralChanged) {
+                                return (
+                                  <div key={`partial-${index}`} className="p-3 bg-orange-50 border border-orange-200 rounded text-sm">
+                                    <div className="font-medium flex items-center gap-2">
+                                      {prevOwner.name}
+                                      <Badge variant="secondary" className="text-xs bg-orange-600 text-white">
+                                        PARTIAL TRANSFER
+                                      </Badge>
+                                    </div>
+                                    <div className="space-y-1 text-xs">
+                                      {surfaceChanged && (
+                                        <div className="flex justify-between">
+                                          <span className="text-red-500 line-through">
+                                            Surface: {(prevOwner.surfacePercentage || 0).toFixed(2)}%
+                                          </span>
+                                          <span className="text-green-600">
+                                            → {(currentOwner.surfacePercentage || 0).toFixed(2)}%
+                                          </span>
+                                        </div>
+                                      )}
+                                      {mineralChanged && (
+                                        <div className="flex justify-between">
+                                          <span className="text-red-500 line-through">
+                                            Mineral: {(prevOwner.mineralPercentage || 0).toFixed(2)}%
+                                          </span>
+                                          <span className="text-green-600">
+                                            → {(currentOwner.mineralPercentage || 0).toFixed(2)}%
+                                          </span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              }
+                              
+                              return null;
                            })}
                          </>
                        )}
