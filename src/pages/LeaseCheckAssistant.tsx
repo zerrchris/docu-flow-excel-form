@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
+import { Progress } from '@/components/ui/progress';
 import * as XLSX from 'xlsx';
 
 const todayStr = () => new Date().toISOString().slice(0,10);
@@ -33,7 +34,9 @@ const LeaseCheckAssistant: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [owners, setOwners] = useState<OwnerRow[]>([]);
   const [flags, setFlags] = useState<FlagRow[]>([]);
-
+  const [progress, setProgress] = useState<{ total: number; done: number }>({ total: 0, done: 0 });
+  const [cancelled, setCancelled] = useState(false);
+  const cancelledRef = useRef(false);
   useEffect(() => {
     document.title = 'Lease Check Assistant | RunsheetPro';
     const desc = 'Upload runsheet Excel/CSV, set tract and date, and compute assumed mineral ownership.';
@@ -85,27 +88,56 @@ const LeaseCheckAssistant: React.FC = () => {
       return;
     }
     setLoading(true);
+    setCancelled(false);
+    cancelledRef.current = false;
+    setOwners([]);
+    setFlags([]);
+    const total = rows.length;
+    setProgress({ total, done: 0 });
     try {
-      const { data, error } = await supabase.functions.invoke('lease-check-assistant', {
+      const chunkSize = 24;
+      const events: any[] = [];
+
+      for (let i = 0; i < rows.length; i += chunkSize) {
+        if (cancelledRef.current) {
+          toast({ title: 'Cancelled', description: 'Lease check cancelled.' });
+          setLoading(false);
+          return;
+        }
+        const batch = rows.slice(i, i + chunkSize);
+        const { data, error } = await supabase.functions.invoke('lease-check-extract', {
+          body: { rows: batch, concurrency: 6 },
+        });
+        if (error) throw error;
+        if ((data?.events || []).length) events.push(...data.events);
+        setProgress((p) => ({ total: p.total, done: Math.min(total, p.done + batch.length) }));
+      }
+
+      if (cancelledRef.current) {
+        toast({ title: 'Cancelled', description: 'Lease check cancelled.' });
+        return;
+      }
+
+      const { data: runData, error: runError } = await supabase.functions.invoke('lease-check-run', {
         body: {
-          rows,
+          events,
           tract_key: tractKey,
           as_of: asOf,
           hbp,
         },
       });
-      if (error) throw error;
-      setOwners((data?.owners || []) as OwnerRow[]);
-      setFlags((data?.flags || []) as FlagRow[]);
-      toast({ title: 'Lease check complete', description: `${(data?.owners || []).length} owners computed.` });
+      if (runError) throw runError;
+      setOwners((runData?.owners || []) as OwnerRow[]);
+      setFlags((runData?.flags || []) as FlagRow[]);
+      toast({ title: 'Lease check complete', description: `${(runData?.owners || []).length} owners computed.` });
     } catch (e: any) {
       console.error(e);
       toast({ title: 'Lease check failed', description: e?.message || 'Try again or review your inputs.', variant: 'destructive' });
     } finally {
       setLoading(false);
+      setProgress({ total: 0, done: 0 });
     }
   };
-
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b">
@@ -141,9 +173,24 @@ const LeaseCheckAssistant: React.FC = () => {
                 <Label htmlFor="hbp">Held by Production (HBP)</Label>
               </div>
             </div>
-            <Button onClick={run} disabled={loading || !rows.length || !tractKey}>
-              {loading ? 'Running…' : 'Run Lease Check'}
-            </Button>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <Button onClick={run} disabled={loading || !rows.length || !tractKey}>
+                  {loading ? (progress.total ? `Extracting ${progress.done}/${progress.total}…` : 'Running…') : 'Run Lease Check'}
+                </Button>
+                {loading && progress.total > 0 && (
+                  <Button variant="outline" onClick={() => { setCancelled(true); cancelledRef.current = true; setLoading(false); toast({ title: 'Cancelled', description: 'Lease check cancelled.' }); }}>
+                    Cancel
+                  </Button>
+                )}
+              </div>
+              {loading && progress.total > 0 && (
+                <div className="space-y-1">
+                  <Progress value={(progress.done / progress.total) * 100} />
+                  <p className="text-sm text-muted-foreground">Processing {progress.done} of {progress.total} rows…</p>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
 
