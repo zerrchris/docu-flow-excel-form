@@ -70,17 +70,26 @@ const Home: React.FC = () => {
           </h2>
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">Turn messy documents into organized data in minutes. Upload any document, let AI extract the key information, and instantly add it to your runsheet.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            {user ? <Link to="/app">
-                <Button size="lg" className="gap-2">
-                  <FileText className="h-5 w-5" />
-                  Open App
-                </Button>
-              </Link> : <Link to="/signin">
+            {user ? (
+              <>
+                <Link to="/app">
+                  <Button size="lg" className="gap-2">
+                    <FileText className="h-5 w-5" />
+                    Open App
+                  </Button>
+                </Link>
+                <Link to="/lease-check-assistant">
+                  <Button variant="outline" size="lg">Lease Check Assistant</Button>
+                </Link>
+              </>
+            ) : (
+              <Link to="/signin">
                 <Button size="lg" className="gap-2">
                   <LogIn className="h-5 w-5" />
                   Get Started
                 </Button>
-              </Link>}
+              </Link>
+            )}
           </div>
         </div>
       </section>

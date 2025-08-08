@@ -19,9 +19,10 @@ import GoogleAuthCallback from "./components/GoogleAuthCallback";
 import CapturePopupPage from "./pages/CapturePopup";
 import AuthStatus from "./pages/AuthStatus";
 import LeaseCheck from "./pages/LeaseCheck";
-
+import LeaseCheckAssistant from "./pages/LeaseCheckAssistant";
+ 
 const queryClient = new QueryClient();
-
+ 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -44,6 +45,7 @@ const App = () => (
             <Route path="/capture-popup" element={<CapturePopupPage />} />
             <Route path="/auth-status" element={<AuthStatus />} />
             <Route path="/lease-check" element={<LeaseCheck />} />
+            <Route path="/lease-check-assistant" element={<LeaseCheckAssistant />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
@@ -52,5 +54,5 @@ const App = () => (
     </TooltipProvider>
   </QueryClientProvider>
 );
-
+ 
 export default App;
