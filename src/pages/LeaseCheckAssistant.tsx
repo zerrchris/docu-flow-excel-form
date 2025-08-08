@@ -95,7 +95,7 @@ const LeaseCheckAssistant: React.FC = () => {
     const total = rows.length;
     setProgress({ total, done: 0 });
     try {
-      const chunkSize = 24;
+      const chunkSize = 8;
       const events: any[] = [];
 
       for (let i = 0; i < rows.length; i += chunkSize) {
@@ -105,11 +105,18 @@ const LeaseCheckAssistant: React.FC = () => {
           return;
         }
         const batch = rows.slice(i, i + chunkSize);
-        const { data, error } = await supabase.functions.invoke('lease-check-extract', {
-          body: { rows: batch, concurrency: 6 },
-        });
-        if (error) throw error;
-        if ((data?.events || []).length) events.push(...data.events);
+        let extractData: any | null = null;
+        let lastError: any = null;
+        for (let attempt = 1; attempt <= 3; attempt++) {
+          const res: any = await supabase.functions.invoke('lease-check-extract', {
+            body: { rows: batch, concurrency: 6 },
+          });
+          if (!res.error) { extractData = res.data; break; }
+          lastError = res.error;
+          await new Promise((r) => setTimeout(r, 500 * attempt));
+        }
+        if (!extractData) throw lastError || new Error('Failed to extract events');
+        if ((extractData?.events || []).length) events.push(...extractData.events);
         setProgress((p) => ({ total: p.total, done: Math.min(total, p.done + batch.length) }));
       }
 

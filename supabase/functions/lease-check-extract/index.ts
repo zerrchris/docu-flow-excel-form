@@ -14,7 +14,7 @@ async function extractEvent(row: Record<string, unknown>) {
     "You extract oil & gas runsheet rows into strict JSON. Be conservative; never invent fractions. If ambiguous, lower confidence and add a brief rationale in notes. Return only JSON.";
 
   const payload = {
-    model: 'gpt-4.1-2025-04-14',
+    model: 'gpt-4o-mini',
     messages: [
       { role: 'system', content: system },
       { role: 'user', content: JSON.stringify(row) },
