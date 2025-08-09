@@ -17,7 +17,7 @@ function tractMatches(evt: any, tract_key: string) {
 
 function parseFraction(f: string | null | undefined): number | null {
   if (!f) return null;
-  const m = String(f).trim().match(/^(\d+)/(\d+)$/);
+  const m = String(f).trim().match(/^(\d+)\/(\d+)$/);
   if (!m) return null;
   const num = parseFloat(m[1]);
   const den = parseFloat(m[2]);
