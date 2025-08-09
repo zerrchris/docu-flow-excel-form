@@ -151,10 +151,13 @@ const LeaseCheckAssistant: React.FC = () => {
   };
 
   const leases = useMemo(() => extractedEvents.filter((e: any) => {
-    const it = String(e?.instrument_type || '').toLowerCase();
-    return it.includes('lease') || it.includes('ogl') || it.includes('oil and gas lease');
-  }).map((e: any) => ({
-    doc: e?.doc_id || e?.recording || e?.id || `${e?.dated || ''}-${e?.recorded || ''}`,
+    const typeCandidate = e?.instrument_type ?? e?.instrument ?? e?.instrumentType ?? e?.doc_type ?? e?.type ?? '';
+    const it = String(typeCandidate).toLowerCase();
+    const text = `${e?.description || ''} ${e?.comments || ''}`.toLowerCase();
+    const hasLeaseWord = it.includes('lease') || it.includes('ogl') || it.includes('oil & gas') || it.includes('oil and gas') || text.includes('lease');
+    return hasLeaseWord;
+  }).map((e: any, i: number) => ({
+    doc: e?.doc_id || e?.recording || e?.id || `${e?.dated || ''}-${e?.recorded || ''}` || `doc-${i}`,
     date: e?.recorded || e?.dated || '',
     grantors: e?.grantors || [],
     grantees: e?.grantees || [],
