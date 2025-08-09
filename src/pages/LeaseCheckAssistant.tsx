@@ -30,13 +30,15 @@ const LeaseCheckAssistant: React.FC = () => {
   const [rows, setRows] = useState<any[]>([]);
   const [tractKey, setTractKey] = useState('');
   const [asOf, setAsOf] = useState(todayStr());
-  const [hbp, setHbp] = useState(false);
   const [loading, setLoading] = useState(false);
   const [owners, setOwners] = useState<OwnerRow[]>([]);
   const [flags, setFlags] = useState<FlagRow[]>([]);
   const [progress, setProgress] = useState<{ total: number; done: number }>({ total: 0, done: 0 });
   const [cancelled, setCancelled] = useState(false);
   const cancelledRef = useRef(false);
+  const [extractedEvents, setExtractedEvents] = useState<any[]>([]);
+  const [showReview, setShowReview] = useState(false);
+  const [leaseOverrides, setLeaseOverrides] = useState<Record<string, { production_present: boolean; top_lease: boolean; boundary_pugh: boolean; depth_pugh: boolean }>>({});
   useEffect(() => {
     document.title = 'Lease Check Assistant | RunsheetPro';
     const desc = 'Upload runsheet Excel/CSV, set tract and date, and compute assumed mineral ownership.';
@@ -125,18 +127,20 @@ const LeaseCheckAssistant: React.FC = () => {
         return;
       }
 
-      const { data: runData, error: runError } = await supabase.functions.invoke('lease-check-run', {
-        body: {
-          events,
-          tract_key: tractKey,
-          as_of: asOf,
-          hbp,
-        },
+      // After extraction, enter review step instead of running immediately
+      const leaseEvents = events.filter((e: any) => {
+        const it = String(e?.instrument_type || '').toLowerCase();
+        return it.includes('lease') || it.includes('ogl') || it.includes('oil and gas lease');
       });
-      if (runError) throw runError;
-      setOwners((runData?.owners || []) as OwnerRow[]);
-      setFlags((runData?.flags || []) as FlagRow[]);
-      toast({ title: 'Lease check complete', description: `${(runData?.owners || []).length} owners computed.` });
+      const initialOverrides: Record<string, { production_present: boolean; top_lease: boolean; boundary_pugh: boolean; depth_pugh: boolean }> = {};
+      for (const e of leaseEvents) {
+        const id = e?.doc_id || e?.recording || e?.id || `${e?.dated || ''}-${e?.recorded || ''}`;
+        if (id) initialOverrides[id] = { production_present: false, top_lease: false, boundary_pugh: false, depth_pugh: false };
+      }
+      setLeaseOverrides(initialOverrides);
+      setExtractedEvents(events);
+      setShowReview(true);
+      toast({ title: 'Review leases', description: `${leaseEvents.length} lease(s) detected. Mark production/top-lease/Pugh, then Compute.` });
     } catch (e: any) {
       console.error(e);
       toast({ title: 'Lease check failed', description: e?.message || 'Try again or review your inputs.', variant: 'destructive' });
@@ -145,6 +149,42 @@ const LeaseCheckAssistant: React.FC = () => {
       setProgress({ total: 0, done: 0 });
     }
   };
+
+  const leases = useMemo(() => extractedEvents.filter((e: any) => {
+    const it = String(e?.instrument_type || '').toLowerCase();
+    return it.includes('lease') || it.includes('ogl') || it.includes('oil and gas lease');
+  }).map((e: any) => ({
+    doc: e?.doc_id || e?.recording || e?.id || `${e?.dated || ''}-${e?.recorded || ''}`,
+    date: e?.recorded || e?.dated || '',
+    grantors: e?.grantors || [],
+    grantees: e?.grantees || [],
+    description: e?.description || e?.comments || ''
+  })), [extractedEvents]);
+
+  const computeOwnership = async () => {
+    try {
+      setLoading(true);
+      const { data: runData, error: runError } = await supabase.functions.invoke('lease-check-run', {
+        body: {
+          events: extractedEvents,
+          tract_key: tractKey,
+          as_of: asOf,
+          lease_overrides: leaseOverrides,
+        },
+      });
+      if (runError) throw runError;
+      setOwners((runData?.owners || []) as OwnerRow[]);
+      setFlags((runData?.flags || []) as FlagRow[]);
+      toast({ title: 'Lease check complete', description: `${(runData?.owners || []).length} owners computed.` });
+      setShowReview(false);
+    } catch (e: any) {
+      console.error(e);
+      toast({ title: 'Lease check failed', description: e?.message || 'Try again or review your inputs.', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b">
@@ -175,15 +215,12 @@ const LeaseCheckAssistant: React.FC = () => {
                 <Label htmlFor="asof">As of Date</Label>
                 <Input id="asof" type="date" value={asOf} onChange={(e) => setAsOf(e.target.value)} />
               </div>
-              <div className="flex items-center gap-3 pt-6">
-                <Switch id="hbp" checked={hbp} onCheckedChange={setHbp} />
-                <Label htmlFor="hbp">Held by Production (HBP)</Label>
-              </div>
+              <div className="pt-6 text-sm text-muted-foreground">Production is set per-lease in the next step.</div>
             </div>
             <div className="space-y-3">
               <div className="flex items-center gap-3">
                 <Button onClick={run} disabled={loading || !rows.length || !tractKey}>
-                  {loading ? (progress.total ? `Extracting ${progress.done}/${progress.total}…` : 'Running…') : 'Run Lease Check'}
+                  {loading ? (progress.total ? `Extracting ${progress.done}/${progress.total}…` : 'Running…') : 'Extract & Review Leases'}
                 </Button>
                 {loading && progress.total > 0 && (
                   <Button variant="outline" onClick={() => { setCancelled(true); cancelledRef.current = true; setLoading(false); toast({ title: 'Cancelled', description: 'Lease check cancelled.' }); }}>
@@ -200,6 +237,64 @@ const LeaseCheckAssistant: React.FC = () => {
             </div>
           </CardContent>
         </Card>
+        {showReview && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Review leases for production and Pugh</CardTitle>
+              <CardDescription>Mark production per lease. If a later lease is not a top lease, earlier leases are assumed expired.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Doc</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Parties</TableHead>
+                    <TableHead>Notes</TableHead>
+                    <TableHead>Production</TableHead>
+                    <TableHead>Top lease</TableHead>
+                    <TableHead>Boundary Pugh</TableHead>
+                    <TableHead>Depth Pugh</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {leases.map((l, i) => (
+                    <TableRow key={i}>
+                      <TableCell>{l.doc}</TableCell>
+                      <TableCell>{l.date}</TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          <div>{(l.grantors || []).join(', ')}</div>
+                          <div className="text-muted-foreground">→ {(l.grantees || []).join(', ')}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="max-w-[280px] truncate" title={l.description || ''}>{l.description}</TableCell>
+                      <TableCell>
+                        <Switch checked={!!leaseOverrides[l.doc]?.production_present}
+                          onCheckedChange={(v) => setLeaseOverrides((s) => ({ ...s, [l.doc]: { production_present: !!v, top_lease: !!s[l.doc]?.top_lease, boundary_pugh: !!s[l.doc]?.boundary_pugh, depth_pugh: !!s[l.doc]?.depth_pugh } }))} />
+                      </TableCell>
+                      <TableCell>
+                        <Switch checked={!!leaseOverrides[l.doc]?.top_lease}
+                          onCheckedChange={(v) => setLeaseOverrides((s) => ({ ...s, [l.doc]: { production_present: !!s[l.doc]?.production_present, top_lease: !!v, boundary_pugh: !!s[l.doc]?.boundary_pugh, depth_pugh: !!s[l.doc]?.depth_pugh } }))} />
+                      </TableCell>
+                      <TableCell>
+                        <Switch checked={!!leaseOverrides[l.doc]?.boundary_pugh}
+                          onCheckedChange={(v) => setLeaseOverrides((s) => ({ ...s, [l.doc]: { production_present: !!s[l.doc]?.production_present, top_lease: !!s[l.doc]?.top_lease, boundary_pugh: !!v, depth_pugh: !!s[l.doc]?.depth_pugh } }))} />
+                      </TableCell>
+                      <TableCell>
+                        <Switch checked={!!leaseOverrides[l.doc]?.depth_pugh}
+                          onCheckedChange={(v) => setLeaseOverrides((s) => ({ ...s, [l.doc]: { production_present: !!s[l.doc]?.production_present, top_lease: !!s[l.doc]?.top_lease, boundary_pugh: !!s[l.doc]?.boundary_pugh, depth_pugh: !!v } }))} />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              <div className="mt-4">
+                <Button onClick={computeOwnership} disabled={loading || leases.length === 0}>{loading ? 'Computing…' : 'Compute Ownership'}</Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {owners.length > 0 && (
           <Card>
@@ -229,6 +324,15 @@ const LeaseCheckAssistant: React.FC = () => {
                 </TableBody>
               </Table>
             </CardContent>
+          </Card>
+        )}
+
+        {!loading && owners.length === 0 && !showReview && extractedEvents.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>No owners found</CardTitle>
+              <CardDescription>No computed owners matched this tract. Check your tract key or lease decisions and try again.</CardDescription>
+            </CardHeader>
           </Card>
         )}
 

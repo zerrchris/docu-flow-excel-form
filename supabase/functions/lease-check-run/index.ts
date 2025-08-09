@@ -17,7 +17,7 @@ function tractMatches(evt: any, tract_key: string) {
 
 function parseFraction(f: string | null | undefined): number | null {
   if (!f) return null;
-  const m = String(f).trim().match(/^(\d+)\/(\d+)$/);
+  const m = String(f).trim().match(/^(\d+)/(\d+)$/);
   if (!m) return null;
   const num = parseFloat(m[1]);
   const den = parseFloat(m[2]);
@@ -25,9 +25,22 @@ function parseFraction(f: string | null | undefined): number | null {
   return num / den;
 }
 
-function runLeasecheck(events: any[], tract_key: string, as_of: string, hbp: boolean, total_acres: number) {
+function runLeasecheck(
+  events: any[],
+  tract_key: string,
+  as_of: string,
+  hbp: boolean,
+  total_acres: number,
+  lease_overrides?: Record<string, { production_present: boolean; top_lease: boolean; boundary_pugh: boolean; depth_pugh: boolean }>
+) {
   const owners: Record<string, number> = {};
   const flags: Array<{ doc?: string; note: string }> = [];
+
+  const getDocId = (e: any) => e?.doc_id || e?.recording || e?.id || `${e?.dated || ''}-${e?.recorded || ''}`;
+  const isLeaseEvent = (e: any) => {
+    const it = String(e?.instrument_type || '').toLowerCase();
+    return it.includes('lease') || it.includes('ogl') || it.includes('oil and gas lease');
+  };
 
   const sorted = [...events].sort((a, b) => {
     const da = a?.recorded || a?.dated || '';
@@ -43,7 +56,6 @@ function runLeasecheck(events: any[], tract_key: string, as_of: string, hbp: boo
     const grantees: string[] = e?.grantees || [];
 
     if (["easement", "mortgage", "surfaceonly"].includes(it)) continue;
-
     if (it.includes('ogl')) continue;
 
     const le = e?.life_estate || {};
@@ -89,6 +101,49 @@ function runLeasecheck(events: any[], tract_key: string, as_of: string, hbp: boo
     if (Math.abs(owners[k]) < 1e-9) delete owners[k];
   }
 
+  // Determine status using overrides (per-lease production / Pugh), else fallback to HBP
+  let status = hbp ? 'Appears Leased' : 'Appears Open';
+  if (lease_overrides && Object.keys(lease_overrides).length) {
+    const leases = sorted.filter((e) => tractMatches(e, tract_key) && isLeaseEvent(e));
+
+    // Group leases by grantor signature
+    const byGrantor: Record<string, any[]> = {};
+    for (const e of leases) {
+      const sig = (e?.grantors || []).join('|').toLowerCase().trim();
+      const arr = byGrantor[sig] || (byGrantor[sig] = []);
+      arr.push(e);
+    }
+
+    const expiredDocs = new Set<string>();
+    for (const sig of Object.keys(byGrantor)) {
+      const arr = byGrantor[sig].sort((a, b) => String(a?.recorded || a?.dated || '').localeCompare(String(b?.recorded || b?.dated || '')));
+      const latest = arr[arr.length - 1];
+      const latestId = getDocId(latest);
+      const latestOv = latestId ? lease_overrides[latestId] : undefined;
+      // If the latest lease is NOT a top lease, earlier leases are assumed expired
+      if (latestOv && latestOv.top_lease === false) {
+        for (let i = 0; i < arr.length - 1; i++) {
+          const id = getDocId(arr[i]);
+          if (id) expiredDocs.add(id);
+        }
+      }
+    }
+
+    let activeProduction = false;
+    let pughLimited = false;
+    for (const e of leases) {
+      const id = getDocId(e);
+      if (!id || expiredDocs.has(id)) continue;
+      const ov = lease_overrides[id];
+      if (ov?.production_present) {
+        activeProduction = true;
+        if (ov.boundary_pugh || ov.depth_pugh) pughLimited = true;
+      }
+    }
+
+    status = activeProduction ? (pughLimited ? 'Appears Leased (Pugh-limited)' : 'Appears Leased') : 'Appears Open';
+  }
+
   const rows = Object.entries(owners)
     .map(([name, frac]) => {
       const f = Math.max(0, frac);
@@ -97,7 +152,7 @@ function runLeasecheck(events: any[], tract_key: string, as_of: string, hbp: boo
         owner: name,
         percent: (nma / total_acres) * 100,
         net_acres: nma,
-        status: hbp ? 'Appears Leased' : 'Appears Open',
+        status,
       };
     })
     .sort((a, b) => b.net_acres - a.net_acres);
@@ -117,6 +172,7 @@ serve(async (req) => {
     const as_of: string = body?.as_of || new Date().toISOString().slice(0, 10);
     const hbp: boolean = !!body?.hbp;
     const total_acres: number = typeof body?.total_acres === 'number' ? body.total_acres : 160;
+    const lease_overrides = body?.lease_overrides || null;
 
     if (!events?.length || !tract_key) {
       return new Response(JSON.stringify({ error: 'events[] and tract_key are required' }), {
@@ -127,7 +183,7 @@ serve(async (req) => {
 
     console.log('lease-check-run: running leasecheck on', events.length, 'events');
 
-    const result = runLeasecheck(events, tract_key, as_of, hbp, total_acres);
+    const result = runLeasecheck(events, tract_key, as_of, hbp, total_acres, lease_overrides);
 
     return new Response(JSON.stringify({ events_count: events.length, ...result }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
