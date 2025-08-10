@@ -24,6 +24,34 @@ interface FlagRow {
   note: string;
 }
 
+// Normalize date-like fields in a runsheet row to ISO YYYY-MM-DD so the extractor can read them reliably
+function normalizeRowDates(row: any) {
+  const dateKeys = [
+    'Dated','Date','Recorded','Record Date','Filing Date','Execution Date','Rec Date','Recording Date'
+  ];
+  const out: any = { ...row };
+  const excelEpoch = new Date(Date.UTC(1899, 11, 30)).getTime(); // Excel epoch (handles 1900 leap bug)
+  const toISO = (d: Date) => (isNaN(d.getTime()) ? '' : d.toISOString().slice(0,10));
+  const serialToDate = (n: number) => new Date(excelEpoch + Math.round(n) * 86400000);
+  const parseMaybe = (v: any): string => {
+    if (v == null || v === '') return '';
+    if (typeof v === 'number') return toISO(serialToDate(v));
+    const s = String(v).trim();
+    // Numeric string that looks like Excel serial
+    if (/^\d{1,6}$/.test(s)) return toISO(serialToDate(Number(s)));
+    // Try native parse for common formats (YYYY-MM-DD, MM/DD/YYYY, etc.)
+    const d = new Date(s);
+    return toISO(d);
+  };
+  for (const k of dateKeys) {
+    if (k in out) {
+      const normalized = parseMaybe(out[k]);
+      if (normalized) out[k] = normalized;
+    }
+  }
+  return out;
+}
+
 const LeaseCheckAssistant: React.FC = () => {
   const { toast } = useToast();
   const [file, setFile] = useState<File | null>(null);
@@ -109,9 +137,10 @@ const LeaseCheckAssistant: React.FC = () => {
         const batch = rows.slice(i, i + chunkSize);
         let extractData: any | null = null;
         let lastError: any = null;
+        const processedBatch = batch.map(normalizeRowDates);
         for (let attempt = 1; attempt <= 3; attempt++) {
           const res: any = await supabase.functions.invoke('lease-check-extract', {
-            body: { rows: batch, concurrency: 6 },
+            body: { rows: processedBatch, concurrency: 6 },
           });
           if (!res.error) { extractData = res.data; break; }
           lastError = res.error;
