@@ -65,6 +65,9 @@ const Home: React.FC = () => {
       {/* Hero Section */}
       <section className="py-20 px-4">
         <div className="container mx-auto text-center max-w-4xl">
+          <div className="mb-2 flex justify-center">
+            <Badge variant="secondary">Welcome to Runsheet Pro</Badge>
+          </div>
           <h2 className="text-5xl font-bold tracking-tight mb-6">
             Pull Data Directly Into Your Runsheets
           </h2>
