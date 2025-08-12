@@ -170,6 +170,54 @@ const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
     }
   };
 
+  const resetToDefaults = () => {
+    // Use comprehensive default columns for runsheet/title work
+    const defaultColumns = [
+      'Inst Number',
+      'Book/Page', 
+      'Inst Type',
+      'Recording Date',
+      'Document Date',
+      'Grantor',
+      'Grantee',
+      'Legal Description',
+      'Consideration',
+      'Notes'
+    ];
+    
+    // Comprehensive detailed default instructions for runsheet/title work
+    const defaultInstructions: Record<string, string> = {
+      'Inst Number': "Extract the instrument number exactly as it appears on the document. This is typically a sequential number assigned by the recording office (e.g., '2023-001234', 'DOC#456789'). Look for labels like 'Instrument Number', 'Document Number', or 'Rec. No.'",
+      
+      'Book/Page': "Extract the complete book and page reference exactly as recorded (e.g., 'Book 123, Page 456', 'Vol. 45, Pg. 678', 'B1234/P5678'). This represents the physical or digital filing location in the county records.",
+      
+      'Inst Type': "Extract the specific type of legal instrument. Be precise with the document type: Warranty Deed, Quit Claim Deed, Special Warranty Deed, Mortgage, Deed of Trust, Release, Assignment, Lease, Easement, Lien, Certificate of Death, Affidavit, Power of Attorney, etc. Use the exact terminology from the document.",
+      
+      'Recording Date': "Extract the official date when the document was recorded at the courthouse or county recorder's office. This is usually stamped or printed on the document and may appear as 'Recorded', 'Filed', or 'Rec'd'. Format as MM/DD/YYYY.",
+      
+      'Document Date': "Extract the date when the document was originally signed or executed by the parties. This appears in the document body and may be different from the recording date. Look for 'Dated', 'Executed', or similar language. Format as MM/DD/YYYY.",
+      
+      'Grantor': "Extract the full legal name(s) of the person(s) or entity transferring rights or interest. Include all grantors if multiple parties. Capture exactly as written, including titles (Mr., Mrs., Trustee, etc.), middle initials, and suffixes (Jr., Sr., III). Also include addresses if present.",
+      
+      'Grantee': "Extract the full legal name(s) of the person(s) or entity receiving rights or interest. Include all grantees if multiple parties. Capture exactly as written, including titles, middle initials, and suffixes. Include marital status if mentioned (single person, husband and wife, etc.) and addresses if present.",
+      
+      'Legal Description': "Extract the complete legal description of the property. This typically includes: Lot and Block numbers, Subdivision name, Section-Township-Range information, metes and bounds descriptions, and any other property identifiers. Capture the entire legal description verbatim as it's critical for property identification.",
+      
+      'Consideration': "Extract the purchase price or consideration paid for the transaction. Look for dollar amounts, 'for the sum of', 'consideration of', or similar language. Include both numerical and written amounts if present (e.g., '$50,000 (Fifty Thousand Dollars)'). Note if 'nominal consideration' like '$10.00 and other good and valuable consideration'.",
+      
+      'Notes': "Extract any additional important information including: special conditions, restrictions, easements, life estates, mineral rights reservations, tax information, attorney names, notary information, witness names, recording fees, or any unusual circumstances mentioned in the document."
+    };
+    
+    setColumns(defaultColumns);
+    setColumnInstructions(defaultInstructions);
+    setSelectedColumn('Inst Number'); // Select first column to show instructions
+    
+    toast({
+      title: "Reset to defaults",
+      description: "Column preferences have been reset to comprehensive defaults.",
+    });
+  };
+
   if (isLoading) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -302,9 +350,14 @@ const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
 
         {/* Footer */}
         <div className="flex justify-between items-center pt-4 border-t">
-          <p className="text-xs text-muted-foreground">
-            These settings will apply to all new runsheets you create.
-          </p>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" onClick={resetToDefaults} className="text-xs">
+              Reset to Comprehensive Defaults
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              These settings will apply to all new runsheets you create.
+            </p>
+          </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
