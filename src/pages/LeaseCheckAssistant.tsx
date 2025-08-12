@@ -255,6 +255,11 @@ const LeaseCheckAssistant: React.FC = () => {
               </h1>
             </Link>
             <div className="flex items-center gap-4">
+              <Link to="/dashboard">
+                <Button variant="outline" size="sm">
+                  Dashboard
+                </Button>
+              </Link>
               <AuthButton />
               {user && (
                 <Link to="/admin">
