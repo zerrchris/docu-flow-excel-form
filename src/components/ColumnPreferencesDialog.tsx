@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/components/ui/use-toast';
-import { X, Plus, GripVertical, Save } from 'lucide-react';
+import { X, Plus, GripVertical, Save, RotateCcw } from 'lucide-react';
 import { ExtractionPreferencesService } from '@/services/extractionPreferences';
 
 interface ColumnPreferencesDialogProps {
@@ -351,7 +351,13 @@ const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
         {/* Footer */}
         <div className="flex justify-between items-center pt-4 border-t">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" onClick={resetToDefaults} className="text-xs">
+            <Button
+              variant="outline"
+              onClick={resetToDefaults}
+              className="text-xs border-primary text-primary hover:bg-primary/5 shadow-sm"
+              aria-label="Reset column preferences to comprehensive defaults"
+            >
+              <RotateCcw className="h-4 w-4 mr-2" />
               Reset to Comprehensive Defaults
             </Button>
             <p className="text-xs text-muted-foreground">
