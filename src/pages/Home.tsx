@@ -94,43 +94,6 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="py-16 px-4 bg-muted/50">
-        <div className="container mx-auto max-w-6xl">
-          <h3 className="text-3xl font-bold text-center mb-12">
-            Everything you need for document processing
-          </h3>
-          <div className="grid md:grid-cols-3 gap-8">
-            <Card>
-              <CardHeader className="text-center">
-                <FileText className="h-12 w-12 mx-auto text-primary mb-4" />
-                <CardTitle>Document Analysis</CardTitle>
-                <CardDescription>
-                  Upload documents and extract key data automatically with AI-powered analysis
-                </CardDescription>
-              </CardHeader>
-            </Card>
-            
-            <Card>
-              <CardHeader className="text-center">
-                <Save className="h-12 w-12 mx-auto text-primary mb-4" />
-                <CardTitle>Cloud Storage</CardTitle>
-                <CardDescription>
-                  Save your runsheets securely in the cloud and access them from anywhere
-                </CardDescription>
-              </CardHeader>
-            </Card>
-            
-            <Card>
-              <CardHeader className="text-center">
-                <FolderOpen className="h-12 w-12 mx-auto text-primary mb-4" />
-                <CardTitle>Easy Management</CardTitle>
-                <CardDescription>Organize, edit, and manage your sheets and documents </CardDescription>
-              </CardHeader>
-            </Card>
-          </div>
-        </div>
-      </section>
 
       {/* How it Works Section */}
       <section className="py-16 px-4">
