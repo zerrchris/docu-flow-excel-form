@@ -352,7 +352,7 @@ const Home: React.FC = () => {
                    <li>• Parallel AI processing for speed</li>
                    <li>• Automatic queue management</li>
                    <li>• Progress tracking for each document</li>
-                   <li>• Bulk addition to runsheet</li>
+                   
                  </ul>
                </div>
                <div className="order-1 lg:order-1">
