@@ -72,7 +72,7 @@ const Home: React.FC = () => {
           <h2 className="text-5xl font-bold tracking-tight mb-6">
             Pull Data Directly Into Your Runsheets
           </h2>
-          <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">Save hours of manual entry—AI pulls key details from leases, deeds, and other instruments straight into your runsheets so landmen can focus on decisions, not data entry.</p>
+          <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">Deed to Data — AI scans. You approve. Key details from deeds, leases, and other instruments flow straight into your runsheets so landmen can focus on decisions, not data entry.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             {user ? (
               <>
