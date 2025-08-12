@@ -66,7 +66,7 @@ const Home: React.FC = () => {
       <section className="py-20 px-4">
         <div className="container mx-auto text-center max-w-4xl">
           <h2 className="text-5xl font-bold tracking-tight mb-6">
-            Extract Document Data Straight Into Your Runsheets
+            Pull Data Directly Into Your Runsheets
           </h2>
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">Turn messy documents into organized data in minutes. Upload any document, let AI extract the key information, and instantly add it to your runsheet.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
