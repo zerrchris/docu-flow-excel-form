@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import extractorLogo from '@/assets/document-extractor-logo.png';
+import LogoMark from '@/components/LogoMark';
 import AuthButton from '@/components/AuthButton';
 const Home: React.FC = () => {
   const [user, setUser] = useState<SupabaseUser | null>(null);
@@ -516,7 +517,7 @@ const Home: React.FC = () => {
       <footer className="border-t py-8 px-4">
         <div className="container mx-auto text-center">
           <div className="flex items-center justify-center gap-4 mb-4">
-            <img src={extractorLogo} alt="RunsheetPro Logo" className="h-8 w-8" />
+            <LogoMark className="h-8 w-8 text-primary" title="RunsheetPro" />
             <span className="font-semibold">RunsheetPro</span>
           </div>
         </div>
