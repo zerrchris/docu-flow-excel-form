@@ -511,60 +511,6 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* Benefits Section */}
-      <section className="py-16 px-4">
-        <div className="container mx-auto max-w-6xl">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div>
-              <h3 className="text-3xl font-bold mb-6">
-                Why land professionals choose RunsheetPro
-              </h3>
-              <div className="space-y-6">
-                <div className="flex gap-4">
-                  <Shield className="h-6 w-6 text-primary flex-shrink-0 mt-1" />
-                  <div>
-                    <h4 className="font-semibold mb-2">Title‑grade accuracy</h4>
-                    <p className="text-muted-foreground">Extract parties, dates, volume/page, legal descriptions, and interest type to build clean chain‑of‑title and lease checks.</p>
-                  </div>
-                </div>
-                <div className="flex gap-4">
-                  <FolderOpen className="h-6 w-6 text-primary flex-shrink-0 mt-1" />
-                  <div>
-                    <h4 className="font-semibold mb-2">Courthouse‑first workflow</h4>
-                    <p className="text-muted-foreground">Batch capture, quick instrument linking, offline-friendly flow, and auto reference numbers built for field work.</p>
-                  </div>
-                </div>
-                <div className="flex gap-4">
-                  <FileText className="h-6 w-6 text-primary flex-shrink-0 mt-1" />
-                  <div>
-                    <h4 className="font-semibold mb-2">Deliverables that landmen need</h4>
-                    <p className="text-muted-foreground">Export runsheets to Excel/CSV, bundle instrument packets, and hand off clean reports for clients and brokers.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <Card className="p-8">
-              <CardHeader className="text-center p-0 mb-6">
-                <CardTitle className="text-2xl">Ready to get started?</CardTitle>
-                <CardDescription>Create your account today and start runsheets like a pro.</CardDescription>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="space-y-4">
-                  {user ? <Link to="/app" className="block">
-                      <Button size="lg" className="w-full">
-                        Go to App
-                      </Button>
-                    </Link> : <Link to="/signin?mode=signup" className="block">
-                      <Button size="lg" className="w-full">
-                        Create Account
-                      </Button>
-                    </Link>}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
 
       {/* Footer */}
       <footer className="border-t py-8 px-4">
