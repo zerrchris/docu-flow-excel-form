@@ -8,7 +8,7 @@ import { FileText, Camera, FolderOpen, Upload, Users, Settings, Plus, Cloud, Col
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
-import extractorLogo from '@/assets/document-extractor-logo.png';
+import LogoMark from '@/components/LogoMark';
 import AuthButton from '@/components/AuthButton';
 import { toast } from '@/hooks/use-toast';
 import { ExtractionPreferencesService } from '@/services/extractionPreferences';
@@ -149,10 +149,9 @@ const Dashboard: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <Link to="/" className="flex items-center gap-4">
-              <img 
-                src={extractorLogo} 
-                alt="RunsheetPro Logo" 
-                className="h-12 w-12"
+              <LogoMark 
+                className="h-12 w-12 text-primary" 
+                title="RunsheetPro" 
               />
               <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
                 RunsheetPro

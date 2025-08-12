@@ -9,7 +9,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
-import extractorLogo from '@/assets/document-extractor-logo.png';
+import LogoMark from '@/components/LogoMark';
 
 const SignIn: React.FC = () => {
   const [user, setUser] = useState<SupabaseUser | null>(null);
@@ -188,10 +188,9 @@ const SignIn: React.FC = () => {
       <div className="p-6">
         <div className="flex items-center justify-between max-w-6xl mx-auto">
           <Link to="/" className="flex items-center gap-4">
-            <img 
-              src={extractorLogo} 
-              alt="RunsheetPro Logo" 
-              className="h-12 w-12"
+            <LogoMark 
+              className="h-12 w-12 text-primary" 
+              title="RunsheetPro" 
             />
             <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
               RunsheetPro

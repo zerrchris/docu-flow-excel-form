@@ -8,7 +8,7 @@ import { ArrowLeft, Monitor, Smartphone, CheckCircle, Clock, Home } from 'lucide
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import extractorLogo from '@/assets/document-extractor-logo.png';
+import LogoMark from '@/components/LogoMark';
 import AuthButton from '@/components/AuthButton';
 
 import { SyncStatusBadge } from '@/components/SyncStatusBadge';
@@ -101,10 +101,9 @@ export const MobileCapture: React.FC = () => {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <Link to="/" className="flex items-center gap-4">
-              <img 
-                src={extractorLogo} 
-                alt="RunsheetPro Logo" 
-                className="h-12 w-12"
+              <LogoMark 
+                className="h-12 w-12 text-primary" 
+                title="RunsheetPro" 
               />
               <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
                 RunsheetPro

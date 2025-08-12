@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { CheckCircle, ArrowRight } from 'lucide-react';
 import { useSubscription } from '@/contexts/SubscriptionContext';
-import extractorLogo from '@/assets/document-extractor-logo.png';
+import LogoMark from '@/components/LogoMark';
 
 const Success = () => {
   const [searchParams] = useSearchParams();
@@ -31,10 +31,9 @@ const Success = () => {
         {/* Header */}
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center gap-3 mb-6">
-            <img 
-              src={extractorLogo} 
-              alt="RunsheetPro Logo" 
-              className="h-12 w-12"
+            <LogoMark 
+              className="h-12 w-12 text-primary" 
+              title="RunsheetPro" 
             />
             <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
               RunsheetPro

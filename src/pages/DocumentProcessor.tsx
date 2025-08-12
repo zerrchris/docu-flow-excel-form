@@ -20,7 +20,7 @@ import { AdminSettingsService } from '@/services/adminSettings';
 import { useActiveRunsheet } from '@/hooks/useActiveRunsheet';
 import { supabase } from '@/integrations/supabase/client';
 
-import extractorLogo from '@/assets/document-extractor-logo.png';
+import LogoMark from '@/components/LogoMark';
 
 // Initial columns for the spreadsheet
 const DEFAULT_COLUMNS = ['Inst Number', 'Book/Page', 'Inst Type', 'Recording Date', 'Document Date', 'Grantor', 'Grantee', 'Legal Description', 'Notes'];
@@ -1775,10 +1775,9 @@ Image: [base64 image data]`;
             <div className="container mx-auto px-4 py-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <img 
-                    src={extractorLogo} 
-                    alt="RunsheetPro Logo" 
-                    className="h-12 w-12"
+                  <LogoMark 
+                    className="h-12 w-12 text-primary" 
+                    title="RunsheetPro" 
                   />
                   <div className="flex flex-col">
                     <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
@@ -1875,10 +1874,9 @@ Image: [base64 image data]`;
             <div className="container mx-auto px-4 py-4">
               <div className="flex items-center justify-between">
                 <Link to="/" className="flex items-center gap-4">
-                  <img 
-                    src={extractorLogo} 
-                    alt="RunsheetPro Logo" 
-                    className="h-12 w-12"
+                  <LogoMark 
+                    className="h-12 w-12 text-primary" 
+                    title="RunsheetPro" 
                   />
                   <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
                     RunsheetPro

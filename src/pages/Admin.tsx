@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { ArrowLeft, Users, Shield, UserCheck, Settings, Home, CreditCard, Calendar, CheckCircle, XCircle } from 'lucide-react';
-import extractorLogo from '@/assets/document-extractor-logo.png';
+import LogoMark from '@/components/LogoMark';
 import AuthButton from '@/components/AuthButton';
 
 import type { User as SupabaseUser } from '@supabase/supabase-js';
@@ -305,10 +305,9 @@ const Admin: React.FC = () => {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <Link to="/" className="flex items-center gap-4">
-              <img 
-                src={extractorLogo} 
-                alt="RunsheetPro Logo" 
-                className="h-12 w-12"
+              <LogoMark 
+                className="h-12 w-12 text-primary" 
+                title="RunsheetPro" 
               />
               <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
                 RunsheetPro
