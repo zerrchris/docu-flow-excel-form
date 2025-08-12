@@ -8,6 +8,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { Progress } from '@/components/ui/progress';
+import { Link } from 'react-router-dom';
+import { Settings } from 'lucide-react';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
+import extractorLogo from '@/assets/document-extractor-logo.png';
+import AuthButton from '@/components/AuthButton';
 import * as XLSX from 'xlsx';
 
 const todayStr = () => new Date().toISOString().slice(0,10);
@@ -54,6 +59,7 @@ function normalizeRowDates(row: any) {
 
 const LeaseCheckAssistant: React.FC = () => {
   const { toast } = useToast();
+  const [user, setUser] = useState<SupabaseUser | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [rows, setRows] = useState<any[]>([]);
   const [tractKey, setTractKey] = useState('');
@@ -67,6 +73,21 @@ const LeaseCheckAssistant: React.FC = () => {
   const [extractedEvents, setExtractedEvents] = useState<any[]>([]);
   const [showReview, setShowReview] = useState(false);
   const [leaseOverrides, setLeaseOverrides] = useState<Record<string, { production_present: boolean; top_lease: boolean; boundary_pugh: boolean; depth_pugh: boolean }>>({});
+
+  useEffect(() => {
+    const initAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setUser(session?.user ?? null);
+      
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        setUser(session?.user ?? null);
+      });
+
+      return () => subscription.unsubscribe();
+    };
+
+    initAuth();
+  }, []);
   useEffect(() => {
     document.title = 'Lease Check Assistant | RunsheetPro';
     const desc = 'Upload runsheet Excel/CSV, set tract and date, and compute assumed mineral ownership.';
@@ -219,12 +240,42 @@ const LeaseCheckAssistant: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b">
-        <div className="max-w-5xl mx-auto px-4 py-6">
-          <h1 className="text-3xl font-bold">Lease Check Assistant</h1>
-          <p className="text-muted-foreground mt-1">Upload a runsheet (Excel/CSV), set a tract and date, and compute assumed mineral ownership. Not a title opinion.</p>
+      {/* Header */}
+      <header className="border-b w-full">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <Link to="/" className="flex items-center gap-4">
+              <img 
+                src={extractorLogo} 
+                alt="RunsheetPro Logo" 
+                className="h-12 w-12"
+              />
+              <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                RunsheetPro
+              </h1>
+            </Link>
+            <div className="flex items-center gap-4">
+              <AuthButton />
+              {user && (
+                <Link to="/admin">
+                  <Button variant="outline" size="sm">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Admin
+                  </Button>
+                </Link>
+              )}
+            </div>
+          </div>
         </div>
       </header>
+
+      {/* Page Title Section */}
+      <div className="border-b bg-muted/30">
+        <div className="max-w-5xl mx-auto px-4 py-6">
+          <h2 className="text-3xl font-bold">Lease Check Assistant</h2>
+          <p className="text-muted-foreground mt-1">Upload a runsheet (Excel/CSV), set a tract and date, and compute assumed mineral ownership. Not a title opinion.</p>
+        </div>
+      </div>
 
       <main className="max-w-5xl mx-auto px-4 py-8 space-y-8">
         <Card>
