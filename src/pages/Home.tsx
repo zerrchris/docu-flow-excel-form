@@ -493,10 +493,7 @@ const Home: React.FC = () => {
           {/* CTA after workflow */}
           <div className="text-center mt-16">
             <div className="bg-muted/50 rounded-2xl p-8 max-w-2xl mx-auto">
-              <h4 className="text-2xl font-semibold mb-4">Ready to streamline your workflow?</h4>
-              <p className="text-muted-foreground mb-6">
-                Join hundreds of users who have already transformed their document processing
-              </p>
+              <h4 className="text-2xl font-semibold mb-6">Ready to streamline your workflow?</h4>
               {user ? <Link to="/app">
                   <Button size="lg" className="gap-2">
                     <FileText className="h-5 w-5" />
