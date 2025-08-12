@@ -501,7 +501,7 @@ const Home: React.FC = () => {
                     <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
                       •
                     </div>
-                    <h4 className="text-2xl font-semibold">AI Brain Button Analysis</h4>
+                    <h4 className="text-2xl font-semibold">One Click AI Analysis</h4>
                   </div>
                   <p className="text-muted-foreground text-lg mb-4">
                     Once a document is added to your runsheet, click the brain button to automatically analyze the document and populate your spreadsheet fields with extracted data.
