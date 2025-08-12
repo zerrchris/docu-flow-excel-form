@@ -519,28 +519,28 @@ const Home: React.FC = () => {
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
               <h3 className="text-3xl font-bold mb-6">
-                Why choose RunsheetPro?
+                Why land professionals choose RunsheetPro
               </h3>
               <div className="space-y-6">
                 <div className="flex gap-4">
-                  <Zap className="h-6 w-6 text-primary flex-shrink-0 mt-1" />
-                  <div>
-                    <h4 className="font-semibold mb-2">Fast</h4>
-                    <p className="text-muted-foreground">Process documents quickly with our streamlined interface and AI-powered extraction.</p>
-                  </div>
-                </div>
-                <div className="flex gap-4">
                   <Shield className="h-6 w-6 text-primary flex-shrink-0 mt-1" />
                   <div>
-                    <h4 className="font-semibold mb-2">Secure & Private</h4>
-                    <p className="text-muted-foreground">Your data is encrypted and stored securely with enterprise-grade protection.</p>
+                    <h4 className="font-semibold mb-2">Title‑grade accuracy</h4>
+                    <p className="text-muted-foreground">Extract parties, dates, volume/page, legal descriptions, and interest type to build clean chain‑of‑title and lease checks.</p>
                   </div>
                 </div>
                 <div className="flex gap-4">
-                  <Users className="h-6 w-6 text-primary flex-shrink-0 mt-1" />
+                  <FolderOpen className="h-6 w-6 text-primary flex-shrink-0 mt-1" />
                   <div>
-                    <h4 className="font-semibold mb-2">User-Friendly</h4>
-                    <p className="text-muted-foreground">Intuitive design that makes data extraction seamless.</p>
+                    <h4 className="font-semibold mb-2">Courthouse‑first workflow</h4>
+                    <p className="text-muted-foreground">Batch capture, quick instrument linking, offline-friendly flow, and auto reference numbers built for field work.</p>
+                  </div>
+                </div>
+                <div className="flex gap-4">
+                  <FileText className="h-6 w-6 text-primary flex-shrink-0 mt-1" />
+                  <div>
+                    <h4 className="font-semibold mb-2">Deliverables that landmen need</h4>
+                    <p className="text-muted-foreground">Export runsheets to Excel/CSV, bundle instrument packets, and hand off clean reports for clients and brokers.</p>
                   </div>
                 </div>
               </div>
