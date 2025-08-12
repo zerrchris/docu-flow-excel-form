@@ -481,12 +481,27 @@ const Home: React.FC = () => {
                   </ul>
                 </div>
                 <div className="order-1 lg:order-1">
-                  <img 
-                    src="/lovable-uploads/8ab8b967-6004-4e23-ada6-0fda1ef1a14b.png"
-                    alt="One-click AI analysis brain button in RunsheetPro populating fields"
-                    className="rounded-lg shadow-lg w-full"
-                    loading="lazy" decoding="async"
-                  />
+                  <div 
+                    className="relative group cursor-pointer"
+                    onMouseEnter={() => setHoveredImage("/lovable-uploads/8ab8b967-6004-4e23-ada6-0fda1ef1a14b.png")}
+                    onMouseLeave={() => setHoveredImage(null)}
+                    onClick={() => setEnlargedImage("/lovable-uploads/8ab8b967-6004-4e23-ada6-0fda1ef1a14b.png")}
+                  >
+                    <img 
+                      src="/lovable-uploads/8ab8b967-6004-4e23-ada6-0fda1ef1a14b.png"
+                      alt="One-click AI analysis brain button in RunsheetPro populating fields"
+                      className="rounded-lg shadow-lg w-full transition-all duration-300 group-hover:brightness-75"
+                      loading="lazy" decoding="async"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <div className="bg-black/50 backdrop-blur-sm rounded-full p-3 flex items-center gap-2 text-white">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                        </svg>
+                        <span className="text-sm font-medium">Click to enlarge</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
           </div>
