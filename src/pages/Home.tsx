@@ -519,9 +519,6 @@ const Home: React.FC = () => {
             <img src={extractorLogo} alt="RunsheetPro Logo" className="h-8 w-8" />
             <span className="font-semibold">RunsheetPro</span>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Professional document processing made simple. Powered by modern web technologies.
-          </p>
         </div>
       </footer>
 
