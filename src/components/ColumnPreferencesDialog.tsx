@@ -75,7 +75,7 @@ const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
           
           'Consideration': "Extract the purchase price or consideration paid for the transaction. Look for dollar amounts, 'for the sum of', 'consideration of', or similar language. Include both numerical and written amounts if present (e.g., '$50,000 (Fifty Thousand Dollars)'). Note if 'nominal consideration' like '$10.00 and other good and valuable consideration'.",
           
-          'Notes': "Extract any additional important information including: special conditions, restrictions, easements, life estates, mineral rights reservations, tax information, attorney names, notary information, witness names, recording fees, or any unusual circumstances mentioned in the document."
+          'Notes': "Extract any additional important information including: special conditions, restrictions, easements, life estates, mineral rights reservations, tax information, attorney names, notary information, witness names, recording fees, or any unusual circumstances mentioned in the document. For oil and gas leases, also extract: effective date, primary term and extension/renewal options, top lease indicators, Pugh clauses (vertical/horizontal severance), pooling and unitization provisions, continuous development obligations, depth limitations, shut-in royalty provisions, royalty rate and valuation method, surface use/entry restrictions, assignment/consent requirements, savings and force majeure clauses, and termination/expiration triggers."
         };
         
         setColumns(defaultColumns);
@@ -205,7 +205,7 @@ const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
       
       'Consideration': "Extract the purchase price or consideration paid for the transaction. Look for dollar amounts, 'for the sum of', 'consideration of', or similar language. Include both numerical and written amounts if present (e.g., '$50,000 (Fifty Thousand Dollars)'). Note if 'nominal consideration' like '$10.00 and other good and valuable consideration'.",
       
-      'Notes': "Extract any additional important information including: special conditions, restrictions, easements, life estates, mineral rights reservations, tax information, attorney names, notary information, witness names, recording fees, or any unusual circumstances mentioned in the document."
+      'Notes': "Extract any additional important information including: special conditions, restrictions, easements, life estates, mineral rights reservations, tax information, attorney names, notary information, witness names, recording fees, or any unusual circumstances mentioned in the document. For oil and gas leases, also extract: effective date, primary term and extension/renewal options, top lease indicators, Pugh clauses (vertical/horizontal severance), pooling and unitization provisions, continuous development obligations, depth limitations, shut-in royalty provisions, royalty rate and valuation method, surface use/entry restrictions, assignment/consent requirements, savings and force majeure clauses, and termination/expiration triggers."
     };
     
     setColumns(defaultColumns);
