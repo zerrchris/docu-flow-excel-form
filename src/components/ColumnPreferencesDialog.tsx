@@ -41,53 +41,42 @@ const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
         setColumns(preferences.columns);
         setColumnInstructions(preferences.column_instructions as Record<string, string>);
       } else {
-        // Use default columns if no preferences exist
-        const defaultColumns = ['Inst Number', 'Book/Page', 'Inst Type', 'Recording Date', 'Document Date', 'Grantor', 'Grantee', 'Legal Description', 'Notes'];
+        // Use comprehensive default columns for runsheet/title work when no preferences exist
+        const defaultColumns = [
+          'Inst Number',
+          'Book/Page',
+          'Inst Type',
+          'Recording Date',
+          'Document Date',
+          'Grantor',
+          'Grantee',
+          'Legal Description',
+          'Consideration',
+          'Notes'
+        ];
         
-        // Generate instructions using the same function used in EditableSpreadsheet
-        const generateDefaultInstruction = (columnName: string): string => {
-          const name = columnName.toLowerCase();
+        // Comprehensive detailed default instructions for runsheet/title work
+        const defaultInstructions: Record<string, string> = {
+          'Inst Number': "Extract the instrument number exactly as it appears on the document. This is typically a sequential number assigned by the recording office (e.g., '2023-001234', 'DOC#456789'). Look for labels like 'Instrument Number', 'Document Number', or 'Rec. No.'",
           
-          const suggestions: Record<string, string> = {
-            'grantor': "Extract the Grantor's name as it appears on the document and include the address if there is one",
-            'grantee': "Extract the Grantee's name as it appears on the document and include the address if there is one",
-            'inst number': "Extract the instrument number exactly as it appears on the document",
-            'instrument number': "Extract the instrument number exactly as it appears on the document",
-            'book': "Extract the book number from the book/page reference",
-            'page': "Extract the page number from the book/page reference",
-            'book/page': "Extract the complete book and page reference (e.g., Book 123, Page 456)",
-            'inst type': "Extract the type of instrument (e.g., Deed, Mortgage, Lien, etc.)",
-            'instrument type': "Extract the type of instrument (e.g., Deed, Mortgage, Lien, etc.)",
-            'recording date': "Extract the date when the document was recorded at the courthouse",
-            'record date': "Extract the date when the document was recorded at the courthouse",
-            'document date': "Extract the date the document was signed or executed",
-            'execution date': "Extract the date the document was signed or executed",
-            'legal description': "Extract the complete legal description of the property including lot, block, subdivision, and metes and bounds if present",
-            'property description': "Extract the complete legal description of the property including lot, block, subdivision, and metes and bounds if present",
-            'notes': "Extract any additional relevant information, special conditions, or remarks",
-            'comments': "Extract any additional relevant information, special conditions, or remarks"
-          };
+          'Book/Page': "Extract the complete book and page reference exactly as recorded (e.g., 'Book 123, Page 456', 'Vol. 45, Pg. 678', 'B1234/P5678'). This represents the physical or digital filing location in the county records.",
           
-          // Find exact match first
-          if (suggestions[name]) {
-            return suggestions[name];
-          }
+          'Inst Type': "Extract the specific type of legal instrument. Be precise with the document type: Warranty Deed, Quit Claim Deed, Special Warranty Deed, Mortgage, Deed of Trust, Release, Assignment, Lease, Easement, Lien, Certificate of Death, Affidavit, Power of Attorney, etc. Use the exact terminology from the document.",
           
-          // Find partial matches
-          for (const [key, suggestion] of Object.entries(suggestions)) {
-            if (name.includes(key) || key.includes(name)) {
-              return suggestion;
-            }
-          }
+          'Recording Date': "Extract the official date when the document was recorded at the courthouse or county recorder's office. This is usually stamped or printed on the document and may appear as 'Recorded', 'Filed', or 'Rec'd'. Format as MM/DD/YYYY.",
           
-          // Default suggestion
-          return `Extract the ${columnName} information exactly as it appears on the document`;
+          'Document Date': "Extract the date when the document was originally signed or executed by the parties. This appears in the document body and may be different from the recording date. Look for 'Dated', 'Executed', or similar language. Format as MM/DD/YYYY.",
+          
+          'Grantor': "Extract the full legal name(s) of the person(s) or entity transferring rights or interest. Include all grantors if multiple parties. Capture exactly as written, including titles (Mr., Mrs., Trustee, etc.), middle initials, and suffixes (Jr., Sr., III). Also include addresses if present.",
+          
+          'Grantee': "Extract the full legal name(s) of the person(s) or entity receiving rights or interest. Include all grantees if multiple parties. Capture exactly as written, including titles, middle initials, and suffixes. Include marital status if mentioned (single person, husband and wife, etc.) and addresses if present.",
+          
+          'Legal Description': "Extract the complete legal description of the property. This typically includes: Lot and Block numbers, Subdivision name, Section-Township-Range information, metes and bounds descriptions, and any other property identifiers. Capture the entire legal description verbatim as it's critical for property identification.",
+          
+          'Consideration': "Extract the purchase price or consideration paid for the transaction. Look for dollar amounts, 'for the sum of', 'consideration of', or similar language. Include both numerical and written amounts if present (e.g., '$50,000 (Fifty Thousand Dollars)'). Note if 'nominal consideration' like '$10.00 and other good and valuable consideration'.",
+          
+          'Notes': "Extract any additional important information including: special conditions, restrictions, easements, life estates, mineral rights reservations, tax information, attorney names, notary information, witness names, recording fees, or any unusual circumstances mentioned in the document."
         };
-        
-        const defaultInstructions: Record<string, string> = {};
-        defaultColumns.forEach(column => {
-          defaultInstructions[column] = generateDefaultInstruction(column);
-        });
         
         setColumns(defaultColumns);
         setColumnInstructions(defaultInstructions);
