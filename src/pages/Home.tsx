@@ -481,9 +481,10 @@ const Home: React.FC = () => {
                 </div>
                 <div className="order-1 lg:order-2">
                   <img 
-                    src="https://images.unsplash.com/photo-1581090464777-f3220bbe1b8b?w=600&h=400&fit=crop&crop=center"
-                    alt="Brain button for AI analysis and automatic field population"
+                    src="/lovable-uploads/8ab8b967-6004-4e23-ada6-0fda1ef1a14b.png"
+                    alt="One-click AI analysis brain button in RunsheetPro populating fields"
                     className="rounded-lg shadow-lg w-full"
+                    loading="lazy" decoding="async"
                   />
                 </div>
               </div>
