@@ -463,7 +463,7 @@ const Home: React.FC = () => {
 
               {/* Brain Button Analysis */}
               <div className="grid lg:grid-cols-2 gap-8 items-center">
-                <div className="order-2 lg:order-1">
+                <div className="order-2 lg:order-2">
                   <div className="flex items-center gap-4 mb-4">
                     <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
                       •
@@ -480,7 +480,7 @@ const Home: React.FC = () => {
                     <li>• Real-time document analysis results</li>
                   </ul>
                 </div>
-                <div className="order-1 lg:order-2">
+                <div className="order-1 lg:order-1">
                   <img 
                     src="/lovable-uploads/8ab8b967-6004-4e23-ada6-0fda1ef1a14b.png"
                     alt="One-click AI analysis brain button in RunsheetPro populating fields"
