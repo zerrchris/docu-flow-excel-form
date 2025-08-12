@@ -345,7 +345,7 @@ const Home: React.FC = () => {
                   <h4 className="text-2xl font-semibold">Batch Process Multiple Documents</h4>
                 </div>
                 <p className="text-muted-foreground text-lg mb-4">
-                  Upload multiple documents at once and let our AI analyze them one at a time in sequence. Each instrument is processed, inspected for accuracy, and automatically added to your runsheet. The next document automatically appears for review, and the process repeats until all your instruments are analyzed - creating a seamless, efficient workflow.
+                  Upload multiple documents at once and let our AI analyze them one at a time in sequence. Each instrument is processed, you inspect it for accuracy, and it is automatically added to your runsheet. The next document automatically appears for review, and the process repeats until all your instruments are analyzed - creating a seamless, efficient workflow.
                 </p>
                  <ul className="space-y-2 text-muted-foreground">
                    <li>• Upload multiple files simultaneously</li>
