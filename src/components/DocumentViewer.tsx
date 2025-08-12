@@ -34,12 +34,14 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
   };
 
   const handleWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
-    const panSpeed = 50;
-    setPanX(prev => prev - e.deltaX * panSpeed / 100);
-    setPanY(prev => prev - e.deltaY * panSpeed / 100);
+    // Allow normal scrolling; only intercept when user holds Ctrl/Cmd to zoom
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      const delta = -e.deltaY;
+      const zoomFactor = delta > 0 ? 1.1 : 0.9;
+      setZoom(prev => Math.max(0.25, Math.min(5, prev * zoomFactor)));
+    }
   };
-
   const getTouchDistance = (touches: React.TouchList) => {
     if (touches.length < 2) return 0;
     const touch1 = touches[0];
@@ -219,7 +221,9 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
                 alt="Document Preview" 
                 className="rounded-lg transition-transform duration-200 select-none cursor-grab active:cursor-grabbing w-full"
                 style={{ 
-                  transform: `scale(${zoom}) translate(${panX / zoom}px, ${panY / zoom}px)`
+                  transform: `scale(${zoom}) translate(${panX / zoom}px, ${panY / zoom}px)`,
+                  transformOrigin: 'center',
+                  willChange: 'transform'
                 }}
                 draggable={false}
                 onMouseDown={handleMouseDown}
