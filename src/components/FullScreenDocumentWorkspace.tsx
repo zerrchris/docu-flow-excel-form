@@ -4,13 +4,14 @@ import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
-import { X, ZoomIn, ZoomOut, RotateCcw, ExternalLink, ArrowLeft, Brain } from 'lucide-react';
+import { X, ZoomIn, ZoomOut, RotateCcw, ExternalLink, ArrowLeft, Brain, AlertTriangle } from 'lucide-react';
 import { DocumentService } from '@/services/documentService';
 import { ExtractionPreferencesService } from '@/services/extractionPreferences';
 import { useActiveRunsheet } from '@/hooks/useActiveRunsheet';
 import PDFViewer from './PDFViewer';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 interface FullScreenDocumentWorkspaceProps {
   runsheetId: string;
@@ -49,6 +50,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
   const [resizing, setResizing] = useState<{column: string, startX: number, startWidth: number} | null>(null);
   const [focusedColumn, setFocusedColumn] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [showAnalyzeWarning, setShowAnalyzeWarning] = useState(false);
   const tableRef = useRef<HTMLDivElement>(null);
   
   // Get runsheet management hook for auto-saving changes
@@ -496,7 +498,14 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
               <Button
                 variant="outline"
                 size="sm"
-                onClick={analyzeDocumentAndPopulateRow}
+                onClick={() => {
+                  const hasExisting = editableFields.some((c) => ((localRowData[c] || '').toString().trim() !== ''));
+                  if (hasExisting) {
+                    setShowAnalyzeWarning(true);
+                  } else {
+                    analyzeDocumentAndPopulateRow();
+                  }
+                }}
                 disabled={isAnalyzing}
                 className="gap-2 text-blue-600 hover:text-blue-700 border-blue-200 hover:border-blue-300"
                 title="Analyze document and extract data to populate row fields"
@@ -614,6 +623,28 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
           </div>
         </div>
       </Card>
+      <AlertDialog open={showAnalyzeWarning} onOpenChange={setShowAnalyzeWarning}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-warning" />
+              Replace Existing Data?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This row already contains data. Analyzing will replace existing values with extracted information.
+              Are you sure you want to continue?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowAnalyzeWarning(false)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={() => { setShowAnalyzeWarning(false); analyzeDocumentAndPopulateRow(); }}>
+              Replace Data
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
