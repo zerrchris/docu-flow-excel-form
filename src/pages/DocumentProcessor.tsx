@@ -406,21 +406,20 @@ const DocumentProcessor: React.FC = () => {
 
   // Load user preferences on component mount
   
-  // Update form state when columns change - but only if form is being actively used
+  // Update form state when columns change, but PRESERVE existing values
   useEffect(() => {
-    // Only reset form data if we actually have meaningful columns to work with
     if (columns.length === 0) return;
-    
-    // Create completely new form data object with only current columns
-    const newFormData: Record<string, string> = {};
-    columns.forEach(column => {
-      newFormData[column] = '';
+
+    setFormData(prev => {
+      const next: Record<string, string> = {};
+      // Keep any existing values for current columns; initialize new ones as empty
+      columns.forEach(column => {
+        next[column] = prev?.[column] ?? '';
+      });
+      return next;
     });
-    
-    // Force replace the entire form data object to ensure no old fields persist
-    setFormData(newFormData);
-    console.log('Form data completely replaced to match current columns:', columns);
-    console.log('Old form data cleared, new form data keys:', Object.keys(newFormData));
+
+    console.log('Form data synchronized to current columns (values preserved). Columns:', columns);
   }, [columns]);
 
   // Listen for force form data reset events from DataForm refresh button
