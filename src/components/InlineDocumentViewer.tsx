@@ -23,52 +23,83 @@ const InlineDocumentViewer: React.FC<InlineDocumentViewerProps> = ({
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
   const [isPdf, setIsPdf] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
-  useEffect(() => {
-    const loadDocument = async () => {
-      try {
-        setIsLoading(true);
+  const loadDocument = React.useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      console.log('🔧 InlineDocumentViewer: Loading document for runsheet:', runsheetId, 'rowIndex:', rowIndex);
+      const document = await DocumentService.getDocumentForRow(runsheetId, rowIndex);
+      console.log('🔧 InlineDocumentViewer: Document found:', document);
+      
+      if (document) {
+        const url = DocumentService.getDocumentUrl(document.file_path);
+        console.log('🔧 InlineDocumentViewer: Generated URL:', url);
+        console.log('🔧 InlineDocumentViewer: File path from document:', document.file_path);
+        
+        setDocumentUrl(url);
+        setDocumentName(document.original_filename);
+        setIsPdf(document.content_type === 'application/pdf' || document.original_filename.toLowerCase().endsWith('.pdf'));
         setError(null);
+      } else {
+        // Check if there's a pending document for this row
+        console.log('🔧 InlineDocumentViewer: No document found, checking pending documents');
+        const pendingDocs = JSON.parse(sessionStorage.getItem('pendingDocuments') || '[]');
+        const pendingDoc = pendingDocs.find((doc: any) => doc.rowIndex === rowIndex);
         
-        console.log('🔧 InlineDocumentViewer: Loading document for runsheet:', runsheetId, 'rowIndex:', rowIndex);
-        const document = await DocumentService.getDocumentForRow(runsheetId, rowIndex);
-        console.log('🔧 InlineDocumentViewer: Document found:', document);
-        
-        if (document) {
-          const url = DocumentService.getDocumentUrl(document.file_path);
-          console.log('🔧 InlineDocumentViewer: Generated URL:', url);
-          console.log('🔧 InlineDocumentViewer: File path from document:', document.file_path);
-          
+        if (pendingDoc) {
+          console.log('🔧 InlineDocumentViewer: Found pending document:', pendingDoc);
+          const url = `https://xnpmrafjjqsissbtempj.supabase.co/storage/v1/object/public/documents/${pendingDoc.storagePath}`;
           setDocumentUrl(url);
-          setDocumentName(document.original_filename);
-          setIsPdf(document.content_type === 'application/pdf' || document.original_filename.toLowerCase().endsWith('.pdf'));
+          setDocumentName(pendingDoc.fileName);
+          setIsPdf(pendingDoc.fileName.toLowerCase().endsWith('.pdf'));
+          setError(null);
         } else {
-          // Check if there's a pending document for this row
-          console.log('🔧 InlineDocumentViewer: No document found, checking pending documents');
-          const pendingDocs = JSON.parse(sessionStorage.getItem('pendingDocuments') || '[]');
-          const pendingDoc = pendingDocs.find((doc: any) => doc.rowIndex === rowIndex);
-          
-          if (pendingDoc) {
-            console.log('🔧 InlineDocumentViewer: Found pending document:', pendingDoc);
-            const url = `https://xnpmrafjjqsissbtempj.supabase.co/storage/v1/object/public/documents/${pendingDoc.storagePath}`;
-            setDocumentUrl(url);
-            setDocumentName(pendingDoc.fileName);
-            setIsPdf(pendingDoc.fileName.toLowerCase().endsWith('.pdf'));
-          } else {
-            console.log('🔧 InlineDocumentViewer: No document or pending document found for runsheet:', runsheetId, 'rowIndex:', rowIndex);
-            setError('No document found for this row');
+          console.log('🔧 InlineDocumentViewer: No document or pending document found for runsheet:', runsheetId, 'rowIndex:', rowIndex);
+          setError('No document found for this row');
+          // Soft retry a few times in case the record is being created asynchronously
+          if (retryCount < 3) {
+            setTimeout(() => setRetryCount((c) => c + 1), 600);
           }
         }
-      } catch (error) {
-        console.error('🔧 InlineDocumentViewer: Error loading document:', error);
-        setError('Failed to load document');
-      } finally {
-        setIsLoading(false);
+      }
+    } catch (error) {
+      console.error('🔧 InlineDocumentViewer: Error loading document:', error);
+      setError('Failed to load document');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [runsheetId, rowIndex, retryCount]);
+
+  // Initial load and reload when runsheet/row changes
+  useEffect(() => {
+    loadDocument();
+    // Reset retry when target changes
+    setRetryCount(0);
+  }, [loadDocument]);
+
+  // Retry trigger
+  useEffect(() => {
+    if (retryCount > 0 && retryCount <= 3) {
+      loadDocument();
+    }
+  }, [retryCount, loadDocument]);
+
+  // Listen for document creation events to refresh inline viewer
+  useEffect(() => {
+    const handler = (event: CustomEvent) => {
+      const { runsheetId: evtId, rowIndex: evtRow } = (event as any).detail || {};
+      if (!evtId && evtRow === undefined) return;
+      if (evtId === runsheetId && evtRow === rowIndex) {
+        setRetryCount(0);
+        loadDocument();
       }
     };
-
-    loadDocument();
-  }, [runsheetId, rowIndex]);
+    window.addEventListener('documentRecordCreated', handler as EventListener);
+    return () => window.removeEventListener('documentRecordCreated', handler as EventListener);
+  }, [runsheetId, rowIndex, loadDocument]);
 
   const handleZoomIn = () => {
     setZoom(prev => Math.min(prev + 0.25, 3));
