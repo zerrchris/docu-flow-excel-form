@@ -376,10 +376,15 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         const payload = (event as any).detail?.data as Record<string, string>;
         if (!payload) return;
 
-        // Determine any new columns present in payload (ignore Storage Path)
-        const newCols = Object.keys(payload).filter(
-          (c) => !columns.includes(c) && c !== 'Storage Path'
-        );
+        // Determine any new columns present in payload, ignoring non-data/system fields
+        const newCols = Object.keys(payload).filter((c) => {
+          if (columns.includes(c)) return false;
+          // Ignore system/meta fields and filename helper
+          if (c === 'Storage Path' || c === 'Document File Name') return false;
+          const val = (payload[c] || '').toString().trim();
+          // Only add columns that actually have a value to prevent reviving deleted columns
+          return val !== '';
+        });
 
         if (newCols.length) {
           const updated = [...columns, ...newCols];
