@@ -45,7 +45,14 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
   onResetDocument,
   isAnalyzing
 }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState<boolean>(() => {
+    try {
+      const saved = sessionStorage.getItem('documentFrameOpen');
+      return saved ? JSON.parse(saved) : true; // default open to avoid accidental collapse
+    } catch {
+      return true;
+    }
+  });
   const [isUploading, setIsUploading] = useState(false);
   const [hasAddedToSpreadsheet, setHasAddedToSpreadsheet] = useState(false);
   const { toast } = useToast();
@@ -63,6 +70,21 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
       window.removeEventListener('mobileDocumentSelected', handleMobileDocumentSelected as EventListener);
     };
   }, [onFileSelect]);
+
+  // Persist and restore expanded state across refreshes/remounts
+  React.useEffect(() => {
+    try {
+      sessionStorage.setItem('documentFrameOpen', JSON.stringify(isExpanded));
+    } catch {}
+  }, [isExpanded]);
+
+  // Auto-open when a file is selected or when form has data (helps after draft restore)
+  React.useEffect(() => {
+    const hasData = formData && Object.values(formData).some(v => (v || '').toString().trim() !== '');
+    if ((file || hasData) && !isExpanded) {
+      setIsExpanded(true);
+    }
+  }, [file, formData, isExpanded]);
 
   // Wrapper to ensure analyze is called without parameters for single document processing
   const handleAnalyze = () => {
