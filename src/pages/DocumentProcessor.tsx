@@ -1978,9 +1978,53 @@ Image: [base64 image data]`;
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Configure extraction instructions for each column below:
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                Configure extraction instructions for each column below:
+              </p>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={async () => {
+                  try {
+                    const prefs = await ExtractionPreferencesService.getDefaultPreferences();
+                    const defaults = (prefs?.column_instructions as Record<string, string>) || DEFAULT_EXTRACTION_INSTRUCTIONS;
+                    let applied = 0;
+                    setColumnInstructions(prev => {
+                      const next = { ...prev } as Record<string, string>;
+                      missingColumns.forEach(col => {
+                        const suggestion = defaults[col] || DEFAULT_EXTRACTION_INSTRUCTIONS[col];
+                        if (suggestion && (!next[col] || next[col].trim() === '')) {
+                          next[col] = suggestion;
+                          applied++;
+                        }
+                      });
+                      return next;
+                    });
+                    if (applied > 0) {
+                      toast({
+                        title: "Suggestions applied",
+                        description: `Added suggested instructions for ${applied} column${applied === 1 ? '' : 's'}.`,
+                      });
+                    } else {
+                      toast({
+                        title: "No suggestions available",
+                        description: "Could not find suggestions for the missing columns.",
+                      });
+                    }
+                  } catch (e) {
+                    console.error('Auto-fill suggestions error', e);
+                    toast({
+                      title: "Auto-fill failed",
+                      description: "We couldn't fetch suggestions. Please try again or enter instructions manually.",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+              >
+                Auto-fill suggested
+              </Button>
+            </div>
             
             <div className="space-y-3">
               {missingColumns.map((column) => (
