@@ -2779,12 +2779,16 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   useEffect(() => {
     if (selectedCell && !editingCell) {
       const handleGlobalKeyDown = (e: KeyboardEvent) => {
+        if (e.defaultPrevented) return;
+        const target = e.target as HTMLElement | null;
+        if (target && target.closest('input, textarea, select, [contenteditable="true"], [role="textbox"]')) {
+          return; // don't steal typing from form fields
+        }
         if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
           startEditing(selectedCell.rowIndex, selectedCell.column, e.key);
           e.preventDefault();
         }
       };
-      
       document.addEventListener('keydown', handleGlobalKeyDown);
       return () => document.removeEventListener('keydown', handleGlobalKeyDown);
     }
@@ -3577,6 +3581,11 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   // Keyboard shortcuts for copy/paste
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.defaultPrevented) return;
+      const target = e.target as HTMLElement | null;
+      if (target && target.closest('input, textarea, select, [contenteditable="true"], [role="textbox"]')) {
+        return; // allow native copy/paste inside form fields
+      }
       if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
         copySelection();
         e.preventDefault();
@@ -3585,7 +3594,6 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         e.preventDefault();
       }
     };
-    
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [copySelection, pasteSelection]);
