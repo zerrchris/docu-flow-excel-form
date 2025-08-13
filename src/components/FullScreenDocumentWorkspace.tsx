@@ -481,7 +481,13 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-background flex flex-col">
+    <div
+      className="fixed inset-0 z-50 bg-background flex flex-col overscroll-none touch-none"
+      role="dialog"
+      aria-modal="true"
+      onWheel={(e) => { e.preventDefault(); e.stopPropagation(); }}
+      onTouchMove={(e) => { e.preventDefault(); e.stopPropagation(); }}
+    >
       {/* Document Area */}
       <div className="flex-1 flex flex-col min-h-0">
         {/* Header with controls */}
