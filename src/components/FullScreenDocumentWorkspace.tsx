@@ -61,12 +61,35 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
   const { updateRunsheet, activeRunsheet } = useActiveRunsheet();
   const { toast } = useToast();
   
-  // Lock page scroll while workspace is open
+  // Lock page scroll while workspace is open (robust, preserves position)
   useEffect(() => {
-    const originalOverflow = document.body.style.overflow;
+    const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
+    const scrollX = window.scrollX || document.documentElement.scrollLeft || 0;
+
+    const prev = {
+      position: document.body.style.position,
+      top: document.body.style.top,
+      left: document.body.style.left,
+      width: document.body.style.width,
+      overflow: document.body.style.overflow,
+      htmlOverflow: document.documentElement.style.overflow,
+    };
+
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.left = `-${scrollX}px`;
+    document.body.style.width = '100%';
     document.body.style.overflow = 'hidden';
+
     return () => {
-      document.body.style.overflow = originalOverflow;
+      document.body.style.position = prev.position;
+      document.body.style.top = prev.top;
+      document.body.style.left = prev.left;
+      document.body.style.width = prev.width;
+      document.body.style.overflow = prev.overflow;
+      document.documentElement.style.overflow = prev.htmlOverflow || '';
+      window.scrollTo(scrollX, scrollY);
     };
   }, []);
   
