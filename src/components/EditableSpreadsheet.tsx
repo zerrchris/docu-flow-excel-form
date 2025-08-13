@@ -216,6 +216,16 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [documentMap, setDocumentMap] = useState<Map<number, DocumentRecord>>(new Map());
   const [currentRunsheetId, setCurrentRunsheetId] = useState<string | null>(null);
 
+  // Resolve a reliable runsheet ID for document operations (inline viewer, linking)
+  const effectiveRunsheetId = currentRunsheetId || currentRunsheet?.id || (() => {
+    try {
+      const stored = localStorage.getItem('activeRunsheet');
+      return stored ? JSON.parse(stored).id : '';
+    } catch (e) {
+      return '';
+    }
+  })();
+
   // Helper function to update document map and notify parent
   const updateDocumentMap = (newMap: Map<number, DocumentRecord>) => {
     setDocumentMap(newMap);
@@ -4531,7 +4541,7 @@ ${extractionFields}`
                       <TableRow>
                         <TableCell colSpan={columns.length + (showDocumentFileNameColumn ? 1 : 0) + 1} className="p-0 border-0">
                           <InlineDocumentViewer
-                            runsheetId={currentRunsheetId || ''}
+                            runsheetId={effectiveRunsheetId}
                             rowIndex={rowIndex}
                             onClose={() => setInlineViewerRow(null)}
                           />
@@ -4744,7 +4754,7 @@ ${extractionFields}`
                        <div className="bg-background border border-border rounded-md p-2 h-full min-h-[60px] flex flex-col gap-1 overflow-visible">
                          <DocumentLinker
                            key={`${rowIndex}-${row['Document File Name']}`}
-                           runsheetId={currentRunsheetId || ''}
+                           runsheetId={effectiveRunsheetId}
                            rowIndex={rowIndex}
                            currentFilename={documentMap.get(rowIndex)?.stored_filename || row['Document File Name']}
                            documentPath={(() => {
