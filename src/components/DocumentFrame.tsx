@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ChevronDown, ChevronUp, GripHorizontal } from 'lucide-react';
+import { ChevronDown, ChevronUp, GripHorizontal, Maximize2, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { uploadFileToStorage } from '@/utils/fileStorage';
 import DataForm from './DataForm';
@@ -12,6 +12,7 @@ import DocumentUpload from './DocumentUpload';
 import RealtimeVoiceInput from './RealtimeVoiceInput';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
+import ViewportPortal from './ViewportPortal';
 
 interface DocumentFrameProps {
   file: File | null;
@@ -55,6 +56,7 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
   });
   const [isUploading, setIsUploading] = useState(false);
   const [hasAddedToSpreadsheet, setHasAddedToSpreadsheet] = useState(false);
+  const [isFullScreenOpen, setIsFullScreenOpen] = useState(false);
   const { toast } = useToast();
 
   // Listen for mobile document selection events
@@ -92,6 +94,50 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
     onAnalyze();
   };
 
+  // Hard-lock background scroll when fullscreen overlay is open
+  React.useEffect(() => {
+    if (!isFullScreenOpen) return;
+    const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
+    const scrollX = window.scrollX || document.documentElement.scrollLeft || 0;
+
+    const prev = {
+      position: document.body.style.position,
+      top: document.body.style.top,
+      left: document.body.style.left,
+      width: document.body.style.width,
+      overflow: document.body.style.overflow,
+      htmlOverflow: document.documentElement.style.overflow,
+    };
+
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.left = `-${scrollX}px`;
+    document.body.style.width = '100%';
+    document.body.style.overflow = 'hidden';
+
+    const prevent = (e: Event) => e.preventDefault();
+    window.addEventListener('wheel', prevent, { passive: false });
+    window.addEventListener('touchmove', prevent, { passive: false });
+    const onKey = (e: KeyboardEvent) => {
+      const keys = ['PageUp', 'PageDown', 'Home', 'End', 'ArrowDown', 'ArrowUp', ' '];
+      if (keys.includes(e.key)) e.preventDefault();
+    };
+    window.addEventListener('keydown', onKey);
+
+    return () => {
+      window.removeEventListener('wheel', prevent as any);
+      window.removeEventListener('touchmove', prevent as any);
+      window.removeEventListener('keydown', onKey);
+      document.body.style.position = prev.position;
+      document.body.style.top = prev.top;
+      document.body.style.left = prev.left;
+      document.body.style.width = prev.width;
+      document.body.style.overflow = prev.overflow;
+      document.documentElement.style.overflow = prev.htmlOverflow || '';
+      window.scrollTo(scrollX, scrollY);
+    };
+  }, [isFullScreenOpen]);
   // Handle voice data extraction
   const handleVoiceDataExtracted = (extractedData: Record<string, string>) => {
     // Update form data with extracted voice data
@@ -151,7 +197,8 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
   };
 
   return (
-    <Card className="overflow-hidden">
+    <>
+      <Card className="overflow-hidden">
       <Collapsible open={isExpanded} onOpenChange={(open) => {
         setIsExpanded(open);
         // When expanding, just ensure the DataForm component refreshes to show current fields
@@ -185,6 +232,12 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
             )}
           </Button>
         </CollapsibleTrigger>
+        <div className="px-4 pb-2 flex justify-end">
+          <Button variant="outline" size="sm" onClick={() => setIsFullScreenOpen(true)} className="gap-2">
+            <Maximize2 className="h-4 w-4" />
+            Open Full Screen
+          </Button>
+        </div>
 
         <CollapsibleContent className="data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
           <div className="border-t">
@@ -249,7 +302,81 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
         </CollapsibleContent>
       </Collapsible>
     </Card>
+    {isFullScreenOpen && (
+      <ViewportPortal>
+        <div
+          className="fixed inset-0 z-50 bg-background flex flex-col overscroll-none"
+          role="dialog"
+          aria-modal="true"
+          onWheel={(e) => { e.preventDefault(); e.stopPropagation(); }}
+          onTouchMove={(e) => { e.preventDefault(); e.stopPropagation(); }}
+        >
+          <div className="flex items-center justify-between p-4 border-b bg-muted/30">
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-semibold">Single Document Processing</h3>
+              {file && <span className="text-sm text-muted-foreground truncate max-w-[40vw]">{file.name}</span>}
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => setIsFullScreenOpen(false)}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <div className="flex-1 min-h-0">
+            <ResizablePanelGroup direction="horizontal" className="w-full h-full">
+              <ResizablePanel defaultSize={33} minSize={25} maxSize={75}>
+                <div className="h-full border-r border-border">
+                  <div className="p-6 h-full overflow-auto">
+                    <div className="space-y-4">
+                      <h4 className="text-md font-medium text-foreground">Document Data</h4>
+                      <RealtimeVoiceInput
+                        fields={fields}
+                        columnInstructions={columnInstructions || {}}
+                        onDataExtracted={handleVoiceDataExtracted}
+                      />
+                      <DataForm 
+                        fields={fields}
+                        formData={formData}
+                        onChange={onChange}
+                        onAnalyze={handleAnalyze}
+                        onCancelAnalysis={onCancelAnalysis}
+                        onAddToSpreadsheet={handleAddToSpreadsheet}
+                        onResetDocument={() => {
+                          setHasAddedToSpreadsheet(false);  // Reset state for new upload
+                          onResetDocument();
+                        }}
+                        isAnalyzing={isAnalyzing}
+                        isUploading={isUploading}
+                        hasAddedToSpreadsheet={hasAddedToSpreadsheet}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </ResizablePanel>
+              
+              <ResizableHandle withHandle />
+              
+              <ResizablePanel defaultSize={67}>
+                <div className="h-full">
+                  {file ? (
+                    <DocumentViewer file={file} previewUrl={previewUrl} />
+                  ) : (
+                    <div className="h-full p-6 space-y-4">
+                      <DocumentUpload 
+                        onFileSelect={onFileSelect} 
+                        onMultipleFilesSelect={onMultipleFilesSelect}
+                        selectedFile={file}
+                        allowMultiple={true}
+                      />
+                    </div>
+                  )}
+                </div>
+              </ResizablePanel>
+            </ResizablePanelGroup>
+          </div>
+        </div>
+      </ViewportPortal>
+    )}
+    </>
   );
-};
 
 export default DocumentFrame;
