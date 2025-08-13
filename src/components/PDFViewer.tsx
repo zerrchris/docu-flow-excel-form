@@ -32,6 +32,7 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ file, previewUrl }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   // PDF event handlers
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
@@ -80,6 +81,16 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ file, previewUrl }) => {
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
+
+  // Wheel handler to keep scroll inside the viewer on Mac trackpads
+  const handleContainerWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const el = e.currentTarget;
+    // Apply deltas to the scrollable container
+    el.scrollTop += e.deltaY;
+    el.scrollLeft += e.deltaX;
+  };
 
   // Download function
   const handleDownload = () => {
@@ -220,7 +231,7 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ file, previewUrl }) => {
           )}
           
           {!loading && !error && (
-            <div className="w-full h-full overflow-scroll overscroll-contain pdf-scrollable">
+            <div ref={scrollRef} className="w-full h-full overflow-scroll overscroll-none pdf-scrollable" onWheel={handleContainerWheel}>
               <div className="flex justify-center p-4" style={{ minWidth: '150%', minHeight: '150%' }}>
                 <Document
                   file={previewUrl}
