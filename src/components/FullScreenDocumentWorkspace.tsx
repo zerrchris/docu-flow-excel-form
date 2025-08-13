@@ -61,6 +61,15 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
   const { updateRunsheet, activeRunsheet } = useActiveRunsheet();
   const { toast } = useToast();
   
+  // Lock page scroll while workspace is open
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, []);
+  
   // Filter out Document File Name column for editing
   const editableFields = fields.filter(field => field !== 'Document File Name');
   // Set initial focus to first column when component mounts
