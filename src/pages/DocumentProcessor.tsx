@@ -1445,6 +1445,23 @@ Image: [base64 image data]`;
     // Also push the row into the spreadsheet component directly
     window.dispatchEvent(new CustomEvent('externalAddRow', { detail: { data: finalData } }));
 
+    // One-time listener to learn which row index the spreadsheet actually used
+    const handleExternalRowPlaced = (event: CustomEvent) => {
+      const detail = (event as any).detail || {};
+      // Correlate using storagePath to avoid mismatches when multiple adds happen
+      if (detail?.storagePath && detail.storagePath === finalData['Storage Path']) {
+        window.removeEventListener('externalRowPlaced', handleExternalRowPlaced as EventListener);
+        const placedRunsheetId: string | undefined = detail.runsheetId;
+        const placedRowIndex: number | undefined = detail.rowIndex;
+        if (placedRunsheetId && placedRowIndex !== undefined) {
+          console.log('🔧 Received externalRowPlaced event:', detail);
+          // Ensure the document record points to the correct row in the correct runsheet
+          createDocumentRecord(finalData, placedRowIndex, placedRunsheetId);
+        }
+      }
+    };
+    window.addEventListener('externalRowPlaced', handleExternalRowPlaced as EventListener);
+
     // Auto-save the runsheet after adding data to show filename options
     setTimeout(async () => {
       console.log('🔧 AUTO_SAVE: Starting auto-save after add to spreadsheet');
@@ -1564,8 +1581,12 @@ Image: [base64 image data]`;
     setFormData(emptyFormData);
   };
 
-  // Helper function to create a document record in the database
-   const createDocumentRecord = async (data: Record<string, string>, rowIndex: number) => {
+  // Helper function to create or correct a document record in the database
+  const createDocumentRecord = async (
+    data: Record<string, string>,
+    rowIndex: number,
+    forcedRunsheetId?: string
+  ) => {
     console.log('🔧 CREATE_DOC_RECORD: createDocumentRecord called');
     console.log('🔧 CREATE_DOC_RECORD: data:', data);
     console.log('🔧 CREATE_DOC_RECORD: rowIndex:', rowIndex);
@@ -1577,8 +1598,8 @@ Image: [base64 image data]`;
         return;
       }
 
-      // Get the current runsheet ID from active runsheet, location state, or spreadsheet data
-      let runsheetId = activeRunsheet?.id || location.state?.runsheetId;
+      // Prefer the explicitly provided runsheet ID
+      let runsheetId = forcedRunsheetId || activeRunsheet?.id || location.state?.runsheetId;
       
       // If no runsheet ID from context, try to get it from the current spreadsheet
       if (!runsheetId) {
@@ -1620,8 +1641,6 @@ Image: [base64 image data]`;
       
       console.log('🔧 CREATE_DOC_RECORD: activeRunsheet?.id:', activeRunsheet?.id);
       console.log('🔧 CREATE_DOC_RECORD: location.state?.runsheetId:', location.state?.runsheetId);
-      console.log('🔧 CREATE_DOC_RECORD: location.state full object:', location.state);
-      console.log('🔧 CREATE_DOC_RECORD: activeRunsheet full object:', activeRunsheet);
       console.log('🔧 CREATE_DOC_RECORD: Final runsheetId:', runsheetId);
       
       if (!runsheetId || runsheetId.startsWith('temp-')) {
@@ -1650,8 +1669,42 @@ Image: [base64 image data]`;
       const fileName = data['Document File Name'] || file?.name || 'Unknown Document';
       
       if (storagePath) {
-        console.log('🔧 DocumentProcessor: Creating document record with runsheet ID:', runsheetId);
+        console.log('🔧 DocumentProcessor: Ensuring document record with runsheet ID:', runsheetId);
+
+        // Idempotency: check if the record for this storagePath already exists for this runsheet
+        const { data: existing, error: existingErr } = await supabase
+          .from('documents')
+          .select('id, row_index')
+          .eq('runsheet_id', runsheetId)
+          .eq('file_path', storagePath)
+          .maybeSingle();
+
+        if (existingErr) {
+          console.error('Error checking for existing document record:', existingErr);
+        }
+
+        if (existing) {
+          // Update row index if it changed
+          if (existing.row_index !== rowIndex) {
+            const { error: updateErr } = await supabase
+              .from('documents')
+              .update({ row_index: rowIndex, updated_at: new Date().toISOString() })
+              .eq('id', existing.id);
+            if (updateErr) {
+              console.error('Error updating document row_index:', updateErr);
+            } else {
+              console.log('🔧 Updated document row_index to', rowIndex);
+            }
+          }
+
+          // Notify listeners regardless
+          window.dispatchEvent(new CustomEvent('documentRecordCreated', {
+            detail: { runsheetId, rowIndex }
+          }));
+          return;
+        }
         
+        // Insert new record
         const { error } = await supabase
           .from('documents')
           .insert({
@@ -1661,28 +1714,16 @@ Image: [base64 image data]`;
             file_path: storagePath,
             stored_filename: fileName,
             original_filename: fileName,
-            content_type: 'application/pdf' // Default for most documents
+            content_type: file?.type || 'application/pdf'
           });
         
         if (error) {
           console.error('Error creating document record:', error);
         } else {
           console.log('Document record created successfully for row', rowIndex);
-          
           // Dispatch a custom event to notify the spreadsheet to refresh documents
-          console.log('🚨 DocumentProcessor: DISPATCHING EVENT! runsheetId:', runsheetId, 'rowIndex:', rowIndex);
-          console.log('🔧 DocumentProcessor: Dispatching documentRecordCreated event with runsheetId:', runsheetId, 'rowIndex:', rowIndex);
-          console.log('🔧 DocumentProcessor: Also including all possible IDs - activeRunsheet?.id:', activeRunsheet?.id, 'location.state?.runsheetId:', location.state?.runsheetId);
           window.dispatchEvent(new CustomEvent('documentRecordCreated', {
-            detail: { 
-              runsheetId, 
-              rowIndex,
-              allPossibleIds: {
-                activeRunsheetId: activeRunsheet?.id,
-                locationStateId: location.state?.runsheetId,
-                finalRunsheetId: runsheetId
-              }
-            }
+            detail: { runsheetId, rowIndex }
           }));
         }
       }

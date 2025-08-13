@@ -420,11 +420,34 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             return isEmpty && !hasDoc;
           });
 
+          // Decide target index and update data
           if (firstEmpty >= 0) {
             const next = [...prev];
             next[firstEmpty] = row;
+            // Inform listeners which row was used
+            setTimeout(() => {
+              window.dispatchEvent(new CustomEvent('externalRowPlaced', {
+                detail: {
+                  rowIndex: firstEmpty,
+                  runsheetId: effectiveRunsheetId,
+                  storagePath: payload['Storage Path'] || null,
+                },
+              }));
+            }, 0);
             return next;
           }
+
+          const appendedIndex = prev.length;
+          // Inform listeners which row was used (appended)
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('externalRowPlaced', {
+              detail: {
+                rowIndex: appendedIndex,
+                runsheetId: effectiveRunsheetId,
+                storagePath: payload['Storage Path'] || null,
+              },
+            }));
+          }, 0);
           return [...prev, row];
         });
 
