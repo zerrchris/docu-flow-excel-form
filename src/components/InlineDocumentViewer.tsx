@@ -22,6 +22,10 @@ const InlineDocumentViewer: React.FC<InlineDocumentViewerProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
+  const [panX, setPanX] = useState(0);
+  const [panY, setPanY] = useState(0);
+  const [isDraggingImage, setIsDraggingImage] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [isPdf, setIsPdf] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
 
@@ -118,6 +122,28 @@ const InlineDocumentViewer: React.FC<InlineDocumentViewerProps> = ({
     setRotation(prev => (prev + 90) % 360);
   };
 
+  // Trackpad/two-finger pan inside the viewer
+  const handleImageWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setPanX(prev => prev - e.deltaX);
+    setPanY(prev => prev - e.deltaY);
+  };
+
+  const handleImageMouseDown = (e: React.MouseEvent) => {
+    setIsDraggingImage(true);
+    setDragStart({ x: e.clientX - panX, y: e.clientY - panY });
+  };
+
+  const handleImageMouseMove = (e: React.MouseEvent) => {
+    if (!isDraggingImage) return;
+    e.preventDefault();
+    setPanX(e.clientX - dragStart.x);
+    setPanY(e.clientY - dragStart.y);
+  };
+
+  const handleImageMouseUp = () => setIsDraggingImage(false);
+
   const openInNewWindow = () => {
     if (documentUrl) {
       window.open(documentUrl, '_blank');
@@ -190,17 +216,23 @@ const InlineDocumentViewer: React.FC<InlineDocumentViewerProps> = ({
           <PDFViewer file={null} previewUrl={documentUrl} />
         ) : (
           <div 
-            className="h-full overflow-auto overscroll-none bg-muted/10 flex items-center justify-center"
-            onWheel={(e) => e.stopPropagation()}
+            className="h-full overflow-auto overscroll-contain bg-muted/10 flex items-center justify-center"
+            onWheel={handleImageWheel}
           >
             <img
               src={documentUrl}
               alt={documentName}
-              className="max-w-full max-h-full object-contain transition-transform duration-200"
+              className="max-w-full max-h-full object-contain transition-transform duration-200 select-none cursor-grab active:cursor-grabbing"
               style={{
-                transform: `scale(${zoom}) rotate(${rotation}deg)`,
-                transformOrigin: 'center'
+                transform: `translate(${panX / zoom}px, ${panY / zoom}px) scale(${zoom}) rotate(${rotation}deg)`,
+                transformOrigin: 'center',
+                willChange: 'transform'
               }}
+              draggable={false}
+              onMouseDown={handleImageMouseDown}
+              onMouseMove={handleImageMouseMove}
+              onMouseUp={handleImageMouseUp}
+              onMouseLeave={handleImageMouseUp}
               onError={() => setError('Failed to load image')}
             />
           </div>
