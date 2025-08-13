@@ -51,6 +51,10 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
   const [focusedColumn, setFocusedColumn] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [showAnalyzeWarning, setShowAnalyzeWarning] = useState(false);
+  const [panX, setPanX] = useState(0);
+  const [panY, setPanY] = useState(0);
+  const [isDraggingImage, setIsDraggingImage] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const tableRef = useRef<HTMLDivElement>(null);
   
   // Get runsheet management hook for auto-saving changes
@@ -252,6 +256,28 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
       window.open(documentUrl, '_blank');
     }
   };
+
+  // Image pan and wheel handlers for Mac trackpad scroll
+  const handleImageWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setPanX(prev => prev - e.deltaX);
+    setPanY(prev => prev - e.deltaY);
+  };
+
+  const handleImageMouseDown = (e: React.MouseEvent) => {
+    setIsDraggingImage(true);
+    setDragStart({ x: e.clientX - panX, y: e.clientY - panY });
+  };
+
+  const handleImageMouseMove = (e: React.MouseEvent) => {
+    if (!isDraggingImage) return;
+    e.preventDefault();
+    setPanX(e.clientX - dragStart.x);
+    setPanY(e.clientY - dragStart.y);
+  };
+
+  const handleImageMouseUp = () => setIsDraggingImage(false);
 
   const analyzeDocumentAndPopulateRow = async () => {
     if (!documentUrl || isAnalyzing) return;
@@ -471,16 +497,22 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
           ) : isPdf ? (
             <PDFViewer file={null} previewUrl={documentUrl} />
           ) : (
-            <ScrollArea className="h-full">
-              <div className="min-h-full bg-muted/10 flex items-center justify-center p-4">
+            <ScrollArea className="h-full overscroll-contain">
+              <div className="min-h-full bg-muted/10 flex items-center justify-center p-4" onWheel={handleImageWheel}>
                 <img
                   src={documentUrl}
                   alt={documentName}
-                  className="max-w-full object-contain transition-transform duration-200"
+                  className="max-w-full object-contain transition-transform duration-200 select-none cursor-grab active:cursor-grabbing"
                   style={{
-                    transform: `scale(${zoom}) rotate(${rotation}deg)`,
-                    transformOrigin: 'center'
+                    transform: `translate(${panX / zoom}px, ${panY / zoom}px) scale(${zoom}) rotate(${rotation}deg)`,
+                    transformOrigin: 'center',
+                    willChange: 'transform'
                   }}
+                  draggable={false}
+                  onMouseDown={handleImageMouseDown}
+                  onMouseMove={handleImageMouseMove}
+                  onMouseUp={handleImageMouseUp}
+                  onMouseLeave={handleImageMouseUp}
                   onError={() => setError('Failed to load image')}
                 />
               </div>

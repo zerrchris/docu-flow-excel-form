@@ -220,7 +220,7 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ file, previewUrl }) => {
           )}
           
           {!loading && !error && (
-            <div className="w-full h-full overflow-scroll pdf-scrollable">
+            <div className="w-full h-full overflow-scroll overscroll-contain pdf-scrollable">
               <div className="flex justify-center p-4" style={{ minWidth: '150%', minHeight: '150%' }}>
                 <Document
                   file={previewUrl}

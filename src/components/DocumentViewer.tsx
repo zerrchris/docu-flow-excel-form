@@ -34,13 +34,19 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
   };
 
   const handleWheel = (e: React.WheelEvent) => {
-    // Allow normal scrolling; only intercept when user holds Ctrl/Cmd to zoom
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
+      e.stopPropagation();
       const delta = -e.deltaY;
-      const zoomFactor = delta > 0 ? 1.1 : 0.9;
+      const zoomFactor = delta > 0 ? 1.08 : 0.92;
       setZoom(prev => Math.max(0.25, Math.min(5, prev * zoomFactor)));
+      return;
     }
+    // Two-finger scroll pans the image instead of scrolling the page
+    e.preventDefault();
+    e.stopPropagation();
+    setPanX(prev => prev - e.deltaX);
+    setPanY(prev => prev - e.deltaY);
   };
   const getTouchDistance = (touches: React.TouchList) => {
     if (touches.length < 2) return 0;
@@ -194,7 +200,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
           )}
         </div>
       </div>
-      <div className="relative flex-1 bg-muted/20 flex items-center justify-center overflow-hidden min-h-0">
+      <div className="relative flex-1 bg-muted/20 flex items-center justify-center overflow-hidden min-h-0 overscroll-contain">
         {!file && (
           <div className="text-center p-4 sm:p-8 text-muted-foreground max-w-sm mx-auto">
             <div className="flex flex-col items-center space-y-2">
@@ -207,7 +213,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
         
         {isImage && previewUrl && (
           <div 
-            className="w-full h-full overflow-hidden"
+            className="w-full h-full overflow-hidden overscroll-contain"
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
