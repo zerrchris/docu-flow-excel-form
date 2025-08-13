@@ -369,6 +369,60 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     };
   }, [currentRunsheetId, runsheetName, data, columns, columnInstructions]);
   
+  // Listen for external add-row events (from DocumentProcessor)
+  useEffect(() => {
+    const handler = (event: CustomEvent) => {
+      try {
+        const payload = (event as any).detail?.data as Record<string, string>;
+        if (!payload) return;
+
+        // Determine any new columns present in payload (ignore Storage Path)
+        const newCols = Object.keys(payload).filter(
+          (c) => !columns.includes(c) && c !== 'Storage Path'
+        );
+
+        if (newCols.length) {
+          const updated = [...columns, ...newCols];
+          setColumns(updated);
+          onColumnChange?.(updated);
+        }
+
+        setData((prev) => {
+          const effectiveCols = [...columns, ...newCols];
+          // Build filtered row matching current/effective columns
+          const row: Record<string, string> = {};
+          effectiveCols.forEach((col) => {
+            row[col] = payload[col] || '';
+          });
+          if (payload['Storage Path']) {
+            row['Storage Path'] = payload['Storage Path'];
+          }
+
+          // Find first empty row without a linked document
+          const firstEmpty = prev.findIndex((r, idx) => {
+            const isEmpty = Object.values(r).every((v) => (v || '').toString().trim() === '');
+            const hasDoc = documentMap.has(idx);
+            return isEmpty && !hasDoc;
+          });
+
+          if (firstEmpty >= 0) {
+            const next = [...prev];
+            next[firstEmpty] = row;
+            return next;
+          }
+          return [...prev, row];
+        });
+
+        setHasUnsavedChanges(true);
+      } catch (e) {
+        console.error('externalAddRow handler error', e);
+      }
+    };
+
+    window.addEventListener('externalAddRow', handler as EventListener);
+    return () => window.removeEventListener('externalAddRow', handler as EventListener);
+  }, [columns, documentMap, onColumnChange]);
+
   // Ref for container width measurement
   const containerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);

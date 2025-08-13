@@ -189,6 +189,20 @@ const DocumentProcessor: React.FC = () => {
     loadUserPreferences();
   }, []);
 
+  // Ensure form fields match the active runsheet columns
+  useEffect(() => {
+    if (activeRunsheet?.columns && activeRunsheet.columns.length) {
+      setColumns(activeRunsheet.columns);
+      setColumnInstructions(activeRunsheet.columnInstructions || {});
+      setFormData(prev => {
+        const next: Record<string, string> = {};
+        activeRunsheet.columns!.forEach(col => { next[col] = prev[col] || ''; });
+        return next;
+      });
+    }
+  }, [activeRunsheet?.id, activeRunsheet?.columns]);
+
+
   // Handle selected runsheet from navigation state - with stability improvements
   useEffect(() => {
     const selectedRunsheet = location.state?.runsheet;
@@ -1427,7 +1441,10 @@ Image: [base64 image data]`;
       
       return newData;
     });
-    
+
+    // Also push the row into the spreadsheet component directly
+    window.dispatchEvent(new CustomEvent('externalAddRow', { detail: { data: finalData } }));
+
     // Auto-save the runsheet after adding data to show filename options
     setTimeout(async () => {
       console.log('🔧 AUTO_SAVE: Starting auto-save after add to spreadsheet');

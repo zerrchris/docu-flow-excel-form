@@ -197,49 +197,20 @@ const DataForm: React.FC<DataFormProps> = ({
     };
   }, []);
 
-  // Manual refresh function to force reset to DEFAULT columns
+  // Refresh fields to match current runsheet columns (from props) and clear values
   const refreshFields = async () => {
-    console.log('Manual refresh triggered - forcing reset to DEFAULT columns');
-    console.log('Current formData keys before refresh:', Object.keys(formData));
+    console.log('Manual refresh triggered - resetting to current runsheet columns');
     console.log('Current fields prop:', fields);
-    
-    // These are the actual default columns from DocumentProcessor
-    const DEFAULT_COLUMNS = [
-      'Inst Number', 
-      'Book/Page', 
-      'Inst Type', 
-      'Recording Date', 
-      'Document Date', 
-      'Grantor', 
-      'Grantee', 
-      'Legal Description', 
-      'Notes', 
-      'Document File Name'
-    ];
-    
-    console.log('Forcing reset to these DEFAULT columns:', DEFAULT_COLUMNS);
-    
-    // Force the DocumentProcessor to reset to defaults by dispatching a special event
-    const forceDefaultsEvent = new CustomEvent('forceResetToDefaults', { 
-      detail: { defaultColumns: DEFAULT_COLUMNS }
-    });
-    window.dispatchEvent(forceDefaultsEvent);
-    
-    // Also do the regular form data reset
-    const forceResetEvent = new CustomEvent('forceFormDataReset', { 
-      detail: { targetFields: DEFAULT_COLUMNS }
-    });
-    window.dispatchEvent(forceResetEvent);
-    
-    // Create visibility for default columns
+
+    // Reset visible fields to the current fields and clear their values
     const refreshedVisibility: Record<string, boolean> = {};
-    DEFAULT_COLUMNS.forEach((field: string) => {
+    fields.forEach((field: string) => {
       refreshedVisibility[field] = true;
+      onChange(field, '');
     });
-    
+
     setVisibleFields(refreshedVisibility);
-    
-    console.log('Manual refresh complete - forced reset to DEFAULT columns:', DEFAULT_COLUMNS);
+    console.log('Manual refresh complete - reset to current fields:', fields);
   };
 
   // Clear all field values while keeping the field structure
