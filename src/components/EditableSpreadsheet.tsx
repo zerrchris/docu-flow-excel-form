@@ -49,6 +49,7 @@ import { ExtractionPreferencesService } from '@/services/extractionPreferences';
 import DocumentNamingSettings from './DocumentNamingSettings';
 import InlineDocumentViewer from './InlineDocumentViewer';
 import FullScreenDocumentWorkspace from './FullScreenDocumentWorkspace';
+import ViewportPortal from './ViewportPortal';
 import type { User } from '@supabase/supabase-js';
 
 interface SpreadsheetProps {
@@ -5223,28 +5224,30 @@ ${extractionFields}`
         </div>
         
         {fullScreenWorkspace && (
-          <FullScreenDocumentWorkspace
-            runsheetId={fullScreenWorkspace.runsheetId}
-            rowIndex={fullScreenWorkspace.rowIndex}
-            rowData={data[fullScreenWorkspace.rowIndex] || {}}
-            fields={columns}
-            onClose={() => setFullScreenWorkspace(null)}
-            onUpdateRow={(rowIndex, rowData) => {
-              const newData = [...data];
-              newData[rowIndex] = rowData;
-              setData(newData);
-              onDataChange?.(newData);
-            }}
-            columnWidths={columnWidths}
-            columnAlignments={columnAlignments}
-            onColumnWidthChange={(column, width) => {
-              setColumnWidths(prev => ({
-                ...prev,
-                [column]: width
-              }));
-              setHasManuallyResizedColumns(true);
-            }}
-          />
+          <ViewportPortal>
+            <FullScreenDocumentWorkspace
+              runsheetId={fullScreenWorkspace.runsheetId}
+              rowIndex={fullScreenWorkspace.rowIndex}
+              rowData={data[fullScreenWorkspace.rowIndex] || {}}
+              fields={columns}
+              onClose={() => setFullScreenWorkspace(null)}
+              onUpdateRow={(rowIndex, rowData) => {
+                const newData = [...data];
+                newData[rowIndex] = rowData;
+                setData(newData);
+                onDataChange?.(newData);
+              }}
+              columnWidths={columnWidths}
+              columnAlignments={columnAlignments}
+              onColumnWidthChange={(column, width) => {
+                setColumnWidths(prev => ({
+                  ...prev,
+                  [column]: width
+                }));
+                setHasManuallyResizedColumns(true);
+              }}
+            />
+          </ViewportPortal>
         )}
 
         {/* Document Naming Settings Dialog */}
