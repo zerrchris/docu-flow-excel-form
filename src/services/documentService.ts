@@ -45,7 +45,7 @@ export class DocumentService {
       .eq('row_index', rowIndex)
       .order('created_at', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error('Error fetching document for row:', error);
