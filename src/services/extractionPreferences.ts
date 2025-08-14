@@ -183,4 +183,41 @@ export class ExtractionPreferencesService {
       return false;
     }
   }
+
+  /**
+   * Clean up extraction preferences by removing columns not in the provided list
+   */
+  static async cleanupPreferences(validColumns: string[]): Promise<boolean> {
+    try {
+      const preferences = await this.getDefaultPreferences();
+      if (!preferences) {
+        return true; // Nothing to clean up
+      }
+
+      const columnInstructions = preferences.column_instructions as ColumnInstructions;
+      
+      // Remove any column instructions for columns not in validColumns
+      const cleanedInstructions: ColumnInstructions = {};
+      for (const [key, value] of Object.entries(columnInstructions)) {
+        if (validColumns.includes(key)) {
+          cleanedInstructions[key] = value;
+        }
+      }
+
+      // Filter columns array to only include valid columns  
+      const cleanedColumns = preferences.columns.filter(col => validColumns.includes(col));
+
+      // Update the preferences with cleaned data
+      const success = await this.saveDefaultPreferences(cleanedColumns, cleanedInstructions);
+      
+      if (success) {
+        console.log('✅ Cleaned up extraction preferences, removed invalid columns');
+      }
+      
+      return success;
+    } catch (error) {
+      console.error('Error cleaning up preferences:', error);
+      return false;
+    }
+  }
 }

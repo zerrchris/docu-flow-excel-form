@@ -260,6 +260,9 @@ const DocumentProcessor: React.FC = () => {
                   }
                 });
                 
+                // Clean up any invalid columns from preferences first
+                await ExtractionPreferencesService.cleanupPreferences(selectedRunsheet.columns);
+                
                 await ExtractionPreferencesService.saveDefaultPreferences(
                   selectedRunsheet.columns, 
                   filteredInstructions
