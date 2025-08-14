@@ -4599,13 +4599,13 @@ ${extractionFields}`
                      return (
                        <TableCell 
                          key={`${rowIndex}-${column}`}
-                         className={`border-r border-border last:border-r-0 relative ${isEditing ? 'p-0' : 'p-0'} cursor-text`}
-                          style={{ 
-                            width: `${getColumnWidth(column)}px`, 
-                            minWidth: `${getColumnWidth(column)}px`,
-                            height: isEditing ? 'fit-content' : `${getRowHeight(rowIndex)}px`,
-                            minHeight: isEditing ? '60px' : `${getRowHeight(rowIndex)}px`
-                          }}
+                          className={`border-r border-border last:border-r-0 relative ${isEditing ? 'p-0' : 'p-0'} cursor-text`}
+                           style={{ 
+                             width: `${getColumnWidth(column)}px`, 
+                             minWidth: `${getColumnWidth(column)}px`,
+                             height: isEditing ? 'auto' : `${getRowHeight(rowIndex)}px`,
+                             minHeight: isEditing ? 'auto' : `${getRowHeight(rowIndex)}px`
+                           }}
                           onClick={(e) => handleCellClick(rowIndex, column, e)}
                           onDoubleClick={() => handleCellDoubleClick(rowIndex, column)}
                           tabIndex={isSelected ? 0 : -1}
@@ -4637,22 +4637,22 @@ ${extractionFields}`
                                    setCellValue('');
                                  }
                                }}
-                               className={`w-full border-2 border-primary rounded-none bg-background focus:ring-0 focus:outline-none resize-y p-2 ${
-                                 columnAlignments[column] === 'center' ? 'text-center' : 
-                                 columnAlignments[column] === 'right' ? 'text-right' : 'text-left'
-                               }`}
-                               style={{ 
-                                 minHeight: '60px',
-                                 width: '100%',
-                                 height: 'auto',
-                                 overflow: 'hidden'
-                               }}
-                               onInput={(e) => {
-                                 // Auto-resize textarea based on content
-                                 const target = e.target as HTMLTextAreaElement;
-                                 target.style.height = 'auto';
-                                 target.style.height = Math.max(60, target.scrollHeight) + 'px';
-                               }}
+                                className={`w-full border-2 border-primary rounded-none bg-background focus:ring-0 focus:outline-none resize-y p-2 ${
+                                  columnAlignments[column] === 'center' ? 'text-center' : 
+                                  columnAlignments[column] === 'right' ? 'text-right' : 'text-left'
+                                }`}
+                                style={{ 
+                                  minHeight: '80px',
+                                  width: '100%',
+                                  height: 'auto',
+                                  overflow: 'hidden'
+                                }}
+                                onInput={(e) => {
+                                  // Auto-resize textarea based on content
+                                  const target = e.target as HTMLTextAreaElement;
+                                  target.style.height = 'auto';
+                                  target.style.height = Math.max(80, target.scrollHeight) + 'px';
+                                }}
                              />
                          ) : (
                            <div
@@ -4691,11 +4691,11 @@ ${extractionFields}`
                            key={`${rowIndex}-${column}`}
                             className={`border-r border-border p-0 cursor-text overflow-hidden`}
                             style={{ 
-                              width: "350px", 
-                              minWidth: "350px",
-                              maxWidth: "350px",
-                              height: isEditing ? 'fit-content' : `${getRowHeight(rowIndex)}px`,
-                              minHeight: isEditing ? '60px' : `${getRowHeight(rowIndex)}px`
+                               width: "350px", 
+                               minWidth: "350px",
+                               maxWidth: "350px",
+                               height: isEditing ? 'auto' : `${getRowHeight(rowIndex)}px`,
+                               minHeight: isEditing ? 'auto' : `${getRowHeight(rowIndex)}px`
                             }}
                             onClick={(e) => handleCellClick(rowIndex, column, e)}
                             onDoubleClick={() => handleCellDoubleClick(rowIndex, column)}
