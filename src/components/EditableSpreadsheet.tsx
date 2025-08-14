@@ -4510,10 +4510,11 @@ ${extractionFields}`
                 top: 0,
                 backgroundColor: 'hsl(var(--background))',
                 boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)',
-                borderBottom: '2px solid hsl(var(--border))'
+                borderBottom: '2px solid hsl(var(--border))',
+                zIndex: 50
               }}
             >
-              <TableRow className="hover:bg-muted/50 transition-colors">
+              <TableRow className="hover:bg-muted/50 transition-colors" style={{ backgroundColor: 'hsl(var(--background))' }}>
                 {columns.map((column) => (
                    <TableHead 
                        key={column}
