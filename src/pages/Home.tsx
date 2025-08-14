@@ -53,11 +53,22 @@ const Home: React.FC = () => {
                   <CreditCard className="h-3 w-3" />
                   {subscriptionTier} Plan
                 </Badge>}
-              {user ? subscribed ? <Link to="/pricing">
-                    <Button variant="outline">Manage Subscription</Button>
-                  </Link> : <Link to="/pricing">
-                    <Button>Get Subscription</Button>
-                  </Link> : <AuthButton />}
+              {user ? (
+                <>
+                  {subscribed ? (
+                    <Link to="/pricing">
+                      <Button variant="outline">Manage Subscription</Button>
+                    </Link>
+                  ) : (
+                    <Link to="/pricing">
+                      <Button>Get Subscription</Button>
+                    </Link>
+                  )}
+                  <AuthButton />
+                </>
+              ) : (
+                <AuthButton />
+              )}
             </div>
           </div>
         </div>
