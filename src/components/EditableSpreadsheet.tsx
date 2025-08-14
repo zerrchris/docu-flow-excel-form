@@ -305,7 +305,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       
       // Create the new runsheet using the same logic as the + button
       setRunsheetName(name);
-      setData(Array.from({ length: 20 }, () => {
+      setData(Array.from({ length: 100 }, () => {
         const row: Record<string, string> = {};
         newColumns.forEach((col: string) => row[col] = '');
         return row;
@@ -318,7 +318,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       setSelectedRange(null);
       setHasUnsavedChanges(false);
       setLastSavedState('');
-      onDataChange?.(Array.from({ length: 20 }, () => {
+      onDataChange?.(Array.from({ length: 100 }, () => {
         const row: Record<string, string> = {};
         newColumns.forEach((col: string) => row[col] = '');
         return row;
@@ -1013,7 +1013,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             // Properly type-cast the data from JSON to the expected format
             // Preserve the current row count if it's larger than what's in the database
             const newData = (runsheet.data as Record<string, string>[]) || [];
-            const targetRowCount = Math.max(newData.length, data.length, 20); // Keep current count if larger
+            const targetRowCount = Math.max(newData.length, data.length, 100); // Keep current count if larger
             const dataWithMinRows = ensureMinimumRows(newData, (runsheet.columns as string[]) || []);
             
             // If we had more rows locally, preserve that count
@@ -4361,7 +4361,7 @@ ${extractionFields}`
                              
                              // Set up new runsheet
                              setRunsheetName(finalName);
-                             setData(Array.from({ length: 20 }, () => {
+                              setData(Array.from({ length: 100 }, () => {
                                const row: Record<string, string> = {};
                                DEFAULT_COLUMNS.forEach(col => row[col] = '');
                                return row;
@@ -4377,7 +4377,7 @@ ${extractionFields}`
                              setLastSaveTime(null);
                              
                              // Update parent components
-                             onDataChange?.(Array.from({ length: 20 }, () => {
+                              onDataChange?.(Array.from({ length: 100 }, () => {
                                const row: Record<string, string> = {};
                                DEFAULT_COLUMNS.forEach(col => row[col] = '');
                                return row;
@@ -4443,7 +4443,7 @@ ${extractionFields}`
                          
                          // Set up new runsheet
                          setRunsheetName(finalName);
-                         setData(Array.from({ length: 20 }, () => {
+                         setData(Array.from({ length: 100 }, () => {
                            const row: Record<string, string> = {};
                            DEFAULT_COLUMNS.forEach(col => row[col] = '');
                            return row;
@@ -4459,7 +4459,7 @@ ${extractionFields}`
                          setLastSaveTime(null);
                          
                          // Update parent components
-                         onDataChange?.(Array.from({ length: 20 }, () => {
+                         onDataChange?.(Array.from({ length: 100 }, () => {
                            const row: Record<string, string> = {};
                            DEFAULT_COLUMNS.forEach(col => row[col] = '');
                            return row;
