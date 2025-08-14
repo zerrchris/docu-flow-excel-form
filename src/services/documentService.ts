@@ -278,7 +278,8 @@ export class DocumentService {
       .from('documents')
       .select('*')
       .eq('runsheet_id', runsheetId)
-      .order('row_index, created_at desc');
+      .order('row_index')
+      .order('created_at', { ascending: false });
 
     if (error) {
       console.error('Error fetching documents for map:', error);
