@@ -5102,7 +5102,7 @@ ${extractionFields}`
 
         {/* Column Configuration Dialog */}
         <Dialog open={showColumnDialog} onOpenChange={setShowColumnDialog}>
-          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-[700px] w-[95vw] h-auto min-h-fit">{" "}
             <DialogHeader>
               <DialogTitle>Configure Column</DialogTitle>
               <DialogDescription>
