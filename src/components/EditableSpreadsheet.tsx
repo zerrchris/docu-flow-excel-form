@@ -4504,8 +4504,11 @@ ${extractionFields}`
           <div style={{ width: `${getTotalTableWidth()}px` }}>
             <Table className="border-collapse" style={{ tableLayout: 'fixed', width: `${getTotalTableWidth()}px` }}>
             {/* Sticky Header */}
-            <TableHeader className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b-2 shadow-lg"
+            <TableHeader className="sticky top-0 z-50 bg-background border-b-2 shadow-lg"
               style={{ 
+                position: 'sticky',
+                top: 0,
+                backgroundColor: 'hsl(var(--background))',
                 boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)',
                 borderBottom: '2px solid hsl(var(--border))'
               }}
@@ -4514,11 +4517,15 @@ ${extractionFields}`
                 {columns.map((column) => (
                    <TableHead 
                        key={column}
-                       className={`font-bold text-center border-r border-border relative p-0 last:border-r-0 cursor-move
-                         ${draggedColumn === column ? 'opacity-50' : ''} 
-                         ${dragOverColumn === column ? 'bg-primary/20' : ''}
-                         ${localMissingColumns.includes(column) ? 'bg-yellow-100 border-2 border-yellow-400 dark:bg-yellow-900/20 dark:border-yellow-500 animate-pulse' : ''}`}
-                       style={{ width: `${getColumnWidth(column)}px`, minWidth: `${getColumnWidth(column)}px` }}
+                        className={`font-bold text-center border-r border-border relative p-0 last:border-r-0 cursor-move bg-background
+                          ${draggedColumn === column ? 'opacity-50' : ''} 
+                          ${dragOverColumn === column ? 'bg-primary/20' : ''}
+                          ${localMissingColumns.includes(column) ? 'bg-yellow-100 border-2 border-yellow-400 dark:bg-yellow-900/20 dark:border-yellow-500 animate-pulse' : ''}`}
+                        style={{ 
+                          width: `${getColumnWidth(column)}px`, 
+                          minWidth: `${getColumnWidth(column)}px`,
+                          backgroundColor: 'hsl(var(--background))'
+                        }}
                        draggable
                       onDragStart={(e) => handleDragStart(e, column)}
                       onDragOver={(e) => handleDragOver(e, column)}
@@ -4580,10 +4587,14 @@ ${extractionFields}`
                 
                  {/* Document File Name column header - conditionally visible */}
                  {showDocumentFileNameColumn && (
-                   <TableHead 
-                     className="font-bold text-center border-r border-border relative p-0 bg-muted/50"
-                     style={{ width: "200px", minWidth: "200px" }}
-                   >
+                    <TableHead 
+                      className="font-bold text-center border-r border-border relative p-0 bg-background"
+                      style={{ 
+                        width: "200px", 
+                        minWidth: "200px",
+                        backgroundColor: 'hsl(var(--background))'
+                      }}
+                    >
                      <div className="w-full h-full px-4 py-2 flex flex-col items-center justify-center">
                        <span className="font-bold">Document File Name</span>
                      </div>
@@ -4591,10 +4602,14 @@ ${extractionFields}`
                  )}
                  
                  {/* Actions column header - not draggable */}
-                  <TableHead 
-                    className="font-bold text-center relative p-0 bg-muted/50"
-                    style={{ width: "600px", minWidth: "600px" }}
-                   >
+                   <TableHead 
+                     className="font-bold text-center relative p-0 bg-background"
+                     style={{ 
+                       width: "600px", 
+                       minWidth: "600px",
+                       backgroundColor: 'hsl(var(--background))'
+                     }}
+                    >
                    <div className="w-full h-full px-4 py-2 flex flex-col gap-1">
                      <Button
                        variant="outline"
