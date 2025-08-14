@@ -2652,11 +2652,17 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     });
   };
 
-  // Auto-focus input when editing starts
+  // Auto-focus input when editing starts and resize textarea
   useEffect(() => {
     if (editingCell && textareaRef.current) {
       textareaRef.current.focus();
       textareaRef.current.select();
+      
+      // Auto-resize textarea to fit content
+      textareaRef.current.style.height = 'auto';
+      const scrollHeight = textareaRef.current.scrollHeight;
+      const minHeight = 80;
+      textareaRef.current.style.height = Math.max(minHeight, scrollHeight) + 'px';
     }
   }, [editingCell]);
 
@@ -4645,7 +4651,7 @@ ${extractionFields}`
                                   minHeight: '80px',
                                   width: '100%',
                                   height: 'auto',
-                                  overflow: 'hidden'
+                                  overflow: 'visible'
                                 }}
                                 onInput={(e) => {
                                   // Auto-resize textarea based on content
