@@ -157,9 +157,26 @@ const DocumentProcessor: React.FC = () => {
           const preferences = await ExtractionPreferencesService.getDefaultPreferences();
           
           if (preferences && preferences.columns && preferences.column_instructions) {
-            // Load saved preferences only if no runsheet is active
-            setColumns(preferences.columns);
-            setColumnInstructions(preferences.column_instructions as Record<string, string>);
+            // Clean up preferences immediately to remove any invalid columns
+            const validColumns = preferences.columns.filter(col => 
+              !col.includes('test insert') && col.trim() !== ''
+            );
+            
+            if (validColumns.length !== preferences.columns.length) {
+              console.log('🧹 Cleaning up invalid columns from preferences');
+              await ExtractionPreferencesService.cleanupPreferences(validColumns);
+              
+              // Reload cleaned preferences
+              const cleanedPrefs = await ExtractionPreferencesService.getDefaultPreferences();
+              if (cleanedPrefs) {
+                setColumns(cleanedPrefs.columns);
+                setColumnInstructions(cleanedPrefs.column_instructions as Record<string, string>);
+              }
+            } else {
+              // Load saved preferences only if no runsheet is active
+              setColumns(preferences.columns);
+              setColumnInstructions(preferences.column_instructions as Record<string, string>);
+            }
             console.log('Loaded user preferences:', preferences);
           } else {
             // No saved preferences, use defaults and save them
@@ -192,6 +209,9 @@ const DocumentProcessor: React.FC = () => {
   // Ensure form fields match the active runsheet columns
   useEffect(() => {
     if (activeRunsheet?.columns && activeRunsheet.columns.length) {
+      // Clean up preferences to match active runsheet columns
+      ExtractionPreferencesService.cleanupPreferences(activeRunsheet.columns);
+      
       setColumns(activeRunsheet.columns);
       setColumnInstructions(activeRunsheet.columnInstructions || {});
       setFormData(prev => {
