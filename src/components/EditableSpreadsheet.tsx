@@ -48,6 +48,7 @@ import { DocumentService, type DocumentRecord } from '@/services/documentService
 import { ExtractionPreferencesService } from '@/services/extractionPreferences';
 import DocumentNamingSettings from './DocumentNamingSettings';
 import InlineDocumentViewer from './InlineDocumentViewer';
+import ColumnPreferencesDialog from './ColumnPreferencesDialog';
 import FullScreenDocumentWorkspace from './FullScreenDocumentWorkspace';
 import ViewportPortal from './ViewportPortal';
 import type { User } from '@supabase/supabase-js';
@@ -199,6 +200,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
   const [showColumnDialog, setShowColumnDialog] = useState(false);
+  const [showColumnPreferencesDialog, setShowColumnPreferencesDialog] = useState(false);
   const [editingColumnName, setEditingColumnName] = useState<string>('');
   const [editingColumnInstructions, setEditingColumnInstructions] = useState<string>('');
   const [selectedColumn, setSelectedColumn] = useState<string>('');
@@ -5102,6 +5104,17 @@ ${extractionFields}`
               </Button>
               <Button 
                 variant="secondary" 
+                onClick={() => {
+                  setShowColumnDialog(false);
+                  setShowColumnPreferencesDialog(true);
+                }}
+                className="gap-2"
+              >
+                <Settings className="h-4 w-4" />
+                Column Preferences
+              </Button>
+              <Button 
+                variant="secondary" 
                 onClick={saveAsDefault}
                 disabled={isSavingAsDefault || !user}
                 className="gap-2"
@@ -5269,6 +5282,12 @@ ${extractionFields}`
             />
           </DialogContent>
         </Dialog>
+
+        {/* Column Preferences Dialog */}
+        <ColumnPreferencesDialog
+          open={showColumnPreferencesDialog}
+          onOpenChange={setShowColumnPreferencesDialog}
+        />
       </div>
     );
 };
