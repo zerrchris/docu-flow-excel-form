@@ -4498,14 +4498,17 @@ ${extractionFields}`
         {/* Single scrollable table container */}
         <div 
           ref={containerRef}
-          className="border rounded-md bg-background relative h-[750px] mx-6"
-          style={{ overflow: 'auto', width: `${getTotalTableWidth()}px`, maxWidth: '100%' }}
+          className="border rounded-md bg-background relative h-[750px] mx-6 overflow-auto"
+          style={{ width: `${getTotalTableWidth()}px`, maxWidth: '100%' }}
         >
           <div style={{ width: `${getTotalTableWidth()}px` }}>
             <Table className="border-collapse" style={{ tableLayout: 'fixed', width: `${getTotalTableWidth()}px` }}>
             {/* Sticky Header */}
-            <TableHeader className="sticky top-0 z-40 bg-background border-b-2 shadow-sm"
-              style={{ boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
+            <TableHeader className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b-2 shadow-lg"
+              style={{ 
+                boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)',
+                borderBottom: '2px solid hsl(var(--border))'
+              }}
             >
               <TableRow className="hover:bg-muted/50 transition-colors">
                 {columns.map((column) => (
