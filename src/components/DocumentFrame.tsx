@@ -48,9 +48,9 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
   const [isExpanded, setIsExpanded] = useState<boolean>(() => {
     try {
       const saved = sessionStorage.getItem('documentFrameOpen');
-      return saved ? JSON.parse(saved) : true; // default open to avoid accidental collapse
+      return saved ? JSON.parse(saved) : false; // default closed until user expands
     } catch {
-      return true;
+      return false;
     }
   });
   const [isUploading, setIsUploading] = useState(false);
@@ -78,13 +78,7 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
     } catch {}
   }, [isExpanded]);
 
-  // Auto-open when a file is selected or when form has data (helps after draft restore)
-  React.useEffect(() => {
-    const hasData = formData && Object.values(formData).some(v => (v || '').toString().trim() !== '');
-    if ((file || hasData) && !isExpanded) {
-      setIsExpanded(true);
-    }
-  }, [file, formData, isExpanded]);
+  // Removed auto-open behavior - let user manually expand when needed
 
   // Wrapper to ensure analyze is called without parameters for single document processing
   const handleAnalyze = () => {
