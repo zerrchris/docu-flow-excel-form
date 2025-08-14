@@ -113,16 +113,20 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
     try {
       const fileResult = await uploadFileToStorage(file, 'documents', 'single-processed');
       
-      const userSpecifiedFilename = formData['Document File Name'];
-      const finalFilename = userSpecifiedFilename && userSpecifiedFilename.trim() 
-        ? userSpecifiedFilename.trim() 
-        : fileResult.fileName;
-      
       const dataWithFile = {
         ...formData,
-        'Document File Name': finalFilename,
         'Storage Path': fileResult.path
       };
+
+      // Only add Document File Name if the field exists in the current runsheet columns
+      if (fields.includes('Document File Name')) {
+        const userSpecifiedFilename = formData['Document File Name'];
+        const finalFilename = userSpecifiedFilename && userSpecifiedFilename.trim() 
+          ? userSpecifiedFilename.trim() 
+          : fileResult.fileName;
+        
+        dataWithFile['Document File Name'] = finalFilename;
+      }
       
       onAddToSpreadsheet(dataWithFile);
       
