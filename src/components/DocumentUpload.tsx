@@ -1,5 +1,5 @@
 import React, { useCallback, useState, useEffect } from 'react';
-import { Upload, File as FileIcon, Trash2, ChevronDown, ChevronUp, FileImage, AlertCircle, FileStack, Smartphone } from 'lucide-react';
+import { Upload, File as FileIcon, Trash2, FileImage, AlertCircle, FileStack, Smartphone } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -23,7 +23,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
   selectedFiles,
   allowMultiple = false
 }) => {
-  const [isExpanded, setIsExpanded] = useState(true);
+  
   const [isProcessing, setIsProcessing] = useState(false);
   const [mobileDocuments, setMobileDocuments] = useState<any[]>([]);
   const [showMobileDocuments, setShowMobileDocuments] = useState(false);
@@ -168,20 +168,9 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
   return (
     <Card className="bg-muted/5 border-2 h-full flex flex-col">
       <div className="p-4 flex flex-col h-full">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-foreground">Upload Document</h3>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="p-2"
-          >
-            {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-          </Button>
-        </div>
+          <h3 className="text-lg font-semibold text-foreground mb-4">Upload Document</h3>
 
-        {isExpanded && (
-          <div className="flex flex-col flex-1">
+        <div className="flex flex-col flex-1">
             {selectedFile && (
               <div className="flex justify-end mb-6">
                 <Button variant="outline" onClick={handleClear} size="sm" className="hover:bg-destructive/10 hover:text-destructive">
@@ -376,7 +365,6 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
               </div>
             )}
           </div>
-        )}
       </div>
     </Card>
   );
