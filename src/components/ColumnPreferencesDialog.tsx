@@ -12,11 +12,13 @@ import { ExtractionPreferencesService } from '@/services/extractionPreferences';
 interface ColumnPreferencesDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onPreferencesSaved?: (columns: string[], instructions: Record<string, string>) => void;
 }
 
 const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
   open,
-  onOpenChange
+  onOpenChange,
+  onPreferencesSaved
 }) => {
   const [columns, setColumns] = useState<string[]>([]);
   const [columnInstructions, setColumnInstructions] = useState<Record<string, string>>({});
@@ -157,6 +159,8 @@ const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
           title: "Preferences saved",
           description: "Your default column preferences have been updated.",
         });
+        // Notify parent component that preferences were saved
+        onPreferencesSaved?.(columns, columnInstructions);
         onOpenChange(false);
       } else {
         throw new Error('Failed to save preferences');

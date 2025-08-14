@@ -5357,6 +5357,15 @@ ${extractionFields}`
         <ColumnPreferencesDialog
           open={showColumnPreferencesDialog}
           onOpenChange={setShowColumnPreferencesDialog}
+          onPreferencesSaved={(newColumns, newInstructions) => {
+            // Update current runsheet's column instructions with the new defaults
+            setColumnInstructions(prev => ({
+              ...prev,
+              ...newInstructions
+            }));
+            // Also update the onColumnInstructionsChange callback if it exists
+            onColumnInstructionsChange?.(newInstructions);
+          }}
         />
       </div>
     );
