@@ -43,7 +43,9 @@ export class DocumentService {
       .select('*')
       .eq('runsheet_id', runsheetId)
       .eq('row_index', rowIndex)
-      .maybeSingle();
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
 
     if (error) {
       console.error('Error fetching document for row:', error);
@@ -272,11 +274,24 @@ export class DocumentService {
    * Get documents mapped by row index for easy lookup
    */
   static async getDocumentMapForRunsheet(runsheetId: string): Promise<Map<number, DocumentRecord>> {
-    const documents = await this.getDocumentsForRunsheet(runsheetId);
+    const { data, error } = await supabase
+      .from('documents')
+      .select('*')
+      .eq('runsheet_id', runsheetId)
+      .order('row_index, created_at desc');
+
+    if (error) {
+      console.error('Error fetching documents for map:', error);
+      return new Map();
+    }
+
     const documentMap = new Map<number, DocumentRecord>();
     
-    documents.forEach(doc => {
-      documentMap.set(doc.row_index, doc);
+    (data || []).forEach(doc => {
+      // Only set if not already set, so we keep the most recent document for each row
+      if (!documentMap.has(doc.row_index)) {
+        documentMap.set(doc.row_index, doc);
+      }
     });
     
     return documentMap;

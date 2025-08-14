@@ -4750,25 +4750,33 @@ ${extractionFields}`
                                 autoFocus
                               />
                            ) : (
-                              <div
-                                data-cell={`${rowIndex}-${column}`}
-                                className={`w-full h-full min-h-[2rem] py-2 px-3 flex items-center transition-colors select-none overflow-hidden
-                                  ${isSelected 
-                                    ? 'bg-primary/20 border-2 border-primary ring-2 ring-primary/20' 
-                                    : isInRange
-                                    ? 'bg-primary/10 border-2 border-primary/50'
-                                    : 'hover:bg-muted/50 border-2 border-transparent'
-                                  }`}
-                                onMouseDown={(e) => handleCellMouseDown(e, rowIndex, column)}
-                                onMouseEnter={() => handleMouseEnter(rowIndex, column)}
-                                onMouseUp={handleMouseUp}
-                                onKeyDown={(e) => handleKeyDown(e, rowIndex, column)}
-                                title={documentMap.get(rowIndex)?.stored_filename || row[column] || ''}
-                              >
-                                <span className="truncate block w-full text-left">
-                                  {documentMap.get(rowIndex)?.stored_filename || row[column] || ''}
-                                </span>
-                              </div>
+                               <div
+                                 data-cell={`${rowIndex}-${column}`}
+                                 className={`w-full h-full min-h-[2rem] py-2 px-3 flex items-center transition-colors select-none overflow-hidden
+                                   ${isSelected 
+                                     ? 'bg-primary/20 border-2 border-primary ring-2 ring-primary/20' 
+                                     : isInRange
+                                     ? 'bg-primary/10 border-2 border-primary/50'
+                                     : 'hover:bg-muted/50 border-2 border-transparent'
+                                   }`}
+                                 onMouseDown={(e) => handleCellMouseDown(e, rowIndex, column)}
+                                 onMouseEnter={() => handleMouseEnter(rowIndex, column)}
+                                 onMouseUp={handleMouseUp}
+                                 onKeyDown={(e) => handleKeyDown(e, rowIndex, column)}
+                                 title={documentMap.get(rowIndex)?.stored_filename || row[column] || ''}
+                               >
+                                 <span 
+                                   className={`truncate block w-full text-left ${documentMap.get(rowIndex) ? 'cursor-pointer hover:text-primary' : ''}`}
+                                   onClick={(e) => {
+                                     if (documentMap.get(rowIndex)) {
+                                       e.stopPropagation();
+                                       setInlineViewerRow(inlineViewerRow === rowIndex ? null : rowIndex);
+                                     }
+                                   }}
+                                 >
+                                   {documentMap.get(rowIndex)?.stored_filename || row[column] || ''}
+                                 </span>
+                               </div>
                            )}
                          </TableCell>
                        );
