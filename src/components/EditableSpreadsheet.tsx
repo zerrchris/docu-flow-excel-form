@@ -2817,7 +2817,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           return; // don't steal typing from form fields
         }
         if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
-          startEditing(selectedCell.rowIndex, selectedCell.column, e.key);
+          startEditing(selectedCell.rowIndex, selectedCell.column, e.key, undefined);
           e.preventDefault();
         }
       };
@@ -3087,7 +3087,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     
     // Only start editing if explicitly requested (for double-click or typing)
     if (shouldStartEditing) {
-      startEditing(rowIndex, column, data[rowIndex]?.[column] || '');
+      startEditing(rowIndex, column, data[rowIndex]?.[column] || '', undefined);
     }
   };
 
@@ -3102,19 +3102,13 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     handleCellDoubleClick(rowIndex, column);
   };
 
-  const handleCellDoubleClick = (rowIndex: number, column: string) => {
-    // Double click should enter edit mode and select all text in the cell
-    startEditing(rowIndex, column, data[rowIndex]?.[column] || '');
-    // Focus and select all text after the textarea is rendered
-    setTimeout(() => {
-      if (textareaRef.current) {
-        textareaRef.current.focus();
-        textareaRef.current.select();
-      }
-    }, 10);
+  const handleCellDoubleClick = (rowIndex: number, column: string, event?: React.MouseEvent) => {
+    // Double click should enter edit mode and position cursor where clicked
+    const cellValue = data[rowIndex]?.[column] || '';
+    startEditing(rowIndex, column, cellValue, event);
   };
 
-  const startEditing = useCallback((rowIndex: number, column: string, value: string) => {
+  const startEditing = useCallback((rowIndex: number, column: string, value: string, clickEvent?: React.MouseEvent) => {
     setEditingCell({ rowIndex, column });
     setCellValue(value);
     setSelectedCell({ rowIndex, column });
@@ -3123,9 +3117,60 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     setTimeout(() => {
       if (textareaRef.current) {
         textareaRef.current.focus();
-        // Position cursor at the end of the text
-        const length = textareaRef.current.value.length;
-        textareaRef.current.setSelectionRange(length, length);
+        
+        if (clickEvent && value) {
+          // Calculate cursor position based on click coordinates
+          const textarea = textareaRef.current;
+          const rect = textarea.getBoundingClientRect();
+          const x = clickEvent.clientX - rect.left;
+          const y = clickEvent.clientY - rect.top;
+          
+          // Create a temporary element to measure text
+          const tempSpan = document.createElement('span');
+          tempSpan.style.font = window.getComputedStyle(textarea).font;
+          tempSpan.style.visibility = 'hidden';
+          tempSpan.style.position = 'absolute';
+          tempSpan.style.whiteSpace = 'pre-wrap';
+          tempSpan.style.lineHeight = window.getComputedStyle(textarea).lineHeight;
+          document.body.appendChild(tempSpan);
+          
+          // Find the approximate character position
+          let position = 0;
+          const lines = value.split('\n');
+          const lineHeight = parseInt(window.getComputedStyle(textarea).lineHeight) || 20;
+          const targetLine = Math.floor(y / lineHeight);
+          
+          // Add characters from previous lines
+          for (let i = 0; i < Math.min(targetLine, lines.length - 1); i++) {
+            position += lines[i].length + 1; // +1 for the newline character
+          }
+          
+          // Find position within the target line
+          if (targetLine < lines.length) {
+            const currentLine = lines[targetLine];
+            let charPosition = 0;
+            
+            for (let i = 0; i <= currentLine.length; i++) {
+              tempSpan.textContent = currentLine.substring(0, i);
+              if (tempSpan.offsetWidth >= x) {
+                charPosition = i;
+                break;
+              }
+              charPosition = i;
+            }
+            
+            position += charPosition;
+          }
+          
+          document.body.removeChild(tempSpan);
+          
+          // Position cursor at calculated position
+          textarea.setSelectionRange(position, position);
+        } else {
+          // Default behavior: position cursor at the end of the text
+          const length = textareaRef.current.value.length;
+          textareaRef.current.setSelectionRange(length, length);
+        }
       }
     }, 10);
   }, []);
@@ -3243,7 +3288,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         }
         } else {
           // Enter should start editing mode
-          startEditing(rowIndex, column, data[rowIndex]?.[column] || '');
+          startEditing(rowIndex, column, data[rowIndex]?.[column] || '', undefined);
         }
         e.preventDefault();
         break;
@@ -3295,7 +3340,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         if (nextColumn && nextRowIndex >= 0 && nextRowIndex < data.length) {
           // Start editing the next cell and select all text
           setTimeout(() => {
-            startEditing(nextRowIndex, nextColumn, data[nextRowIndex]?.[nextColumn] || '');
+            startEditing(nextRowIndex, nextColumn, data[nextRowIndex]?.[nextColumn] || '', undefined);
             // Select all text in the next cell for easy deletion/replacement
             setTimeout(() => {
               if (textareaRef.current) {
@@ -3382,7 +3427,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         
       default:
         if (!editingCell && e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
-          startEditing(rowIndex, column, e.key);
+          startEditing(rowIndex, column, e.key, undefined);
           e.preventDefault();
         }
         break;
@@ -3471,7 +3516,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         if (nextColumn && nextRowIndex >= 0 && nextRowIndex < data.length) {
           setTimeout(() => {
             selectCell(nextRowIndex, nextColumn);
-            startEditing(nextRowIndex, nextColumn, data[nextRowIndex]?.[nextColumn] || '');
+            startEditing(nextRowIndex, nextColumn, data[nextRowIndex]?.[nextColumn] || '', undefined);
           }, 0);
         }
       }
@@ -4613,7 +4658,7 @@ ${extractionFields}`
                              minHeight: isEditing ? 'auto' : `${getRowHeight(rowIndex)}px`
                            }}
                           onClick={(e) => handleCellClick(rowIndex, column, e)}
-                          onDoubleClick={() => handleCellDoubleClick(rowIndex, column)}
+                           onDoubleClick={(e) => handleCellDoubleClick(rowIndex, column, e)}
                           tabIndex={isSelected ? 0 : -1}
                        >
                           {isEditing ? (
@@ -4704,7 +4749,7 @@ ${extractionFields}`
                                minHeight: isEditing ? 'auto' : `${getRowHeight(rowIndex)}px`
                             }}
                             onClick={(e) => handleCellClick(rowIndex, column, e)}
-                            onDoubleClick={() => handleCellDoubleClick(rowIndex, column)}
+                            onDoubleClick={(e) => handleCellDoubleClick(rowIndex, column, e)}
                            tabIndex={isSelected ? 0 : -1}
                          >
                            {isEditing ? (
@@ -4729,7 +4774,7 @@ ${extractionFields}`
                                          setTimeout(() => {
                                            const nextRowData = data[nextRowIndex];
                                            const nextCellValue = nextDocument.stored_filename || nextRowData['Document File Name'] || '';
-                                           startEditing(nextRowIndex, 'Document File Name', nextCellValue);
+                                           startEditing(nextRowIndex, 'Document File Name', nextCellValue, undefined);
                                          }, 10);
                                        }, 10);
                                      }
