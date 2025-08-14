@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -371,25 +371,25 @@ export type Database = {
     Functions: {
       generate_document_filename: {
         Args: {
-          runsheet_data: Json
-          row_index: number
           original_filename: string
+          row_index: number
+          runsheet_data: Json
         }
         Returns: string
       }
       generate_document_filename_with_preferences: {
         Args: {
-          runsheet_data: Json
-          row_index: number
           original_filename: string
+          row_index: number
+          runsheet_data: Json
           user_id: string
         }
         Returns: string
       }
       has_role: {
         Args: {
-          _user_id: string
           _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
         }
         Returns: boolean
       }
