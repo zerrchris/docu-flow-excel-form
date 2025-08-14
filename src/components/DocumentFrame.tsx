@@ -378,5 +378,6 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
     )}
     </>
   );
+};
 
 export default DocumentFrame;
