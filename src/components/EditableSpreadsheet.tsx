@@ -4909,26 +4909,34 @@ ${extractionFields}`
                              return dbPath || storagePath;
                            })()}
                            existingDocumentUrl={row['Document File Name'] && row['Document File Name'].trim() !== '' ? 'exists' : undefined}
-                        onDocumentLinked={(filename) => {
-                           console.log('🔧 EditableSpreadsheet: onDocumentLinked called with filename:', filename);
-                           console.log('🔧 EditableSpreadsheet: Current row data before update:', data[rowIndex]);
-                           const newData = [...data];
-                           newData[rowIndex] = {
-                             ...newData[rowIndex],
-                             'Document File Name': filename
-                           };
-                           console.log('🔧 EditableSpreadsheet: New row data after update:', newData[rowIndex]);
-                           setData(newData);
-                           onDataChange?.(newData);
-                          
-                           // Refresh document map after a short delay to ensure DB is updated
-                           if (currentRunsheetId) {
-                             setTimeout(() => {
-                               console.log('🔧 EditableSpreadsheet: Refreshing document map');
-                               DocumentService.getDocumentMapForRunsheet(currentRunsheetId).then(updateDocumentMap);
-                             }, 500);
-                           }
-                        }}
+                         onDocumentLinked={async (filename) => {
+                            console.log('🔧 EditableSpreadsheet: onDocumentLinked called with filename:', filename);
+                            console.log('🔧 EditableSpreadsheet: Current row data before update:', data[rowIndex]);
+                            const newData = [...data];
+                            newData[rowIndex] = {
+                              ...newData[rowIndex],
+                              'Document File Name': filename
+                            };
+                            console.log('🔧 EditableSpreadsheet: New row data after update:', newData[rowIndex]);
+                            setData(newData);
+                            onDataChange?.(newData);
+                           
+                            // Immediately refresh document map to ensure consistency
+                            if (currentRunsheetId) {
+                              try {
+                                console.log('🔧 EditableSpreadsheet: Immediately refreshing document map');
+                                const updatedDocumentMap = await DocumentService.getDocumentMapForRunsheet(currentRunsheetId);
+                                updateDocumentMap(updatedDocumentMap);
+                                console.log('🔧 EditableSpreadsheet: Document map refreshed with', updatedDocumentMap.size, 'documents');
+                              } catch (error) {
+                                console.error('Error refreshing document map:', error);
+                                // Fallback to delayed refresh if immediate refresh fails
+                                setTimeout(() => {
+                                  DocumentService.getDocumentMapForRunsheet(currentRunsheetId).then(updateDocumentMap);
+                                }, 500);
+                              }
+                            }
+                         }}
                         onDocumentRemoved={() => {
                           const newData = [...data];
                           newData[rowIndex] = {
