@@ -227,6 +227,48 @@ export class DocumentService {
   }
 
   /**
+   * Analyze document using advanced AI extraction with structured outputs
+   */
+  static async analyzeDocumentAdvanced(
+    filePath: string,
+    fileName: string, 
+    contentType: string,
+    columnInstructions?: Record<string, string>,
+    useVision?: boolean
+  ): Promise<{ success: boolean; data?: any; error?: string }> {
+    try {
+      // Get the public URL for the document
+      const fileUrl = this.getDocumentUrl(filePath);
+      
+      const { data } = await supabase.functions.invoke('analyze-document-advanced', {
+        body: {
+          fileUrl,
+          fileName,
+          contentType,
+          columnInstructions: columnInstructions || {},
+          useVision: useVision || false
+        }
+      });
+
+      if (!data?.success) {
+        throw new Error(data?.error || 'Analysis failed');
+      }
+
+      return {
+        success: true,
+        data: data.data
+      };
+
+    } catch (error) {
+      console.error('Error in advanced document analysis:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Analysis failed'
+      };
+    }
+  }
+
+  /**
    * Organize documents into runsheet-named folders
    */
   static async organizeDocumentsByRunsheet(
