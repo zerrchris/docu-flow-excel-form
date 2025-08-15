@@ -535,6 +535,15 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     const saveEmergencyDraft = () => {
       if (!data || data.length === 0) return;
       
+      // Skip saving if documents are being processed to avoid interrupting workflow
+      const hasDocuments = documentMap.size > 0;
+      const isProcessingDocuments = hasDocuments || inlineViewerRow !== null;
+      
+      if (isProcessingDocuments) {
+        console.log('⏸️ Skipping emergency draft save - document processing in progress');
+        return;
+      }
+      
       // Check if there's meaningful data to save
       const hasData = data.some(row => 
         Object.values(row).some(value => value && value.trim() !== '')
@@ -558,17 +567,17 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       }
     };
 
-    // Save immediately on data change
-    const timeoutId = setTimeout(saveEmergencyDraft, 1000);
+    // Reduce frequency to avoid interrupting document processing
+    const timeoutId = setTimeout(saveEmergencyDraft, 5000); // Increased from 1 second
     
-    // Set up periodic saving every 30 seconds
-    const intervalId = setInterval(saveEmergencyDraft, 30000);
+    // Set up periodic saving every 2 minutes instead of 30 seconds
+    const intervalId = setInterval(saveEmergencyDraft, 120000);
     
     return () => {
       clearTimeout(timeoutId);
       clearInterval(intervalId);
     };
-  }, [data, columns, columnInstructions, runsheetName, currentRunsheetId]);
+  }, [data, columns, columnInstructions, runsheetName, currentRunsheetId, documentMap, inlineViewerRow]);
 
   // Clear emergency draft when runsheet is successfully saved
   useEffect(() => {
@@ -594,21 +603,45 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           const draft = JSON.parse(emergencyDraft);
           const draftAge = Date.now() - (draft.timestamp || 0);
           
-          // Only restore if draft is less than 24 hours old
+          // Only restore if draft is less than 24 hours old AND conditions are right
+          const hasCurrentRunsheet = currentRunsheetId || initialRunsheetId;
+          const hasDocuments = documentMap.size > 0;
+          const isProcessingDocuments = hasDocuments || inlineViewerRow !== null;
+          
           if (draftAge < 24 * 60 * 60 * 1000) {
-            console.log('🔄 Restoring complete emergency draft state from localStorage');
+            // Don't restore if we already have active work or document processing
+            if (hasCurrentRunsheet || isProcessingDocuments) {
+              console.log('🔒 Skipping draft restoration - active work detected');
+              return;
+            }
             
-            if (draft.data) setData(draft.data);
-            if (draft.columns) setColumns(draft.columns);
-            if (draft.columnInstructions) setColumnInstructions(draft.columnInstructions);
-            if (draft.runsheetName) setRunsheetName(draft.runsheetName);
-            if (draft.currentRunsheetId) setCurrentRunsheetId(draft.currentRunsheetId);
+            // Check if the current data is empty/minimal before restoring
+            const hasMinimalData = data.length === 0 || data.every(row => 
+              Object.values(row).every(value => !value || value.trim() === '')
+            );
             
-            toast({
-              title: "Draft restored",
-              description: "Your previous work has been restored from backup.",
-              variant: "default"
-            });
+            // Only restore if we have minimal data and the draft has meaningful content
+            if (hasMinimalData && draft.data && draft.data.length > 0) {
+              const draftHasData = draft.data.some((row: Record<string, string>) => 
+                Object.values(row).some(value => value && value.trim() !== '')
+              );
+              
+              if (draftHasData) {
+                console.log('🔄 Restoring emergency draft - no active work detected');
+                
+                if (draft.data) setData(draft.data);
+                if (draft.columns) setColumns(draft.columns);
+                if (draft.columnInstructions) setColumnInstructions(draft.columnInstructions);
+                if (draft.runsheetName && draft.runsheetName !== 'Untitled Runsheet') setRunsheetName(draft.runsheetName);
+                if (draft.currentRunsheetId) setCurrentRunsheetId(draft.currentRunsheetId);
+                
+                toast({
+                  title: "Draft restored",
+                  description: "Your previous work has been restored from backup.",
+                  variant: "default"
+                });
+              }
+            }
           } else {
             // Clean up old draft
             localStorage.removeItem('runsheet-emergency-draft');
