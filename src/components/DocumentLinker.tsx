@@ -666,16 +666,8 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                   title={filename}
                   onClick={(e) => {
                     e.stopPropagation();
-                    // Use a proper document viewer that preserves state
-                    const newTab = window.open(filename, '_blank');
-                    if (newTab) {
-                      // Add listener to detect when user returns to this tab
-                      const handleFocus = () => {
-                        console.log('🔧 DocumentLinker: User returned from viewing document');
-                        window.removeEventListener('focus', handleFocus);
-                      };
-                      window.addEventListener('focus', handleFocus);
-                    }
+                    // Open in new tab without focus listeners that cause state loss
+                    window.open(filename, '_blank');
                   }}
                 >
                   Screenshot
@@ -813,16 +805,8 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                     if (documentPath) {
                       // Use the provided document path
                       const url = supabase.storage.from('documents').getPublicUrl(documentPath).data.publicUrl;
-                      // Use a proper document viewer that preserves state
-                      const newTab = window.open(url, '_blank');
-                      if (newTab) {
-                        // Add listener to detect when user returns to this tab
-                        const handleFocus = () => {
-                          console.log('🔧 DocumentLinker: User returned from viewing document');
-                          window.removeEventListener('focus', handleFocus);
-                        };
-                        window.addEventListener('focus', handleFocus);
-                      }
+                      // Open in new tab without focus listeners that cause state loss
+                      window.open(url, '_blank');
                     } else {
                       // Fallback: fetch from database
                       const { data: { user } } = await supabase.auth.getUser();
@@ -849,16 +833,8 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                       
                       if (document) {
                         const url = supabase.storage.from('documents').getPublicUrl(document.file_path).data.publicUrl;
-                        // Use a proper document viewer that preserves state
-                        const newTab = window.open(url, '_blank');
-                        if (newTab) {
-                          // Add listener to detect when user returns to this tab
-                          const handleFocus = () => {
-                            console.log('🔧 DocumentLinker: User returned from viewing document');
-                            window.removeEventListener('focus', handleFocus);
-                          };
-                          window.addEventListener('focus', handleFocus);
-                        }
+                        // Open in new tab without focus listeners that cause state loss
+                        window.open(url, '_blank');
                       } else {
                         toast({
                           title: "Error",

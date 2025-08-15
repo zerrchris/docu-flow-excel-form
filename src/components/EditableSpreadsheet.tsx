@@ -1321,28 +1321,58 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       }
     };
 
-    // Save when page becomes hidden (user switches tabs or navigates)
+    // Save when page becomes hidden (user switches tabs or navigates) - but don't reset state
     const handleVisibilityChange = () => {
       if (document.hidden && hasUnsavedChanges && user) {
+        // Save current state to prevent loss
+        sessionStorage.setItem('preserveRunsheetState', JSON.stringify({
+          runsheetName,
+          currentRunsheetId,
+          data,
+          columns,
+          columnInstructions,
+          documentMap: Array.from(documentMap.entries()),
+          timestamp: Date.now()
+        }));
         forceSave();
-      }
-    };
-
-    // Save on blur (when user clicks away from the page)
-    const handleBlur = () => {
-      if (hasUnsavedChanges && user) {
-        forceSave();
+      } else if (!document.hidden) {
+        // When page becomes visible again, check for preserved state
+        const preservedState = sessionStorage.getItem('preserveRunsheetState');
+        if (preservedState) {
+          try {
+            const state = JSON.parse(preservedState);
+            const stateAge = Date.now() - (state.timestamp || 0);
+            
+            // Only restore if very recent (within 30 seconds) and we have empty state
+            if (stateAge < 30000 && !currentRunsheetId && runsheetName === 'Untitled Runsheet') {
+              console.log('🔄 Restoring preserved state after tab focus');
+              
+              if (state.data && Array.isArray(state.data)) setData(state.data);
+              if (state.columns && Array.isArray(state.columns)) setColumns(state.columns);
+              if (state.columnInstructions) setColumnInstructions(state.columnInstructions);
+              if (state.runsheetName && state.runsheetName !== 'Untitled Runsheet') setRunsheetName(state.runsheetName);
+              if (state.currentRunsheetId) setCurrentRunsheetId(state.currentRunsheetId);
+              if (state.documentMap && Array.isArray(state.documentMap)) {
+                const restoredMap = new Map<number, DocumentRecord>(state.documentMap as [number, DocumentRecord][]);
+                setDocumentMap(restoredMap);
+                updateDocumentMap(restoredMap);
+              }
+            }
+            sessionStorage.removeItem('preserveRunsheetState');
+          } catch (error) {
+            console.error('Error restoring preserved state:', error);
+            sessionStorage.removeItem('preserveRunsheetState');
+          }
+        }
       }
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('blur', handleBlur);
     
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('blur', handleBlur);
     };
   }, [hasUnsavedChanges, user, runsheetName, columns, data, columnInstructions, forceSave]);
 
