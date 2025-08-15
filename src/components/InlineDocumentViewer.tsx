@@ -35,6 +35,14 @@ const InlineDocumentViewer: React.FC<InlineDocumentViewerProps> = ({
       setError(null);
       
       console.log('🔧 InlineDocumentViewer: Loading document for runsheet:', runsheetId, 'rowIndex:', rowIndex);
+      
+      // Add validation for parameters
+      if (!runsheetId || runsheetId.trim() === '' || runsheetId === 'undefined') {
+        console.error('🔧 InlineDocumentViewer: Invalid runsheet ID:', runsheetId);
+        setError('Invalid runsheet ID');
+        return;
+      }
+      
       const document = await DocumentService.getDocumentForRow(runsheetId, rowIndex);
       console.log('🔧 InlineDocumentViewer: Document found:', document);
       

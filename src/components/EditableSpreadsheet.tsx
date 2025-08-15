@@ -4936,17 +4936,25 @@ ${extractionFields}`
                                  onKeyDown={(e) => handleKeyDown(e, rowIndex, column)}
                                  title={documentMap.get(rowIndex)?.stored_filename || row[column] || ''}
                                >
-                                 <span 
-                                   className={`truncate block w-full text-left ${documentMap.get(rowIndex) ? 'cursor-pointer hover:text-primary' : ''}`}
-                                   onClick={(e) => {
-                                     if (documentMap.get(rowIndex)) {
-                                       e.stopPropagation();
-                                       setInlineViewerRow(inlineViewerRow === rowIndex ? null : rowIndex);
-                                     }
-                                   }}
-                                 >
-                                   {documentMap.get(rowIndex)?.stored_filename || row[column] || ''}
-                                 </span>
+                                  <span 
+                                    className={`truncate block w-full text-left ${documentMap.get(rowIndex) ? 'cursor-pointer hover:text-primary' : ''}`}
+                                    onClick={(e) => {
+                                      if (documentMap.get(rowIndex)) {
+                                        e.stopPropagation();
+                                        console.log('🔧 EditableSpreadsheet: Expanding inline viewer for row:', rowIndex);
+                                        console.log('🔧 EditableSpreadsheet: Document in map:', documentMap.get(rowIndex));
+                                        console.log('🔧 EditableSpreadsheet: Current runsheet ID:', effectiveRunsheetId);
+                                        console.log('🔧 EditableSpreadsheet: Document map size:', documentMap.size);
+                                        console.log('🔧 EditableSpreadsheet: All documents in map:', Array.from(documentMap.entries()));
+                                        setInlineViewerRow(inlineViewerRow === rowIndex ? null : rowIndex);
+                                      } else {
+                                        console.log('🔧 EditableSpreadsheet: No document found for row:', rowIndex, 'in document map');
+                                        console.log('🔧 EditableSpreadsheet: Document map:', Array.from(documentMap.entries()));
+                                      }
+                                    }}
+                                  >
+                                    {documentMap.get(rowIndex)?.stored_filename || row[column] || ''}
+                                  </span>
                                </div>
                            )}
                          </TableCell>
