@@ -666,7 +666,8 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                   title={filename}
                   onClick={(e) => {
                     e.stopPropagation();
-                    window.open(filename, '_blank');
+                    // Open in same tab to avoid navigation confusion with back button
+                    window.location.href = filename;
                   }}
                 >
                   Screenshot
@@ -804,7 +805,8 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                     if (documentPath) {
                       // Use the provided document path
                       const url = supabase.storage.from('documents').getPublicUrl(documentPath).data.publicUrl;
-                      window.open(url, '_blank');
+                      // Open in same tab to avoid navigation confusion with back button
+                      window.location.href = url;
                     } else {
                       // Fallback: fetch from database
                       const { data: { user } } = await supabase.auth.getUser();
@@ -831,7 +833,8 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                       
                       if (document) {
                         const url = supabase.storage.from('documents').getPublicUrl(document.file_path).data.publicUrl;
-                        window.open(url, '_blank');
+                        // Open in same tab to avoid navigation confusion with back button
+                        window.location.href = url;
                       } else {
                         toast({
                           title: "Error",

@@ -607,11 +607,18 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           const hasCurrentRunsheet = currentRunsheetId || initialRunsheetId;
           const hasDocuments = documentMap.size > 0;
           const isProcessingDocuments = hasDocuments || inlineViewerRow !== null;
+          const hasActiveRunsheetName = runsheetName && runsheetName !== 'Untitled Runsheet';
           
           if (draftAge < 24 * 60 * 60 * 1000) {
-            // Don't restore if we already have active work or document processing
-            if (hasCurrentRunsheet || isProcessingDocuments) {
-              console.log('🔒 Skipping draft restoration - active work detected');
+            // Don't restore if we already have active work, documents, or a named runsheet
+            if (hasCurrentRunsheet || isProcessingDocuments || hasActiveRunsheetName) {
+              console.log('🔒 Skipping draft restoration - active work detected', {
+                hasCurrentRunsheet,
+                hasDocuments,
+                isProcessingDocuments, 
+                hasActiveRunsheetName,
+                currentRunsheetName: runsheetName
+              });
               return;
             }
             
