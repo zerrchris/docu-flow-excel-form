@@ -663,22 +663,24 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
   // Check user authentication status
   useEffect(() => {
-    const initAuth = async () => {
+    let unsub: (() => void) | undefined;
+
+    (async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         setUser(session?.user ?? null);
-
+        
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
           setUser(session?.user ?? null);
         });
-
-        return () => subscription.unsubscribe();
+        
+        unsub = () => subscription.unsubscribe();
       } catch (error) {
         console.warn('Auth initialization failed in spreadsheet:', error);
       }
-    };
+    })();
 
-    initAuth();
+    return () => { if (unsub) unsub(); };
   }, []);
 
   // Check if opened from extension and needs fresh data
@@ -2389,7 +2391,6 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         });
       }
     };
-    reader.readAsArrayBuffer(file);
     reader.readAsArrayBuffer(file);
   };
 
