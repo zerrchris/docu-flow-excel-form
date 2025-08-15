@@ -597,6 +597,14 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   // Complete emergency draft restoration on component mount
   useEffect(() => {
     const restoreEmergencyDraft = () => {
+      console.log('🔄 Emergency draft restoration check starting', {
+        hasEmergencyDraft: !!localStorage.getItem('runsheet-emergency-draft'),
+        currentRunsheetId,
+        documentMapSize: documentMap.size,
+        runsheetName,
+        dataLength: data.length
+      });
+      
       try {
         const emergencyDraft = localStorage.getItem('runsheet-emergency-draft');
         if (emergencyDraft) {
@@ -654,7 +662,46 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             localStorage.removeItem('runsheet-emergency-draft');
             console.log('🗑️ Removed old emergency draft (>24h)');
           }
+      }
+      
+      // Check for temporary state from navigation (highest priority)
+      const tempState = sessionStorage.getItem('tempRunsheetState');
+      if (tempState) {
+        try {
+          const state = JSON.parse(tempState);
+          const stateAge = Date.now() - (state.timestamp || 0);
+          
+          if (stateAge < 5 * 60 * 1000) { // Only restore if less than 5 minutes old
+            console.log('🔄 Restoring temporary navigation state');
+            
+            if (state.data) setData(state.data);
+            if (state.columns) setColumns(state.columns);
+            if (state.columnInstructions) setColumnInstructions(state.columnInstructions);
+            if (state.runsheetName) setRunsheetName(state.runsheetName);
+            if (state.currentRunsheetId) setCurrentRunsheetId(state.currentRunsheetId);
+            if (state.documentMap && Array.isArray(state.documentMap)) {
+              const restoredMap = new Map<number, DocumentRecord>(state.documentMap as [number, DocumentRecord][]);
+              setDocumentMap(restoredMap);
+            }
+            
+            // Clear the temp state after restoration
+            sessionStorage.removeItem('tempRunsheetState');
+            
+            toast({
+              title: "State restored",
+              description: "Your work has been restored after navigation.",
+              variant: "default"
+            });
+            return;
+          } else {
+            // Clean up old temp state
+            sessionStorage.removeItem('tempRunsheetState');
+          }
+        } catch (error) {
+          console.error('Error restoring temp state:', error);
+          sessionStorage.removeItem('tempRunsheetState');
         }
+      }
       } catch (error) {
         console.error('Error restoring emergency draft:', error);
       }
@@ -1244,6 +1291,17 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (hasUnsavedChanges && user) {
+        // Store current state before leaving for navigation recovery
+        sessionStorage.setItem('tempRunsheetState', JSON.stringify({
+          runsheetName,
+          currentRunsheetId,
+          data,
+          columns,
+          columnInstructions,
+          documentMap: Array.from(documentMap.entries()),
+          timestamp: Date.now()
+        }));
+        
         // Force immediate save using sendBeacon for reliability
         const payload = JSON.stringify({
           name: runsheetName,
