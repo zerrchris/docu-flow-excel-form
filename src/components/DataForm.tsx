@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { RotateCw, CheckCircle, Plus, Settings, ChevronDown, ChevronUp, Upload, Wand2, RefreshCw, Trash2 } from 'lucide-react';
+import { RotateCw, CheckCircle, Plus, Settings, ChevronDown, ChevronUp, Upload, Wand2, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface DataFormProps {
@@ -197,21 +197,6 @@ const DataForm: React.FC<DataFormProps> = ({
     };
   }, []);
 
-  // Refresh fields to match current runsheet columns (from props) and clear values
-  const refreshFields = async () => {
-    console.log('Manual refresh triggered - resetting to current runsheet columns');
-    console.log('Current fields prop:', fields);
-
-    // Reset visible fields to the current fields and clear their values
-    const refreshedVisibility: Record<string, boolean> = {};
-    fields.forEach((field: string) => {
-      refreshedVisibility[field] = true;
-      onChange(field, '');
-    });
-
-    setVisibleFields(refreshedVisibility);
-    console.log('Manual refresh complete - reset to current fields:', fields);
-  };
 
   // Clear all field values while keeping the field structure
   const clearFields = () => {
@@ -277,7 +262,7 @@ const DataForm: React.FC<DataFormProps> = ({
         </CollapsibleContent>
       </Collapsible>
 
-      {/* Clear Fields and Refresh Fields Buttons */}
+      {/* Clear Fields Button */}
       <div className="space-y-2">
         <Button
           variant="outline"
@@ -288,17 +273,8 @@ const DataForm: React.FC<DataFormProps> = ({
           <Trash2 className="h-4 w-4" />
           Clear Fields
         </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={refreshFields}
-          className="w-full gap-2"
-        >
-          <RefreshCw className="h-4 w-4" />
-          Refresh Fields
-        </Button>
         <div className="text-xs text-muted-foreground text-center px-2">
-          Clear Fields removes all data. Refresh Fields resets to match your current runsheet columns.
+          Clear Fields removes all data from the form.
         </div>
       </div>
 
