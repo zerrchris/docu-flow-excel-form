@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ChevronDown, ChevronUp, X, FileText } from 'lucide-react';
+import { ChevronDown, ChevronUp, X, FileText, SkipForward } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
 import { uploadFileToStorage } from '@/utils/fileStorage';
@@ -172,8 +172,19 @@ const BatchDocumentRow: React.FC<BatchDocumentRowProps> = ({
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-0">
             <div className="lg:col-span-4 border-r border-border">
               <div className="p-6">
-                <div className="space-y-2">
-                  <h4 className="text-md font-medium text-foreground">Document Data</h4>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-md font-medium text-foreground">Document Data</h4>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={onRemove}
+                      className="gap-2 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                    >
+                      <SkipForward className="h-4 w-4" />
+                      Skip Document
+                    </Button>
+                  </div>
                   <DataForm 
                     fields={fields}
                     formData={formData}
