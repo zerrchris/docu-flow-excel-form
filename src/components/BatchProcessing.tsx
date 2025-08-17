@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Upload, Files, ChevronDown, ChevronUp, Smartphone } from 'lucide-react';
@@ -32,6 +32,111 @@ const BatchProcessing: React.FC<BatchProcessingProps> = ({
   const [isLoadingMobileDocs, setIsLoadingMobileDocs] = useState(false);
   const activeDocumentRef = React.useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  // Save batch processing state to localStorage
+  const saveBatchState = (documents: BatchDocument[], expanded: boolean, activeIndex: number | null) => {
+    try {
+      const state = {
+        documents: documents.map(doc => ({
+          id: doc.id,
+          fileName: doc.file.name,
+          fileSize: doc.file.size,
+          fileType: doc.file.type
+        })),
+        isExpanded: expanded,
+        activeDocumentIndex: activeIndex,
+        timestamp: Date.now()
+      };
+      localStorage.setItem('batch-processing-state', JSON.stringify(state));
+      console.log('💾 Saved batch processing state');
+    } catch (error) {
+      console.error('Error saving batch state:', error);
+    }
+  };
+
+  // Save file data to localStorage
+  const saveBatchFileData = async (documents: BatchDocument[]) => {
+    try {
+      const fileDataArray = await Promise.all(
+        documents.map(async (doc) => {
+          const buffer = await doc.file.arrayBuffer();
+          return {
+            data: Array.from(new Uint8Array(buffer))
+          };
+        })
+      );
+      localStorage.setItem('batch-processing-files', JSON.stringify(fileDataArray));
+    } catch (error) {
+      console.error('Error saving batch file data:', error);
+    }
+  };
+
+  // Clear batch processing state
+  const clearBatchState = () => {
+    localStorage.removeItem('batch-processing-state');
+    localStorage.removeItem('batch-processing-files');
+    localStorage.removeItem('batch-docs-count');
+    console.log('🗑️ Cleared batch processing state');
+  };
+
+  // Restore batch processing state on mount
+  useEffect(() => {
+    const restoreBatchState = async () => {
+      try {
+        const savedState = localStorage.getItem('batch-processing-state');
+        if (!savedState) return;
+
+        const state = JSON.parse(savedState);
+        const stateAge = Date.now() - (state.timestamp || 0);
+        
+        // Only restore if less than 30 minutes old
+        if (stateAge > 30 * 60 * 1000) {
+          clearBatchState();
+          return;
+        }
+
+        // Check if we have the actual file data saved
+        const savedFiles = localStorage.getItem('batch-processing-files');
+        if (savedFiles && state.documents?.length > 0) {
+          const fileDataArray = JSON.parse(savedFiles);
+          const restoredDocuments: BatchDocument[] = [];
+
+          for (let i = 0; i < state.documents.length && i < fileDataArray.length; i++) {
+            try {
+              const fileData = fileDataArray[i];
+              const uint8Array = new Uint8Array(fileData.data);
+              const blob = new Blob([uint8Array], { type: state.documents[i].fileType });
+              const file = new File([blob], state.documents[i].fileName, { type: state.documents[i].fileType });
+              
+              restoredDocuments.push({
+                id: state.documents[i].id,
+                file: file
+              });
+            } catch (error) {
+              console.error('Error restoring file:', error);
+            }
+          }
+
+          if (restoredDocuments.length > 0) {
+            setBatchDocuments(restoredDocuments);
+            setIsExpanded(state.isExpanded ?? false);
+            setActiveDocumentIndex(state.activeDocumentIndex ?? null);
+            setIsUploadAreaExpanded(false);
+            
+            toast({
+              title: "Batch Processing Restored",
+              description: `${restoredDocuments.length} documents restored from your previous session.`,
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error restoring batch state:', error);
+        clearBatchState();
+      }
+    };
+
+    restoreBatchState();
+  }, [toast]);
 
   const handleAnalyzeMobileDocs = async () => {
     setIsLoadingMobileDocs(true);
@@ -109,7 +214,12 @@ const BatchProcessing: React.FC<BatchProcessingProps> = ({
         }
       }
 
-      setBatchDocuments(prev => [...prev, ...newDocuments]);
+      setBatchDocuments(prev => {
+        const newDocs = [...prev, ...newDocuments];
+        // Save files to localStorage for restoration
+        saveBatchFileData(newDocs);
+        return newDocs;
+      });
       
       toast({
         title: "Mobile Documents Loaded",
@@ -139,7 +249,13 @@ const BatchProcessing: React.FC<BatchProcessingProps> = ({
       file
     }));
 
-    setBatchDocuments(prev => [...prev, ...newDocuments]);
+    setBatchDocuments(prev => {
+      const newDocs = [...prev, ...newDocuments];
+      saveBatchState(newDocs, isExpanded, activeDocumentIndex);
+      saveBatchFileData(newDocs);
+      localStorage.setItem('batch-docs-count', newDocs.length.toString());
+      return newDocs;
+    });
     
     toast({
       title: "Files uploaded",
@@ -179,18 +295,34 @@ const BatchProcessing: React.FC<BatchProcessingProps> = ({
     const currentIndex = batchDocuments.findIndex(doc => doc.id === id);
     const newDocuments = batchDocuments.filter(doc => doc.id !== id);
     
-    setBatchDocuments(newDocuments);
-    
-    // If we removed a document and there are more documents, navigate to next one
+    // Calculate next index before updating state
+    let nextIndex: number | null = null;
     if (newDocuments.length > 0) {
       // If we removed the last document, go to the previous one
       // Otherwise, stay at the same index (which will be the next document)
-      const nextIndex = currentIndex >= newDocuments.length ? newDocuments.length - 1 : currentIndex;
-      setActiveDocumentIndex(nextIndex);
+      nextIndex = currentIndex >= newDocuments.length ? newDocuments.length - 1 : currentIndex;
+    }
+    
+    setBatchDocuments(newDocuments);
+    setActiveDocumentIndex(nextIndex);
+    
+    // Clear batch state if no documents left
+    if (newDocuments.length === 0) {
+      clearBatchState();
     } else {
-      setActiveDocumentIndex(null);
+      saveBatchState(newDocuments, isExpanded, nextIndex);
+      saveBatchFileData(newDocuments);
+      localStorage.setItem('batch-docs-count', newDocuments.length.toString());
     }
   };
+
+  // Save state when expansion or active document changes
+  useEffect(() => {
+    if (batchDocuments.length > 0) {
+      saveBatchState(batchDocuments, isExpanded, activeDocumentIndex);
+      localStorage.setItem('batch-docs-count', batchDocuments.length.toString());
+    }
+  }, [isExpanded, activeDocumentIndex, batchDocuments]);
 
   // Initialize active document when first document is uploaded
   React.useEffect(() => {

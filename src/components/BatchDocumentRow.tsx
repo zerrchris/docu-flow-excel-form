@@ -108,6 +108,16 @@ const BatchDocumentRow: React.FC<BatchDocumentRowProps> = ({
       console.log('🔧 BatchDocumentRow: onAddToSpreadsheet completed, removing from batch');
       onRemove(); // Remove this row after adding to spreadsheet
       
+      // Clear any saved batch state since document was processed successfully
+      const remainingDocs = parseInt(localStorage.getItem('batch-docs-count') || '0') - 1;
+      if (remainingDocs <= 0) {
+        localStorage.removeItem('batch-processing-state');
+        localStorage.removeItem('batch-processing-files');
+        localStorage.removeItem('batch-docs-count');
+      } else {
+        localStorage.setItem('batch-docs-count', remainingDocs.toString());
+      }
+      
       toast({
         title: "Success",
         description: `Document "${file.name}" processed and uploaded successfully.`,
