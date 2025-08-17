@@ -845,12 +845,19 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     }
   }, [initialRunsheetName]);
 
-  // Set initial runsheet ID if provided
+  // Set initial runsheet ID if provided, or sync with restored active runsheet
   useEffect(() => {
     if (initialRunsheetId) {
       setCurrentRunsheetId(initialRunsheetId);
+    } else if (currentRunsheet?.id && !currentRunsheetId) {
+      // Sync with restored active runsheet from localStorage on mount
+      console.log('🔄 Syncing currentRunsheetId with restored active runsheet:', currentRunsheet.id);
+      setCurrentRunsheetId(currentRunsheet.id);
+      if (currentRunsheet.name && currentRunsheet.name !== 'Untitled Runsheet') {
+        setRunsheetName(currentRunsheet.name);
+      }
     }
-  }, [initialRunsheetId]);
+  }, [initialRunsheetId, currentRunsheet?.id, currentRunsheetId]);
 
   // Load documents when runsheet changes
   useEffect(() => {
