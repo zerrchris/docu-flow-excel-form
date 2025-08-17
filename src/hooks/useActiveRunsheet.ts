@@ -36,10 +36,21 @@ const loadFromLocalStorage = () => {
   try {
     const stored = localStorage.getItem(ACTIVE_RUNSHEET_KEY);
     if (stored) {
-      globalActiveRunsheet = JSON.parse(stored);
+      const parsedRunsheet = JSON.parse(stored);
+      
+      // Ensure we have a valid runsheet with required properties
+      if (parsedRunsheet && parsedRunsheet.id && parsedRunsheet.name) {
+        globalActiveRunsheet = parsedRunsheet;
+        console.log('📋 Successfully loaded active runsheet from localStorage:', parsedRunsheet.name, parsedRunsheet.id);
+      } else {
+        console.warn('⚠️ Invalid active runsheet data in localStorage, clearing it');
+        localStorage.removeItem(ACTIVE_RUNSHEET_KEY);
+        globalActiveRunsheet = null;
+      }
     }
   } catch (error) {
     console.error('Error loading active runsheet from localStorage:', error);
+    localStorage.removeItem(ACTIVE_RUNSHEET_KEY);
     globalActiveRunsheet = null;
   }
 };
@@ -66,7 +77,14 @@ export const useActiveRunsheet = () => {
   }, []);
 
   const setActiveRunsheet = (runsheet: ActiveRunsheet) => {
+    // Ensure we have valid runsheet data before setting
+    if (!runsheet || !runsheet.id || !runsheet.name) {
+      console.error('⚠️ Attempted to set invalid active runsheet:', runsheet);
+      return;
+    }
+    
     globalActiveRunsheet = runsheet;
+    console.log('📋 Setting active runsheet:', runsheet.name, runsheet.id);
     saveToLocalStorage();
     notifyListeners();
   };

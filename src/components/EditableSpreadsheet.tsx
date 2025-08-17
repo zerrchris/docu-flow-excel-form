@@ -530,6 +530,35 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     });
   }, [initialData, initialColumns, data]);
 
+  // Sync currentRunsheetId with active runsheet on mount and when currentRunsheet changes
+  useEffect(() => {
+    if (currentRunsheet?.id && currentRunsheetId !== currentRunsheet.id) {
+      console.log('📋 Syncing currentRunsheetId with active runsheet:', currentRunsheet.id);
+      setCurrentRunsheetId(currentRunsheet.id);
+      
+      // Also sync the runsheet name if it differs
+      if (currentRunsheet.name && runsheetName !== currentRunsheet.name) {
+        setRunsheetName(currentRunsheet.name);
+      }
+    }
+    
+    // CRITICAL: If we have an active runsheet but no currentRunsheetId, this indicates 
+    // a state restoration issue - prioritize the active runsheet
+    if (currentRunsheet?.id && !currentRunsheetId) {
+      console.log('🔄 Restoring currentRunsheetId from active runsheet after page refresh:', currentRunsheet.id);
+      setCurrentRunsheetId(currentRunsheet.id);
+      setRunsheetName(currentRunsheet.name || 'Untitled Runsheet');
+      
+      // Clear any conflicting emergency draft since we have a proper active runsheet
+      try {
+        localStorage.removeItem('runsheet-emergency-draft');
+        console.log('🗑️ Cleared conflicting emergency draft');
+      } catch (error) {
+        console.error('Error clearing emergency draft:', error);
+      }
+    }
+  }, [currentRunsheet, currentRunsheetId, runsheetName]);
+
   // Emergency draft saving - auto-save to localStorage every 30 seconds and on data changes
   useEffect(() => {
     const saveEmergencyDraft = () => {
