@@ -34,11 +34,21 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ file, previewUrl }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Reset states when file/previewUrl changes
+  useEffect(() => {
+    if (previewUrl && file?.type.includes('pdf')) {
+      setLoading(true);
+      setError(null);
+    }
+  }, [previewUrl, file]);
+
   // PDF event handlers
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
+    console.log('PDF loaded successfully:', numPages, 'pages');
     setTotalPages(numPages);
     setCurrentPage(1);
     setLoading(false);
+    setError(null);
   };
 
   const onDocumentLoadError = (error: Error) => {
