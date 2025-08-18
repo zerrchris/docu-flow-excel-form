@@ -247,6 +247,13 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [autoSaveError, setAutoSaveError] = useState<string>('');
   const [lastAutoSaveTime, setLastAutoSaveTime] = useState<Date | null>(null);
   
+  // Enhanced UI state for better interactions
+  const [isScrolling, setIsScrolling] = useState(false);
+  const [cellValidationErrors, setCellValidationErrors] = useState<Record<string, string>>({});
+  const [isTableLoading, setIsTableLoading] = useState(false);
+  const [lastEditedCell, setLastEditedCell] = useState<{rowIndex: number, column: string} | null>(null);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
   // Initialize auto-save hook
   const { save: autoSave, forceSave: autoForceSave, isSaving: autoSaving } = useAutoSave({
     runsheetId: currentRunsheetId,
@@ -4700,37 +4707,61 @@ ${extractionFields}`
           </p>
         </div>
 
-        {/* Single scrollable table container */}
+        {/* Loading overlay for table operations */}
+        {isTableLoading && (
+          <div className="fixed inset-0 bg-background/50 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="bg-background border rounded-lg p-6 shadow-lg">
+              <div className="flex items-center gap-3">
+                <div className="animate-spin h-6 w-6 border-b-2 border-primary rounded-full"></div>
+                <span>Updating spreadsheet...</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Enhanced scrollable table container with smooth scrolling */}
         <div 
           ref={containerRef}
-          className="border rounded-md bg-background relative h-[750px] mx-6 overflow-auto"
-          style={{ width: `${getTotalTableWidth()}px`, maxWidth: '100%' }}
+          className={`border rounded-md bg-background relative h-[750px] mx-6 overflow-auto transition-all duration-200 ${
+            isScrolling ? 'scroll-smooth' : ''
+          }`}
+          style={{ 
+            width: `${getTotalTableWidth()}px`, 
+            maxWidth: '100%',
+            scrollBehavior: 'smooth'
+          }}
         >
           <div style={{ width: `${getTotalTableWidth()}px` }}>
             <Table className="border-collapse" style={{ tableLayout: 'fixed', width: `${getTotalTableWidth()}px` }}>
-            {/* Sticky Header */}
-            <TableHeader className="sticky top-0 z-50 bg-background border-b-2 shadow-lg"
+            {/* Enhanced Sticky Header with better visual separation */}
+            <TableHeader 
+              className="sticky top-0 z-50 bg-background border-b-2 shadow-lg backdrop-blur-sm"
               style={{ 
                 position: 'sticky',
                 top: 0,
-                backgroundColor: 'hsl(var(--background))',
-                boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)',
-                borderBottom: '2px solid hsl(var(--border))',
-                zIndex: 50
+                backgroundColor: 'hsla(var(--background) / 0.95)',
+                backdropFilter: 'blur(8px)',
+                boxShadow: isScrolling 
+                  ? '0 8px 25px -5px rgba(0,0,0,0.15), 0 4px 10px -2px rgba(0,0,0,0.1)'
+                  : '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)',
+                borderBottom: '2px solid hsl(var(--primary))',
+                zIndex: 50,
+                transition: 'box-shadow 0.2s ease-in-out'
               }}
             >
               <TableRow className="hover:bg-muted/50 transition-colors" style={{ backgroundColor: 'hsl(var(--background))' }}>
                 {columns.map((column) => (
                    <TableHead 
                        key={column}
-                        className={`font-bold text-center border-r border-border relative p-0 last:border-r-0 cursor-move bg-background
-                          ${draggedColumn === column ? 'opacity-50' : ''} 
-                          ${dragOverColumn === column ? 'bg-primary/20' : ''}
-                          ${localMissingColumns.includes(column) ? 'bg-yellow-100 border-2 border-yellow-400 dark:bg-yellow-900/20 dark:border-yellow-500 animate-pulse' : ''}`}
+                       className={`font-bold text-center border-r border-border relative p-0 last:border-r-0 cursor-move transition-all duration-200
+                          ${draggedColumn === column ? 'opacity-50 transform scale-95' : ''} 
+                          ${dragOverColumn === column ? 'bg-primary/20 shadow-lg' : 'bg-background/95'}
+                          ${localMissingColumns.includes(column) ? 'bg-yellow-100 border-2 border-yellow-400 dark:bg-yellow-900/20 dark:border-yellow-500 animate-pulse shadow-yellow-200 dark:shadow-yellow-900' : 'hover:bg-muted/30'}
+                          backdrop-blur-sm`}
                         style={{ 
                           width: `${getColumnWidth(column)}px`, 
                           minWidth: `${getColumnWidth(column)}px`,
-                          backgroundColor: 'hsl(var(--background))'
+                          backgroundColor: dragOverColumn === column ? 'hsl(var(--primary) / 0.2)' : 'hsla(var(--background) / 0.95)'
                         }}
                        draggable
                       onDragStart={(e) => handleDragStart(e, column)}
@@ -4741,33 +4772,39 @@ ${extractionFields}`
                     >
                        <ContextMenu>
                          <ContextMenuTrigger className="w-full h-full p-0 select-none">
-                            <div 
-                              className={`w-full h-full px-4 py-2 cursor-pointer hover:bg-primary/10 transition-colors relative
-                                ${localMissingColumns.includes(column) ? 'hover:bg-yellow-200 dark:hover:bg-yellow-800/30' : ''}`}
-                              onClick={() => openColumnDialog(column)}
-                           >
-                              <div className="flex flex-col items-center">
-                                <span className="font-bold">{column}</span>
-                                {localMissingColumns.includes(column) && (
-                                  <span className="text-xs text-yellow-700 dark:text-yellow-300 mt-1 font-medium animate-pulse">
-                                    Click to save
-                                  </span>
-                                )}
+                             <div 
+                               className={`w-full h-full px-4 py-2 cursor-pointer transition-all duration-200 relative rounded-sm
+                                 ${localMissingColumns.includes(column) 
+                                   ? 'hover:bg-yellow-200 dark:hover:bg-yellow-800/30 animate-pulse' 
+                                   : 'hover:bg-primary/15 hover:shadow-sm'
+                                 }`}
+                               onClick={() => openColumnDialog(column)}
+                            >
+                               <div className="flex flex-col items-center">
+                                 <span className="font-bold">{column}</span>
+                                 {localMissingColumns.includes(column) && (
+                                   <span className="text-xs text-yellow-700 dark:text-yellow-300 mt-1 font-medium animate-pulse">
+                                     Click to save
+                                   </span>
+                                 )}
+                               </div>
+                               {/* Enhanced resize handle */}
+                              <div
+                                className="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize hover:bg-primary/60 bg-border/20 transition-all duration-200 z-10 group"
+                                onMouseDown={(e) => {
+                                  e.stopPropagation();
+                                  e.preventDefault();
+                                  handleMouseDown(e, column);
+                                }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  e.preventDefault();
+                                }}
+                                title="Drag to resize column"
+                              >
+                                <div className="w-0.5 h-full bg-border/40 group-hover:bg-primary/80 transition-colors duration-200 mx-auto"></div>
                               </div>
-                             {/* Resize handle */}
-                             <div
-                               className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-primary/50 bg-border/30 transition-colors z-10"
-                               onMouseDown={(e) => {
-                                 e.stopPropagation();
-                                 e.preventDefault();
-                                 handleMouseDown(e, column);
-                               }}
-                               onClick={(e) => {
-                                 e.stopPropagation();
-                                 e.preventDefault();
-                               }}
-                             />
-                           </div>
+                            </div>
                          </ContextMenuTrigger>
                        <ContextMenuContent>
                          <ContextMenuItem onClick={() => insertColumnBefore(column)}>
@@ -4858,8 +4895,10 @@ ${extractionFields}`
                       </TableRow>
                     )}
                    
-                    <TableRow 
-                      className="hover:bg-muted/30 relative"
+                     <TableRow 
+                      className={`relative transition-all duration-200 group
+                        ${lastEditedCell?.rowIndex === rowIndex ? 'bg-green-50 dark:bg-green-900/20 animate-pulse' : 'hover:bg-muted/30'}
+                      `}
                       style={{ 
                         height: `${getRowHeight(rowIndex)}px`,
                         minHeight: `${getRowHeight(rowIndex)}px`
@@ -4872,19 +4911,22 @@ ${extractionFields}`
                      const isInRange = isCellInRange(rowIndex, columnIndex);
                      
                      return (
-                       <TableCell 
-                         key={`${rowIndex}-${column}`}
-                          className={`border-r border-border last:border-r-0 relative ${isEditing ? 'p-0' : 'p-0'} cursor-text`}
-                           style={{ 
-                             width: `${getColumnWidth(column)}px`, 
-                             minWidth: `${getColumnWidth(column)}px`,
-                             height: isEditing ? 'auto' : `${getRowHeight(rowIndex)}px`,
-                             minHeight: isEditing ? 'auto' : `${getRowHeight(rowIndex)}px`
-                           }}
-                          onClick={(e) => handleCellClick(rowIndex, column, e)}
-                           onDoubleClick={(e) => handleCellDoubleClick(rowIndex, column, e)}
-                          tabIndex={isSelected ? 0 : -1}
-                       >
+                        <TableCell 
+                          key={`${rowIndex}-${column}`}
+                           className={`border-r border-border last:border-r-0 relative cursor-text transition-all duration-200 group-hover:bg-muted/20
+                             ${isEditing ? 'p-0 z-20' : 'p-0'}
+                             ${cellValidationErrors[`${rowIndex}-${column}`] ? 'border-2 border-red-400 bg-red-50 dark:bg-red-900/20' : ''}
+                           `}
+                            style={{ 
+                              width: `${getColumnWidth(column)}px`, 
+                              minWidth: `${getColumnWidth(column)}px`,
+                              height: isEditing ? 'auto' : `${getRowHeight(rowIndex)}px`,
+                              minHeight: isEditing ? 'auto' : `${getRowHeight(rowIndex)}px`
+                            }}
+                           onClick={(e) => handleCellClick(rowIndex, column, e)}
+                            onDoubleClick={(e) => handleCellDoubleClick(rowIndex, column, e)}
+                           tabIndex={isSelected ? 0 : -1}
+                        >
                           {isEditing ? (
                              <Textarea
                                ref={textareaRef}
@@ -4912,10 +4954,10 @@ ${extractionFields}`
                                    setCellValue('');
                                  }
                                }}
-                                className={`w-full border-2 border-primary rounded-none bg-background focus:ring-0 focus:outline-none resize-y p-2 ${
-                                  columnAlignments[column] === 'center' ? 'text-center' : 
-                                  columnAlignments[column] === 'right' ? 'text-right' : 'text-left'
-                                }`}
+                                 className={`w-full border-2 border-primary rounded-sm bg-background focus:ring-2 focus:ring-primary/20 focus:outline-none resize-y p-3 shadow-lg transition-all duration-200 ${
+                                   columnAlignments[column] === 'center' ? 'text-center' : 
+                                   columnAlignments[column] === 'right' ? 'text-right' : 'text-left'
+                                 }`}
                                 style={{ 
                                   minHeight: '80px',
                                   width: '100%',
@@ -4930,22 +4972,27 @@ ${extractionFields}`
                                 }}
                              />
                          ) : (
-                           <div
-                             data-cell={`${rowIndex}-${column}`}
-                              className={`w-full h-full min-h-[2rem] py-2 px-3 flex items-start transition-colors whitespace-pre-wrap select-none
-                                ${isSelected 
-                                  ? 'bg-primary/20 border-2 border-primary ring-2 ring-primary/20' 
-                                  : isInRange
-                                  ? 'bg-primary/10 border-2 border-primary/50'
-                                  : 'hover:bg-muted/50 border-2 border-transparent'
-                                }
-                                ${columnAlignments[column] === 'center' ? 'text-center justify-center' : 
-                                  columnAlignments[column] === 'right' ? 'text-right justify-end' : 'text-left justify-start'}`}
-                               onMouseDown={(e) => handleCellMouseDown(e, rowIndex, column)}
-                               onMouseEnter={() => handleMouseEnter(rowIndex, column)}
-                               onMouseUp={handleMouseUp}
-                               onKeyDown={(e) => handleKeyDown(e, rowIndex, column)}
-                             >
+                            <div
+                              data-cell={`${rowIndex}-${column}`}
+                               className={`w-full h-full min-h-[2rem] py-2 px-3 flex items-start transition-all duration-200 whitespace-pre-wrap select-none rounded-sm
+                                 ${isSelected 
+                                   ? 'bg-primary/25 border-2 border-primary ring-2 ring-primary/20 shadow-sm' 
+                                   : isInRange
+                                   ? 'bg-primary/15 border-2 border-primary/50'
+                                   : lastEditedCell?.rowIndex === rowIndex && lastEditedCell?.column === column
+                                   ? 'bg-green-100 dark:bg-green-900/30 border-2 border-green-400 dark:border-green-600'
+                                   : 'hover:bg-muted/60 border-2 border-transparent hover:shadow-sm'
+                                 }
+                                 ${columnAlignments[column] === 'center' ? 'text-center justify-center' : 
+                                   columnAlignments[column] === 'right' ? 'text-right justify-end' : 'text-left justify-start'}
+                                 ${cellValidationErrors[`${rowIndex}-${column}`] ? 'border-red-400 bg-red-50 dark:bg-red-900/20' : ''}
+                               `}
+                                onMouseDown={(e) => handleCellMouseDown(e, rowIndex, column)}
+                                onMouseEnter={() => handleMouseEnter(rowIndex, column)}
+                                onMouseUp={handleMouseUp}
+                                onKeyDown={(e) => handleKeyDown(e, rowIndex, column)}
+                                title={cellValidationErrors[`${rowIndex}-${column}`] || undefined}
+                              >
                                {row[column] || ''}
                              </div>
                          )}
@@ -5162,12 +5209,14 @@ ${extractionFields}`
                        </div>
                        </TableCell>
                       
-                      {/* Row resize handle */}
-                      <div
-                        className="absolute bottom-0 left-0 right-0 h-1 cursor-row-resize hover:bg-primary/30 bg-border/50 opacity-0 hover:opacity-100 transition-opacity"
-                        onMouseDown={(e) => handleRowMouseDown(e, rowIndex)}
-                        title="Drag to resize row height"
-                      />
+                       {/* Enhanced row resize handle */}
+                       <div
+                         className="absolute bottom-0 left-0 right-0 h-2 cursor-row-resize hover:bg-primary/40 bg-border/30 opacity-0 group-hover:opacity-70 hover:!opacity-100 transition-all duration-200 z-10"
+                         onMouseDown={(e) => handleRowMouseDown(e, rowIndex)}
+                         title="Drag to resize row height"
+                       >
+                         <div className="w-full h-0.5 bg-primary/60 mt-0.75"></div>
+                        </div>
                       </TableRow>
                      </React.Fragment>
                     );
@@ -5178,14 +5227,15 @@ ${extractionFields}`
 
         </div>
 
-        <div className="flex justify-between items-center text-sm text-muted-foreground pt-2">
-          <Dialog open={showAddRowsDialog} onOpenChange={setShowAddRowsDialog}>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2">
-                <Plus className="h-4 w-4" />
-                Add Rows
-              </Button>
-            </DialogTrigger>
+          <div className="flex justify-between items-center text-sm text-muted-foreground pt-2">
+            <div className="flex items-center gap-4">
+              <Dialog open={showAddRowsDialog} onOpenChange={setShowAddRowsDialog}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2 hover:bg-primary/10 transition-colors">
+                    <Plus className="h-4 w-4" />
+                    Add Rows
+                  </Button>
+                </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
               <DialogHeader>
                 <DialogTitle>Add Rows</DialogTitle>
@@ -5216,7 +5266,22 @@ ${extractionFields}`
                 <Button onClick={addRows}>Add Rows</Button>
               </DialogFooter>
             </DialogContent>
-          </Dialog>
+            </Dialog>
+            
+            {/* Performance indicator */}
+            <div className="text-xs text-muted-foreground">
+              {data.length} rows • {columns.length} columns
+              {isScrolling && <span className="ml-2 text-primary">● Scrolling</span>}
+            </div>
+            </div>
+            
+            {/* Auto-save status */}
+            <AutoSaveIndicator 
+              status={autoSaveStatus} 
+              errorMessage={autoSaveError}
+              lastSavedAt={lastAutoSaveTime}
+              className="transition-all duration-200"
+            />
         </div>
 
         {/* Open Runsheet Dialog */}
