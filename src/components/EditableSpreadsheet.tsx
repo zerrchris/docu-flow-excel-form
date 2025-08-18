@@ -3029,6 +3029,19 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     }
   }, [selectedCell, editingCell]);
 
+  // Enhanced scroll handling
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    setIsScrolling(true);
+    
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current);
+    }
+    
+    scrollTimeoutRef.current = setTimeout(() => {
+      setIsScrolling(false);
+    }, 150);
+  }, []);
+
   // Column resizing functions
   const getColumnWidth = (column: string) => {
     return columnWidths[column] || 120; // default width
@@ -4719,34 +4732,55 @@ ${extractionFields}`
           </div>
         )}
 
-        {/* Enhanced scrollable table container with smooth scrolling */}
+        {/* Enhanced scrollable table container with proper sticky header support */}
         <div 
           ref={containerRef}
-          className={`border rounded-md bg-background relative h-[750px] mx-6 overflow-auto transition-all duration-200 ${
+          className={`border rounded-md bg-background relative h-[750px] mx-6 transition-all duration-200 ${
             isScrolling ? 'scroll-smooth' : ''
           }`}
           style={{ 
             width: `${getTotalTableWidth()}px`, 
             maxWidth: '100%',
-            scrollBehavior: 'smooth'
+            scrollBehavior: 'smooth',
+            overflow: 'auto',
+            position: 'relative'
           }}
+          onScroll={handleScroll}
         >
-          <div style={{ width: `${getTotalTableWidth()}px` }}>
-            <Table className="border-collapse" style={{ tableLayout: 'fixed', width: `${getTotalTableWidth()}px` }}>
-            {/* Enhanced Sticky Header with better visual separation */}
+          {/* Fixed table wrapper for proper sticky behavior */}
+          <div 
+            style={{ 
+              width: `${getTotalTableWidth()}px`,
+              position: 'relative',
+              height: 'fit-content',
+              minHeight: '100%'
+          }}
+          onScroll={handleScroll}
+        >
+            <Table 
+              className="border-collapse w-full" 
+              style={{ 
+                tableLayout: 'fixed', 
+                width: `${getTotalTableWidth()}px`,
+                position: 'relative'
+              }}
+            >
+            {/* Properly implemented sticky header */}
             <TableHeader 
-              className="sticky top-0 z-50 bg-background border-b-2 shadow-lg backdrop-blur-sm"
+              className="sticky top-0 bg-background border-b-2 shadow-lg backdrop-blur-sm z-50"
               style={{ 
                 position: 'sticky',
-                top: 0,
-                backgroundColor: 'hsla(var(--background) / 0.95)',
+                top: '0px',
+                backgroundColor: 'hsl(var(--background))',
                 backdropFilter: 'blur(8px)',
+                WebkitBackdropFilter: 'blur(8px)', // Safari support
                 boxShadow: isScrolling 
                   ? '0 8px 25px -5px rgba(0,0,0,0.15), 0 4px 10px -2px rgba(0,0,0,0.1)'
                   : '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)',
                 borderBottom: '2px solid hsl(var(--primary))',
-                zIndex: 50,
-                transition: 'box-shadow 0.2s ease-in-out'
+                zIndex: 1000, // Higher z-index to ensure it stays on top
+                transition: 'box-shadow 0.2s ease-in-out',
+                transform: 'translateZ(0)', // Force hardware acceleration
               }}
             >
               <TableRow className="hover:bg-muted/50 transition-colors" style={{ backgroundColor: 'hsl(var(--background))' }}>
@@ -4761,7 +4795,10 @@ ${extractionFields}`
                         style={{ 
                           width: `${getColumnWidth(column)}px`, 
                           minWidth: `${getColumnWidth(column)}px`,
-                          backgroundColor: dragOverColumn === column ? 'hsl(var(--primary) / 0.2)' : 'hsla(var(--background) / 0.95)'
+                          backgroundColor: dragOverColumn === column ? 'hsl(var(--primary) / 0.2)' : 'hsl(var(--background))',
+                          position: 'sticky',
+                          top: '0px',
+                          zIndex: 999
                         }}
                        draggable
                       onDragStart={(e) => handleDragStart(e, column)}
@@ -4830,14 +4867,17 @@ ${extractionFields}`
                 
                  {/* Document File Name column header - conditionally visible */}
                  {showDocumentFileNameColumn && (
-                    <TableHead 
-                      className="font-bold text-center border-r border-border relative p-0 bg-background"
-                      style={{ 
-                        width: "200px", 
-                        minWidth: "200px",
-                        backgroundColor: 'hsl(var(--background))'
-                      }}
-                    >
+                     <TableHead 
+                       className="font-bold text-center border-r border-border relative p-0 bg-background sticky top-0"
+                       style={{ 
+                         width: "200px", 
+                         minWidth: "200px",
+                         backgroundColor: 'hsl(var(--background))',
+                         position: 'sticky',
+                         top: '0px',
+                         zIndex: 999
+                       }}
+                     >
                      <div className="w-full h-full px-4 py-2 flex flex-col items-center justify-center">
                        <span className="font-bold">Document File Name</span>
                      </div>
@@ -4845,14 +4885,17 @@ ${extractionFields}`
                  )}
                  
                  {/* Actions column header - not draggable */}
-                   <TableHead 
-                     className="font-bold text-center relative p-0 bg-background"
-                     style={{ 
-                       width: "600px", 
-                       minWidth: "600px",
-                       backgroundColor: 'hsl(var(--background))'
-                     }}
-                    >
+                    <TableHead 
+                      className="font-bold text-center relative p-0 bg-background sticky top-0"
+                      style={{ 
+                        width: "600px", 
+                        minWidth: "600px",
+                        backgroundColor: 'hsl(var(--background))',
+                        position: 'sticky',
+                        top: '0px',
+                        zIndex: 999
+                      }}
+                     >
                    <div className="w-full h-full px-4 py-2 flex flex-col gap-1">
                      <Button
                        variant="outline"
