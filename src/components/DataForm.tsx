@@ -261,11 +261,17 @@ const DataForm: React.FC<DataFormProps> = ({
     setIsReExtracting(true);
     
     try {
+      console.log('🔧 DataForm: Starting re-extraction for field:', reExtractDialog.fieldName);
+      console.log('🔧 DataForm: fileUrl:', fileUrl);
+      console.log('🔧 DataForm: fileName:', fileName);
+      console.log('🔧 DataForm: userNotes:', notes);
+      
       let imageData = null;
       
       // If fileUrl is a blob URL, convert to base64
       if (fileUrl && fileUrl.startsWith('blob:')) {
         try {
+          console.log('🔧 DataForm: Converting blob URL to base64...');
           const response = await fetch(fileUrl);
           const blob = await response.blob();
           const reader = new FileReader();
@@ -275,6 +281,7 @@ const DataForm: React.FC<DataFormProps> = ({
             reader.onerror = reject;
             reader.readAsDataURL(blob);
           });
+          console.log('🔧 DataForm: Successfully converted to base64, length:', imageData?.length);
         } catch (err) {
           console.error('Failed to convert blob to base64:', err);
           toast({
@@ -285,6 +292,15 @@ const DataForm: React.FC<DataFormProps> = ({
           return;
         }
       }
+
+      console.log('🔧 DataForm: Calling re-extract-field with:', {
+        hasFileUrl: !!fileUrl,
+        hasImageData: !!imageData,
+        fieldName: reExtractDialog.fieldName,
+        fieldInstructions: columnInstructions[reExtractDialog.fieldName],
+        userNotes: notes,
+        currentValue: reExtractDialog.currentValue
+      });
 
       const response = await supabase.functions.invoke('re-extract-field', {
         body: {
@@ -298,11 +314,20 @@ const DataForm: React.FC<DataFormProps> = ({
         }
       });
 
+      console.log('🔧 DataForm: Edge function response:', response);
+
       if (response.error) {
+        console.error('🔧 DataForm: Edge function error:', response.error);
         throw response.error;
       }
 
+      if (!response.data) {
+        console.error('🔧 DataForm: No data in response:', response);
+        throw new Error('No data returned from re-extraction');
+      }
+
       const { extractedValue } = response.data;
+      console.log('🔧 DataForm: Extracted value:', extractedValue);
       
       // Update the specific field with the re-extracted value
       onChange(reExtractDialog.fieldName, extractedValue);
@@ -313,10 +338,10 @@ const DataForm: React.FC<DataFormProps> = ({
       });
 
     } catch (error) {
-      console.error('Error re-extracting field:', error);
+      console.error('🔧 DataForm: Error re-extracting field:', error);
       toast({
-        title: "Re-extraction failed",
-        description: "Failed to re-extract the field. Please try again.",
+        title: "Re-extraction failed", 
+        description: `Failed to re-extract the field: ${error?.message || 'Unknown error'}. Please try again.`,
         variant: "destructive"
       });
     } finally {
