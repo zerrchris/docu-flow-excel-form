@@ -8,7 +8,6 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Plus, Trash2, Check, X, ArrowUp, ArrowDown, Save, FolderOpen, Download, Upload, AlignLeft, AlignCenter, AlignRight, Cloud, ChevronDown, FileText, Archive, ExternalLink, AlertTriangle, FileStack, Settings, Eye, EyeOff, Sparkles } from 'lucide-react';
@@ -4758,7 +4757,7 @@ ${extractionFields}`
           }}
           onScroll={handleScroll}
         >
-            <Table 
+            <table 
               className="border-collapse w-full" 
               style={{ 
                 tableLayout: 'fixed', 
@@ -4767,25 +4766,23 @@ ${extractionFields}`
               }}
             >
             {/* STICKY HEADER - Always visible at top */}
-            <TableHeader 
-              className="sticky top-0 bg-background/95 border-b-2 backdrop-blur-sm z-50"
+            <thead 
+              className="sticky-table-header"
               style={{ 
                 position: 'sticky',
                 top: 0,
-                zIndex: 9999,
+                zIndex: 1000,
                 backgroundColor: 'hsl(var(--background))',
                 borderBottom: '2px solid hsl(var(--border))',
-                backdropFilter: 'blur(4px)',
-                WebkitBackdropFilter: 'blur(4px)',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
               }}
             >
-               <TableRow className="hover:bg-muted/50 transition-colors">
-                {columns.map((column) => (
-                   <TableHead 
+               <tr className="hover:bg-muted/50 transition-colors">
+                 {columns.map((column) => (
+                   <th 
                        key={column}
-                       className={`font-bold text-center border-r border-border relative p-0 last:border-r-0 cursor-move transition-all duration-200
-                          ${draggedColumn === column ? 'opacity-50 transform scale-95' : ''} 
+                       className={`font-bold text-center border-r border-border relative p-0 last:border-r-0 cursor-move transition-all duration-200 h-12 px-4 text-left align-middle font-medium text-muted-foreground
+                          ${draggedColumn === column ? 'opacity-50 transform scale-95' : ''}
                           ${dragOverColumn === column ? 'bg-primary/20 shadow-lg' : 'bg-background/95'}
                           ${localMissingColumns.includes(column) ? 'bg-yellow-100 border-2 border-yellow-400 dark:bg-yellow-900/20 dark:border-yellow-500 animate-pulse shadow-yellow-200 dark:shadow-yellow-900' : 'hover:bg-muted/30'}
                           backdrop-blur-sm`}
@@ -4862,12 +4859,12 @@ ${extractionFields}`
                          </ContextMenuItem>
                        </ContextMenuContent>
                      </ContextMenu>
-                   </TableHead>
-                 ))}
-                
-                 {/* Document File Name column header - conditionally visible */}
-                 {showDocumentFileNameColumn && (
-                     <TableHead 
+                    </th>
+                  ))}
+                 
+                  {/* Document File Name column header - conditionally visible */}
+                  {showDocumentFileNameColumn && (
+                      <th
                        className="font-bold text-center border-r border-border relative p-0 bg-background sticky top-0"
                        style={{ 
                          width: "200px", 
@@ -4881,11 +4878,11 @@ ${extractionFields}`
                      <div className="w-full h-full px-4 py-2 flex flex-col items-center justify-center">
                        <span className="font-bold">Document File Name</span>
                      </div>
-                   </TableHead>
-                 )}
-                 
-                 {/* Actions column header - not draggable */}
-                    <TableHead 
+                    </th>
+                  )}
+                  
+                  {/* Actions column header - not draggable */}
+                     <th
                       className="font-bold text-center relative p-0 bg-background sticky top-0"
                       style={{ 
                         width: "600px", 
@@ -4916,37 +4913,37 @@ ${extractionFields}`
                          Smart File Name Settings
                       </Button>
                    </div>
-                 </TableHead>
-               </TableRow>
-             </TableHeader>
+                  </th>
+                </tr>
+             </thead>
 
               {/* Table Body */}
-              <TableBody>
+              <tbody>
                   {data.map((row, rowIndex) => {
                     return (
                       <React.Fragment key={`row-${rowIndex}`}>
                          {/* Show inline document viewer above this row if it's selected */}
                         {inlineViewerRow === rowIndex && (
-                      <TableRow>
-                        <TableCell colSpan={columns.length + (showDocumentFileNameColumn ? 1 : 0) + 1} className="p-0 border-0">
-                          <InlineDocumentViewer
-                            runsheetId={effectiveRunsheetId}
-                            rowIndex={rowIndex}
-                            onClose={() => setInlineViewerRow(null)}
-                          />
-                        </TableCell>
-                      </TableRow>
-                    )}
+                       <tr>
+                         <td colSpan={columns.length + (showDocumentFileNameColumn ? 1 : 0) + 1} className="p-0 border-0">
+                           <InlineDocumentViewer
+                             runsheetId={effectiveRunsheetId}
+                             rowIndex={rowIndex}
+                             onClose={() => setInlineViewerRow(null)}
+                           />
+                         </td>
+                       </tr>
+                     )}
                    
-                     <TableRow 
-                      className={`relative transition-all duration-200 group
-                        ${lastEditedCell?.rowIndex === rowIndex ? 'bg-green-50 dark:bg-green-900/20 animate-pulse' : 'hover:bg-muted/30'}
-                      `}
-                      style={{ 
-                        height: `${getRowHeight(rowIndex)}px`,
-                        minHeight: `${getRowHeight(rowIndex)}px`
-                      }}
-                    >
+                      <tr 
+                       className={`relative transition-all duration-200 group border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted
+                         ${lastEditedCell?.rowIndex === rowIndex ? 'bg-green-50 dark:bg-green-900/20 animate-pulse' : 'hover:bg-muted/30'}
+                       `}
+                       style={{ 
+                         height: `${getRowHeight(rowIndex)}px`,
+                         minHeight: `${getRowHeight(rowIndex)}px`
+                       }}
+                     >
                     {columns.map((column) => {
                      const isSelected = selectedCell?.rowIndex === rowIndex && selectedCell?.column === column;
                      const isEditing = editingCell?.rowIndex === rowIndex && editingCell?.column === column;
@@ -4954,7 +4951,7 @@ ${extractionFields}`
                      const isInRange = isCellInRange(rowIndex, columnIndex);
                      
                      return (
-                        <TableCell 
+                         <td
                           key={`${rowIndex}-${column}`}
                            className={`border-r border-border last:border-r-0 relative cursor-text transition-all duration-200 group-hover:bg-muted/20
                              ${isEditing ? 'p-0 z-20' : 'p-0'}
@@ -5039,7 +5036,7 @@ ${extractionFields}`
                                {row[column] || ''}
                              </div>
                          )}
-                       </TableCell>
+                         </td>
                      );
                     })}
                     
@@ -5052,7 +5049,7 @@ ${extractionFields}`
                        const isInRange = isCellInRange(rowIndex, columnIndex);
                        
                        return (
-                         <TableCell 
+                          <td
                            key={`${rowIndex}-${column}`}
                             className={`border-r border-border p-0 cursor-text overflow-hidden`}
                             style={{ 
@@ -5153,12 +5150,12 @@ ${extractionFields}`
                                   </span>
                                </div>
                            )}
-                         </TableCell>
+                          </td>
                        );
                      })()}
                     
                      {/* Actions column - Document management */}
-                     <TableCell 
+                     <td 
                        className="p-0 overflow-hidden"
                        style={{ 
                          width: "600px", 
@@ -5250,7 +5247,7 @@ ${extractionFields}`
                            rowData={row}
                          />
                        </div>
-                       </TableCell>
+                       </td>
                       
                        {/* Enhanced row resize handle */}
                        <div
@@ -5260,13 +5257,13 @@ ${extractionFields}`
                        >
                          <div className="w-full h-0.5 bg-primary/60 mt-0.75"></div>
                         </div>
-                      </TableRow>
+                      </tr>
                      </React.Fragment>
                     );
                   })}
-               </TableBody>
-           </Table>
-           </div>
+              </tbody>
+            </table>
+            </div>
 
         </div>
 
