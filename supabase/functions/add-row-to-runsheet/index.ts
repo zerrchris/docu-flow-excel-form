@@ -81,8 +81,19 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Update runsheet data
+    // Enhanced validation and row management
     let data = Array.isArray(runsheet.data) ? [...runsheet.data] : []
+    
+    // Validate row_index is reasonable
+    if (row_index < 0 || row_index > data.length + 100) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid row index provided', success: false }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
+    }
     
     // Ensure we have the specified row index
     while (data.length <= row_index) {
@@ -91,8 +102,46 @@ Deno.serve(async (req) => {
       data.push(emptyRow)
     }
 
-    // Update the row at the specified index
-    data[row_index] = { ...data[row_index], ...row_data }
+    // Check if target row has existing data (safety check)
+    const existingRow = data[row_index]
+    const hasExistingData = Object.values(existingRow).some(value => 
+      value && value.toString().trim() !== '' && value.toString().trim().toLowerCase() !== 'n/a'
+    )
+
+    if (hasExistingData) {
+      console.log('Warning: Adding data to row that already contains information:', existingRow)
+      // Log for audit purposes but don't prevent the operation as this might be intentional updates
+    }
+
+    // Validate the incoming data
+    const validatedRowData: Record<string, string> = {}
+    let validFieldCount = 0
+    
+    Object.entries(row_data).forEach(([column, value]) => {
+      if (runsheet.columns.includes(column)) {
+        const stringValue = value?.toString().trim() || ''
+        if (stringValue !== '') {
+          validatedRowData[column] = stringValue
+          validFieldCount++
+        }
+      } else {
+        console.log('Ignoring invalid column:', column)
+      }
+    })
+
+    // Ensure we're adding at least some valid data
+    if (validFieldCount === 0) {
+      return new Response(
+        JSON.stringify({ error: 'No valid data provided for any columns', success: false }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      )
+    }
+
+    // Update the row with validated data
+    data[row_index] = { ...data[row_index], ...validatedRowData }
 
     // Save updated runsheet
     const { error: updateError } = await supabase
@@ -115,13 +164,16 @@ Deno.serve(async (req) => {
       )
     }
 
-    console.log('Successfully added row to runsheet at index:', row_index)
+    console.log(`Successfully added ${validFieldCount} fields to row ${row_index} in runsheet`)
 
     return new Response(
       JSON.stringify({ 
         success: true,
         row_index: row_index,
-        message: `Row ${row_index + 1} added successfully`
+        populated_fields: Object.keys(validatedRowData),
+        populated_field_count: validFieldCount,
+        had_existing_data: hasExistingData,
+        message: `Row ${row_index + 1} updated successfully with ${validFieldCount} fields`
       }),
       { 
         status: 200, 

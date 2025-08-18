@@ -66,36 +66,85 @@ serve(async (req) => {
       );
     }
 
-    // Find the next available row (first empty row)
+    // Enhanced empty row validation
     const currentData = runsheet.data as Record<string, string>[];
     let targetRowIndex = -1;
 
-    // Look for the first row that has all empty values
+    // Comprehensive check for truly empty rows
+    const isRowEmpty = (row: Record<string, string>): boolean => {
+      return Object.values(row).every(value => 
+        !value || 
+        value.toString().trim() === '' || 
+        value.toString().trim().toLowerCase() === 'n/a'
+      );
+    };
+
+    // Look for the first completely empty row
     for (let i = 0; i < currentData.length; i++) {
       const row = currentData[i];
-      const hasAnyData = Object.values(row).some(value => value && value.trim() !== '');
       
-      if (!hasAnyData) {
-        targetRowIndex = i;
-        break;
+      if (isRowEmpty(row)) {
+        // Double-check that this row doesn't have any associated documents
+        const { data: existingDoc } = await supabaseService
+          .from('documents')
+          .select('id')
+          .eq('runsheet_id', runsheetId)
+          .eq('row_index', i)
+          .eq('user_id', user.id)
+          .maybeSingle();
+          
+        if (!existingDoc) {
+          targetRowIndex = i;
+          break;
+        }
       }
     }
 
-    // If no empty row found, add a new row
+    // If no empty row found, add new rows to ensure we have space
     if (targetRowIndex === -1) {
       const newRow: Record<string, string> = {};
       runsheet.columns.forEach((col: string) => newRow[col] = '');
       currentData.push(newRow);
       targetRowIndex = currentData.length - 1;
+      
+      console.log(`No empty row found, added new row at index ${targetRowIndex}`);
+    } else {
+      console.log(`Found empty row at index ${targetRowIndex}`);
+    }
+
+    // Validate that target row is still empty before populating
+    if (!isRowEmpty(currentData[targetRowIndex])) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Target row is no longer empty. Data insertion cancelled to prevent overwriting.',
+          targetRowIndex,
+          currentRowData: currentData[targetRowIndex]
+        }),
+        { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Populate the target row with extracted data
     const targetRow = currentData[targetRowIndex];
+    const populatedFields: string[] = [];
+    
     Object.entries(extractedData).forEach(([column, value]) => {
-      if (runsheet.columns.includes(column)) {
-        targetRow[column] = value || '';
+      if (runsheet.columns.includes(column) && value && value.toString().trim() !== '') {
+        targetRow[column] = value.toString().trim();
+        populatedFields.push(column);
       }
     });
+
+    // Validate that we actually populated some data
+    if (populatedFields.length === 0) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'No valid data was extracted from the document. Please check the document content and try again.',
+          extractedData 
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Update the runsheet in the database
     const { error: updateError } = await supabaseService
@@ -157,14 +206,15 @@ serve(async (req) => {
       }
     }
 
-    console.log(`Successfully populated row ${targetRowIndex} in runsheet ${runsheetId}`);
+    console.log(`Successfully populated row ${targetRowIndex} with ${populatedFields.length} fields in runsheet ${runsheetId}`);
 
     return new Response(
       JSON.stringify({
         success: true,
         rowIndex: targetRowIndex,
-        populatedFields: Object.keys(extractedData).length,
-        message: `Data successfully added to row ${targetRowIndex + 1}`
+        populatedFields: populatedFields,
+        populatedFieldCount: populatedFields.length,
+        message: `Data successfully added to row ${targetRowIndex + 1}. Populated fields: ${populatedFields.join(', ')}`
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

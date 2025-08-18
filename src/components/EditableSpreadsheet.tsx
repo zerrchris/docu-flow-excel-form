@@ -55,6 +55,16 @@ import { useAutoSave } from '@/hooks/useAutoSave';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 import DocumentWorkspaceButton from './DocumentWorkspaceButton';
 import type { User } from '@supabase/supabase-js';
+import { 
+  isRowEmpty, 
+  hasRowData, 
+  findFirstEmptyRow, 
+  validateDataForInsertion, 
+  validateRowForInsertion,
+  getRowDataSummary,
+  prepareDataForInsertion 
+} from '@/utils/rowValidation';
+import { RowInsertionIndicator, NextEmptyRowIndicator } from './RowInsertionIndicator';
 
 interface SpreadsheetProps {
   initialColumns: string[];
@@ -252,6 +262,12 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [cellValidationErrors, setCellValidationErrors] = useState<Record<string, string>>({});
   const [isTableLoading, setIsTableLoading] = useState(false);
   const [lastEditedCell, setLastEditedCell] = useState<{rowIndex: number, column: string} | null>(null);
+  const [pendingDataInsertion, setPendingDataInsertion] = useState<{
+    rowIndex: number;
+    data: Record<string, string>;
+    hasExistingData: boolean;
+  } | null>(null);
+  const [showInsertionPreview, setShowInsertionPreview] = useState(false);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Initialize auto-save hook
@@ -3910,7 +3926,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     setRowsToAdd(1);
   };
 
-  const analyzeDocumentAndPopulateRow = async (file: File, targetRowIndex: number) => {
+  const analyzeDocumentAndPopulateRow = async (file: File, targetRowIndex: number, forceOverwrite: boolean = false) => {
     try {
       console.log('🔍 Starting document analysis for:', file.name, 'type:', file.type, 'size:', file.size);
       
@@ -4213,13 +4229,59 @@ ${extractionFields}`
 
       console.log('🔍 Final mapped data:', mappedData);
 
+      // Validate the data before insertion
+      const dataValidation = validateDataForInsertion(mappedData, columns);
+      if (!dataValidation.isValid) {
+        throw new Error(dataValidation.error || 'Invalid data for insertion');
+      }
+
+      // Show warnings if any
+      if (dataValidation.warnings && dataValidation.warnings.length > 0) {
+        console.warn('Data insertion warnings:', dataValidation.warnings);
+      }
+
+      // Validate the target row unless overwrite is forced
+      const currentRow = data[targetRowIndex];
+      const rowValidation = validateRowForInsertion(currentRow, targetRowIndex, forceOverwrite);
+      
+      if (!rowValidation.isValid && !forceOverwrite) {
+        // Show confirmation dialog for overwriting existing data
+        const userConfirmed = window.confirm(
+          `${rowValidation.error}\n\nCurrent row contains: ${getRowDataSummary(currentRow)}\n\nDo you want to overwrite this data?`
+        );
+        
+        if (!userConfirmed) {
+          // Find the next empty row and suggest it
+          const nextEmptyRowIndex = findFirstEmptyRow(data);
+          if (nextEmptyRowIndex !== -1) {
+            const useEmptyRow = window.confirm(
+              `Would you like to add the data to the first empty row (row ${nextEmptyRowIndex + 1}) instead?`
+            );
+            if (useEmptyRow) {
+              return analyzeDocumentAndPopulateRow(file, nextEmptyRowIndex, false);
+            }
+          }
+          
+          toast({
+            title: "Operation cancelled",
+            description: "Data insertion was cancelled to prevent overwriting existing information.",
+            variant: "default"
+          });
+          return;
+        }
+      }
+
+      // Clean the data for insertion
+      const cleanMappedData = prepareDataForInsertion(mappedData, columns);
+
       // Update the row with mapped data
       const newData = [...data];
       console.log('🔍 Row data before update:', newData[targetRowIndex]);
       
+      // Merge with existing data (in case of partial updates)
       newData[targetRowIndex] = {
         ...newData[targetRowIndex],
-        ...mappedData
+        ...cleanMappedData
       };
       
       console.log('🔍 Row data after update:', newData[targetRowIndex]);
@@ -4227,10 +4289,14 @@ ${extractionFields}`
       setData(newData);
       onDataChange?.(newData);
 
+      // Show success message with details
+      const populatedFields = Object.keys(cleanMappedData);
       toast({
-        title: "Document analyzed",
-        description: "Data has been extracted and populated in the row.",
+        title: "Document analyzed successfully",
+        description: `Data extracted and added to row ${targetRowIndex + 1}. Populated fields: ${populatedFields.join(', ')}`,
+        variant: "default"
       });
+
 
     } catch (error) {
       console.error('Document analysis error:', error);
@@ -5229,11 +5295,32 @@ ${extractionFields}`
                            );
 
                             if (hasExistingData) {
-                              // Show warning dialog
+                              // Show insertion preview and warning
+                              setPendingDataInsertion({
+                                rowIndex,
+                                data: row,
+                                hasExistingData: true
+                              });
+                              setShowInsertionPreview(true);
+                              
+                              // Also show the existing dialog
                               setPendingAnalysis({ file, filename, rowIndex });
                               setShowAnalyzeWarningDialog(true);
                             } else {
-                              // Proceed with analysis
+                              // Show insertion preview for empty row
+                              setPendingDataInsertion({
+                                rowIndex,
+                                data: {},
+                                hasExistingData: false
+                              });
+                              setShowInsertionPreview(true);
+                              
+                              // Proceed with analysis after brief preview
+                              setTimeout(() => {
+                                setShowInsertionPreview(false);
+                                setPendingDataInsertion(null);
+                              }, 1000);
+                              
                               await analyzeDocumentAndPopulateRow(file, rowIndex);
                             }
                           }}
@@ -5623,6 +5710,8 @@ ${extractionFields}`
             <AlertDialogFooter>
               <AlertDialogCancel onClick={() => {
                 setShowAnalyzeWarningDialog(false);
+                setShowInsertionPreview(false);
+                setPendingDataInsertion(null);
                 setPendingAnalysis(null);
               }}>
                 Cancel
@@ -5630,7 +5719,9 @@ ${extractionFields}`
               <AlertDialogAction onClick={async () => {
                 if (pendingAnalysis) {
                   setShowAnalyzeWarningDialog(false);
-                  await analyzeDocumentAndPopulateRow(pendingAnalysis.file, pendingAnalysis.rowIndex);
+                  setShowInsertionPreview(false);
+                  setPendingDataInsertion(null);
+                  await analyzeDocumentAndPopulateRow(pendingAnalysis.file, pendingAnalysis.rowIndex, true);
                   setPendingAnalysis(null);
                 }
               }}>
@@ -5638,9 +5729,38 @@ ${extractionFields}`
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
-        </AlertDialog>
+         </AlertDialog>
 
-        {/* Google Drive Picker */}
+         {/* Row Insertion Preview */}
+         {showInsertionPreview && pendingDataInsertion && (
+           <div className="fixed top-4 right-4 z-50 max-w-md">
+             <RowInsertionIndicator
+               rowIndex={pendingDataInsertion.rowIndex}
+               isVisible={true}
+               hasExistingData={pendingDataInsertion.hasExistingData}
+             />
+             
+             {pendingDataInsertion.hasExistingData && (
+               <NextEmptyRowIndicator
+                 nextEmptyRowIndex={findFirstEmptyRow(data)}
+                 isVisible={true}
+                 onUseEmptyRow={() => {
+                   const emptyRowIndex = findFirstEmptyRow(data);
+                   if (emptyRowIndex !== -1 && pendingAnalysis) {
+                     setShowAnalyzeWarningDialog(false);
+                     setShowInsertionPreview(false);
+                     analyzeDocumentAndPopulateRow(pendingAnalysis.file, emptyRowIndex);
+                     setPendingAnalysis(null);
+                     setPendingDataInsertion(null);
+                   }
+                 }}
+                 className="mt-2"
+               />
+             )}
+           </div>
+         )}
+
+         {/* Google Drive Picker */}
         <GoogleDrivePicker
           isOpen={showGoogleDrivePicker}
           onClose={() => setShowGoogleDrivePicker(false)}
