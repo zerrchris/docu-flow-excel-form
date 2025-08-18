@@ -573,10 +573,9 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
             {/* File Preview Section */}
             {selectedFile && (
               <div className="mt-4">
-                <FilePreview
+                <SelectedFilePreview
                   file={selectedFile}
                   onRemove={() => onFileSelect(null as any)}
-                  showPreview={true}
                 />
               </div>
             )}
@@ -600,6 +599,65 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
           </div>
       </div>
     </Card>
+  );
+};
+
+// Simple preview component for selected File objects
+const SelectedFilePreview: React.FC<{ file: File; onRemove: () => void }> = ({ file, onRemove }) => {
+  const getFileType = (filename: string) => {
+    const ext = filename.toLowerCase().split('.').pop();
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(ext || '')) return 'image';
+    if (['pdf'].includes(ext || '')) return 'pdf';
+    return 'other';
+  };
+
+  const fileType = getFileType(file.name);
+  const fileUrl = URL.createObjectURL(file);
+
+  return (
+    <div className="border rounded-lg p-4 bg-muted/30">
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <h4 className="font-medium">{file.name}</h4>
+          <p className="text-sm text-muted-foreground">
+            {formatFileSize(file.size)}
+          </p>
+        </div>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={onRemove}
+          className="text-destructive hover:text-destructive"
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
+      
+      {fileType === 'image' && (
+        <div className="mt-3">
+          <img
+            src={fileUrl}
+            alt={file.name}
+            className="max-w-full max-h-48 object-contain rounded border"
+            onLoad={() => URL.revokeObjectURL(fileUrl)}
+          />
+        </div>
+      )}
+      
+      {fileType === 'pdf' && (
+        <div className="mt-3 text-center py-8 border rounded bg-muted/20">
+          <FileIcon className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
+          <p className="text-sm text-muted-foreground">PDF file selected</p>
+        </div>
+      )}
+      
+      {fileType === 'other' && (
+        <div className="mt-3 text-center py-8 border rounded bg-muted/20">
+          <FileIcon className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
+          <p className="text-sm text-muted-foreground">File selected</p>
+        </div>
+      )}
+    </div>
   );
 };
 
