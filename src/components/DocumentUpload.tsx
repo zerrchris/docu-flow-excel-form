@@ -6,6 +6,9 @@ import { useToast } from '@/hooks/use-toast';
 import { convertPDFToImages, isPDF, createFileFromBlob } from '@/utils/pdfToImage';
 import { ScreenshotCapture } from './ScreenshotCapture';
 import { supabase } from '@/integrations/supabase/client';
+import { validateMultipleFiles, formatFileSize } from '@/utils/fileValidation';
+import { FileUploadStatus } from '@/components/ui/file-upload-status';
+import { FilePreview } from '@/components/FilePreview';
 
 interface DocumentUploadProps {
   onFileSelect: (file: File) => void;
@@ -159,36 +162,65 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
     e.preventDefault();
     
     const files = Array.from(e.dataTransfer.files);
-    if (files.length > 0) {
-      // Validate all files first
-      const invalidFiles: string[] = [];
+    if (files.length === 0) return;
+    
+    console.log('🔧 DocumentUpload: Processing dropped files:', files.length);
+    
+    // Use enhanced validation
+    const { validFiles, invalidFiles, warnings } = validateMultipleFiles(files);
+    
+    // Show validation status
+    if (invalidFiles.length > 0) {
+      toast({
+        title: "❌ File Validation Errors",
+        description: `${invalidFiles.length} file(s) were rejected. Check the details below.`,
+        variant: "destructive",
+        duration: 8000,
+      });
       
-      for (const file of files) {
-        const validation = validateFile(file);
-        if (!validation.isValid) {
-          invalidFiles.push(`${file.name}: ${validation.error}`);
-        }
-      }
-
-      if (invalidFiles.length > 0) {
+      // Log specific errors
+      invalidFiles.forEach(({ file, error }) => {
+        console.error('🔧 DocumentUpload: File rejected:', file.name, '-', error);
+      });
+      
+      return; // Don't process any files if there are validation errors
+    }
+    
+    // Show warnings if any
+    if (warnings.length > 0) {
+      toast({
+        title: "⚠️ File Upload Warnings",
+        description: `${warnings.length} file(s) have potential issues but will be processed.`,
+        variant: "default",
+        duration: 6000,
+      });
+    }
+    
+    // Process valid files
+    try {
+      if (allowMultiple && validFiles.length > 1 && onMultipleFilesSelect) {
+        onMultipleFilesSelect(validFiles);
         toast({
-          title: "Invalid files dropped",
-          description: invalidFiles.join('\n'),
-          variant: "destructive",
-          duration: 6000,
+          title: "✅ Files Ready",
+          description: `${validFiles.length} files are ready for processing.`,
         });
-        return;
-      }
-
-      // Process validated files
-      if (allowMultiple && files.length > 1 && onMultipleFilesSelect) {
-        onMultipleFilesSelect(files);
-      } else {
-        const processedFile = await handlePDFConversion(files[0]);
+      } else if (validFiles.length > 0) {
+        const processedFile = await handlePDFConversion(validFiles[0]);
         if (processedFile) {
           onFileSelect(processedFile);
+          toast({
+            title: "✅ File Selected",
+            description: `"${processedFile.name}" is ready for analysis.`,
+          });
         }
       }
+    } catch (error) {
+      console.error('🔧 DocumentUpload: Error processing files:', error);
+      toast({
+        title: "Processing Error",
+        description: "Failed to process the uploaded files. Please try again.",
+        variant: "destructive",
+      });
     }
   }, [onFileSelect, onMultipleFilesSelect, allowMultiple, handlePDFConversion, toast]);
 
@@ -196,75 +228,166 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
     e.preventDefault();
   }, []);
 
-  const validateFile = (file: File): { isValid: boolean; error?: string } => {
+  const validateFile = (file: File): { isValid: boolean; error?: string; warning?: string } => {
+    console.log('🔧 DocumentUpload: Validating file:', {
+      name: file.name,
+      type: file.type,
+      size: file.size
+    });
+
     // File size validation (50MB max)
     const maxSize = 50 * 1024 * 1024; // 50MB
     if (file.size > maxSize) {
-      return { isValid: false, error: `File size (${(file.size / 1024 / 1024).toFixed(1)}MB) exceeds the 50MB limit.` };
-    }
-
-    // File type validation
-    const validTypes = [
-      'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/tiff',
-      'application/pdf',
-      'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'text/plain'
-    ];
-
-    const validExtensions = [
-      '.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.tif',
-      '.pdf',
-      '.doc', '.docx',
-      '.txt'
-    ];
-
-    const fileName = file.name.toLowerCase();
-    const hasValidExtension = validExtensions.some(ext => fileName.endsWith(ext));
-    const hasValidType = validTypes.includes(file.type) || file.type.startsWith('image/');
-
-    if (!hasValidExtension && !hasValidType) {
       return { 
         isValid: false, 
-        error: `Unsupported file type. Please use: Images (JPG, PNG, GIF, WebP, BMP, TIFF), PDF, Word documents (DOC, DOCX), or Text files.` 
+        error: `File "${file.name}" is too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum file size is 50MB. Please compress or resize your file.` 
       };
     }
 
-    return { isValid: true };
+    // Empty file check
+    if (file.size === 0) {
+      return { 
+        isValid: false, 
+        error: `File "${file.name}" appears to be empty. Please select a valid file.` 
+      };
+    }
+
+    // Supported file types and extensions
+    const supportedFormats = {
+      // Image formats
+      images: {
+        types: ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/tiff', 'image/svg+xml'],
+        extensions: ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.tif', '.svg']
+      },
+      // Document formats
+      documents: {
+        types: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'],
+        extensions: ['.pdf', '.doc', '.docx', '.txt']
+      }
+    };
+
+    // Get all valid types and extensions
+    const allValidTypes = [...supportedFormats.images.types, ...supportedFormats.documents.types];
+    const allValidExtensions = [...supportedFormats.images.extensions, ...supportedFormats.documents.extensions];
+
+    const fileName = file.name.toLowerCase();
+    const fileExtension = fileName.substring(fileName.lastIndexOf('.'));
+    
+    // Check if extension is valid
+    const hasValidExtension = allValidExtensions.includes(fileExtension);
+    
+    // Check MIME type - be more flexible with image types
+    const hasValidMimeType = allValidTypes.includes(file.type) || 
+                            file.type.startsWith('image/') || 
+                            (file.type === '' && hasValidExtension); // Handle files with empty MIME type but valid extension
+
+    // Special handling for specific cases
+    if (!hasValidExtension && !hasValidMimeType) {
+      const supportedTypesText = "Images (JPG, PNG, GIF, WebP, BMP, TIFF, SVG), PDF documents, Word documents (DOC, DOCX), or Text files (TXT)";
+      return { 
+        isValid: false, 
+        error: `"${file.name}" has an unsupported file format. Please upload one of the following: ${supportedTypesText}.` 
+      };
+    }
+
+    // Warn about potentially problematic formats
+    let warning: string | undefined;
+    if (file.type === 'image/gif' && file.size > 10 * 1024 * 1024) {
+      warning = "Large GIF files may take longer to process and could impact performance.";
+    } else if (file.type === 'application/pdf') {
+      warning = "PDF files will be processed, but converting to an image format (PNG/JPG) may provide better analysis results.";
+    } else if (file.type === 'image/svg+xml') {
+      warning = "SVG files are supported but raster images (PNG, JPG) typically work better for document analysis.";
+    }
+
+    // Additional validation for suspicious files
+    if (fileName.includes('..') || fileName.includes('/') || fileName.includes('\\')) {
+      return { 
+        isValid: false, 
+        error: `"${file.name}" contains invalid characters. Please rename your file and try again.` 
+      };
+    }
+
+    // Check for executable extensions disguised as documents
+    const dangerousExtensions = ['.exe', '.bat', '.cmd', '.scr', '.pif', '.com', '.jar', '.zip', '.rar'];
+    const hasDangerousExtension = dangerousExtensions.some(ext => fileName.includes(ext));
+    
+    if (hasDangerousExtension) {
+      return { 
+        isValid: false, 
+        error: `"${file.name}" appears to contain executable code. Only document and image files are allowed.` 
+      };
+    }
+
+    console.log('🔧 DocumentUpload: File validation passed:', file.name);
+    return { isValid: true, warning };
   };
 
   const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (files && files.length > 0) {
-      // Validate all files first
-      const fileArray = Array.from(files);
-      const invalidFiles: string[] = [];
+    if (!files || files.length === 0) return;
+    
+    console.log('🔧 DocumentUpload: Processing selected files:', files.length);
+    
+    // Use enhanced validation
+    const fileArray = Array.from(files);
+    const { validFiles, invalidFiles, warnings } = validateMultipleFiles(fileArray);
+    
+    // Clear file input if there are validation errors
+    if (invalidFiles.length > 0) {
+      e.target.value = '';
       
-      for (const file of fileArray) {
-        const validation = validateFile(file);
-        if (!validation.isValid) {
-          invalidFiles.push(`${file.name}: ${validation.error}`);
-        }
-      }
-
-      if (invalidFiles.length > 0) {
+      toast({
+        title: "❌ File Validation Failed",
+        description: `${invalidFiles.length} file(s) were rejected. Please select valid files.`,
+        variant: "destructive",
+        duration: 8000,
+      });
+      
+      // Log specific errors
+      invalidFiles.forEach(({ file, error }) => {
+        console.error('🔧 DocumentUpload: File rejected:', file.name, '-', error);
+      });
+      
+      return;
+    }
+    
+    // Show warnings if any
+    if (warnings.length > 0) {
+      toast({
+        title: "⚠️ File Warnings",
+        description: `${warnings.length} file(s) have potential issues but will be processed.`,
+        variant: "default",
+        duration: 6000,
+      });
+    }
+    
+    // Process valid files
+    try {
+      if (allowMultiple && validFiles.length > 1 && onMultipleFilesSelect) {
+        onMultipleFilesSelect(validFiles);
         toast({
-          title: "Invalid files detected",
-          description: invalidFiles.join('\n'),
-          variant: "destructive",
-          duration: 6000,
+          title: "✅ Files Selected",
+          description: `${validFiles.length} files are ready for processing.`,
         });
-        return;
-      }
-
-      // Process validated files
-      if (allowMultiple && files.length > 1 && onMultipleFilesSelect) {
-        onMultipleFilesSelect(fileArray);
-      } else {
-        const processedFile = await handlePDFConversion(files[0]);
+      } else if (validFiles.length > 0) {
+        const processedFile = await handlePDFConversion(validFiles[0]);
         if (processedFile) {
           onFileSelect(processedFile);
+          toast({
+            title: "✅ File Selected",
+            description: `"${processedFile.name}" is ready for analysis.`,
+          });
         }
       }
+    } catch (error) {
+      console.error('🔧 DocumentUpload: Error processing files:', error);
+      e.target.value = ''; // Clear input on error
+      toast({
+        title: "Processing Error",
+        description: "Failed to process the selected files. Please try again.",
+        variant: "destructive",
+      });
     }
   }, [onFileSelect, onMultipleFilesSelect, allowMultiple, handlePDFConversion, toast]);
 
@@ -349,7 +472,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
                         id="document-upload-input"
                         type="file"
                         className="sr-only"
-                        accept="image/*,.pdf,.doc,.docx"
+                        accept="image/*,.pdf,.doc,.docx,.txt"
                         onChange={handleFileChange}
                         multiple={allowMultiple}
                         disabled={isProcessing}
@@ -357,11 +480,11 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
                     </div>
                     <div className="space-y-1">
                       <p className="text-sm text-muted-foreground">
-                        Supports: Images, PDF, Word documents{allowMultiple ? ' - Multiple images can be combined' : ''}
+                        ✅ Supported: JPG, PNG, GIF, WebP, BMP, TIFF, SVG, PDF, DOC, DOCX, TXT{allowMultiple ? ' | Multiple files can be selected' : ''}
                       </p>
                       <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
                         <AlertCircle className="h-3 w-3" />
-                        For best results with PDFs, convert to image (PNG/JPG) first
+                        Maximum file size: 50MB | For best results with PDFs, convert to image format first
                       </p>
                     </div>
                   </>
@@ -447,6 +570,17 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
               </div>
             )}
 
+            {/* File Preview Section */}
+            {selectedFile && (
+              <div className="mt-4">
+                <FilePreview
+                  file={selectedFile}
+                  onRemove={() => onFileSelect(null as any)}
+                  showPreview={true}
+                />
+              </div>
+            )}
+
             {selectedFiles && selectedFiles.length > 0 ? (
               <div className="mt-4 space-y-2">
                 <p className="text-sm font-medium">{selectedFiles.length} files selected:</p>
@@ -462,15 +596,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
                   ))}
                 </div>
               </div>
-            ) : selectedFile && (
-              <div className="flex items-center space-x-2 p-4 bg-background rounded-lg mt-4 border">
-                <FileIcon className="h-5 w-5 text-primary" />
-                <span className="text-base text-foreground font-medium">{selectedFile.name}</span>
-                <span className="text-sm text-muted-foreground">
-                  ({(selectedFile.size / 1024).toFixed(1)} KB)
-                </span>
-              </div>
-            )}
+            ) : null}
           </div>
       </div>
     </Card>

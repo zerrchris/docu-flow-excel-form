@@ -40,24 +40,109 @@ serve(async (req) => {
       extracted_data 
     } = await req.json();
 
-    // Convert base64 blob to binary for storage
+    // Validate document blob format
+    const validateDocumentBlob = (blob: string): { isValid: boolean; error?: string; mimeType?: string } => {
+      if (!blob || typeof blob !== 'string') {
+        return { isValid: false, error: 'No document data provided' };
+      }
+
+      // Extract MIME type from data URL
+      const mimeTypeMatch = blob.match(/^data:([^;]+);base64,/);
+      if (!mimeTypeMatch) {
+        return { isValid: false, error: 'Invalid data format. Expected base64-encoded data URL.' };
+      }
+
+      const mimeType = mimeTypeMatch[1];
+      console.log('📎 Extension document link: Detected MIME type:', mimeType);
+
+      // Allowed MIME types for storage
+      const allowedTypes = [
+        'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 
+        'image/webp', 'image/bmp', 'image/tiff',
+        'application/pdf',
+        'text/plain'
+      ];
+
+      if (!allowedTypes.includes(mimeType)) {
+        return { 
+          isValid: false, 
+          error: `Unsupported file type: ${mimeType}. Supported types: ${allowedTypes.join(', ')}`,
+          mimeType 
+        };
+      }
+
+      // Validate base64 data
+      try {
+        const base64Data = blob.split(',')[1];
+        if (!base64Data || base64Data.length === 0) {
+          return { isValid: false, error: 'Invalid or empty base64 data' };
+        }
+        
+        // Test decode
+        atob(base64Data.substring(0, Math.min(100, base64Data.length)));
+        
+        return { isValid: true, mimeType };
+      } catch (error) {
+        return { isValid: false, error: 'Invalid base64 encoding' };
+      }
+    };
+
+    // Validate the document
+    const validation = validateDocumentBlob(document_blob);
+    if (!validation.isValid) {
+      console.error('❌ Document validation failed:', validation.error);
+      
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: validation.error,
+          mimeType: validation.mimeType
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400,
+        }
+      );
+    }
+
+    console.log('✅ Document validation passed for MIME type:', validation.mimeType);
+
+    // Convert base64 blob to binary for storage with additional validation
     const base64Data = document_blob.split(',')[1];
+    
+    if (!base64Data) {
+      throw new Error('Invalid document data: missing base64 content');
+    }
+
+    // Validate file size before processing
+    const estimatedSize = (base64Data.length * 3) / 4; // Approximate decoded size
+    const maxFileSize = 50 * 1024 * 1024; // 50MB
+    
+    if (estimatedSize > maxFileSize) {
+      throw new Error(`File too large: ${(estimatedSize / 1024 / 1024).toFixed(1)}MB exceeds 50MB limit`);
+    }
+
+    console.log('📦 Processing file size:', (estimatedSize / 1024 / 1024).toFixed(2), 'MB');
+
     const binaryData = atob(base64Data);
     const uint8Array = new Uint8Array(binaryData.length);
     for (let i = 0; i < binaryData.length; i++) {
       uint8Array[i] = binaryData.charCodeAt(i);
     }
 
+    // Determine content type from validation
+    const contentType = validation.mimeType || 'image/png';
+
     // Generate unique filename
     const timestamp = Date.now();
     const uniqueFilename = `extension_capture_${timestamp}_${filename || 'document.png'}`;
     const storagePath = `${user.id}/captures/${uniqueFilename}`;
 
-    // Upload to Supabase Storage
+    // Upload to Supabase Storage with proper content type
     const { data: uploadData, error: uploadError } = await supabaseClient.storage
       .from('documents')
       .upload(storagePath, uint8Array, {
-        contentType: 'image/png',
+        contentType: contentType,
         cacheControl: '3600',
         upsert: false
       });
@@ -81,7 +166,7 @@ serve(async (req) => {
         stored_filename: uniqueFilename,
         file_path: storagePath,
         row_index: row_index || 0,
-        content_type: 'image/png',
+        content_type: contentType,
         file_size: uint8Array.length
       })
       .select()

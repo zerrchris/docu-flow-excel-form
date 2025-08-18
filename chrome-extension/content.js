@@ -3527,6 +3527,15 @@ async function captureSelectedArea(left, top, width, height) {
           // Handle single mode - process with AI analysis if available
           if (snipMode === 'single') {
             try {
+              // Validate captured content format first
+              const validation = await validateCaptureFormat(blob);
+              
+              if (!validation.isValid) {
+                showNotification(validation.error, 'error');
+                cleanupSnipMode();
+                return;
+              }
+              
               // Store the snip locally for later use
               window.currentCapturedSnip = blob;
               window.currentSnipFilename = `captured_snip_${Date.now()}.png`;
@@ -3572,10 +3581,10 @@ async function captureSelectedArea(left, top, width, height) {
               updateScreenshotIndicator(true);
               
               cleanupSnipMode();
-              showNotification('Snip captured! Fill in data and click "Add to Row" to save everything together.', 'success');
+              showNotification('✅ Screenshot captured successfully! Fill in any additional data and click "Add Row" to save.', 'success');
             } catch (error) {
               console.error('Error capturing snip:', error);
-              showNotification('Failed to capture snip', 'error');
+              showNotification(`Failed to capture screenshot: ${error.message}`, 'error');
               cleanupSnipMode();
             }
           }
@@ -3914,7 +3923,43 @@ async function combineSnipsVertically(snips) {
   });
 }
 
-// Enhanced snip processing with AI analysis
+// Enhanced file format validation for Chrome extension
+function validateCaptureFormat(blob) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target.result;
+      
+      // Check if it's a valid image format
+      const supportedFormats = [
+        'data:image/png', 'data:image/jpeg', 'data:image/jpg',
+        'data:image/gif', 'data:image/webp', 'data:image/bmp'
+      ];
+      
+      const isSupported = supportedFormats.some(format => dataUrl.startsWith(format));
+      
+      if (!isSupported) {
+        resolve({
+          isValid: false,
+          error: 'Captured content is not in a supported image format. Please try capturing again.'
+        });
+      } else {
+        resolve({ isValid: true, dataUrl });
+      }
+    };
+    
+    reader.onerror = () => {
+      resolve({
+        isValid: false,
+        error: 'Failed to read captured content. Please try capturing again.'
+      });
+    };
+    
+    reader.readAsDataURL(blob);
+  });
+}
+
+// Enhanced processSnipWithAI function with better validation
 async function processSnipWithAI(blob, metadata = {}) {
   try {
     if (!window.EnhancedSnipWorkflow) {

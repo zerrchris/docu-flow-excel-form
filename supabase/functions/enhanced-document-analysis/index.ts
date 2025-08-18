@@ -34,6 +34,91 @@ serve(async (req) => {
 
     const { document_data, runsheet_id, document_name, extraction_preferences } = await req.json();
 
+    // Comprehensive document format validation
+    const validateDocumentData = (data: string): { isValid: boolean; error?: string; fileType?: string } => {
+      if (!data || typeof data !== 'string') {
+        return { isValid: false, error: 'No document data provided' };
+      }
+
+      // Supported formats for AI analysis
+      const supportedImageFormats = [
+        'data:image/jpeg', 'data:image/jpg', 'data:image/png', 
+        'data:image/gif', 'data:image/webp', 'data:image/bmp'
+      ];
+
+      // Check for supported formats
+      const detectedFormat = supportedImageFormats.find(format => data.startsWith(format));
+      if (detectedFormat) {
+        const fileType = detectedFormat.split('/')[1];
+        console.log('✅ Enhanced analysis: Valid format detected:', fileType);
+        return { isValid: true, fileType };
+      }
+
+      // Specific error messages for common unsupported formats
+      if (data.includes('data:application/pdf')) {
+        return { 
+          isValid: false, 
+          error: 'PDF format detected. Please convert PDF pages to image format (PNG/JPEG) for enhanced AI analysis.',
+          fileType: 'pdf'
+        };
+      }
+
+      if (data.includes('data:image/svg')) {
+        return { 
+          isValid: false, 
+          error: 'SVG format is not supported for AI document analysis. Please convert to raster format (PNG/JPEG).',
+          fileType: 'svg'
+        };
+      }
+
+      if (data.includes('data:application/') || data.includes('data:text/')) {
+        return { 
+          isValid: false, 
+          error: 'Document files require image conversion. Please screenshot the document or export as PNG/JPEG.',
+          fileType: 'document'
+        };
+      }
+
+      // Check for valid base64 structure
+      if (!data.startsWith('data:')) {
+        return { 
+          isValid: false, 
+          error: 'Invalid document format. Expected base64-encoded image data.',
+          fileType: 'invalid'
+        };
+      }
+
+      return { 
+        isValid: false, 
+        error: 'Unsupported document format for AI analysis. Please provide PNG, JPEG, GIF, WebP, or BMP image.',
+        fileType: 'unsupported'
+      };
+    };
+
+    // Validate document data
+    const validation = validateDocumentData(document_data);
+    if (!validation.isValid) {
+      console.error('❌ Enhanced analysis validation failed:', validation.error);
+      
+      return new Response(
+        JSON.stringify({ 
+          success: false,
+          error: validation.error,
+          fileType: validation.fileType,
+          supportedFormats: ['PNG', 'JPEG', 'GIF', 'WebP', 'BMP'],
+          recommendations: {
+            pdf: 'Use a PDF to image converter or screenshot each page',
+            document: 'Take a screenshot of the document or export as image',
+            svg: 'Convert SVG to PNG or JPEG using an image editor'
+          }
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400,
+        }
+      );
+    }
+
     // Enhanced document analysis using OpenAI GPT-4 Vision
     const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
