@@ -409,21 +409,35 @@ export function createRealTimeSubscription(
   onUpdate?: (payload: any) => void,
   onError?: (error: any) => void
 ) {
-  let retryCount = 0;
-  const maxRetries = 3; // Reduced from 5 to prevent endless retry loops
-  let isDestroyed = false;
-  
   // Check if we're online before attempting connection
   if (!connectionMonitor.online) {
-    console.log('Offline - deferring subscription until connection restored');
-    // Return a dummy channel that will be recreated when online
-    return supabase.channel(`offline_${table}_${Date.now()}`);
+    console.log('Offline - creating placeholder channel for', table);
+    const placeholderChannel = supabase.channel(`offline_${table}_${Date.now()}`);
+    (placeholderChannel as any)._cleanup = () => supabase.removeChannel(placeholderChannel);
+    return placeholderChannel;
   }
   
-  console.log(`Creating subscription to ${table}, attempt ${retryCount + 1}`);
+  console.log(`Creating realtime subscription for ${table}`);
   
-  const channel = supabase
-    .channel(`${table}_changes_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`)
+  const channelName = `${table}_changes_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const channel = supabase.channel(channelName);
+  
+  let isDestroyed = false;
+  
+  // Add cleanup function immediately
+  (channel as any)._cleanup = () => {
+    if (isDestroyed) return;
+    isDestroyed = true;
+    console.log(`Cleaning up subscription for ${table}`);
+    try {
+      supabase.removeChannel(channel);
+    } catch (error) {
+      console.warn('Error during channel cleanup:', error);
+    }
+  };
+  
+  // Set up the subscription
+  channel
     .on(
       'postgres_changes',
       {
@@ -434,73 +448,41 @@ export function createRealTimeSubscription(
       },
       (payload) => {
         if (isDestroyed) return;
-        console.log(`Received realtime update for ${table}:`, payload);
-        retryCount = 0; // Reset on successful message
+        console.log(`Realtime update for ${table}:`, payload);
         onUpdate?.(payload);
       }
     )
     .subscribe((status, error) => {
       if (isDestroyed) return;
       
-      console.log(`Subscription status for ${table}:`, status, error);
+      console.log(`Subscription status for ${table}:`, status);
       
       if (status === 'SUBSCRIBED') {
         console.log(`Successfully subscribed to ${table} changes`);
-        retryCount = 0;
-      } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
-        console.error(`Subscription ${status} for ${table}:`, error);
+      } else if (status === 'CLOSED') {
+        console.log(`Subscription closed for ${table}`);
+      } else if (status === 'CHANNEL_ERROR') {
+        console.error(`Subscription error for ${table}:`, error);
         
-        // Don't retry if we're offline or destroyed
-        if (!connectionMonitor.online || isDestroyed) {
-          console.log('Offline or destroyed - not retrying subscription');
-          return;
-        }
+        // Notify about the error but don't retry automatically
+        onError?.(new Error(`Subscription failed for ${table}: ${error?.message || 'Unknown error'}`));
         
-        if (retryCount < maxRetries) {
-          retryCount++;
-          const delay = Math.min(2000 * Math.pow(1.5, retryCount - 1), 10000); // Less aggressive backoff
-          
-          setTimeout(() => {
-            if (isDestroyed) return;
-            console.log(`Retrying subscription to ${table}, attempt ${retryCount + 1}/${maxRetries + 1}`);
-            // Clean up current channel and create new one
-            supabase.removeChannel(channel);
-            if (!isDestroyed) {
-              const newChannel = createRealTimeSubscription(table, filter, onUpdate, onError);
-              // Transfer the cleanup function
-              (channel as any)._cleanup = () => {
-                isDestroyed = true;
-                supabase.removeChannel(newChannel);
-              };
-            }
-          }, delay);
-        } else {
-          console.error(`Failed to maintain subscription to ${table} after ${maxRetries} attempts`);
-          onError?.(new Error(`Failed to maintain subscription to ${table} after ${maxRetries} attempts`));
-          
-          // Only show toast if we haven't shown it recently
-          const lastToastKey = `realtime_error_${table}`;
-          const lastToastTime = sessionStorage.getItem(lastToastKey);
-          const now = Date.now();
-          
-          if (!lastToastTime || now - parseInt(lastToastTime) > 60000) { // 1 minute cooldown
-            sessionStorage.setItem(lastToastKey, now.toString());
-            toast({
-              title: "Connection issue",
-              description: "Real-time updates temporarily unavailable. Data will sync when connection improves.",
-              variant: "default"
-            });
-          }
+        // Show user-friendly message with rate limiting
+        const lastToastKey = `realtime_error_${table}`;
+        const lastToastTime = sessionStorage.getItem(lastToastKey);
+        const now = Date.now();
+        
+        if (!lastToastTime || now - parseInt(lastToastTime) > 30000) { // 30 second cooldown
+          sessionStorage.setItem(lastToastKey, now.toString());
+          toast({
+            title: "Connection issue",
+            description: "Real-time updates may be delayed. Your changes are still being saved.",
+            variant: "default"
+          });
         }
       }
     });
     
-  // Add cleanup function to channel
-  (channel as any)._cleanup = () => {
-    isDestroyed = true;
-    supabase.removeChannel(channel);
-  };
-  
   return channel;
 }
 
