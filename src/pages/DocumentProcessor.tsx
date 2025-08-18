@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-do
 import { toast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Upload, FolderOpen, Plus, AlertTriangle, Smartphone, Files, Home, FileStack, RefreshCw } from 'lucide-react';
+import { Upload, FolderOpen, Plus, AlertTriangle, Smartphone, Files, Home, FileStack, RefreshCw, FileText, ChevronUp, ChevronDown, Layers } from 'lucide-react';
 import DocumentFrame from '@/components/DocumentFrame';
 import DocumentViewer from '@/components/DocumentViewer';
 import DataForm from '@/components/DataForm';
@@ -44,7 +44,8 @@ const DocumentProcessor: React.FC = () => {
   
   // View state
   const [isDocumentMode, setIsDocumentMode] = useState(false);
-  const [showDocumentProcessor, setShowDocumentProcessor] = useState(true); // Controls if document processor section is visible
+  const [documentFrameExpanded, setDocumentFrameExpanded] = useState(true); // Controls if document frame is expanded
+  const [batchProcessingExpanded, setBatchProcessingExpanded] = useState(false); // Controls if batch processing is expanded
   
   // Document state
   const [file, setFile] = useState<File | null>(null);
@@ -715,10 +716,11 @@ const DocumentProcessor: React.FC = () => {
     setShowCombineConfirmation(false);
   };
 
-  // Function to go back to runsheet mode and close document processor
+  // Function to go back to runsheet mode and collapse processors
   const goBackToRunsheet = () => {
     setIsDocumentMode(false);
-    setShowDocumentProcessor(false); // Hide document processor section
+    setDocumentFrameExpanded(false); // Collapse document processor
+    setBatchProcessingExpanded(false); // Collapse batch processing
   };
 
   // Function to upload new document (resets everything)
@@ -746,9 +748,9 @@ const DocumentProcessor: React.FC = () => {
     // since OpenAI can access blob URLs when they're properly formatted
     setStorageUrl(url);
     
-    // Enter document processing mode and show document processor
+    // Enter document processing mode and expand document processor
     setIsDocumentMode(true);
-    setShowDocumentProcessor(true); // Ensure document processor is visible
+    setDocumentFrameExpanded(true); // Ensure document processor is expanded
     
     console.log('🔧 DocumentProcessor: File set and preview URL created:', url);
     
@@ -2022,49 +2024,66 @@ Image: [base64 image data]`;
           </header>
           
           <div className="w-full px-4 py-6">
-            {showDocumentProcessor && (
-              <>
-                <DocumentFrame 
-                  file={file}
-                  previewUrl={previewUrl}
-                  fields={columns}
-                  formData={formData}
-                  columnInstructions={columnInstructions}
-                  onChange={handleFieldChange}
-                  onAnalyze={analyzeDocument}
-                  onCancelAnalysis={cancelAnalysis}
-                  onAddToSpreadsheet={addToSpreadsheet}
-                  onFileSelect={handleFileSelect}
-                  onMultipleFilesSelect={handleMultipleFilesSelect}
-                  onResetDocument={uploadNewDocument}
-                  isAnalyzing={isAnalyzing}
-                />
-                
-                <BatchProcessing 
-                  fields={columns}
-                  onAddToSpreadsheet={addToSpreadsheet}
-                  onAnalyze={analyzeDocument}
-                  isAnalyzing={isAnalyzing}
-                />
-              </>
-            )}
-            
-            {!showDocumentProcessor && (
-              <div className="mb-4 p-4 border rounded-lg bg-muted/20">
-                <div className="flex items-center justify-between">
-                  <div className="text-sm text-muted-foreground">
-                    Document processor is closed. Upload a document to start processing.
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowDocumentProcessor(true)}
-                  >
-                    Show Document Processor
-                  </Button>
+            {/* Document Processing Section */}
+            <div className="mb-4 border rounded-lg">
+              <div 
+                className="p-4 bg-muted/20 cursor-pointer flex items-center justify-between hover:bg-muted/30 transition-colors"
+                onClick={() => setDocumentFrameExpanded(!documentFrameExpanded)}
+              >
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  <span className="font-medium">Document Processor</span>
                 </div>
+                <Button variant="ghost" size="sm">
+                  {documentFrameExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </Button>
               </div>
-            )}
+              {documentFrameExpanded && (
+                <div className="p-4 border-t">
+                  <DocumentFrame 
+                    file={file}
+                    previewUrl={previewUrl}
+                    fields={columns}
+                    formData={formData}
+                    columnInstructions={columnInstructions}
+                    onChange={handleFieldChange}
+                    onAnalyze={analyzeDocument}
+                    onCancelAnalysis={cancelAnalysis}
+                    onAddToSpreadsheet={addToSpreadsheet}
+                    onFileSelect={handleFileSelect}
+                    onMultipleFilesSelect={handleMultipleFilesSelect}
+                    onResetDocument={uploadNewDocument}
+                    isAnalyzing={isAnalyzing}
+                  />
+                </div>
+              )}
+            </div>
+            
+            {/* Batch Processing Section */}
+            <div className="mb-4 border rounded-lg">
+              <div 
+                className="p-4 bg-muted/20 cursor-pointer flex items-center justify-between hover:bg-muted/30 transition-colors"
+                onClick={() => setBatchProcessingExpanded(!batchProcessingExpanded)}
+              >
+                <div className="flex items-center gap-2">
+                  <Layers className="h-4 w-4" />
+                  <span className="font-medium">Batch Processing</span>
+                </div>
+                <Button variant="ghost" size="sm">
+                  {batchProcessingExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </Button>
+              </div>
+              {batchProcessingExpanded && (
+                <div className="p-4 border-t">
+                  <BatchProcessing 
+                    fields={columns}
+                    onAddToSpreadsheet={addToSpreadsheet}
+                    onAnalyze={analyzeDocument}
+                    isAnalyzing={isAnalyzing}
+                  />
+                </div>
+              )}
+            </div>
             
             <div className="mt-6">
             <EditableSpreadsheet
