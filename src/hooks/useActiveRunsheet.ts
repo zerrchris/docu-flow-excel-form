@@ -83,6 +83,14 @@ export const useActiveRunsheet = () => {
       return;
     }
     
+    // Prevent unnecessary updates if the runsheet hasn't changed
+    if (globalActiveRunsheet && 
+        globalActiveRunsheet.id === runsheet.id && 
+        globalActiveRunsheet.name === runsheet.name &&
+        JSON.stringify(globalActiveRunsheet.data) === JSON.stringify(runsheet.data)) {
+      return; // No changes, skip update
+    }
+    
     globalActiveRunsheet = runsheet;
     // console.log('📋 Setting active runsheet:', runsheet.name, runsheet.id); // Commented out to reduce log noise
     saveToLocalStorage();
