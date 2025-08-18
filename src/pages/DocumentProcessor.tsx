@@ -48,6 +48,7 @@ const DocumentProcessor: React.FC = () => {
   // Document state
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [storageUrl, setStorageUrl] = useState<string | null>(null);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [showCombineConfirmation, setShowCombineConfirmation] = useState(false);
   const [isProcessingCombination, setIsProcessingCombination] = useState(false);
@@ -699,6 +700,7 @@ const DocumentProcessor: React.FC = () => {
     
     setFile(null);
     setPreviewUrl(null);
+    setStorageUrl(null);
     
     // Reset form data
     const emptyFormData: Record<string, string> = {};
@@ -724,7 +726,7 @@ const DocumentProcessor: React.FC = () => {
   };
 
   // Handle single file selection
-  const handleFileSelect = (selectedFile: File) => {
+  const handleFileSelect = async (selectedFile: File) => {
     console.log('🔧 DocumentProcessor: handleFileSelect called with file:', selectedFile.name, 'Size:', selectedFile.size, 'Type:', selectedFile.type);
     
     // Revoke any previous object URL to avoid memory leaks
@@ -737,6 +739,36 @@ const DocumentProcessor: React.FC = () => {
     // Create preview URL for the file
     const url = URL.createObjectURL(selectedFile);
     setPreviewUrl(url);
+    
+    // Upload file to storage for re-extract functionality
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const fileExt = selectedFile.name.split('.').pop();
+        const fileName = `${Date.now()}_${selectedFile.name}`;
+        const filePath = `${user.id}/${fileName}`;
+        
+        const { data, error } = await supabase.storage
+          .from('documents')
+          .upload(filePath, selectedFile, {
+            cacheControl: '3600',
+            upsert: false
+          });
+        
+        if (!error && data) {
+          const { data: { publicUrl } } = supabase.storage
+            .from('documents')
+            .getPublicUrl(data.path);
+          
+          setStorageUrl(publicUrl);
+          console.log('🔧 DocumentProcessor: File uploaded to storage:', publicUrl);
+        } else {
+          console.error('Failed to upload file to storage:', error);
+        }
+      }
+    } catch (error) {
+      console.error('Error uploading file to storage:', error);
+    }
     
     // Enter document processing mode
     setIsDocumentMode(true);
@@ -805,6 +837,34 @@ const DocumentProcessor: React.FC = () => {
       setPreviewUrl(newPreviewUrl);
       console.log('Combined file set:', combinedFile);
       console.log('New preview URL set:', newPreviewUrl);
+      
+      // Upload combined file to storage for re-extract functionality
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const fileName = `combined_${Date.now()}.png`;
+          const filePath = `${user.id}/${fileName}`;
+          
+          const { data, error } = await supabase.storage
+            .from('documents')
+            .upload(filePath, combinedFile, {
+              cacheControl: '3600',
+              upsert: false
+            });
+          
+          if (!error && data) {
+            const { data: { publicUrl } } = supabase.storage
+              .from('documents')
+              .getPublicUrl(data.path);
+            
+            setStorageUrl(publicUrl);
+            console.log('🔧 Combined file uploaded to storage:', publicUrl);
+          }
+        }
+      } catch (error) {
+        console.error('Error uploading combined file to storage:', error);
+      }
+      
       setPendingFiles([]);
       
       // Reset form data
@@ -1789,6 +1849,7 @@ Image: [base64 image data]`;
     // Clear all component state
     setFile(null);
     setPreviewUrl(null);
+    setStorageUrl(null);
     setPendingFiles([]);
     setSpreadsheetData([]);
     setFormData({});
@@ -1929,7 +1990,7 @@ Image: [base64 image data]`;
                     isAnalyzing={isAnalyzing}
                     isUploading={false}
                     hasAddedToSpreadsheet={false}
-                    fileUrl={previewUrl}
+                    fileUrl={storageUrl}
                     fileName={file?.name}
                     columnInstructions={columnInstructions}
                   />
