@@ -240,10 +240,11 @@ const DataForm: React.FC<DataFormProps> = ({
 
   // Handle re-extraction for a specific field
   const handleReExtract = (fieldName: string) => {
-    if (!fileUrl) {
+    // Allow re-extraction if we have a fileUrl OR if the field already has data (indicating analysis has been done)
+    if (!fileUrl && (!formData[fieldName] || formData[fieldName].trim() === '')) {
       toast({
-        title: "No document",
-        description: "Please upload a document first before re-extracting fields.",
+        title: "No document or data",
+        description: "Please upload and analyze a document first before re-extracting fields.",
         variant: "destructive"
       });
       return;
@@ -432,7 +433,7 @@ const DataForm: React.FC<DataFormProps> = ({
                     className="flex-1 min-h-[40px] resize-none"
                     rows={Math.max(1, Math.ceil((formData[field] || '').length / 50))}
                   />
-                  {fileUrl && (
+                  {(fileUrl || (formData[field] && formData[field].trim() !== '')) && (
                     <Button
                       type="button"
                       variant="outline"
@@ -446,7 +447,7 @@ const DataForm: React.FC<DataFormProps> = ({
                     </Button>
                   )}
                 </div>
-                {fileUrl && (
+                {(fileUrl || (formData[field] && formData[field].trim() !== '')) && (
                   <div className="text-xs text-muted-foreground">
                     Click <Sparkles className="inline h-3 w-3" /> to re-extract this field with AI feedback
                   </div>
