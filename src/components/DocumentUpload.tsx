@@ -88,9 +88,37 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
   // Handle mobile document selection
   const handleMobileDocumentSelect = async (doc: any) => {
     try {
+      console.log('🔧 DocumentUpload: Selecting mobile document:', doc.name, 'URL:', doc.url);
       const response = await fetch(doc.url);
       const blob = await response.blob();
-      const file = new File([blob] as BlobPart[], doc.name, { type: blob.type });
+      console.log('🔧 DocumentUpload: Blob type from fetch:', blob.type, 'Size:', blob.size);
+      
+      // Determine proper MIME type - fallback to extension-based detection if blob.type is corrupted
+      let fileType = blob.type;
+      if (!fileType || fileType === 'click' || !fileType.startsWith('image/')) {
+        console.warn('🔧 DocumentUpload: Blob has corrupted/invalid type:', blob.type, 'for file:', doc.name);
+        
+        // Fallback to extension-based type detection
+        const fileName = doc.name.toLowerCase();
+        if (fileName.endsWith('.jpg') || fileName.endsWith('.jpeg')) {
+          fileType = 'image/jpeg';
+        } else if (fileName.endsWith('.png')) {
+          fileType = 'image/png';
+        } else if (fileName.endsWith('.gif')) {
+          fileType = 'image/gif';
+        } else if (fileName.endsWith('.webp')) {
+          fileType = 'image/webp';
+        } else if (fileName.endsWith('.pdf')) {
+          fileType = 'application/pdf';
+        } else {
+          // Default to jpeg if we can't determine
+          fileType = 'image/jpeg';
+        }
+        console.log('🔧 DocumentUpload: Using fallback type:', fileType);
+      }
+      
+      const file = new File([blob] as BlobPart[], doc.name, { type: fileType });
+      console.log('🔧 DocumentUpload: Created file with type:', file.type, 'Name:', file.name, 'Size:', file.size);
       
       onFileSelect(file);
       setShowMobileDocuments(false);
