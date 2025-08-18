@@ -740,35 +740,9 @@ const DocumentProcessor: React.FC = () => {
     const url = URL.createObjectURL(selectedFile);
     setPreviewUrl(url);
     
-    // Upload file to storage for re-extract functionality
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const fileExt = selectedFile.name.split('.').pop();
-        const fileName = `${Date.now()}_${selectedFile.name}`;
-        const filePath = `${user.id}/${fileName}`;
-        
-        const { data, error } = await supabase.storage
-          .from('documents')
-          .upload(filePath, selectedFile, {
-            cacheControl: '3600',
-            upsert: false
-          });
-        
-        if (!error && data) {
-          const { data: { publicUrl } } = supabase.storage
-            .from('documents')
-            .getPublicUrl(data.path);
-          
-          setStorageUrl(publicUrl);
-          console.log('🔧 DocumentProcessor: File uploaded to storage:', publicUrl);
-        } else {
-          console.error('Failed to upload file to storage:', error);
-        }
-      }
-    } catch (error) {
-      console.error('Error uploading file to storage:', error);
-    }
+    // For re-extract functionality, we'll use the preview URL directly
+    // since OpenAI can access blob URLs when they're properly formatted
+    setStorageUrl(url);
     
     // Enter document processing mode
     setIsDocumentMode(true);
@@ -838,32 +812,8 @@ const DocumentProcessor: React.FC = () => {
       console.log('Combined file set:', combinedFile);
       console.log('New preview URL set:', newPreviewUrl);
       
-      // Upload combined file to storage for re-extract functionality
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const fileName = `combined_${Date.now()}.png`;
-          const filePath = `${user.id}/${fileName}`;
-          
-          const { data, error } = await supabase.storage
-            .from('documents')
-            .upload(filePath, combinedFile, {
-              cacheControl: '3600',
-              upsert: false
-            });
-          
-          if (!error && data) {
-            const { data: { publicUrl } } = supabase.storage
-              .from('documents')
-              .getPublicUrl(data.path);
-            
-            setStorageUrl(publicUrl);
-            console.log('🔧 Combined file uploaded to storage:', publicUrl);
-          }
-        }
-      } catch (error) {
-        console.error('Error uploading combined file to storage:', error);
-      }
+      // For re-extract functionality, use the preview URL
+      setStorageUrl(newPreviewUrl);
       
       setPendingFiles([]);
       

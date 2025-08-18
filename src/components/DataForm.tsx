@@ -260,9 +260,35 @@ const DataForm: React.FC<DataFormProps> = ({
     setIsReExtracting(true);
     
     try {
+      let imageData = null;
+      
+      // If fileUrl is a blob URL, convert to base64
+      if (fileUrl && fileUrl.startsWith('blob:')) {
+        try {
+          const response = await fetch(fileUrl);
+          const blob = await response.blob();
+          const reader = new FileReader();
+          
+          imageData = await new Promise<string>((resolve, reject) => {
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+        } catch (err) {
+          console.error('Failed to convert blob to base64:', err);
+          toast({
+            title: "Image Processing Error",
+            description: "Failed to process image for re-extraction",
+            variant: "destructive"
+          });
+          return;
+        }
+      }
+
       const response = await supabase.functions.invoke('re-extract-field', {
         body: {
-          fileUrl,
+          fileUrl: imageData ? null : fileUrl,
+          imageData,
           fileName,
           fieldName: reExtractDialog.fieldName,
           fieldInstructions: columnInstructions[reExtractDialog.fieldName] || `Extract the ${reExtractDialog.fieldName} field accurately`,

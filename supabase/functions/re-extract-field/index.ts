@@ -22,11 +22,11 @@ serve(async (req) => {
       );
     }
 
-    const { fileUrl, fileName, fieldName, fieldInstructions, userNotes, currentValue } = await req.json();
+    const { fileUrl, fileName, fieldName, fieldInstructions, userNotes, currentValue, imageData } = await req.json();
 
-    if (!fileUrl || !fieldName || !userNotes) {
+    if ((!fileUrl && !imageData) || !fieldName || !userNotes) {
       return new Response(
-        JSON.stringify({ error: 'Missing required parameters: fileUrl, fieldName, and userNotes are required' }),
+        JSON.stringify({ error: 'Missing required parameters: (fileUrl or imageData), fieldName, and userNotes are required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -76,7 +76,7 @@ Important guidelines:
               {
                 type: 'image_url',
                 image_url: {
-                  url: fileUrl,
+                  url: imageData || fileUrl,
                   detail: 'high'
                 }
               }
