@@ -84,7 +84,7 @@ export const useActiveRunsheet = () => {
     }
     
     globalActiveRunsheet = runsheet;
-    console.log('📋 Setting active runsheet:', runsheet.name, runsheet.id);
+    // console.log('📋 Setting active runsheet:', runsheet.name, runsheet.id); // Commented out to reduce log noise
     saveToLocalStorage();
     notifyListeners();
   };
