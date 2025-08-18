@@ -766,8 +766,8 @@ const DocumentProcessor: React.FC = () => {
     setShowCombineConfirmation(false);
     
     toast({
-      title: "Document uploaded",
-      description: `${selectedFile.name} has been uploaded. Click 'Analyze Document' to extract data.`,
+      title: "✅ Document Ready for Processing",
+      description: `${selectedFile.name} is ready. Click 'Analyze Document' to extract data automatically.`,
     });
   };
 
@@ -921,8 +921,8 @@ const DocumentProcessor: React.FC = () => {
       // Check if the file is a PDF and handle appropriately
       if (targetFile.type === 'application/pdf') {
         toast({
-          title: "PDF Analysis Not Supported",
-          description: "PDF files cannot be analyzed directly. Please convert your PDF to an image format (PNG, JPEG) and try again.",
+          title: "❌ Unsupported File Format",
+          description: "PDF analysis is not supported. Please convert your PDF to an image format (PNG, JPEG) first, or take a screenshot of the document.",
           variant: "destructive"
         });
         setIsAnalyzing(false);
@@ -1223,19 +1223,30 @@ Image: [base64 image data]`;
         }, 500);
       }
       
+      // Show success message with extracted fields
+      const extractedFieldCount = Object.values(extractedData).filter(value => value.trim() !== '').length;
+      toast({
+        title: "✅ Data Extraction Complete",
+        description: `Successfully extracted ${extractedFieldCount} fields. Please review and verify the data before adding to runsheet.`,
+      });
+      
       return extractedData;
       
     } catch (error: any) {
       // Handle cancellation gracefully
       if (error.name === 'AbortError') {
         console.log('Analysis was cancelled by user');
+        toast({
+          title: "Analysis Cancelled",
+          description: "Document analysis was cancelled by user.",
+        });
         return {};
       }
       
       console.error('Analysis error:', error);
       toast({
-        title: "Analysis failed",
-        description: error.message || "Failed to analyze document. Please check your API key and try again.",
+        title: "❌ Data Extraction Failed",
+        description: error.message || "Failed to analyze document. Please try re-uploading the document or check if the file is clear and readable.",
         variant: "destructive",
       });
       return {};
@@ -1503,6 +1514,14 @@ Image: [base64 image data]`;
         createDocumentRecord(finalData, targetRowIndex);
       }
       
+      // Store targetRowIndex for toast message
+      setTimeout(() => {
+        toast({
+          title: "✅ Data Successfully Added",
+          description: `Document data has been added to row ${targetRowIndex + 1} in your runsheet without overwriting existing data.`,
+        });
+      }, 100);
+      
       return newData;
     });
 
@@ -1548,11 +1567,6 @@ Image: [base64 image data]`;
       }, 1500); // Give the save operation time to complete
     }, 100);
     
-    toast({
-      title: "Data added to spreadsheet",
-      description: "The current data has been added as a new row.",
-    });
-
     // Reset form data for next entry - use current columns (which may have been updated)
     // Only reset after a successful add to prevent loss of data
     setTimeout(() => {

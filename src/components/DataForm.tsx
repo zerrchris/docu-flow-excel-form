@@ -8,6 +8,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { RotateCw, CheckCircle, Plus, Settings, ChevronDown, ChevronUp, Upload, Wand2, Trash2, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import ReExtractDialog from '@/components/ReExtractDialog';
+import DataVerificationDialog from '@/components/DataVerificationDialog';
 import { toast } from '@/hooks/use-toast';
 
 interface DataFormProps {
@@ -59,6 +60,9 @@ const DataForm: React.FC<DataFormProps> = ({
     currentValue: ''
   });
   const [isReExtracting, setIsReExtracting] = useState(false);
+  
+  // Verification dialog state
+  const [verificationDialog, setVerificationDialog] = useState(false);
 
   // Generate smart filename using user's naming preferences
   const generateSmartFilename = async () => {
@@ -491,6 +495,23 @@ const DataForm: React.FC<DataFormProps> = ({
         )}
       </div>
 
+      {/* Data Verification Notice */}
+      {Object.values(formData).some(value => value.trim() !== '') && (
+        <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <CheckCircle className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" />
+            <div>
+              <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                Data Extracted Successfully
+              </h4>
+              <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                Please review and verify the extracted data above. You can edit any field if needed, then click "Add to Runsheet" to add this data to the next available row.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Action Buttons */}
       <div className="space-y-2 pt-4">
         <div className="flex flex-col space-y-2 sm:flex-row sm:space-x-2 sm:space-y-0">
@@ -503,7 +524,7 @@ const DataForm: React.FC<DataFormProps> = ({
             {isAnalyzing ? (
               <>
                 <RotateCw className="mr-2 h-4 w-4 animate-spin" />
-                Analyzing...
+                Extracting Data...
               </>
             ) : (
               'Analyze Document'
@@ -522,12 +543,19 @@ const DataForm: React.FC<DataFormProps> = ({
           
           <Button
             variant="success"
-            onClick={async () => {
+            onClick={() => {
               if (visibleFieldsList.length === 0) {
                 alert('No fields are visible. Please use the "Hide/Display Fields" button above to show fields first.');
                 return;
               }
-              await onAddToSpreadsheet();
+              
+              // Check if there's extracted data to verify
+              const hasExtractedData = Object.values(formData).some(value => value.trim() !== '');
+              if (hasExtractedData) {
+                setVerificationDialog(true);
+              } else {
+                onAddToSpreadsheet();
+              }
             }}
             className="w-full sm:w-auto"
             disabled={isUploading}
@@ -536,11 +564,11 @@ const DataForm: React.FC<DataFormProps> = ({
             {isUploading ? (
               <>
                 <Upload className="h-4 w-4 mr-1 animate-pulse" />
-                Uploading...
+                Processing...
               </>
             ) : (
               <>
-                <Plus className="h-4 w-4 mr-1" />
+                <CheckCircle className="h-4 w-4 mr-1" />
                 Add to Runsheet
               </>
             )}
@@ -576,6 +604,19 @@ const DataForm: React.FC<DataFormProps> = ({
         currentValue={reExtractDialog.currentValue}
         onReExtract={handleReExtractWithNotes}
         isLoading={isReExtracting}
+      />
+
+      {/* Data Verification Dialog */}
+      <DataVerificationDialog
+        isOpen={verificationDialog}
+        onClose={() => setVerificationDialog(false)}
+        onConfirm={async () => {
+          setVerificationDialog(false);
+          await onAddToSpreadsheet();
+        }}
+        onEdit={() => setVerificationDialog(false)}
+        extractedData={formData}
+        fileName={fileName}
       />
     </div>
   );
