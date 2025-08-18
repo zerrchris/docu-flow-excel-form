@@ -1929,6 +1929,9 @@ Image: [base64 image data]`;
                     isAnalyzing={isAnalyzing}
                     isUploading={false}
                     hasAddedToSpreadsheet={false}
+                    fileUrl={previewUrl}
+                    fileName={file?.name}
+                    columnInstructions={columnInstructions}
                   />
                 </div>
               </div>

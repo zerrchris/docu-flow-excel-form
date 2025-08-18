@@ -5,8 +5,10 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { RotateCw, CheckCircle, Plus, Settings, ChevronDown, ChevronUp, Upload, Wand2, Trash2 } from 'lucide-react';
+import { RotateCw, CheckCircle, Plus, Settings, ChevronDown, ChevronUp, Upload, Wand2, Trash2, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import ReExtractDialog from '@/components/ReExtractDialog';
+import { toast } from '@/hooks/use-toast';
 
 interface DataFormProps {
   fields: string[];
@@ -19,6 +21,10 @@ interface DataFormProps {
   isAnalyzing: boolean;
   isUploading?: boolean;
   hasAddedToSpreadsheet?: boolean;
+  // New props for re-extraction
+  fileUrl?: string;
+  fileName?: string;
+  columnInstructions?: Record<string, string>;
 }
 
 const DataForm: React.FC<DataFormProps> = ({ 
@@ -31,11 +37,26 @@ const DataForm: React.FC<DataFormProps> = ({
   onResetDocument,
   isAnalyzing,
   isUploading = false,
-  hasAddedToSpreadsheet = false
+  hasAddedToSpreadsheet = false,
+  fileUrl,
+  fileName,
+  columnInstructions = {}
 }) => {
   const [visibleFields, setVisibleFields] = useState<Record<string, boolean>>({});
   const [showFieldSettings, setShowFieldSettings] = useState(false);
   const [isGeneratingName, setIsGeneratingName] = useState(false);
+  
+  // Re-extraction state
+  const [reExtractDialog, setReExtractDialog] = useState<{
+    isOpen: boolean;
+    fieldName: string;
+    currentValue: string;
+  }>({
+    isOpen: false,
+    fieldName: '',
+    currentValue: ''
+  });
+  const [isReExtracting, setIsReExtracting] = useState(false);
 
   // Generate smart filename using user's naming preferences
   const generateSmartFilename = async () => {
@@ -217,6 +238,65 @@ const DataForm: React.FC<DataFormProps> = ({
     }));
   };
 
+  // Handle re-extraction for a specific field
+  const handleReExtract = (fieldName: string) => {
+    if (!fileUrl) {
+      toast({
+        title: "No document",
+        description: "Please upload a document first before re-extracting fields.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setReExtractDialog({
+      isOpen: true,
+      fieldName,
+      currentValue: formData[fieldName] || ''
+    });
+  };
+
+  const handleReExtractWithNotes = async (notes: string) => {
+    setIsReExtracting(true);
+    
+    try {
+      const response = await supabase.functions.invoke('re-extract-field', {
+        body: {
+          fileUrl,
+          fileName,
+          fieldName: reExtractDialog.fieldName,
+          fieldInstructions: columnInstructions[reExtractDialog.fieldName] || `Extract the ${reExtractDialog.fieldName} field accurately`,
+          userNotes: notes,
+          currentValue: reExtractDialog.currentValue
+        }
+      });
+
+      if (response.error) {
+        throw response.error;
+      }
+
+      const { extractedValue } = response.data;
+      
+      // Update the specific field with the re-extracted value
+      onChange(reExtractDialog.fieldName, extractedValue);
+      
+      toast({
+        title: "Field re-extracted",
+        description: `Successfully re-extracted "${reExtractDialog.fieldName}" with your feedback.`,
+      });
+
+    } catch (error) {
+      console.error('Error re-extracting field:', error);
+      toast({
+        title: "Re-extraction failed",
+        description: "Failed to re-extract the field. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsReExtracting(false);
+    }
+  };
+
   // Only show fields that exist in current fields AND are marked visible
   const visibleFieldsList = fields.filter(field => visibleFields[field] === true);
   
@@ -317,13 +397,35 @@ const DataForm: React.FC<DataFormProps> = ({
               </div>
             )}
             {field !== 'Document File Name' && (
-              <Textarea
-                id={field}
-                value={formData[field] || ''}
-                onChange={(e) => onChange(field, e.target.value)}
-                className="mt-1 min-h-[40px] resize-none"
-                rows={Math.max(1, Math.ceil((formData[field] || '').length / 50))}
-              />
+              <div className="space-y-1">
+                <div className="flex gap-2">
+                  <Textarea
+                    id={field}
+                    value={formData[field] || ''}
+                    onChange={(e) => onChange(field, e.target.value)}
+                    className="flex-1 min-h-[40px] resize-none"
+                    rows={Math.max(1, Math.ceil((formData[field] || '').length / 50))}
+                  />
+                  {fileUrl && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleReExtract(field)}
+                      disabled={isReExtracting || isAnalyzing}
+                      className="px-3 h-10 shrink-0"
+                      title="Re-extract this field with AI using your feedback"
+                    >
+                      <Sparkles className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+                {fileUrl && (
+                  <div className="text-xs text-muted-foreground">
+                    Click <Sparkles className="inline h-3 w-3" /> to re-extract this field with AI feedback
+                  </div>
+                )}
+              </div>
             )}
           </div>
         ))}
@@ -401,6 +503,16 @@ const DataForm: React.FC<DataFormProps> = ({
           </Button>
         )}
       </div>
+
+      {/* Re-extraction Dialog */}
+      <ReExtractDialog
+        isOpen={reExtractDialog.isOpen}
+        onClose={() => setReExtractDialog(prev => ({ ...prev, isOpen: false }))}
+        fieldName={reExtractDialog.fieldName}
+        currentValue={reExtractDialog.currentValue}
+        onReExtract={handleReExtractWithNotes}
+        isLoading={isReExtracting}
+      />
     </div>
   );
 };
