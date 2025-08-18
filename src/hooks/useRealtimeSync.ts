@@ -23,16 +23,15 @@ export function useRealtimeSync({
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const connectionListenerRef = useRef<(() => void) | null>(null);
   const isActiveRef = useRef(true);
+  const isCreatingSubscriptionRef = useRef(false);
+  const lastSubscriptionTimeRef = useRef(0);
 
   const handleRealtimeUpdate = useCallback((payload: any) => {
     if (!isActiveRef.current) return;
     
-    console.log('Realtime update received:', payload);
-    
     // Avoid processing our own updates
     const updateId = payload.new?.updated_at || payload.old?.updated_at;
     if (updateId && updateId === lastUpdateRef.current) {
-      console.log('Skipping own update');
       return;
     }
 
@@ -50,15 +49,23 @@ export function useRealtimeSync({
 
   const handleRealtimeError = useCallback((error: any) => {
     if (!isActiveRef.current) return;
-    
-    console.error('Realtime subscription error:', error);
     onError?.(error);
   }, [onError]);
 
   const createSubscription = useCallback(() => {
-    if (!isActiveRef.current || !enabled || !runsheetId || !connectionMonitor.online) {
+    const now = Date.now();
+    
+    // Prevent creating subscriptions too frequently (max once per 2 seconds)
+    if (now - lastSubscriptionTimeRef.current < 2000) {
       return;
     }
+    
+    if (!isActiveRef.current || !enabled || !runsheetId || !connectionMonitor.online || isCreatingSubscriptionRef.current) {
+      return;
+    }
+
+    isCreatingSubscriptionRef.current = true;
+    lastSubscriptionTimeRef.current = now;
 
     // Clean up existing subscription
     if (channelRef.current) {
@@ -71,8 +78,6 @@ export function useRealtimeSync({
       channelRef.current = null;
     }
 
-    console.log('Creating new realtime subscription for runsheet:', runsheetId);
-
     // Create new subscription
     const channel = createRealTimeSubscription(
       'runsheets',
@@ -82,20 +87,8 @@ export function useRealtimeSync({
     );
 
     channelRef.current = channel;
+    isCreatingSubscriptionRef.current = false;
   }, [runsheetId, enabled, handleRealtimeUpdate, handleRealtimeError]);
-
-  const scheduleReconnect = useCallback(() => {
-    if (reconnectTimeoutRef.current) {
-      clearTimeout(reconnectTimeoutRef.current);
-    }
-    
-    reconnectTimeoutRef.current = setTimeout(() => {
-      if (isActiveRef.current && enabled && runsheetId && connectionMonitor.online) {
-        console.log('Attempting to reconnect realtime subscription...');
-        createSubscription();
-      }
-    }, 3000); // 3 second delay for reconnection
-  }, [createSubscription, enabled, runsheetId]);
 
   // Track our own updates to avoid processing them
   const trackOwnUpdate = useCallback((updateTime: string) => {
@@ -119,33 +112,49 @@ export function useRealtimeSync({
       return;
     }
 
-    // Initial subscription creation
-    createSubscription();
+    // Initial subscription creation with delay to prevent rapid creation
+    const initialTimeout = setTimeout(() => {
+      if (isActiveRef.current) {
+        createSubscription();
+      }
+    }, 500);
 
-    // Listen for connection changes
+    // Listen for connection changes (debounced)
     if (connectionListenerRef.current) {
       connectionListenerRef.current();
     }
     
+    let connectionTimeout: NodeJS.Timeout | null = null;
+    
     connectionListenerRef.current = connectionMonitor.onStatusChange((isOnline) => {
       if (!isActiveRef.current) return;
       
+      // Clear any pending timeout
+      if (connectionTimeout) {
+        clearTimeout(connectionTimeout);
+      }
+      
       if (isOnline) {
-        console.log('Connection restored - recreating realtime subscription');
-        // Small delay to ensure connection is stable
-        setTimeout(() => {
+        // Debounce connection restore to prevent rapid reconnections
+        connectionTimeout = setTimeout(() => {
           if (isActiveRef.current && enabled && runsheetId) {
             createSubscription();
           }
-        }, 1000);
-      } else {
-        console.log('Connection lost - realtime subscription will be recreated when online');
+        }, 2000); // 2 second delay
       }
     });
 
     // Cleanup function
     return () => {
       isActiveRef.current = false;
+      
+      if (initialTimeout) {
+        clearTimeout(initialTimeout);
+      }
+      
+      if (connectionTimeout) {
+        clearTimeout(connectionTimeout);
+      }
       
       if (channelRef.current) {
         const channel = channelRef.current;

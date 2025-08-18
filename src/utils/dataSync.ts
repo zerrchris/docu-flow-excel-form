@@ -411,13 +411,10 @@ export function createRealTimeSubscription(
 ) {
   // Check if we're online before attempting connection
   if (!connectionMonitor.online) {
-    console.log('Offline - creating placeholder channel for', table);
     const placeholderChannel = supabase.channel(`offline_${table}_${Date.now()}`);
     (placeholderChannel as any)._cleanup = () => supabase.removeChannel(placeholderChannel);
     return placeholderChannel;
   }
-  
-  console.log(`Creating realtime subscription for ${table}`);
   
   const channelName = `${table}_changes_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const channel = supabase.channel(channelName);
@@ -429,11 +426,10 @@ export function createRealTimeSubscription(
   (channel as any)._cleanup = () => {
     if (isDestroyed) return;
     isDestroyed = true;
-    console.log(`Cleaning up subscription for ${table}`);
     try {
       supabase.removeChannel(channel);
     } catch (error) {
-      console.warn('Error during channel cleanup:', error);
+      // Silently handle cleanup errors
     }
   };
   
@@ -449,24 +445,18 @@ export function createRealTimeSubscription(
       },
       (payload) => {
         if (isDestroyed) return;
-        console.log(`Realtime update for ${table}:`, payload);
         onUpdate?.(payload);
       }
     )
     .subscribe((status, error) => {
       if (isDestroyed) return;
       
-      console.log(`Subscription status for ${table}:`, status);
-      
       if (status === 'SUBSCRIBED') {
-        console.log(`Successfully subscribed to ${table} changes`);
         hasShownError = false; // Reset error flag on successful connection
       } else if (status === 'CLOSED') {
-        console.log(`Subscription closed for ${table} - this is normal`);
         // Don't treat CLOSED as an error - it's part of normal lifecycle
+        // No logging to prevent console spam
       } else if (status === 'CHANNEL_ERROR') {
-        console.error(`Subscription error for ${table}:`, error);
-        
         // Only notify about the error once to avoid spam
         if (!hasShownError) {
           hasShownError = true;
@@ -477,7 +467,7 @@ export function createRealTimeSubscription(
           const lastToastTime = sessionStorage.getItem(lastToastKey);
           const now = Date.now();
           
-          if (!lastToastTime || now - parseInt(lastToastTime) > 30000) { // 30 second cooldown
+          if (!lastToastTime || now - parseInt(lastToastTime) > 60000) { // 60 second cooldown
             sessionStorage.setItem(lastToastKey, now.toString());
             toast({
               title: "Connection issue",
