@@ -167,6 +167,32 @@ All colors MUST be HSL.
     @apply p-6 bg-card rounded-lg shadow-md border border-border;
   }
 
+  /* Sticky Header Optimization for EditableSpreadsheet */
+  .sticky-header-content {
+    /* Force hardware acceleration for smooth sticky behavior */
+    transform: translateZ(0);
+    will-change: transform;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+  
+  /* Ensure sticky headers work in all browsers */
+  .table-sticky-header {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 1000 !important;
+    background-color: hsl(var(--background)) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+  }
+  
+  /* Fix for potential sticky issues in Safari */
+  @supports (-webkit-backdrop-filter: blur(8px)) {
+    .table-sticky-header {
+      -webkit-backdrop-filter: blur(8px) !important;
+    }
+  }
+
   /* Custom scrollbar styles */
   .scrollbar-thin::-webkit-scrollbar {
     width: 12px;

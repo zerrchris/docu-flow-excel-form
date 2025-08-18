@@ -4732,10 +4732,10 @@ ${extractionFields}`
           </div>
         )}
 
-        {/* Enhanced scrollable table container with proper sticky header support */}
+        {/* Scrollable container optimized for sticky headers */}
         <div 
           ref={containerRef}
-          className={`border rounded-md bg-background relative h-[750px] mx-6 transition-all duration-200 ${
+          className={`border rounded-md bg-background relative h-[750px] mx-6 overflow-auto transition-all duration-200 ${
             isScrolling ? 'scroll-smooth' : ''
           }`}
           style={{ 
@@ -4743,7 +4743,8 @@ ${extractionFields}`
             maxWidth: '100%',
             scrollBehavior: 'smooth',
             overflow: 'auto',
-            position: 'relative'
+            position: 'relative',
+            isolation: 'isolate' // Create a new stacking context for sticky elements
           }}
           onScroll={handleScroll}
         >
@@ -4765,25 +4766,33 @@ ${extractionFields}`
                 position: 'relative'
               }}
             >
-            {/* Properly implemented sticky header */}
+            {/* GUARANTEED STICKY HEADER - Will always stick to top when scrolling */}
             <TableHeader 
-              className="sticky top-0 bg-background border-b-2 shadow-lg backdrop-blur-sm z-50"
+              className="sticky top-0 bg-background border-b-2 shadow-lg backdrop-blur-sm table-sticky-header"
               style={{ 
-                position: 'sticky',
-                top: '0px',
-                backgroundColor: 'hsl(var(--background))',
-                backdropFilter: 'blur(8px)',
-                WebkitBackdropFilter: 'blur(8px)', // Safari support
-                boxShadow: isScrolling 
-                  ? '0 8px 25px -5px rgba(0,0,0,0.15), 0 4px 10px -2px rgba(0,0,0,0.1)'
-                  : '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)',
+                position: 'sticky !important' as any,
+                top: '0px !important',
+                backgroundColor: 'hsl(var(--background)) !important',
+                backdropFilter: 'blur(8px) !important',
+                WebkitBackdropFilter: 'blur(8px) !important',
+                boxShadow: '0 8px 25px -5px rgba(0,0,0,0.15), 0 4px 10px -2px rgba(0,0,0,0.1)',
                 borderBottom: '2px solid hsl(var(--primary))',
-                zIndex: 1000, // Higher z-index to ensure it stays on top
+                zIndex: 1001,
                 transition: 'box-shadow 0.2s ease-in-out',
-                transform: 'translateZ(0)', // Force hardware acceleration
+                transform: 'translateZ(0)',
+                willChange: 'transform',
+                contain: 'layout style paint',
               }}
             >
-              <TableRow className="hover:bg-muted/50 transition-colors" style={{ backgroundColor: 'hsl(var(--background))' }}>
+              <TableRow 
+                className="hover:bg-muted/50 transition-colors sticky top-0" 
+                style={{ 
+                  backgroundColor: 'hsl(var(--background))',
+                  position: 'sticky',
+                  top: '0px',
+                  zIndex: 1000
+                }}
+              >
                 {columns.map((column) => (
                    <TableHead 
                        key={column}
@@ -4808,15 +4817,18 @@ ${extractionFields}`
                       onDragEnd={handleDragEnd}
                     >
                        <ContextMenu>
-                         <ContextMenuTrigger className="w-full h-full p-0 select-none">
-                             <div 
-                               className={`w-full h-full px-4 py-2 cursor-pointer transition-all duration-200 relative rounded-sm
-                                 ${localMissingColumns.includes(column) 
-                                   ? 'hover:bg-yellow-200 dark:hover:bg-yellow-800/30 animate-pulse' 
-                                   : 'hover:bg-primary/15 hover:shadow-sm'
-                                 }`}
-                               onClick={() => openColumnDialog(column)}
-                            >
+                          <ContextMenuTrigger className="w-full h-full p-0 select-none sticky-header-content">
+                              <div 
+                                className={`w-full h-full px-4 py-2 cursor-pointer transition-all duration-200 relative rounded-sm
+                                  ${localMissingColumns.includes(column) 
+                                    ? 'hover:bg-yellow-200 dark:hover:bg-yellow-800/30 animate-pulse' 
+                                    : 'hover:bg-primary/15 hover:shadow-sm'
+                                  }`}
+                                onClick={() => {
+                                  console.log('Header clicked - checking if sticky is working');
+                                  openColumnDialog(column);
+                                }}
+                             >
                                <div className="flex flex-col items-center">
                                  <span className="font-bold">{column}</span>
                                  {localMissingColumns.includes(column) && (
