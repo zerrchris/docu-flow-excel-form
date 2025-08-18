@@ -5109,9 +5109,12 @@ ${extractionFields}`
                              await analyzeDocumentAndPopulateRow(file, rowIndex);
                            }
                          }}
-                         onOpenWorkspace={() => {
-                           setFullScreenWorkspace({ runsheetId: currentRunsheetId || '', rowIndex });
-                          }}
+                          onOpenWorkspace={() => {
+                            console.log('🔧 EditableSpreadsheet: Opening full screen workspace for rowIndex:', rowIndex, '(display row:', rowIndex + 1, ')');
+                            console.log('🔧 EditableSpreadsheet: Row data:', row);
+                            console.log('🔧 EditableSpreadsheet: Document for this row:', documentMap.get(rowIndex));
+                            setFullScreenWorkspace({ runsheetId: currentRunsheetId || '', rowIndex });
+                           }}
                           isSpreadsheetUpload={true}
                           autoAnalyze={false}
                            rowData={row}
