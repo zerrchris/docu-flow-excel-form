@@ -53,6 +53,7 @@ import ViewportPortal from './ViewportPortal';
 import { AutoSaveIndicator } from './AutoSaveIndicator';
 import { useAutoSave } from '@/hooks/useAutoSave';
 import { useRealtimeSync } from '@/hooks/useRealtimeSync';
+import DocumentWorkspaceButton from './DocumentWorkspaceButton';
 import type { User } from '@supabase/supabase-js';
 
 interface SpreadsheetProps {
