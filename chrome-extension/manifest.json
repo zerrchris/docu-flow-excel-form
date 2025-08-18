@@ -39,7 +39,7 @@
 
   "web_accessible_resources": [
     {
-      "resources": ["icons/*.png"],
+      "resources": ["icons/*.png", "enhanced-snip-workflow.js"],
       "matches": ["<all_urls>"]
     }
   ],

@@ -1,16 +1,100 @@
 project_id = "xnpmrafjjqsissbtempj"
 
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[auth]
+enabled = true
+port = 54324
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["https://localhost:3000"]
+jwt_expiry = 3600
+refresh_token_rotation_enabled = true
+refresh_token_reuse_interval = 10
+enable_signup = true
+
+[auth.external.google]
+enabled = true
+client_id = "env(GOOGLE_OAUTH_CLIENT_ID)"
+secret = "env(GOOGLE_OAUTH_CLIENT_SECRET)"
+redirect_uri = "http://localhost:54324/auth/v1/callback"
+
+[db]
+port = 54322
+
+[functions.add-row-to-runsheet]
+verify_jwt = true
+[functions.admin-manage-subscription]
+verify_jwt = false
+[functions.analyze-document-advanced]
+verify_jwt = true
 [functions.analyze-document]
 verify_jwt = false
-
+[functions.analyze-lease-check]
+verify_jwt = true
+[functions.analyze-row-ownership]
+verify_jwt = true
+[functions.analyze-voice-text]
+verify_jwt = true
+[functions.check-subscription]
+verify_jwt = false
+[functions.convert-pdf-to-image]
+verify_jwt = false
+[functions.convert-pdf-to-images]
+verify_jwt = false
+[functions.create-checkout]
+verify_jwt = false
+[functions.create-quick-runsheet]
+verify_jwt = true
+[functions.customer-portal]
+verify_jwt = false
+[functions.enhanced-document-analysis]
+verify_jwt = true
+[functions.extension-document-link]
+verify_jwt = true
 [functions.extension-sync]
 verify_jwt = false
-
+[functions.generate-text]
+verify_jwt = true
+[functions.get-user-runsheets]
+verify_jwt = true
 [functions.google-drive-auth]
 verify_jwt = false
-
+[functions.lease-check-assistant]
+verify_jwt = true
+[functions.lease-check-extract]
+verify_jwt = true
+[functions.lease-check-run]
+verify_jwt = true
+[functions.organize-documents-by-runsheet]
+verify_jwt = true
 [functions.populate-runsheet-data]
 verify_jwt = true
-
+[functions.re-extract-field]
+verify_jwt = true
+[functions.realtime-voice]
+verify_jwt = true
+[functions.save-runsheet]
+verify_jwt = true
 [functions.send-confirmation-email]
 verify_jwt = false
+[functions.store-document]
+verify_jwt = true
+[functions.transcribe-audio]
+verify_jwt = true
+[functions.upload-pending-documents]
+verify_jwt = true
+
+[realtime]
+enabled = true
+port = 54323
+ip_version = "ipv4"
+
+[storage]
+enabled = true
+port = 54324
+image_transformation_enabled = true
