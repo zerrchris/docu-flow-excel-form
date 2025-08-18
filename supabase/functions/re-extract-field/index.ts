@@ -110,13 +110,23 @@ Important guidelines:
 
     const reExtractedValue = data.choices[0].message.content.trim();
     
-    console.log(`Successfully re-extracted "${fieldName}":`, reExtractedValue);
+    // Clean up markdown formatting (remove code blocks, backticks, quotes)
+    let cleanedValue = reExtractedValue
+      .replace(/^```[\s\S]*?\n/, '') // Remove opening code block
+      .replace(/\n```$/, '') // Remove closing code block
+      .replace(/^["']/, '') // Remove opening quote
+      .replace(/["']$/, '') // Remove closing quote
+      .replace(/^`+/, '') // Remove opening backticks
+      .replace(/`+$/, '') // Remove closing backticks
+      .trim();
+    
+    console.log(`Successfully re-extracted "${fieldName}":`, cleanedValue);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         fieldName,
-        extractedValue: reExtractedValue,
+        extractedValue: cleanedValue,
         userNotes
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
