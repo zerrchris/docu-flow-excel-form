@@ -871,7 +871,12 @@ const DocumentProcessor: React.FC = () => {
   const analyzeDocument = async (fileToAnalyze?: File) => {
     console.log('analyzeDocument called with fileToAnalyze:', fileToAnalyze);
     const targetFile = fileToAnalyze || file;
-    console.log('targetFile:', targetFile);
+    console.log('targetFile details:', {
+      name: targetFile?.name,
+      type: targetFile?.type,
+      size: targetFile?.size,
+      lastModified: targetFile?.lastModified
+    });
     
     if (!targetFile) {
       toast({
@@ -920,9 +925,30 @@ const DocumentProcessor: React.FC = () => {
         return;
       }
 
-      // Verify the file is a supported image format
+      // Verify the file is a supported image format - with fallback for corrupted file types
       const supportedImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-      if (!supportedImageTypes.includes(targetFile.type)) {
+      
+      // Check if file type is corrupted (e.g., showing "click" instead of proper MIME type)
+      const hasCorruptedType = targetFile.type && !targetFile.type.startsWith('image/') && !targetFile.type.startsWith('application/');
+      
+      if (hasCorruptedType) {
+        console.warn('Detected corrupted file type:', targetFile.type, 'for file:', targetFile.name);
+        // Try to determine type from filename extension
+        const fileExtension = targetFile.name.toLowerCase().split('.').pop();
+        const isLikelyImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExtension || '');
+        
+        if (!isLikelyImage) {
+          toast({
+            title: "Unsupported File Format",
+            description: `File appears to have a corrupted type "${targetFile.type}". Please re-upload the file as PNG, JPEG, GIF, or WebP.`,
+            variant: "destructive"
+          });
+          setIsAnalyzing(false);
+          setAnalysisAbortController(null);
+          return;
+        }
+        // Continue processing if extension suggests it's an image
+      } else if (!supportedImageTypes.includes(targetFile.type)) {
         // Handle octet-stream files that might actually be images
         if (targetFile.type === 'application/octet-stream') {
           // Check if filename suggests it's an image
