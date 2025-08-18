@@ -160,6 +160,27 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
     
     const files = Array.from(e.dataTransfer.files);
     if (files.length > 0) {
+      // Validate all files first
+      const invalidFiles: string[] = [];
+      
+      for (const file of files) {
+        const validation = validateFile(file);
+        if (!validation.isValid) {
+          invalidFiles.push(`${file.name}: ${validation.error}`);
+        }
+      }
+
+      if (invalidFiles.length > 0) {
+        toast({
+          title: "Invalid files dropped",
+          description: invalidFiles.join('\n'),
+          variant: "destructive",
+          duration: 6000,
+        });
+        return;
+      }
+
+      // Process validated files
       if (allowMultiple && files.length > 1 && onMultipleFilesSelect) {
         onMultipleFilesSelect(files);
       } else {
@@ -169,17 +190,75 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
         }
       }
     }
-  }, [onFileSelect, onMultipleFilesSelect, allowMultiple, handlePDFConversion]);
+  }, [onFileSelect, onMultipleFilesSelect, allowMultiple, handlePDFConversion, toast]);
 
   const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
   }, []);
 
+  const validateFile = (file: File): { isValid: boolean; error?: string } => {
+    // File size validation (50MB max)
+    const maxSize = 50 * 1024 * 1024; // 50MB
+    if (file.size > maxSize) {
+      return { isValid: false, error: `File size (${(file.size / 1024 / 1024).toFixed(1)}MB) exceeds the 50MB limit.` };
+    }
+
+    // File type validation
+    const validTypes = [
+      'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/tiff',
+      'application/pdf',
+      'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain'
+    ];
+
+    const validExtensions = [
+      '.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.tif',
+      '.pdf',
+      '.doc', '.docx',
+      '.txt'
+    ];
+
+    const fileName = file.name.toLowerCase();
+    const hasValidExtension = validExtensions.some(ext => fileName.endsWith(ext));
+    const hasValidType = validTypes.includes(file.type) || file.type.startsWith('image/');
+
+    if (!hasValidExtension && !hasValidType) {
+      return { 
+        isValid: false, 
+        error: `Unsupported file type. Please use: Images (JPG, PNG, GIF, WebP, BMP, TIFF), PDF, Word documents (DOC, DOCX), or Text files.` 
+      };
+    }
+
+    return { isValid: true };
+  };
+
   const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
+      // Validate all files first
+      const fileArray = Array.from(files);
+      const invalidFiles: string[] = [];
+      
+      for (const file of fileArray) {
+        const validation = validateFile(file);
+        if (!validation.isValid) {
+          invalidFiles.push(`${file.name}: ${validation.error}`);
+        }
+      }
+
+      if (invalidFiles.length > 0) {
+        toast({
+          title: "Invalid files detected",
+          description: invalidFiles.join('\n'),
+          variant: "destructive",
+          duration: 6000,
+        });
+        return;
+      }
+
+      // Process validated files
       if (allowMultiple && files.length > 1 && onMultipleFilesSelect) {
-        onMultipleFilesSelect(Array.from(files));
+        onMultipleFilesSelect(fileArray);
       } else {
         const processedFile = await handlePDFConversion(files[0]);
         if (processedFile) {
@@ -187,7 +266,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
         }
       }
     }
-  }, [onFileSelect, onMultipleFilesSelect, allowMultiple, handlePDFConversion]);
+  }, [onFileSelect, onMultipleFilesSelect, allowMultiple, handlePDFConversion, toast]);
 
   const handleClear = useCallback(() => {
     onFileSelect(null as any);

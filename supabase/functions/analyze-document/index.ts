@@ -15,7 +15,7 @@ serve(async (req) => {
   }
 
   try {
-    const { prompt, imageData, systemMessage = "You are a document analysis assistant. CRITICAL: Only extract information that is clearly visible and readable in the document image. If information is not present, missing, illegible, or unclear, respond with 'N/A' or leave blank. Do not infer, guess, or hallucinate any information. Only use what you can actually see. IMPORTANT: Return your response as a valid JSON object with field names as keys and extracted values as values. Do not include any markdown formatting, explanations, or additional text - just the JSON object." } = await req.json();
+    const { prompt, imageData, systemMessage = "You are a precise document analysis assistant. Extract information that is clearly visible and readable in the document. If information is not clearly present, use empty string ''. Return ONLY valid JSON with field names as keys and extracted text as values. No markdown, no explanations, no additional text - just clean JSON." } = await req.json();
 
     if (!prompt || !imageData) {
       return new Response(
@@ -160,7 +160,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o',
         messages: [
           { role: 'system', content: systemMessage },
           { 
@@ -180,8 +180,9 @@ serve(async (req) => {
             ]
           }
         ],
-        temperature: 0.1,
-        max_tokens: 1500,
+        temperature: 0.0,
+        max_tokens: 2000,
+        response_format: { type: "json_object" }
       }),
     });
 

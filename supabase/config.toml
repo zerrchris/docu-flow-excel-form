@@ -9,5 +9,8 @@ verify_jwt = false
 [functions.google-drive-auth]
 verify_jwt = false
 
+[functions.populate-runsheet-data]
+verify_jwt = true
+
 [functions.send-confirmation-email]
 verify_jwt = false

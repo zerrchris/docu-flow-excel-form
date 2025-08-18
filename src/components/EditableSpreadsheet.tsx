@@ -5163,90 +5163,126 @@ ${extractionFields}`
                          maxWidth: "600px"
                        }}
                     >
-                       <div className="bg-background border border-border rounded-md p-2 h-full min-h-[60px] flex flex-col gap-1 overflow-visible">
-                         <DocumentLinker
-                           key={`${rowIndex}-${row['Document File Name']}`}
-                           runsheetId={effectiveRunsheetId}
-                           rowIndex={rowIndex}
-                           currentFilename={documentMap.get(rowIndex)?.stored_filename || row['Document File Name']}
-                           documentPath={(() => {
-                             const dbPath = documentMap.get(rowIndex)?.file_path;
-                             const storagePath = row['Storage Path'];
-                             return dbPath || storagePath;
-                           })()}
-                           existingDocumentUrl={row['Document File Name'] && row['Document File Name'].trim() !== '' ? 'exists' : undefined}
-                         onDocumentLinked={async (filename) => {
-                            console.log('🔧 EditableSpreadsheet: onDocumentLinked called with filename:', filename);
-                            console.log('🔧 EditableSpreadsheet: Current row data before update:', data[rowIndex]);
-                            const newData = [...data];
-                            newData[rowIndex] = {
-                              ...newData[rowIndex],
-                              'Document File Name': filename
-                            };
-                            console.log('🔧 EditableSpreadsheet: New row data after update:', newData[rowIndex]);
-                            setData(newData);
-                            onDataChange?.(newData);
+                        <div className="bg-background border border-border rounded-md p-2 h-full min-h-[60px] flex flex-col gap-1 overflow-visible">
+                          <DocumentLinker
+                            key={`${rowIndex}-${row['Document File Name']}`}
+                            runsheetId={effectiveRunsheetId}
+                            rowIndex={rowIndex}
+                            currentFilename={documentMap.get(rowIndex)?.stored_filename || row['Document File Name']}
+                            documentPath={(() => {
+                              const dbPath = documentMap.get(rowIndex)?.file_path;
+                              const storagePath = row['Storage Path'];
+                              return dbPath || storagePath;
+                            })()}
+                            existingDocumentUrl={row['Document File Name'] && row['Document File Name'].trim() !== '' ? 'exists' : undefined}
+                          onDocumentLinked={async (filename) => {
+                             console.log('🔧 EditableSpreadsheet: onDocumentLinked called with filename:', filename);
+                             console.log('🔧 EditableSpreadsheet: Current row data before update:', data[rowIndex]);
+                             const newData = [...data];
+                             newData[rowIndex] = {
+                               ...newData[rowIndex],
+                               'Document File Name': filename
+                             };
+                             console.log('🔧 EditableSpreadsheet: New row data after update:', newData[rowIndex]);
+                             setData(newData);
+                             onDataChange?.(newData);
+                            
+                             // Immediately refresh document map to ensure consistency
+                             if (currentRunsheetId) {
+                               try {
+                                 console.log('🔧 EditableSpreadsheet: Immediately refreshing document map');
+                                 const updatedDocumentMap = await DocumentService.getDocumentMapForRunsheet(currentRunsheetId);
+                                 updateDocumentMap(updatedDocumentMap);
+                                 console.log('🔧 EditableSpreadsheet: Document map refreshed with', updatedDocumentMap.size, 'documents');
+                               } catch (error) {
+                                 console.error('Error refreshing document map:', error);
+                                 // Fallback to delayed refresh if immediate refresh fails
+                                 setTimeout(() => {
+                                   DocumentService.getDocumentMapForRunsheet(currentRunsheetId).then(updateDocumentMap);
+                                 }, 500);
+                               }
+                             }
+                          }}
+                         onDocumentRemoved={() => {
+                           const newData = [...data];
+                           newData[rowIndex] = {
+                             ...newData[rowIndex],
+                             'Document File Name': ''
+                           };
+                           setData(newData);
+                           onDataChange?.(newData);
+                           updateDocumentMap((() => {
+                             const newMap = new Map(documentMap);
+                             newMap.delete(rowIndex);
+                             return newMap;
+                           })());
+                         }}
+                         onAnalyzeDocument={async (file, filename) => {
+                           console.log('🔧 EditableSpreadsheet: onAnalyzeDocument called for row:', rowIndex);
                            
-                            // Immediately refresh document map to ensure consistency
-                            if (currentRunsheetId) {
-                              try {
-                                console.log('🔧 EditableSpreadsheet: Immediately refreshing document map');
-                                const updatedDocumentMap = await DocumentService.getDocumentMapForRunsheet(currentRunsheetId);
-                                updateDocumentMap(updatedDocumentMap);
-                                console.log('🔧 EditableSpreadsheet: Document map refreshed with', updatedDocumentMap.size, 'documents');
-                              } catch (error) {
-                                console.error('Error refreshing document map:', error);
-                                // Fallback to delayed refresh if immediate refresh fails
-                                setTimeout(() => {
-                                  DocumentService.getDocumentMapForRunsheet(currentRunsheetId).then(updateDocumentMap);
-                                }, 500);
-                              }
-                            }
-                         }}
-                        onDocumentRemoved={() => {
-                          const newData = [...data];
-                          newData[rowIndex] = {
-                            ...newData[rowIndex],
-                            'Document File Name': ''
-                          };
-                          setData(newData);
-                          onDataChange?.(newData);
-                          updateDocumentMap((() => {
-                            const newMap = new Map(documentMap);
-                            newMap.delete(rowIndex);
-                            return newMap;
-                          })());
-                        }}
-                        onAnalyzeDocument={async (file, filename) => {
-                          console.log('🔧 EditableSpreadsheet: onAnalyzeDocument called for row:', rowIndex);
-                          
-                          // Check if row has existing data (excluding Document File Name column)
-                          const rowData = data[rowIndex];
-                          const hasExistingData = columns.some(col => 
-                            rowData[col] && 
-                            rowData[col].trim() !== ''
-                          );
+                           // Check if row has existing data (excluding Document File Name column)
+                           const rowData = data[rowIndex];
+                           const hasExistingData = columns.some(col => 
+                             rowData[col] && 
+                             rowData[col].trim() !== ''
+                           );
 
-                           if (hasExistingData) {
-                             // Show warning dialog
-                             setPendingAnalysis({ file, filename, rowIndex });
-                             setShowAnalyzeWarningDialog(true);
-                           } else {
-                             // Proceed with analysis
-                             await analyzeDocumentAndPopulateRow(file, rowIndex);
-                           }
-                         }}
-                          onOpenWorkspace={() => {
-                            console.log('🔧 EditableSpreadsheet: Opening full screen workspace for rowIndex:', rowIndex, '(display row:', rowIndex + 1, ')');
-                            console.log('🔧 EditableSpreadsheet: Row data:', row);
-                            console.log('🔧 EditableSpreadsheet: Document for this row:', documentMap.get(rowIndex));
-                            setFullScreenWorkspace({ runsheetId: currentRunsheetId || '', rowIndex });
-                           }}
-                          isSpreadsheetUpload={true}
-                          autoAnalyze={false}
-                           rowData={row}
-                         />
-                       </div>
+                            if (hasExistingData) {
+                              // Show warning dialog
+                              setPendingAnalysis({ file, filename, rowIndex });
+                              setShowAnalyzeWarningDialog(true);
+                            } else {
+                              // Proceed with analysis
+                              await analyzeDocumentAndPopulateRow(file, rowIndex);
+                            }
+                          }}
+                           onOpenWorkspace={() => {
+                             console.log('🔧 EditableSpreadsheet: Opening full screen workspace for rowIndex:', rowIndex, '(display row:', rowIndex + 1, ')');
+                             console.log('🔧 EditableSpreadsheet: Row data:', row);
+                             console.log('🔧 EditableSpreadsheet: Document for this row:', documentMap.get(rowIndex));
+                             setFullScreenWorkspace({ runsheetId: currentRunsheetId || '', rowIndex });
+                            }}
+                           isSpreadsheetUpload={true}
+                           autoAnalyze={false}
+                            rowData={row}
+                          />
+                          
+                          {/* Enhanced Document Analysis Button */}
+                          <DocumentWorkspaceButton
+                            runsheetId={currentRunsheetId || ''}
+                            availableColumns={columns}
+                            onDataConfirmed={async (extractedData, file) => {
+                              // Find next available row and populate with extracted data
+                              const nextEmptyRowIndex = data.findIndex(row => 
+                                columns.every(col => !row[col] || row[col].trim() === '')
+                              );
+                              
+                              const targetRowIndex = nextEmptyRowIndex >= 0 ? nextEmptyRowIndex : data.length;
+                              
+                              // Add new row if needed
+                              if (targetRowIndex >= data.length) {
+                                ensureRowCount(targetRowIndex + 1);
+                              }
+                              
+                              // Update the target row with extracted data
+                              const newData = [...data];
+                              newData[targetRowIndex] = {
+                                ...newData[targetRowIndex],
+                                ...extractedData
+                              };
+                              
+                              setData(newData);
+                              onDataChange?.(newData);
+                              
+                              toast({
+                                title: "Data added successfully",
+                                description: `Document data has been added to row ${targetRowIndex + 1}.`,
+                              });
+                            }}
+                            buttonText="AI Analysis"
+                            buttonVariant="outline"
+                          />
+                        </div>
                        </td>
                       
                        {/* Enhanced row resize handle */}
