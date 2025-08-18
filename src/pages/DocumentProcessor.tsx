@@ -44,6 +44,8 @@ const DocumentProcessor: React.FC = () => {
   
   // View state
   const [isDocumentMode, setIsDocumentMode] = useState(false);
+  const [isDocumentFrameExpanded, setIsDocumentFrameExpanded] = useState(false);
+  const [isBatchProcessingExpanded, setIsBatchProcessingExpanded] = useState(false);
   
   // Document state
   const [file, setFile] = useState<File | null>(null);
@@ -717,6 +719,9 @@ const DocumentProcessor: React.FC = () => {
   // Function to go back to runsheet mode while preserving document
   const goBackToRunsheet = () => {
     setIsDocumentMode(false);
+    // Collapse both document processor sections
+    setIsDocumentFrameExpanded(false);
+    setIsBatchProcessingExpanded(false);
   };
 
   // Function to upload new document (resets everything)
@@ -2033,6 +2038,8 @@ Image: [base64 image data]`;
               onMultipleFilesSelect={handleMultipleFilesSelect}
               onResetDocument={uploadNewDocument}
               isAnalyzing={isAnalyzing}
+              isExpanded={isDocumentFrameExpanded}
+              onExpandedChange={setIsDocumentFrameExpanded}
             />
             
             <BatchProcessing 
@@ -2040,6 +2047,8 @@ Image: [base64 image data]`;
               onAddToSpreadsheet={addToSpreadsheet}
               onAnalyze={analyzeDocument}
               isAnalyzing={isAnalyzing}
+              isExpanded={isBatchProcessingExpanded}
+              onExpandedChange={setIsBatchProcessingExpanded}
             />
             
             <div className="mt-6">

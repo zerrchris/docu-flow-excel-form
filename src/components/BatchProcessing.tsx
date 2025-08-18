@@ -17,15 +17,23 @@ interface BatchProcessingProps {
   onAddToSpreadsheet: (data: Record<string, string>) => Promise<void>;
   onAnalyze: (file: File) => Promise<Record<string, string>>;
   isAnalyzing: boolean;
+  isExpanded?: boolean;
+  onExpandedChange?: (expanded: boolean) => void;
 }
 
 const BatchProcessing: React.FC<BatchProcessingProps> = ({
   fields,
   onAddToSpreadsheet,
   onAnalyze,
-  isAnalyzing
+  isAnalyzing,
+  isExpanded: externalExpanded,
+  onExpandedChange: externalOnExpandedChange
 }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [internalExpanded, setInternalExpanded] = useState(false);
+
+  // Use external state if provided, otherwise use internal state
+  const isExpanded = externalExpanded !== undefined ? externalExpanded : internalExpanded;
+  const setIsExpanded = externalOnExpandedChange || setInternalExpanded;
   const [batchDocuments, setBatchDocuments] = useState<BatchDocument[]>([]);
   const [isUploadAreaExpanded, setIsUploadAreaExpanded] = useState(true);
   const [activeDocumentIndex, setActiveDocumentIndex] = useState<number | null>(null);

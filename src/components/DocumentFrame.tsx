@@ -27,7 +27,8 @@ interface DocumentFrameProps {
   onMultipleFilesSelect?: (files: File[]) => void;
   onResetDocument: () => void;
   isAnalyzing: boolean;
-  
+  isExpanded?: boolean;
+  onExpandedChange?: (expanded: boolean) => void;
 }
 
 const DocumentFrame: React.FC<DocumentFrameProps> = ({ 
@@ -43,9 +44,11 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
   onFileSelect,
   onMultipleFilesSelect,
   onResetDocument,
-  isAnalyzing
+  isAnalyzing,
+  isExpanded: externalExpanded,
+  onExpandedChange: externalOnExpandedChange
 }) => {
-  const [isExpanded, setIsExpanded] = useState<boolean>(() => {
+  const [internalExpanded, setInternalExpanded] = useState<boolean>(() => {
     try {
       const saved = sessionStorage.getItem('documentFrameOpen');
       return saved ? JSON.parse(saved) : false; // default closed until user expands
@@ -53,6 +56,10 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
       return false;
     }
   });
+
+  // Use external state if provided, otherwise use internal state
+  const isExpanded = externalExpanded !== undefined ? externalExpanded : internalExpanded;
+  const setIsExpanded = externalOnExpandedChange || setInternalExpanded;
   const [isUploading, setIsUploading] = useState(false);
   const [hasAddedToSpreadsheet, setHasAddedToSpreadsheet] = useState(false);
   const { toast } = useToast();
