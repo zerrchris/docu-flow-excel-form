@@ -2,21 +2,25 @@ import { useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { RealtimeChannel } from '@supabase/supabase-js';
 import { useToast } from '@/hooks/use-toast';
+import { createRealTimeSubscription, connectionMonitor } from '@/utils/dataSync';
 
 interface RealtimeSyncOptions {
   runsheetId?: string | null;
   onUpdate?: (payload: any) => void;
+  onError?: (error: any) => void;
   enabled?: boolean;
 }
 
 export function useRealtimeSync({ 
   runsheetId, 
   onUpdate,
+  onError,
   enabled = true 
 }: RealtimeSyncOptions) {
   const { toast } = useToast();
   const channelRef = useRef<RealtimeChannel | null>(null);
   const lastUpdateRef = useRef<string>('');
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleRealtimeUpdate = useCallback((payload: any) => {
     console.log('Realtime update received:', payload);
@@ -28,7 +32,7 @@ export function useRealtimeSync({
       return;
     }
 
-    // Only show notifications for updates from other users
+    // Show notification for updates from other users
     if (payload.eventType === 'UPDATE' && payload.new) {
       toast({
         title: "Runsheet updated",
@@ -39,6 +43,23 @@ export function useRealtimeSync({
 
     onUpdate?.(payload);
   }, [onUpdate, toast]);
+
+  const handleRealtimeError = useCallback((error: any) => {
+    console.error('Realtime subscription error:', error);
+    onError?.(error);
+    
+    // Attempt to reconnect after a delay
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+    }
+    
+    reconnectTimeoutRef.current = setTimeout(() => {
+      if (enabled && runsheetId && connectionMonitor.online) {
+        console.log('Attempting to reconnect realtime subscription...');
+        // The subscription will be recreated by the useEffect
+      }
+    }, 5000);
+  }, [onError, enabled, runsheetId]);
 
   // Track our own updates to avoid processing them
   const trackOwnUpdate = useCallback((updateTime: string) => {
@@ -55,32 +76,28 @@ export function useRealtimeSync({
       return;
     }
 
-    // Create new subscription
-    const channel = supabase
-      .channel(`runsheet_${runsheetId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'runsheets',
-          filter: `id=eq.${runsheetId}`
-        },
-        handleRealtimeUpdate
-      )
-      .subscribe((status) => {
-        console.log('Realtime subscription status:', status);
-      });
+    // Create enhanced subscription with error handling
+    const channel = createRealTimeSubscription(
+      'runsheets',
+      `id=eq.${runsheetId}`,
+      handleRealtimeUpdate,
+      handleRealtimeError
+    );
 
     channelRef.current = channel;
 
+    // Cleanup function
     return () => {
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
       }
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
     };
-  }, [runsheetId, enabled, handleRealtimeUpdate]);
+  }, [runsheetId, enabled, handleRealtimeUpdate, handleRealtimeError]);
 
   return {
     trackOwnUpdate

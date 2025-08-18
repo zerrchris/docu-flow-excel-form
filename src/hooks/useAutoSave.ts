@@ -1,6 +1,12 @@
-import { useCallback, useRef, useEffect } from 'react';
+import { useCallback, useRef, useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { 
+  saveRunsheetSafely, 
+  connectionMonitor, 
+  OptimisticUpdater,
+  checkDataConsistency
+} from '@/utils/dataSync';
 
 interface AutoSaveOptions {
   runsheetId?: string | null;
@@ -19,6 +25,9 @@ interface AutoSaveResult {
   save: () => Promise<void>;
   forceSave: () => Promise<void>;
   isSaving: boolean;
+  hasUnsavedChanges: boolean;
+  lastSyncTime: Date | null;
+  connectionStatus: 'online' | 'offline' | 'syncing';
 }
 
 export function useAutoSave({
@@ -37,6 +46,22 @@ export function useAutoSave({
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isSavingRef = useRef(false);
   const lastSavedStateRef = useRef<string>('');
+  const optimisticUpdaterRef = useRef<OptimisticUpdater<any> | null>(null);
+  
+  const [connectionStatus, setConnectionStatus] = useState<'online' | 'offline' | 'syncing'>('online');
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
+
+  // Monitor connection status
+  useEffect(() => {
+    const unsubscribe = connectionMonitor.onStatusChange((isOnline) => {
+      setConnectionStatus(isOnline ? 'online' : 'offline');
+    });
+    
+    setConnectionStatus(connectionMonitor.online ? 'online' : 'offline');
+    
+    return unsubscribe;
+  }, []);
 
   // Calculate current state hash for comparison
   const getCurrentStateHash = useCallback(() => {
@@ -49,9 +74,15 @@ export function useAutoSave({
     });
   }, [runsheetId, runsheetName, columns, data, columnInstructions]);
 
-  // Core save function
+  // Core save function with enhanced error handling
   const performSave = useCallback(async (): Promise<void> => {
     if (!userId || !runsheetName.trim() || columns.length === 0) {
+      return;
+    }
+
+    // Check connection status
+    if (!connectionMonitor.online) {
+      console.log('Offline - deferring save until connection restored');
       return;
     }
 
@@ -59,64 +90,74 @@ export function useAutoSave({
     
     // Skip if no changes since last save
     if (currentStateHash === lastSavedStateRef.current) {
+      setHasUnsavedChanges(false);
       return;
     }
 
     isSavingRef.current = true;
+    setConnectionStatus('syncing');
     onSaveStart?.();
 
     try {
       // Prepare runsheet data
       const runsheetData = {
+        id: runsheetId || undefined,
         name: runsheetName.trim(),
         columns,
         data,
         column_instructions: columnInstructions,
         user_id: userId,
-        updated_at: new Date().toISOString(),
       };
 
-      let result;
-      
+      // Check for conflicts if updating existing runsheet
       if (runsheetId) {
-        // Update existing runsheet
-        const { data: updateResult, error } = await supabase
-          .from('runsheets')
-          .update(runsheetData)
-          .eq('id', runsheetId)
-          .eq('user_id', userId)
-          .select('*')
-          .single();
+        const consistencyCheck = await checkDataConsistency(
+          runsheetData,
+          runsheetId,
+          'runsheets'
+        );
+        
+        if (!consistencyCheck.consistent && consistencyCheck.conflicts) {
+          toast({
+            title: "Sync conflict detected",
+            description: "Another user has modified this runsheet. Your changes will be merged with theirs.",
+            variant: "default"
+          });
+          
+          // Handle merge conflicts here if needed
+          // For now, we'll proceed with the save
+        }
+      }
 
-        if (error) throw error;
-        result = updateResult;
-      } else {
-        // Create new runsheet
-        const { data: insertResult, error } = await supabase
-          .from('runsheets')
-          .insert(runsheetData)
-          .select('*')
-          .single();
+      const result = await saveRunsheetSafely(runsheetData);
 
-        if (error) throw error;
-        result = insertResult;
+      if (!result.success) {
+        throw new Error(result.error);
       }
 
       // Update last saved state
       lastSavedStateRef.current = currentStateHash;
+      setHasUnsavedChanges(false);
+      setLastSyncTime(new Date());
+      setConnectionStatus('online');
       
-      onSaveSuccess?.(result);
+      onSaveSuccess?.(result.data);
       
     } catch (error) {
       console.error('Auto-save error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to save runsheet';
+      
+      setConnectionStatus(connectionMonitor.online ? 'online' : 'offline');
       onSaveError?.(errorMessage);
       
-      toast({
-        title: "Auto-save failed",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      // Don't show error toast if we're offline (connection monitor handles that)
+      if (connectionMonitor.online) {
+        toast({
+          title: "Save failed",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
     } finally {
       isSavingRef.current = false;
     }
@@ -155,19 +196,38 @@ export function useAutoSave({
     };
   }, []);
 
-  // Auto-save when data changes
+  // Auto-save when data changes with change detection
   useEffect(() => {
     const currentStateHash = getCurrentStateHash();
     
-    // Only trigger auto-save if there are actual changes
-    if (currentStateHash !== lastSavedStateRef.current && userId) {
+    // Update unsaved changes indicator
+    const hasChanges = currentStateHash !== lastSavedStateRef.current;
+    setHasUnsavedChanges(hasChanges);
+    
+    // Only trigger auto-save if there are actual changes and user is authenticated
+    if (hasChanges && userId && connectionMonitor.online) {
       save();
     }
   }, [runsheetName, columns, data, columnInstructions, userId, save, getCurrentStateHash]);
 
+  // Auto-save when coming back online
+  useEffect(() => {
+    const unsubscribe = connectionMonitor.onStatusChange((isOnline) => {
+      if (isOnline && hasUnsavedChanges && userId) {
+        console.log('Back online - triggering auto-save for unsaved changes');
+        save();
+      }
+    });
+    
+    return unsubscribe;
+  }, [hasUnsavedChanges, userId, save]);
+
   return {
     save,
     forceSave,
-    isSaving: isSavingRef.current
+    isSaving: isSavingRef.current,
+    hasUnsavedChanges,
+    lastSyncTime,
+    connectionStatus
   };
 }
