@@ -410,55 +410,98 @@ export function createRealTimeSubscription(
   onError?: (error: any) => void
 ) {
   let retryCount = 0;
-  const maxRetries = 5;
+  const maxRetries = 3; // Reduced from 5 to prevent endless retry loops
+  let isDestroyed = false;
   
-  const createSubscription = () => {
-    const channel = supabase
-      .channel(`${table}_changes_${Date.now()}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table,
-          filter
-        },
-        (payload) => {
-          retryCount = 0; // Reset on successful message
-          onUpdate?.(payload);
+  // Check if we're online before attempting connection
+  if (!connectionMonitor.online) {
+    console.log('Offline - deferring subscription until connection restored');
+    // Return a dummy channel that will be recreated when online
+    return supabase.channel(`offline_${table}_${Date.now()}`);
+  }
+  
+  console.log(`Creating subscription to ${table}, attempt ${retryCount + 1}`);
+  
+  const channel = supabase
+    .channel(`${table}_changes_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table,
+        ...(filter && { filter })
+      },
+      (payload) => {
+        if (isDestroyed) return;
+        console.log(`Received realtime update for ${table}:`, payload);
+        retryCount = 0; // Reset on successful message
+        onUpdate?.(payload);
+      }
+    )
+    .subscribe((status, error) => {
+      if (isDestroyed) return;
+      
+      console.log(`Subscription status for ${table}:`, status, error);
+      
+      if (status === 'SUBSCRIBED') {
+        console.log(`Successfully subscribed to ${table} changes`);
+        retryCount = 0;
+      } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+        console.error(`Subscription ${status} for ${table}:`, error);
+        
+        // Don't retry if we're offline or destroyed
+        if (!connectionMonitor.online || isDestroyed) {
+          console.log('Offline or destroyed - not retrying subscription');
+          return;
         }
-      )
-      .subscribe((status, error) => {
-        if (status === 'SUBSCRIBED') {
-          console.log(`Subscribed to ${table} changes`);
-          retryCount = 0;
-        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
-          console.error(`Subscription ${status}:`, error);
+        
+        if (retryCount < maxRetries) {
+          retryCount++;
+          const delay = Math.min(2000 * Math.pow(1.5, retryCount - 1), 10000); // Less aggressive backoff
           
-          if (retryCount < maxRetries) {
-            retryCount++;
-            const delay = Math.min(1000 * Math.pow(2, retryCount - 1), 30000);
-            
-            setTimeout(() => {
-              console.log(`Retrying subscription to ${table}, attempt ${retryCount}`);
-              supabase.removeChannel(channel);
-              createSubscription();
-            }, delay);
-          } else {
-            onError?.(new Error(`Failed to maintain subscription to ${table} after ${maxRetries} attempts`));
+          setTimeout(() => {
+            if (isDestroyed) return;
+            console.log(`Retrying subscription to ${table}, attempt ${retryCount + 1}/${maxRetries + 1}`);
+            // Clean up current channel and create new one
+            supabase.removeChannel(channel);
+            if (!isDestroyed) {
+              const newChannel = createRealTimeSubscription(table, filter, onUpdate, onError);
+              // Transfer the cleanup function
+              (channel as any)._cleanup = () => {
+                isDestroyed = true;
+                supabase.removeChannel(newChannel);
+              };
+            }
+          }, delay);
+        } else {
+          console.error(`Failed to maintain subscription to ${table} after ${maxRetries} attempts`);
+          onError?.(new Error(`Failed to maintain subscription to ${table} after ${maxRetries} attempts`));
+          
+          // Only show toast if we haven't shown it recently
+          const lastToastKey = `realtime_error_${table}`;
+          const lastToastTime = sessionStorage.getItem(lastToastKey);
+          const now = Date.now();
+          
+          if (!lastToastTime || now - parseInt(lastToastTime) > 60000) { // 1 minute cooldown
+            sessionStorage.setItem(lastToastKey, now.toString());
             toast({
               title: "Connection issue",
-              description: "Lost connection to real-time updates. Please refresh the page.",
-              variant: "destructive"
+              description: "Real-time updates temporarily unavailable. Data will sync when connection improves.",
+              variant: "default"
             });
           }
         }
-      });
-      
-    return channel;
+      }
+    });
+    
+  // Add cleanup function to channel
+  (channel as any)._cleanup = () => {
+    isDestroyed = true;
+    supabase.removeChannel(channel);
   };
   
-  return createSubscription();
+  return channel;
 }
 
 /**

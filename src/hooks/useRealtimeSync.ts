@@ -70,7 +70,13 @@ export function useRealtimeSync({
     if (!enabled || !runsheetId) {
       // Clean up existing subscription
       if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
+        // Use custom cleanup if available, otherwise fallback to supabase.removeChannel
+        const channel = channelRef.current;
+        if ((channel as any)._cleanup) {
+          (channel as any)._cleanup();
+        } else {
+          supabase.removeChannel(channel);
+        }
         channelRef.current = null;
       }
       return;
@@ -89,7 +95,12 @@ export function useRealtimeSync({
     // Cleanup function
     return () => {
       if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
+        const channel = channelRef.current;
+        if ((channel as any)._cleanup) {
+          (channel as any)._cleanup();
+        } else {
+          supabase.removeChannel(channel);
+        }
         channelRef.current = null;
       }
       if (reconnectTimeoutRef.current) {
