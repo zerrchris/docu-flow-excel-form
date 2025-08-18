@@ -44,6 +44,7 @@ const DocumentProcessor: React.FC = () => {
   
   // View state
   const [isDocumentMode, setIsDocumentMode] = useState(false);
+  const [showDocumentProcessor, setShowDocumentProcessor] = useState(true); // Controls if document processor section is visible
   
   // Document state
   const [file, setFile] = useState<File | null>(null);
@@ -714,9 +715,10 @@ const DocumentProcessor: React.FC = () => {
     setShowCombineConfirmation(false);
   };
 
-  // Function to go back to runsheet mode while preserving document
+  // Function to go back to runsheet mode and close document processor
   const goBackToRunsheet = () => {
     setIsDocumentMode(false);
+    setShowDocumentProcessor(false); // Hide document processor section
   };
 
   // Function to upload new document (resets everything)
@@ -744,8 +746,9 @@ const DocumentProcessor: React.FC = () => {
     // since OpenAI can access blob URLs when they're properly formatted
     setStorageUrl(url);
     
-    // Enter document processing mode
+    // Enter document processing mode and show document processor
     setIsDocumentMode(true);
+    setShowDocumentProcessor(true); // Ensure document processor is visible
     
     console.log('🔧 DocumentProcessor: File set and preview URL created:', url);
     
@@ -2019,28 +2022,49 @@ Image: [base64 image data]`;
           </header>
           
           <div className="w-full px-4 py-6">
-            <DocumentFrame 
-              file={file}
-              previewUrl={previewUrl}
-              fields={columns}
-              formData={formData}
-              columnInstructions={columnInstructions}
-              onChange={handleFieldChange}
-              onAnalyze={analyzeDocument}
-              onCancelAnalysis={cancelAnalysis}
-              onAddToSpreadsheet={addToSpreadsheet}
-              onFileSelect={handleFileSelect}
-              onMultipleFilesSelect={handleMultipleFilesSelect}
-              onResetDocument={uploadNewDocument}
-              isAnalyzing={isAnalyzing}
-            />
+            {showDocumentProcessor && (
+              <>
+                <DocumentFrame 
+                  file={file}
+                  previewUrl={previewUrl}
+                  fields={columns}
+                  formData={formData}
+                  columnInstructions={columnInstructions}
+                  onChange={handleFieldChange}
+                  onAnalyze={analyzeDocument}
+                  onCancelAnalysis={cancelAnalysis}
+                  onAddToSpreadsheet={addToSpreadsheet}
+                  onFileSelect={handleFileSelect}
+                  onMultipleFilesSelect={handleMultipleFilesSelect}
+                  onResetDocument={uploadNewDocument}
+                  isAnalyzing={isAnalyzing}
+                />
+                
+                <BatchProcessing 
+                  fields={columns}
+                  onAddToSpreadsheet={addToSpreadsheet}
+                  onAnalyze={analyzeDocument}
+                  isAnalyzing={isAnalyzing}
+                />
+              </>
+            )}
             
-            <BatchProcessing 
-              fields={columns}
-              onAddToSpreadsheet={addToSpreadsheet}
-              onAnalyze={analyzeDocument}
-              isAnalyzing={isAnalyzing}
-            />
+            {!showDocumentProcessor && (
+              <div className="mb-4 p-4 border rounded-lg bg-muted/20">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-muted-foreground">
+                    Document processor is closed. Upload a document to start processing.
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowDocumentProcessor(true)}
+                  >
+                    Show Document Processor
+                  </Button>
+                </div>
+              </div>
+            )}
             
             <div className="mt-6">
             <EditableSpreadsheet
