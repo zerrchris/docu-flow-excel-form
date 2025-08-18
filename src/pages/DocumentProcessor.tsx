@@ -934,7 +934,7 @@ const DocumentProcessor: React.FC = () => {
       if (hasCorruptedType) {
         console.warn('Detected corrupted file type:', targetFile.type, 'for file:', targetFile.name);
         // Try to determine type from filename extension
-        const fileExtension = targetFile.name.toLowerCase().split('.').pop();
+        const fileExtension = targetFile?.name?.toLowerCase().split('.').pop();
         const isLikelyImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExtension || '');
         
         if (!isLikelyImage) {
@@ -1032,7 +1032,7 @@ Image: [base64 image data]`;
 
       // Determine correct MIME type for the image data
       let mimeType = targetFile.type;
-      if (targetFile.type === 'application/octet-stream') {
+      if (targetFile.type === 'application/octet-stream' && targetFile?.name) {
         // Infer MIME type from file extension for octet-stream files
         const fileName = targetFile.name.toLowerCase();
         if (fileName.endsWith('.jpg') || fileName.endsWith('.jpeg')) {
