@@ -494,7 +494,7 @@ const DataForm: React.FC<DataFormProps> = ({
         <div className="flex flex-col space-y-2 sm:flex-row sm:space-x-2 sm:space-y-0">
           <Button 
             variant="gradient"
-            onClick={onAnalyze}
+            onClick={() => onAnalyze()}
             disabled={isAnalyzing}
             className="w-full sm:w-auto"
           >
