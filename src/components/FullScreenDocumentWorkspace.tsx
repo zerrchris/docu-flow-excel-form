@@ -108,28 +108,39 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
         setIsLoading(true);
         setError(null);
         
+        console.log('🔧 FullScreenDocumentWorkspace: Loading document for runsheet:', runsheetId, 'row:', rowIndex);
+        
         // Try to load from database first
         const document = await DocumentService.getDocumentForRow(runsheetId, rowIndex);
+        console.log('🔧 FullScreenDocumentWorkspace: Document from database:', document);
+        
         if (document) {
           const url = DocumentService.getDocumentUrl(document.file_path);
+          console.log('🔧 FullScreenDocumentWorkspace: Document URL:', url);
           setDocumentUrl(url);
           setDocumentName(document.original_filename);
           setIsPdf(document.content_type === 'application/pdf' || document.original_filename.toLowerCase().endsWith('.pdf'));
         } else {
+          console.log('🔧 FullScreenDocumentWorkspace: No document found in database, checking session storage...');
+          
           // Check for pending documents in session storage
           const pendingDocs = JSON.parse(sessionStorage.getItem('pendingDocuments') || '[]');
+          console.log('🔧 FullScreenDocumentWorkspace: Pending documents:', pendingDocs);
+          
           const pendingDoc = pendingDocs.find((doc: any) => doc.rowIndex === rowIndex);
+          console.log('🔧 FullScreenDocumentWorkspace: Found pending document for row:', pendingDoc);
           
           if (pendingDoc) {
             setDocumentUrl(pendingDoc.fileData);
             setDocumentName(pendingDoc.fileName);
             setIsPdf(pendingDoc.fileType === 'application/pdf' || pendingDoc.fileName.toLowerCase().endsWith('.pdf'));
           } else {
-            setError('No document found for this row');
+            console.error('🔧 FullScreenDocumentWorkspace: No document found in database or session storage');
+            setError(`No document found for row ${rowIndex} in runsheet ${runsheetId}`);
           }
         }
       } catch (error) {
-        console.error('Error loading document:', error);
+        console.error('🔧 FullScreenDocumentWorkspace: Error loading document:', error);
         setError('Failed to load document');
       } finally {
         setIsLoading(false);
