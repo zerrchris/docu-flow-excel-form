@@ -1069,14 +1069,16 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
   // Update active runsheet when name changes (prevent loops)
   useEffect(() => {
-    if (runsheetName && runsheetName !== 'Untitled Runsheet' && currentRunsheet && currentRunsheet.name !== runsheetName) {
-      // Only update if the name actually changed to prevent loops
+    if (runsheetName && runsheetName !== 'Untitled Runsheet' && currentRunsheet && 
+        currentRunsheet.name !== runsheetName && currentRunsheetId) {
+      // Only update if the name actually changed and we have a valid runsheet ID to prevent loops
+      console.log('🔧 EditableSpreadsheet: Updating active runsheet name from', currentRunsheet.name, 'to', runsheetName);
       setActiveRunsheet({ 
         ...currentRunsheet,
         name: runsheetName 
       });
     }
-  }, [runsheetName, currentRunsheet]);
+  }, [runsheetName, currentRunsheet?.name, currentRunsheetId]); // More specific dependencies
 
   // Listen for external trigger events from DocumentProcessor
   useEffect(() => {

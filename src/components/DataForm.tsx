@@ -18,6 +18,7 @@ interface DataFormProps {
   onCancelAnalysis?: () => void;
   onAddToSpreadsheet: () => Promise<void>;
   onResetDocument?: () => void;
+  onBackToRunsheet?: () => void; // Add back to runsheet handler
   isAnalyzing: boolean;
   isUploading?: boolean;
   hasAddedToSpreadsheet?: boolean;
@@ -35,6 +36,7 @@ const DataForm: React.FC<DataFormProps> = ({
   onCancelAnalysis,
   onAddToSpreadsheet,
   onResetDocument,
+  onBackToRunsheet,
   isAnalyzing,
   isUploading = false,
   hasAddedToSpreadsheet = false,
@@ -543,6 +545,16 @@ const DataForm: React.FC<DataFormProps> = ({
               </>
             )}
           </Button>
+
+          {onBackToRunsheet && (
+            <Button
+              variant="outline"
+              onClick={onBackToRunsheet}
+              className="w-full sm:w-auto"
+            >
+              Back to Runsheet
+            </Button>
+          )}
         </div>
         
         {onResetDocument && hasAddedToSpreadsheet && (

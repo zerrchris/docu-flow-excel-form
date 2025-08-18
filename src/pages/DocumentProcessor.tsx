@@ -1909,14 +1909,6 @@ Image: [base64 image data]`;
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={goBackToRunsheet}
-                    className="gap-2"
-                  >
-                    Back to Runsheet
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
                     onClick={uploadNewDocument}
                     className="gap-2"
                   >
@@ -1963,6 +1955,7 @@ Image: [base64 image data]`;
                     onCancelAnalysis={cancelAnalysis}
                     onAddToSpreadsheet={addToSpreadsheet}
                     onResetDocument={uploadNewDocument}
+                    onBackToRunsheet={goBackToRunsheet}
                     isAnalyzing={isAnalyzing}
                     isUploading={false}
                     hasAddedToSpreadsheet={false}
