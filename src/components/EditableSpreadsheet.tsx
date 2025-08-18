@@ -51,6 +51,9 @@ import InlineDocumentViewer from './InlineDocumentViewer';
 import ColumnPreferencesDialog from './ColumnPreferencesDialog';
 import FullScreenDocumentWorkspace from './FullScreenDocumentWorkspace';
 import ViewportPortal from './ViewportPortal';
+import { AutoSaveIndicator } from './AutoSaveIndicator';
+import { useAutoSave } from '@/hooks/useAutoSave';
+import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 import type { User } from '@supabase/supabase-js';
 
 interface SpreadsheetProps {
@@ -239,6 +242,65 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [fullScreenWorkspace, setFullScreenWorkspace] = useState<{ runsheetId: string; rowIndex: number } | null>(null);
   const [showDocumentFileNameColumn, setShowDocumentFileNameColumn] = useState(true);
   
+  // Auto-save state
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [autoSaveError, setAutoSaveError] = useState<string>('');
+  const [lastAutoSaveTime, setLastAutoSaveTime] = useState<Date | null>(null);
+  
+  // Initialize auto-save hook
+  const { save: autoSave, forceSave: autoForceSave, isSaving: autoSaving } = useAutoSave({
+    runsheetId: currentRunsheetId,
+    runsheetName,
+    columns,
+    data,
+    columnInstructions,
+    userId: user?.id,
+    debounceMs: 1000, // Save 1 second after last change
+    onSaveStart: () => {
+      setAutoSaveStatus('saving');
+      setAutoSaveError('');
+    },
+    onSaveSuccess: (result) => {
+      setAutoSaveStatus('saved');
+      setLastAutoSaveTime(new Date());
+      setHasUnsavedChanges(false);
+      
+      // Update current runsheet ID if this was a new runsheet
+      if (!currentRunsheetId && result?.id) {
+        setCurrentRunsheetId(result.id);
+        setActiveRunsheet({
+          id: result.id,
+          name: runsheetName,
+          data,
+          columns
+        });
+      }
+    },
+    onSaveError: (error) => {
+      setAutoSaveStatus('error');
+      setAutoSaveError(error);
+    }
+  });
+
+  // Initialize real-time sync
+  const { trackOwnUpdate } = useRealtimeSync({
+    runsheetId: currentRunsheetId,
+    enabled: true,
+    onUpdate: (payload) => {
+      if (payload.eventType === 'UPDATE' && payload.new) {
+        // Update local state with remote changes
+        try {
+          if (payload.new.data) setData(payload.new.data);
+          if (payload.new.columns) setColumns(payload.new.columns);
+          if (payload.new.column_instructions) setColumnInstructions(payload.new.column_instructions);
+          if (payload.new.name) setRunsheetName(payload.new.name);
+        } catch (error) {
+          console.error('Error applying realtime update:', error);
+        }
+      }
+    }
+  });
+
   // Listen for document upload save requests
   React.useEffect(() => {
     const handleSaveRequest = async (event: CustomEvent) => {
@@ -262,16 +324,10 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           return;
         }
         
-        // Save the runsheet and get the actual saved runsheet ID
-        const savedRunsheetResult = await saveRunsheet();
+        // Use force save for document upload requests  
+        await autoForceSave();
         
-        // Use the actual saved runsheet ID from the database, not the state
         let runsheetIdToReturn = currentRunsheetId;
-        
-        // If we just created a new runsheet, use that ID
-        if (savedRunsheetResult && savedRunsheetResult.id) {
-          runsheetIdToReturn = savedRunsheetResult.id;
-        }
         
         if (runsheetIdToReturn) {
           // Send success response with the runsheet ID
@@ -366,9 +422,9 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     window.addEventListener('startNewRunsheet', handleStartNewRunsheet as EventListener);
     
     // Handle Ctrl+S save event from DocumentProcessor
-    const handleSaveEvent = () => {
-      if (user && hasUnsavedChanges) {
-        forceSave();
+    const handleSaveEvent = async () => {
+      if (user) {
+        await autoForceSave();
       }
     };
     
@@ -1254,36 +1310,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     }
   }, [user, hasUnsavedChanges, runsheetName, columns, data, columnInstructions, onUnsavedChanges]);
 
-  // Force save function for critical moments (navigation, etc.)
-  const forceSave = useCallback(async () => {
-    if (!user || !runsheetName || columns.length === 0) return;
-    
-    try {
-      await supabase
-        .from('runsheets')
-        .upsert({
-          name: runsheetName,
-          columns: columns,
-          data: data,
-          column_instructions: columnInstructions,
-          user_id: user.id,
-          updated_at: new Date().toISOString(),
-        }, {
-          onConflict: 'user_id,name'
-        });
-      
-      const savedState = JSON.stringify({ data, columns, runsheetName, columnInstructions });
-      setLastSavedState(savedState);
-      setHasUnsavedChanges(false);
-      onUnsavedChanges?.(false);
-      
-      // Dispatch event to notify DocumentProcessor that save completed
-      window.dispatchEvent(new CustomEvent('runsheetSaved'));
-      console.log('Force save completed');
-    } catch (error) {
-      console.error('Force save failed:', error);
-    }
-  }, [user, runsheetName, columns, data, columnInstructions, onUnsavedChanges]);
+  // Legacy save functions removed - now using auto-save hooks above
 
   // Track changes and trigger auto-save with proper change detection
   useEffect(() => {
@@ -1306,12 +1333,13 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       
       // Delayed auto-save: save 30 seconds after the last change to give user time for navigation prompts
       const timeoutId = setTimeout(() => {
-        autoSaveRunsheet();
+        // Use auto-save instead of old autoSaveRunsheet
+        autoSave();
       }, 30000); // Increased from 3 seconds to 30 seconds
       
       return () => clearTimeout(timeoutId);
     }
-  }, [data, columns, runsheetName, columnInstructions, user, lastSavedState, autoSaveRunsheet, onUnsavedChanges]);
+  }, [data, columns, runsheetName, columnInstructions, user, lastSavedState, autoSave, onUnsavedChanges]);
 
   // Aggressive fallback auto-save every 30 seconds
   useEffect(() => {
@@ -1319,12 +1347,12 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     
     const interval = setInterval(() => {
       if (hasUnsavedChanges) {
-        autoSaveRunsheet();
+        autoSave();
       }
     }, 30000); // Auto-save every 30 seconds if there are changes
 
     return () => clearInterval(interval);
-  }, [user, hasUnsavedChanges, autoSaveRunsheet]);
+  }, [user, hasUnsavedChanges, autoSave]);
 
   // Enhanced page navigation and visibility handling
   useEffect(() => {
@@ -1355,8 +1383,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         const saveUrl = 'https://xnpmrafjjqsissbtempj.supabase.co/functions/v1/save-runsheet';
         navigator.sendBeacon(saveUrl, payload);
         
-        // Also try regular save
-        forceSave();
+        // Also try regular auto-save
+        autoForceSave();
       }
     };
 
@@ -1373,7 +1401,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           documentMap: Array.from(documentMap.entries()),
           timestamp: Date.now()
         }));
-        forceSave();
+        autoForceSave();
       } else if (!document.hidden) {
         // When page becomes visible again, check for preserved state
         const preservedState = sessionStorage.getItem('preserveRunsheetState');
@@ -1413,7 +1441,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       window.removeEventListener('beforeunload', handleBeforeUnload);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [hasUnsavedChanges, user, runsheetName, columns, data, columnInstructions, forceSave]);
+    }, [hasUnsavedChanges, user, runsheetName, columns, data, columnInstructions, autoForceSave]);
 
   // Check if runsheet name exists and handle conflicts
   const checkRunsheetNameConflict = async (baseName: string, userId: string): Promise<{ hasConflict: boolean; suggestedName?: string }> => {
@@ -3352,6 +3380,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       };
       setData(newData);
       onDataChange?.(newData);
+      setHasUnsavedChanges(true);
       
       // Handle Document File Name column edits specially - update the actual document filename
       if (editingCell.column === 'Document File Name' && currentRunsheetId && cellValue.trim()) {
@@ -4269,8 +4298,16 @@ ${extractionFields}`
               className="gap-2"
             >
               <Save className="h-4 w-4" />
-              {isSaving ? 'Saving...' : 'Save'}
+              {isSaving || autoSaving ? 'Saving...' : 'Save'}
             </Button>
+            
+            {/* Auto-save status indicator */}
+            <AutoSaveIndicator 
+              status={autoSaveStatus}
+              errorMessage={autoSaveError}
+              lastSavedAt={lastAutoSaveTime}
+              className="ml-2"
+            />
             
             {/* Save and Close Button */}
             <Button
@@ -4281,7 +4318,7 @@ ${extractionFields}`
               className="gap-2"
             >
               <Save className="h-4 w-4" />
-              {isSaving ? 'Saving...' : 'Save & Close'}
+              {isSaving || autoSaving ? 'Saving...' : 'Save & Close'}
             </Button>
 
             {/* Download Button */}
