@@ -65,7 +65,6 @@ import {
   prepareDataForInsertion 
 } from '@/utils/rowValidation';
 import { RowInsertionIndicator, NextEmptyRowIndicator } from './RowInsertionIndicator';
-import { ConnectionStatus } from './ConnectionStatus';
 
 interface SpreadsheetProps {
   initialColumns: string[];
@@ -271,15 +270,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [showInsertionPreview, setShowInsertionPreview] = useState(false);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Initialize auto-save hook with enhanced monitoring
-  const { 
-    save: autoSave, 
-    forceSave: autoForceSave, 
-    isSaving: autoSaving,
-    hasUnsavedChanges: autoHasUnsavedChanges,
-    lastSyncTime,
-    connectionStatus
-  } = useAutoSave({
+  // Initialize auto-save hook
+  const { save: autoSave, forceSave: autoForceSave, isSaving: autoSaving } = useAutoSave({
     runsheetId: currentRunsheetId,
     runsheetName,
     columns,
@@ -313,7 +305,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     }
   });
 
-  // Initialize real-time sync with enhanced error handling
+  // Initialize real-time sync
   const { trackOwnUpdate } = useRealtimeSync({
     runsheetId: currentRunsheetId,
     enabled: true,
@@ -329,14 +321,6 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           console.error('Error applying realtime update:', error);
         }
       }
-    },
-    onError: (error) => {
-      console.error('Realtime sync error:', error);
-      toast({
-        title: "Sync error",
-        description: "Lost connection to real-time updates. Your changes are still being saved.",
-        variant: "default"
-      });
     }
   });
 
@@ -4328,51 +4312,68 @@ ${extractionFields}`
     <div className="mt-6" data-spreadsheet-container>
       <div className="flex flex-col space-y-4 px-6">
         <div className="flex justify-between items-center mb-2">
-            <div className="flex items-center gap-3">
-              <h3 className="text-lg font-semibold text-foreground">Runsheet</h3>
-              <span className="text-muted-foreground">•</span>
-              {editingRunsheetName ? (
-                <Input
-                  value={tempRunsheetName}
-                  onChange={(e) => setTempRunsheetName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      saveRunsheetNameEdit();
-                      e.preventDefault();
-                    } else if (e.key === 'Escape') {
-                      cancelRunsheetNameEdit();
-                      e.preventDefault();
-                    }
-                  }}
-                  onBlur={saveRunsheetNameEdit}
-                  className="h-7 text-sm font-medium min-w-[200px] max-w-[300px]"
-                  autoFocus
-                />
-              ) : (
-                <button
-                  onClick={startEditingRunsheetName}
-                  className="text-sm font-medium text-foreground hover:text-primary transition-colors cursor-pointer underline-offset-4 hover:underline"
-                >
-                  {runsheetName}
-                </button>
-              )}
-              
-              {/* Enhanced Status Display */}
-              {user && (
-                <div className="flex items-center gap-4">
-                  <ConnectionStatus
-                    connectionStatus={connectionStatus}
-                    hasUnsavedChanges={autoHasUnsavedChanges}
-                    lastSyncTime={lastSyncTime}
-                  />
-                  
-                  {/* Row count indicator */}
-                  <div className="flex items-center gap-1 px-2 py-1 bg-muted rounded text-xs">
-                    <span>{data.length} rows</span>
+          <div className="flex items-center gap-3">
+            <h3 className="text-lg font-semibold text-foreground">Runsheet</h3>
+            <span className="text-muted-foreground">•</span>
+            {editingRunsheetName ? (
+              <Input
+                value={tempRunsheetName}
+                onChange={(e) => setTempRunsheetName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    saveRunsheetNameEdit();
+                    e.preventDefault();
+                  } else if (e.key === 'Escape') {
+                    cancelRunsheetNameEdit();
+                    e.preventDefault();
+                  }
+                }}
+                onBlur={saveRunsheetNameEdit}
+                className="h-7 text-sm font-medium min-w-[200px] max-w-[300px]"
+                autoFocus
+              />
+            ) : (
+              <button
+                onClick={startEditingRunsheetName}
+                className="text-sm font-medium text-foreground hover:text-primary transition-colors cursor-pointer underline-offset-4 hover:underline"
+              >
+                {runsheetName}
+              </button>
+            )}
+            
+            {/* Autosave Status */}
+            {user && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                {hasUnsavedChanges ? (
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />
+                    <span>Unsaved changes</span>
                   </div>
+                ) : lastSaveTime ? (
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-green-500 rounded-full" />
+                    <span>
+                      Auto-saved at {new Date(lastSaveTime).toLocaleTimeString([], { 
+                        hour: '2-digit', 
+                        minute: '2-digit',
+                        second: '2-digit'
+                      })}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-gray-400 rounded-full" />
+                    <span>Not saved yet</span>
+                  </div>
+                )}
+                
+                {/* Row count indicator */}
+                <div className="flex items-center gap-1 ml-2 px-2 py-1 bg-muted rounded text-xs">
+                  <span>{data.length} rows</span>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
+          </div>
           <div className="flex items-center gap-2">
             {/* Save Button */}
             <Button

@@ -1,5 +1,4 @@
 import { supabase } from '@/integrations/supabase/client';
-import { withRetry, DataSyncError, getDocumentsForRunsheet } from '@/utils/dataSync';
 
 export interface DocumentRecord {
   id: string;
@@ -18,46 +17,42 @@ export interface DocumentRecord {
 export class DocumentService {
   
   /**
-   * Get all documents for a specific runsheet with enhanced error handling
+   * Get all documents for a specific runsheet
    */
   static async getDocumentsForRunsheet(runsheetId: string): Promise<DocumentRecord[]> {
-    const result = await getDocumentsForRunsheet(runsheetId);
-    
-    if (!result.success) {
-      console.error('Error fetching documents:', result.error);
+    const { data, error } = await supabase
+      .from('documents')
+      .select('*')
+      .eq('runsheet_id', runsheetId)
+      .order('row_index');
+
+    if (error) {
+      console.error('Error fetching documents:', error);
       return [];
     }
-    
-    return result.data || [];
+
+    return data || [];
   }
 
   /**
-   * Get document for a specific row in a runsheet with retry logic
+   * Get document for a specific row in a runsheet
    */
   static async getDocumentForRow(runsheetId: string, rowIndex: number): Promise<DocumentRecord | null> {
-    const result = await withRetry(async () => {
-      const { data, error } = await supabase
-        .from('documents')
-        .select('*')
-        .eq('runsheet_id', runsheetId)
-        .eq('row_index', rowIndex)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+    const { data, error } = await supabase
+      .from('documents')
+      .select('*')
+      .eq('runsheet_id', runsheetId)
+      .eq('row_index', rowIndex)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-      if (error) {
-        throw new DataSyncError(
-          'Fetch failed',
-          'Failed to load document for this row.',
-          true,
-          error
-        );
-      }
+    if (error) {
+      console.error('Error fetching document for row:', error);
+      return null;
+    }
 
-      return data;
-    });
-
-    return result.success ? result.data : null;
+    return data;
   }
 
   /**
