@@ -4766,33 +4766,21 @@ ${extractionFields}`
                 position: 'relative'
               }}
             >
-            {/* GUARANTEED STICKY HEADER - Will always stick to top when scrolling */}
+            {/* STICKY HEADER - Always visible at top */}
             <TableHeader 
-              className="sticky top-0 bg-background border-b-2 shadow-lg backdrop-blur-sm table-sticky-header"
+              className="sticky top-0 bg-background/95 border-b-2 backdrop-blur-sm z-50"
               style={{ 
-                position: 'sticky !important' as any,
-                top: '0px !important',
-                backgroundColor: 'hsl(var(--background)) !important',
-                backdropFilter: 'blur(8px) !important',
-                WebkitBackdropFilter: 'blur(8px) !important',
-                boxShadow: '0 8px 25px -5px rgba(0,0,0,0.15), 0 4px 10px -2px rgba(0,0,0,0.1)',
-                borderBottom: '2px solid hsl(var(--primary))',
-                zIndex: 1001,
-                transition: 'box-shadow 0.2s ease-in-out',
-                transform: 'translateZ(0)',
-                willChange: 'transform',
-                contain: 'layout style paint',
+                position: 'sticky',
+                top: 0,
+                zIndex: 9999,
+                backgroundColor: 'hsl(var(--background))',
+                borderBottom: '2px solid hsl(var(--border))',
+                backdropFilter: 'blur(4px)',
+                WebkitBackdropFilter: 'blur(4px)',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
               }}
             >
-              <TableRow 
-                className="hover:bg-muted/50 transition-colors sticky top-0" 
-                style={{ 
-                  backgroundColor: 'hsl(var(--background))',
-                  position: 'sticky',
-                  top: '0px',
-                  zIndex: 1000
-                }}
-              >
+               <TableRow className="hover:bg-muted/50 transition-colors">
                 {columns.map((column) => (
                    <TableHead 
                        key={column}
@@ -4937,8 +4925,8 @@ ${extractionFields}`
                   {data.map((row, rowIndex) => {
                     return (
                       <React.Fragment key={`row-${rowIndex}`}>
-                        {/* Show inline document viewer above this row if it's selected */}
-                       {inlineViewerRow === rowIndex && (
+                         {/* Show inline document viewer above this row if it's selected */}
+                        {inlineViewerRow === rowIndex && (
                       <TableRow>
                         <TableCell colSpan={columns.length + (showDocumentFileNameColumn ? 1 : 0) + 1} className="p-0 border-0">
                           <InlineDocumentViewer

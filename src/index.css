@@ -168,7 +168,41 @@ All colors MUST be HSL.
   }
 
   /* Sticky Header Optimization for EditableSpreadsheet */
-  .sticky-header-content {
+/* Sticky header styles */
+.table-sticky-header {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 9999 !important;
+  background-color: hsl(var(--background)) !important;
+}
+
+/* Force sticky positioning for table headers */
+table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: hsl(var(--background));
+}
+
+/* Enhanced sticky table header */
+.sticky-table-header {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 999 !important;
+  background-color: hsl(var(--background)) !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
+}
+
+/* Ensure table container supports sticky */
+.sticky-table-container {
+  position: relative;
+  overflow: auto;
+  max-height: 100vh;
+}
+
+.sticky-header-content {
     /* Force hardware acceleration for smooth sticky behavior */
     transform: translateZ(0);
     will-change: transform;
