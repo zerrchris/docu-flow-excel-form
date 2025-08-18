@@ -21,8 +21,12 @@ export function useRealtimeSync({
   const channelRef = useRef<RealtimeChannel | null>(null);
   const lastUpdateRef = useRef<string>('');
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const connectionListenerRef = useRef<(() => void) | null>(null);
+  const isActiveRef = useRef(true);
 
   const handleRealtimeUpdate = useCallback((payload: any) => {
+    if (!isActiveRef.current) return;
+    
     console.log('Realtime update received:', payload);
     
     // Avoid processing our own updates
@@ -45,21 +49,53 @@ export function useRealtimeSync({
   }, [onUpdate, toast]);
 
   const handleRealtimeError = useCallback((error: any) => {
+    if (!isActiveRef.current) return;
+    
     console.error('Realtime subscription error:', error);
     onError?.(error);
-    
-    // Attempt to reconnect after a delay
+  }, [onError]);
+
+  const createSubscription = useCallback(() => {
+    if (!isActiveRef.current || !enabled || !runsheetId || !connectionMonitor.online) {
+      return;
+    }
+
+    // Clean up existing subscription
+    if (channelRef.current) {
+      const channel = channelRef.current;
+      if ((channel as any)._cleanup) {
+        (channel as any)._cleanup();
+      } else {
+        supabase.removeChannel(channel);
+      }
+      channelRef.current = null;
+    }
+
+    console.log('Creating new realtime subscription for runsheet:', runsheetId);
+
+    // Create new subscription
+    const channel = createRealTimeSubscription(
+      'runsheets',
+      `id=eq.${runsheetId}`,
+      handleRealtimeUpdate,
+      handleRealtimeError
+    );
+
+    channelRef.current = channel;
+  }, [runsheetId, enabled, handleRealtimeUpdate, handleRealtimeError]);
+
+  const scheduleReconnect = useCallback(() => {
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current);
     }
     
     reconnectTimeoutRef.current = setTimeout(() => {
-      if (enabled && runsheetId && connectionMonitor.online) {
+      if (isActiveRef.current && enabled && runsheetId && connectionMonitor.online) {
         console.log('Attempting to reconnect realtime subscription...');
-        // The subscription will be recreated by the useEffect
+        createSubscription();
       }
-    }, 5000);
-  }, [onError, enabled, runsheetId]);
+    }, 3000); // 3 second delay for reconnection
+  }, [createSubscription, enabled, runsheetId]);
 
   // Track our own updates to avoid processing them
   const trackOwnUpdate = useCallback((updateTime: string) => {
@@ -67,6 +103,8 @@ export function useRealtimeSync({
   }, []);
 
   useEffect(() => {
+    isActiveRef.current = true;
+
     if (!enabled || !runsheetId) {
       // Clean up existing subscription
       if (channelRef.current) {
@@ -81,18 +119,34 @@ export function useRealtimeSync({
       return;
     }
 
-    // Create enhanced subscription with error handling
-    const channel = createRealTimeSubscription(
-      'runsheets',
-      `id=eq.${runsheetId}`,
-      handleRealtimeUpdate,
-      handleRealtimeError
-    );
+    // Initial subscription creation
+    createSubscription();
 
-    channelRef.current = channel;
+    // Listen for connection changes
+    if (connectionListenerRef.current) {
+      connectionListenerRef.current();
+    }
+    
+    connectionListenerRef.current = connectionMonitor.onStatusChange((isOnline) => {
+      if (!isActiveRef.current) return;
+      
+      if (isOnline) {
+        console.log('Connection restored - recreating realtime subscription');
+        // Small delay to ensure connection is stable
+        setTimeout(() => {
+          if (isActiveRef.current && enabled && runsheetId) {
+            createSubscription();
+          }
+        }, 1000);
+      } else {
+        console.log('Connection lost - realtime subscription will be recreated when online');
+      }
+    });
 
     // Cleanup function
     return () => {
+      isActiveRef.current = false;
+      
       if (channelRef.current) {
         const channel = channelRef.current;
         if ((channel as any)._cleanup) {
@@ -102,12 +156,18 @@ export function useRealtimeSync({
         }
         channelRef.current = null;
       }
+      
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
         reconnectTimeoutRef.current = null;
       }
+      
+      if (connectionListenerRef.current) {
+        connectionListenerRef.current();
+        connectionListenerRef.current = null;
+      }
     };
-  }, [runsheetId, enabled, handleRealtimeUpdate, handleRealtimeError]);
+  }, [runsheetId, enabled, createSubscription]);
 
   return {
     trackOwnUpdate

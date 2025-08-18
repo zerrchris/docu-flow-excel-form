@@ -423,6 +423,7 @@ export function createRealTimeSubscription(
   const channel = supabase.channel(channelName);
   
   let isDestroyed = false;
+  let hasShownError = false;
   
   // Add cleanup function immediately
   (channel as any)._cleanup = () => {
@@ -459,26 +460,31 @@ export function createRealTimeSubscription(
       
       if (status === 'SUBSCRIBED') {
         console.log(`Successfully subscribed to ${table} changes`);
+        hasShownError = false; // Reset error flag on successful connection
       } else if (status === 'CLOSED') {
-        console.log(`Subscription closed for ${table}`);
+        console.log(`Subscription closed for ${table} - this is normal`);
+        // Don't treat CLOSED as an error - it's part of normal lifecycle
       } else if (status === 'CHANNEL_ERROR') {
         console.error(`Subscription error for ${table}:`, error);
         
-        // Notify about the error but don't retry automatically
-        onError?.(new Error(`Subscription failed for ${table}: ${error?.message || 'Unknown error'}`));
-        
-        // Show user-friendly message with rate limiting
-        const lastToastKey = `realtime_error_${table}`;
-        const lastToastTime = sessionStorage.getItem(lastToastKey);
-        const now = Date.now();
-        
-        if (!lastToastTime || now - parseInt(lastToastTime) > 30000) { // 30 second cooldown
-          sessionStorage.setItem(lastToastKey, now.toString());
-          toast({
-            title: "Connection issue",
-            description: "Real-time updates may be delayed. Your changes are still being saved.",
-            variant: "default"
-          });
+        // Only notify about the error once to avoid spam
+        if (!hasShownError) {
+          hasShownError = true;
+          onError?.(new Error(`Subscription failed for ${table}: ${error?.message || 'Unknown error'}`));
+          
+          // Show user-friendly message with rate limiting
+          const lastToastKey = `realtime_error_${table}`;
+          const lastToastTime = sessionStorage.getItem(lastToastKey);
+          const now = Date.now();
+          
+          if (!lastToastTime || now - parseInt(lastToastTime) > 30000) { // 30 second cooldown
+            sessionStorage.setItem(lastToastKey, now.toString());
+            toast({
+              title: "Connection issue",
+              description: "Real-time updates may be delayed. Your changes are still being saved.",
+              variant: "default"
+            });
+          }
         }
       }
     });
