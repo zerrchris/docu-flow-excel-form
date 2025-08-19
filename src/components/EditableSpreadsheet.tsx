@@ -5335,44 +5335,8 @@ ${extractionFields}`
                            isSpreadsheetUpload={true}
                            autoAnalyze={false}
                             rowData={row}
-                          />
-                          
-                          {/* Enhanced Document Analysis Button */}
-                          <DocumentWorkspaceButton
-                            runsheetId={currentRunsheetId || ''}
-                            availableColumns={columns}
-                            onDataConfirmed={async (extractedData, file) => {
-                              // Find next available row and populate with extracted data
-                              const nextEmptyRowIndex = data.findIndex(row => 
-                                columns.every(col => !row[col] || row[col].trim() === '')
-                              );
-                              
-                              const targetRowIndex = nextEmptyRowIndex >= 0 ? nextEmptyRowIndex : data.length;
-                              
-                              // Add new row if needed
-                              if (targetRowIndex >= data.length) {
-                                ensureRowCount(targetRowIndex + 1);
-                              }
-                              
-                              // Update the target row with extracted data
-                              const newData = [...data];
-                              newData[targetRowIndex] = {
-                                ...newData[targetRowIndex],
-                                ...extractedData
-                              };
-                              
-                              setData(newData);
-                              onDataChange?.(newData);
-                              
-                              toast({
-                                title: "Data added successfully",
-                                description: `Document data has been added to row ${targetRowIndex + 1}.`,
-                              });
-                            }}
-                            buttonText="AI Analysis"
-                            buttonVariant="outline"
-                          />
-                        </div>
+                           />
+                         </div>
                        </td>
                       
                        {/* Enhanced row resize handle */}
