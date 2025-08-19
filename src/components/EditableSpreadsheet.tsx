@@ -4891,22 +4891,22 @@ ${extractionFields}`
                                    </span>
                                  )}
                                </div>
-                               {/* Enhanced resize handle */}
-                              <div
-                                className="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize hover:bg-primary/60 bg-border/20 transition-all duration-200 z-10 group"
-                                onMouseDown={(e) => {
-                                  e.stopPropagation();
-                                  e.preventDefault();
-                                  handleMouseDown(e, column);
-                                }}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  e.preventDefault();
-                                }}
-                                title="Drag to resize column"
-                              >
-                                <div className="w-0.5 h-full bg-border/40 group-hover:bg-primary/80 transition-colors duration-200 mx-auto"></div>
-                              </div>
+                                {/* Enhanced resize handle */}
+                               <div
+                                 className="absolute -right-1 top-0 bottom-0 w-2 cursor-col-resize hover:bg-primary/30 transition-all duration-200 z-10 group"
+                                 onMouseDown={(e) => {
+                                   e.stopPropagation();
+                                   e.preventDefault();
+                                   handleMouseDown(e, column);
+                                 }}
+                                 onClick={(e) => {
+                                   e.stopPropagation();
+                                   e.preventDefault();
+                                 }}
+                                 title="Drag to resize column"
+                               >
+                                 <div className="w-0.5 h-full bg-border/60 group-hover:bg-primary transition-colors duration-200 ml-0.5"></div>
+                               </div>
                             </div>
                          </ContextMenuTrigger>
                        <ContextMenuContent>
