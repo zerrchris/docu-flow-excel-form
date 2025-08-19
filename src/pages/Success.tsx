@@ -15,9 +15,9 @@ const Success = () => {
     // Refresh subscription status after successful payment
     const refreshStatus = async () => {
       // Wait a moment for Stripe to process
-      setTimeout(() => {
-        checkSubscription();
-      }, 2000);
+    setTimeout(() => {
+      checkSubscription();
+    }, 3000); // Check subscription after 3 seconds to allow processing time
     };
 
     if (sessionId) {

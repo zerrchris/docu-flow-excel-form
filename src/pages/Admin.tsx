@@ -8,8 +8,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Users, Shield, UserCheck, Settings, Home, CreditCard, Calendar, CheckCircle, XCircle } from 'lucide-react';
+import { ArrowLeft, Users, Shield, UserCheck, Settings, Home, CreditCard, Calendar, CheckCircle, XCircle, Search, Filter } from 'lucide-react';
 import LogoMark from '@/components/LogoMark';
 import AuthButton from '@/components/AuthButton';
 
@@ -43,9 +44,13 @@ const Admin: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<SupabaseUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<UserWithRole[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<UserWithRole[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [globalInstructions, setGlobalInstructions] = useState('');
   const [isSavingInstructions, setIsSavingInstructions] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'user'>('all');
+  const [subscriptionFilter, setSubscriptionFilter] = useState<'all' | 'subscribed' | 'unsubscribed'>('all');
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -91,6 +96,7 @@ const Admin: React.FC = () => {
       }) || [];
 
       setUsers(usersWithRoles);
+      setFilteredUsers(usersWithRoles);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -157,6 +163,35 @@ const Admin: React.FC = () => {
       });
     }
   };
+
+  // Filter users based on search and filters
+  useEffect(() => {
+    let filtered = users;
+
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter(user => 
+        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        `${user.first_name || ''} ${user.last_name || ''}`.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Apply role filter
+    if (roleFilter !== 'all') {
+      filtered = filtered.filter(user => user.role === roleFilter);
+    }
+
+    // Apply subscription filter
+    if (subscriptionFilter !== 'all') {
+      if (subscriptionFilter === 'subscribed') {
+        filtered = filtered.filter(user => user.subscription?.subscribed);
+      } else {
+        filtered = filtered.filter(user => !user.subscription?.subscribed);
+      }
+    }
+
+    setFilteredUsers(filtered);
+  }, [users, searchTerm, roleFilter, subscriptionFilter]);
 
   useEffect(() => {
     // Check authentication and admin status
@@ -429,9 +464,45 @@ const Admin: React.FC = () => {
         {/* Users Table */}
         <Card>
           <CardHeader>
-            <CardTitle>User Management & Subscription Control</CardTitle>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <CardTitle>User Management & Subscription Control</CardTitle>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Input
+                    placeholder="Search users..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-9 w-full sm:w-64"
+                  />
+                </div>
+                <Select value={roleFilter} onValueChange={(value: 'all' | 'admin' | 'user') => setRoleFilter(value)}>
+                  <SelectTrigger className="w-full sm:w-32">
+                    <SelectValue placeholder="Role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Roles</SelectItem>
+                    <SelectItem value="admin">Admins</SelectItem>
+                    <SelectItem value="user">Users</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={subscriptionFilter} onValueChange={(value: 'all' | 'subscribed' | 'unsubscribed') => setSubscriptionFilter(value)}>
+                  <SelectTrigger className="w-full sm:w-40">
+                    <SelectValue placeholder="Subscription" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="subscribed">Subscribed</SelectItem>
+                    <SelectItem value="unsubscribed">Not Subscribed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
+            <div className="mb-4 text-sm text-muted-foreground">
+              Showing {filteredUsers.length} of {users.length} users
+            </div>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -444,7 +515,7 @@ const Admin: React.FC = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {users.map((user) => (
+                {filteredUsers.map((user) => (
                   <TableRow key={user.id}>
                     <TableCell>
                       {user.first_name || user.last_name 

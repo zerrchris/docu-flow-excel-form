@@ -18,6 +18,8 @@ const SignIn: React.FC = () => {
   const [isSignUp, setIsSignUp] = useState(searchParams.get('mode') === 'signup');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
   const [resetEmailSent, setResetEmailSent] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
@@ -84,7 +86,11 @@ const SignIn: React.FC = () => {
           email,
           password,
           options: {
-            emailRedirectTo: redirectUrl
+            emailRedirectTo: redirectUrl,
+            data: {
+              first_name: firstName,
+              last_name: lastName,
+            }
           }
         });
         
@@ -110,6 +116,8 @@ const SignIn: React.FC = () => {
       
       setEmail('');
       setPassword('');
+      setFirstName('');
+      setLastName('');
     } catch (error: any) {
       console.error('Authentication error:', error);
       
@@ -221,6 +229,32 @@ const SignIn: React.FC = () => {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleAuth} className="space-y-4">
+              {isSignUp && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="firstName">First Name</Label>
+                    <Input
+                      id="firstName"
+                      type="text"
+                      placeholder="Enter your first name"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName">Last Name</Label>
+                    <Input
+                      id="lastName"
+                      type="text"
+                      placeholder="Enter your last name"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -237,10 +271,11 @@ const SignIn: React.FC = () => {
                 <Input
                   id="password"
                   type="password"
-                  placeholder="Enter your password"
+                  placeholder={isSignUp ? "Create a password (min. 6 characters)" : "Enter your password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  minLength={6}
                 />
               </div>
               <div className="space-y-3">
@@ -308,6 +343,8 @@ const SignIn: React.FC = () => {
                   onClick={() => {
                     setIsSignUp(!isSignUp);
                     setResetEmailSent(false);
+                    setFirstName('');
+                    setLastName('');
                   }}
                 >
                   {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}

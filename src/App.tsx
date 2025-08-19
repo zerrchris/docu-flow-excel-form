@@ -12,6 +12,8 @@ import ResetPassword from "./pages/ResetPassword";
 import Admin from "./pages/Admin";
 import Pricing from "./pages/Pricing";
 import Success from "./pages/Success";
+import Settings from "./pages/Settings";
+import UserDashboard from "./components/UserDashboard";
 import { MobileCapture } from "./pages/MobileCapture";
 import { FileManager } from "./pages/FileManager";
 import NotFound from "./pages/NotFound";
@@ -37,6 +39,8 @@ const App = () => (
             <Route path="/signin" element={<SignIn />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/admin" element={<Admin />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/dashboard" element={<UserDashboard />} />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/success" element={<Success />} />
             <Route path="/mobile-capture" element={<MobileCapture />} />
