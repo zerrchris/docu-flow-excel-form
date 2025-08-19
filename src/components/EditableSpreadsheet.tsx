@@ -4824,14 +4824,16 @@ ${extractionFields}`
           }}
           onScroll={handleScroll}
         >
-            <table 
-              className="border-collapse w-full" 
+             <table 
+              className="border-collapse w-full table-fixed" 
               style={{ 
                 tableLayout: 'fixed', 
                 width: `${getTotalTableWidth()}px`,
-                position: 'relative'
+                position: 'relative',
+                borderCollapse: 'separate',
+                borderSpacing: '0'
               }}
-            >
+             >
             {/* STICKY HEADER - Always visible at top */}
             <thead 
               className="sticky-table-header"
@@ -4986,21 +4988,21 @@ ${extractionFields}`
 
               {/* Table Body */}
               <tbody>
-                  {data.map((row, rowIndex) => {
-                    return (
-                      <React.Fragment key={`row-${rowIndex}`}>
-                         {/* Show inline document viewer above this row if it's selected */}
-                        {inlineViewerRow === rowIndex && (
-                       <tr>
-                         <td colSpan={columns.length + (showDocumentFileNameColumn ? 1 : 0) + 1} className="p-0 border-0">
-                           <InlineDocumentViewer
-                             runsheetId={effectiveRunsheetId}
-                             rowIndex={rowIndex}
-                             onClose={() => setInlineViewerRow(null)}
-                           />
-                         </td>
-                       </tr>
-                     )}
+                   {data.map((row, rowIndex) => {
+                     return (
+                       <React.Fragment key={`row-${rowIndex}`}>
+                          {/* Show inline document viewer above this row if it's selected */}
+                         {inlineViewerRow === rowIndex && (
+                        <tr>
+                          <td colSpan={columns.length + (showDocumentFileNameColumn ? 1 : 0) + 1} className="p-0 border-0">
+                            <InlineDocumentViewer
+                              runsheetId={effectiveRunsheetId}
+                              rowIndex={rowIndex}
+                              onClose={() => setInlineViewerRow(null)}
+                            />
+                          </td>
+                        </tr>
+                      )}
                    
                       <tr 
                        className={`relative transition-all duration-200 group border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted
