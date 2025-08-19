@@ -1777,7 +1777,15 @@ Image: [base64 image data]`;
 
           // Notify listeners regardless
           window.dispatchEvent(new CustomEvent('documentRecordCreated', {
-            detail: { runsheetId, rowIndex }
+            detail: { 
+              runsheetId, 
+              rowIndex,
+              allPossibleIds: {
+                activeRunsheetId: activeRunsheet?.id,
+                locationStateId: location.state?.runsheet?.id,
+                finalRunsheetId: runsheetId
+              }
+            }
           }));
           return;
         }
@@ -1801,7 +1809,15 @@ Image: [base64 image data]`;
           console.log('Document record created successfully for row', rowIndex);
           // Dispatch a custom event to notify the spreadsheet to refresh documents
           window.dispatchEvent(new CustomEvent('documentRecordCreated', {
-            detail: { runsheetId, rowIndex }
+            detail: { 
+              runsheetId, 
+              rowIndex,
+              allPossibleIds: {
+                activeRunsheetId: activeRunsheet?.id,
+                locationStateId: location.state?.runsheet?.id,
+                finalRunsheetId: runsheetId
+              }
+            }
           }));
         }
       }

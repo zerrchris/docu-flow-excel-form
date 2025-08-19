@@ -1049,6 +1049,12 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             // Force update the document map and trigger re-render
             updateDocumentMap(new Map(documents));
             
+            // Force component re-render to ensure expand buttons work
+            setTimeout(() => {
+              console.log('🔄 EditableSpreadsheet: Document map updated, checking if expand should work now');
+              console.log('🔄 EditableSpreadsheet: Document map after refresh:', Array.from(documents.entries()));
+            }, 50);
+            
             // Force refresh any cached image elements
             setTimeout(() => {
               const images = document.querySelectorAll('img[src*="supabase"]');
@@ -4990,19 +4996,19 @@ ${extractionFields}`
               <tbody>
                    {data.map((row, rowIndex) => {
                      return (
-                       <React.Fragment key={`row-${rowIndex}`}>
-                          {/* Show inline document viewer above this row if it's selected */}
-                         {inlineViewerRow === rowIndex && (
-                        <tr>
-                          <td colSpan={columns.length + (showDocumentFileNameColumn ? 1 : 0) + 1} className="p-0 border-0">
-                            <InlineDocumentViewer
-                              runsheetId={effectiveRunsheetId}
-                              rowIndex={rowIndex}
-                              onClose={() => setInlineViewerRow(null)}
-                            />
-                          </td>
-                        </tr>
-                      )}
+                        <>
+                           {/* Show inline document viewer above this row if it's selected */}
+                          {inlineViewerRow === rowIndex && (
+                         <tr>
+                           <td colSpan={columns.length + (showDocumentFileNameColumn ? 1 : 0) + 1} className="p-0 border-0">
+                             <InlineDocumentViewer
+                               runsheetId={effectiveRunsheetId}
+                               rowIndex={rowIndex}
+                               onClose={() => setInlineViewerRow(null)}
+                             />
+                           </td>
+                         </tr>
+                       )}
                    
                       <tr 
                        className={`relative transition-all duration-200 group border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted
@@ -5347,8 +5353,8 @@ ${extractionFields}`
                        >
                          <div className="w-full h-0.5 bg-primary/60 mt-0.75"></div>
                         </div>
-                      </tr>
-                     </React.Fragment>
+                       </tr>
+                      </>
                     );
                   })}
               </tbody>
