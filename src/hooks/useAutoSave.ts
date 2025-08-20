@@ -91,8 +91,7 @@ export function useAutoSave({
           .update(runsheetData)
           .eq('id', runsheetId)
           .eq('user_id', userId)
-          .select('*')
-          .single();
+          .select('*');
 
         if (error) {
           // If update fails due to duplicate name, use upsert instead
@@ -110,8 +109,20 @@ export function useAutoSave({
           } else {
             throw error;
           }
+        } else if (!updateResult || updateResult.length === 0) {
+          // No rows were updated, try creating instead
+          const { data: insertResult, error: insertError } = await supabase
+            .from('runsheets')
+            .upsert(runsheetData, {
+              onConflict: 'user_id,name'
+            })
+            .select('*')
+            .single();
+          
+          if (insertError) throw insertError;
+          result = insertResult;
         } else {
-          result = updateResult;
+          result = updateResult[0]; // Take first result since we removed .single()
         }
       } else {
         // Create new runsheet - use upsert to handle duplicates
