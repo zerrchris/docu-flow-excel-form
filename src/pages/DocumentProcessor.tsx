@@ -1576,6 +1576,16 @@ Image: [base64 image data]`;
         emptyFormData[column] = '';
       });
       setFormData(emptyFormData);
+      
+      // Also reset the document to allow adding a new one
+      console.log('🔧 DOCUMENT_RESET: Clearing document preview after successful add');
+      resetDocument();
+      
+      // Show success message
+      toast({
+        title: "Added to runsheet",
+        description: "Document has been successfully added to the runsheet. You can now add another document.",
+      });
     }, 500); // Small delay to ensure the data was properly added first
   };
 
