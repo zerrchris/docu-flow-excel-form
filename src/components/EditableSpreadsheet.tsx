@@ -5011,9 +5011,9 @@ ${extractionFields}`
                        )}
                    
                       <tr 
-                       className={`relative transition-all duration-200 group border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted
-                         ${lastEditedCell?.rowIndex === rowIndex ? 'bg-green-50 dark:bg-green-900/20 animate-pulse' : 'hover:bg-muted/30'}
-                       `}
+                        className={`relative transition-all duration-200 group border-b border-border transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted
+                          ${lastEditedCell?.rowIndex === rowIndex ? 'bg-green-50 dark:bg-green-900/20 animate-pulse' : 'hover:bg-muted/30'}
+                        `}
                        style={{ 
                          height: `${getRowHeight(rowIndex)}px`,
                          minHeight: `${getRowHeight(rowIndex)}px`
