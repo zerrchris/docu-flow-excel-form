@@ -5032,61 +5032,55 @@ ${extractionFields}`
                              ${isEditing ? 'p-0 z-20' : 'p-0'}
                              ${cellValidationErrors[`${rowIndex}-${column}`] ? 'border-2 border-red-400 bg-red-50 dark:bg-red-900/20' : ''}
                            `}
-                            style={{ 
-                              width: `${getColumnWidth(column)}px`, 
-                              minWidth: `${getColumnWidth(column)}px`,
-                              height: isEditing ? 'auto' : `${getRowHeight(rowIndex)}px`,
-                              minHeight: isEditing ? 'auto' : `${getRowHeight(rowIndex)}px`
-                            }}
+                             style={{ 
+                               width: `${getColumnWidth(column)}px`, 
+                               minWidth: `${getColumnWidth(column)}px`,
+                               height: `${getRowHeight(rowIndex)}px`,
+                               minHeight: `${getRowHeight(rowIndex)}px`
+                             }}
                            onClick={(e) => handleCellClick(rowIndex, column, e)}
                             onDoubleClick={(e) => handleCellDoubleClick(rowIndex, column, e)}
                            tabIndex={isSelected ? 0 : -1}
                         >
-                          {isEditing ? (
-                             <Textarea
-                               ref={textareaRef}
-                               value={cellValue}
-                               onChange={(e) => setCellValue(e.target.value)}
-                               onKeyDown={(e) => {
-                                 // Allow Shift+Enter for line breaks, but handle Tab/Enter/Escape/Arrow keys
-                                 if ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Tab' || e.key === 'Escape' || 
-                                     ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
-                                   handleInputKeyDown(e);
-                                 }
-                               }}
-                               onBlur={() => {
-                                 // Save the cell value when clicking away from the cell
-                                 if (editingCell) {
-                                   setData(prev => {
-                                     const newData = [...prev];
-                                     newData[editingCell.rowIndex] = {
-                                       ...newData[editingCell.rowIndex],
-                                       [editingCell.column]: cellValue
-                                     };
-                                     return newData;
-                                   });
-                                   setEditingCell(null);
-                                   setCellValue('');
-                                 }
-                               }}
-                                  className={`w-full h-full border-0 rounded-none bg-transparent focus:ring-0 focus:ring-offset-0 focus:outline-none resize-none p-0 ${
+                           {isEditing ? (
+                              <Textarea
+                                ref={textareaRef}
+                                value={cellValue}
+                                onChange={(e) => setCellValue(e.target.value)}
+                                onKeyDown={(e) => {
+                                  // Allow Shift+Enter for line breaks, but handle Tab/Enter/Escape/Arrow keys
+                                  if ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Tab' || e.key === 'Escape' || 
+                                      ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                                    handleInputKeyDown(e);
+                                  }
+                                }}
+                                onBlur={() => {
+                                  // Save the cell value when clicking away from the cell
+                                  if (editingCell) {
+                                    setData(prev => {
+                                      const newData = [...prev];
+                                      newData[editingCell.rowIndex] = {
+                                        ...newData[editingCell.rowIndex],
+                                        [editingCell.column]: cellValue
+                                      };
+                                      return newData;
+                                    });
+                                    setEditingCell(null);
+                                    setCellValue('');
+                                  }
+                                }}
+                                  className={`absolute inset-0 w-full h-full border-2 border-primary rounded-none bg-background focus:ring-0 focus:ring-offset-0 focus:outline-none resize-none ${
                                     columnAlignments[column] === 'center' ? 'text-center' : 
                                     columnAlignments[column] === 'right' ? 'text-right' : 'text-left'
                                   }`}
                                  style={{ 
-                                   minHeight: '100%',
-                                   width: '100%',
-                                   height: '100%',
-                                   overflow: 'hidden',
-                                   padding: '8px 12px'
+                                   padding: '8px 12px',
+                                   margin: 0
                                  }}
-                                onInput={(e) => {
-                                  // Auto-resize textarea based on content
-                                  const target = e.target as HTMLTextAreaElement;
-                                  target.style.height = 'auto';
-                                  target.style.height = Math.max(80, target.scrollHeight) + 'px';
-                                }}
-                             />
+                                  onInput={(e) => {
+                                    // Keep the height fixed to fill the cell
+                                  }}
+                              />
                          ) : (
                             <div
                               data-cell={`${rowIndex}-${column}`}
