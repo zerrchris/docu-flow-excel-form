@@ -97,10 +97,12 @@ export function useAutoSave({
         if (error) throw error;
         result = updateResult;
       } else {
-        // Create new runsheet
+        // Create new runsheet - use upsert to handle duplicates
         const { data: insertResult, error } = await supabase
           .from('runsheets')
-          .insert(runsheetData)
+          .upsert(runsheetData, {
+            onConflict: 'user_id,name'
+          })
           .select('*')
           .single();
 
