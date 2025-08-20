@@ -5069,16 +5069,17 @@ ${extractionFields}`
                                    setCellValue('');
                                  }
                                }}
-                                 className={`w-full border-2 border-primary rounded-sm bg-background focus:ring-2 focus:ring-primary/20 focus:outline-none resize-y p-3 shadow-lg transition-all duration-200 ${
-                                   columnAlignments[column] === 'center' ? 'text-center' : 
-                                   columnAlignments[column] === 'right' ? 'text-right' : 'text-left'
-                                 }`}
-                                style={{ 
-                                  minHeight: '80px',
-                                  width: '100%',
-                                  height: 'auto',
-                                  overflow: 'visible'
-                                }}
+                                  className={`w-full h-full border-0 rounded-none bg-transparent focus:ring-0 focus:ring-offset-0 focus:outline-none resize-none p-0 ${
+                                    columnAlignments[column] === 'center' ? 'text-center' : 
+                                    columnAlignments[column] === 'right' ? 'text-right' : 'text-left'
+                                  }`}
+                                 style={{ 
+                                   minHeight: '100%',
+                                   width: '100%',
+                                   height: '100%',
+                                   overflow: 'hidden',
+                                   padding: '8px 12px'
+                                 }}
                                 onInput={(e) => {
                                   // Auto-resize textarea based on content
                                   const target = e.target as HTMLTextAreaElement;
@@ -5175,11 +5176,13 @@ ${extractionFields}`
                                    }
                                  }}
                                 onBlur={saveEdit}
-                                className="w-full h-full resize-y border-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent p-2"
-                                style={{ 
-                                  minHeight: '60px',
-                                  overflow: 'hidden'
-                                }}
+                                 className="w-full h-full resize-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent"
+                                 style={{ 
+                                   minHeight: '100%',
+                                   height: '100%',
+                                   overflow: 'hidden',
+                                   padding: '8px 12px'
+                                 }}
                                 onInput={(e) => {
                                   // Auto-resize textarea based on content
                                   const target = e.target as HTMLTextAreaElement;
