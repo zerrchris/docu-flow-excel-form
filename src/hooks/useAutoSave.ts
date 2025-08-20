@@ -55,6 +55,12 @@ export function useAutoSave({
       return;
     }
 
+    // Don't attempt to save if we have a temporary runsheet ID
+    if (runsheetId && runsheetId.startsWith('temp-')) {
+      console.log('Auto-save skipped: temporary runsheet ID detected:', runsheetId);
+      return;
+    }
+
     const currentStateHash = getCurrentStateHash();
     
     // Skip if no changes since last save
