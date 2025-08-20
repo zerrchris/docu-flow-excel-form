@@ -85,7 +85,7 @@ export function useAutoSave({
       let result;
       
       if (runsheetId) {
-        // Update existing runsheet
+        // Try to update existing runsheet
         const { data: updateResult, error } = await supabase
           .from('runsheets')
           .update(runsheetData)
@@ -94,8 +94,25 @@ export function useAutoSave({
           .select('*')
           .single();
 
-        if (error) throw error;
-        result = updateResult;
+        if (error) {
+          // If update fails due to duplicate name, use upsert instead
+          if (error.code === '23505') {
+            const { data: upsertResult, error: upsertError } = await supabase
+              .from('runsheets')
+              .upsert(runsheetData, {
+                onConflict: 'user_id,name'
+              })
+              .select('*')
+              .single();
+            
+            if (upsertError) throw upsertError;
+            result = upsertResult;
+          } else {
+            throw error;
+          }
+        } else {
+          result = updateResult;
+        }
       } else {
         // Create new runsheet - use upsert to handle duplicates
         const { data: insertResult, error } = await supabase
