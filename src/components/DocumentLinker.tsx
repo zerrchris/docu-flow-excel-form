@@ -497,12 +497,50 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
       }
 
       if (smartFilename && smartFilename !== currentFilename) {
-        // Trigger rename directly with the smart filename
-        await handleRenameWithFilename(smartFilename);
+        // Check if a file with this name already exists in the runsheet
+        let finalFilename = smartFilename;
+        let suffix = 1;
         
+        while (true) {
+          // Check if this filename already exists for this user and runsheet (excluding current document)
+          const { data: existingDoc, error: checkError } = await supabase
+            .from('documents')
+            .select('id, stored_filename')
+            .eq('user_id', user.id)
+            .eq('runsheet_id', runsheetId)
+            .eq('stored_filename', finalFilename)
+            .neq('row_index', rowIndex) // Exclude current document
+            .maybeSingle();
+
+          if (checkError) {
+            console.warn('Error checking for existing filename:', checkError);
+            break; // Continue with the filename as-is if we can't check
+          }
+
+          if (!existingDoc) {
+            // No conflict, we can use this filename
+            break;
+          }
+
+          // Create a new filename with suffix
+          const baseName = smartFilename.replace(/\.[^/.]+$/, ''); // Remove extension
+          finalFilename = `${baseName}_${suffix}${extension}`;
+          suffix++;
+          
+          // Prevent infinite loop
+          if (suffix > 99) {
+            finalFilename = `${smartFilename.replace(/\.[^/.]+$/, '')}_${Date.now()}${extension}`;
+            break;
+          }
+        }
+        
+        // Trigger rename with the conflict-resolved filename
+        await handleRenameWithFilename(finalFilename);
+        
+        const conflictMessage = finalFilename !== smartFilename ? ' (conflict resolved with suffix)' : '';
         toast({
           title: "Smart filename generated",
-          description: `Filename updated to: ${smartFilename}`,
+          description: `Filename updated to: ${finalFilename}${conflictMessage}`,
         });
       } else {
         toast({
