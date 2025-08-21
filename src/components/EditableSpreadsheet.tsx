@@ -322,22 +322,14 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     }
   });
 
-  // Initialize real-time sync
+  // Disable real-time sync to prevent data conflicts
+  // Real-time sync was causing data to be overwritten when multiple updates occurred
   const { trackOwnUpdate } = useRealtimeSync({
     runsheetId: currentRunsheetId,
-    enabled: true,
+    enabled: false, // ← Disabled to prevent data overwrites
     onUpdate: (payload) => {
-      if (payload.eventType === 'UPDATE' && payload.new) {
-        // Update local state with remote changes
-        try {
-          if (payload.new.data) setData(payload.new.data);
-          if (payload.new.columns) setColumns(payload.new.columns);
-          if (payload.new.column_instructions) setColumnInstructions(payload.new.column_instructions);
-          if (payload.new.name) setRunsheetName(payload.new.name);
-        } catch (error) {
-          console.error('Error applying realtime update:', error);
-        }
-      }
+      // Real-time updates disabled - relying on manual save/load only
+      console.log('Real-time update received but ignored:', payload);
     }
   });
 
