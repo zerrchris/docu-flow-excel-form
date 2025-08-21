@@ -724,17 +724,22 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           const hasDocuments = documentMap.size > 0;
           const isProcessingDocuments = hasDocuments || inlineViewerRow !== null;
           const hasActiveRunsheetName = runsheetName && runsheetName !== 'Untitled Runsheet';
+          const hasActiveRunsheet = !!currentRunsheet; // Check if there's already an active runsheet
           
           if (draftAge < 24 * 60 * 60 * 1000) {
-            // Don't restore if we already have active work, documents, or a named runsheet
-            if (hasCurrentRunsheet || isProcessingDocuments || hasActiveRunsheetName) {
+            // Don't restore if we already have active work, documents, a named runsheet, OR an active runsheet
+            if (hasCurrentRunsheet || isProcessingDocuments || hasActiveRunsheetName || hasActiveRunsheet) {
               console.log('🔒 Skipping draft restoration - active work detected', {
                 hasCurrentRunsheet,
                 hasDocuments,
                 isProcessingDocuments, 
                 hasActiveRunsheetName,
+                hasActiveRunsheet,
                 currentRunsheetName: runsheetName
               });
+              // Clear the emergency draft since we have active work
+              localStorage.removeItem('runsheet-emergency-draft');
+              console.log('🗑️ Cleared emergency draft - active work takes priority');
               return;
             }
             
@@ -779,7 +784,11 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           const state = JSON.parse(tempState);
           const stateAge = Date.now() - (state.timestamp || 0);
           
-          if (stateAge < 5 * 60 * 1000) { // Only restore if less than 5 minutes old
+          // Only restore temporary state if we don't already have an active runsheet
+          const hasActiveRunsheet = !!currentRunsheet;
+          const hasCurrentRunsheet = currentRunsheetId || initialRunsheetId;
+          
+          if (stateAge < 5 * 60 * 1000 && !hasActiveRunsheet && !hasCurrentRunsheet) { // Only restore if less than 5 minutes old and no active work
             console.log('🔄 Restoring temporary navigation state');
             
             if (state.data) setData(state.data);
@@ -800,10 +809,10 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
               description: "Your work has been restored after navigation.",
               variant: "default"
             });
-            return;
           } else {
-            // Clean up old temp state
+            // Clear old or invalid temp state
             sessionStorage.removeItem('tempRunsheetState');
+            console.log('🗑️ Cleared temp state - too old or active work detected');
           }
         } catch (error) {
           console.error('Error restoring temp state:', error);
