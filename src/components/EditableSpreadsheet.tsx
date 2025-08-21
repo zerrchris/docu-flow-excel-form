@@ -540,12 +540,33 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           const effectiveRunsheetId = eventRunsheetId || currentRunsheetId;
           console.log('🔧 DEBUG: Using effectiveRunsheetId:', effectiveRunsheetId);
 
+          // Ensure runsheet ID matches first
+          if (effectiveRunsheetId && payload.runsheetId && effectiveRunsheetId !== payload.runsheetId) {
+            console.log('🔧 DEBUG: Row rejected - runsheet ID mismatch', {
+              effective: effectiveRunsheetId,
+              received: payload.runsheetId
+            });
+            return prevData;
+          }
+
+          console.log('🔧 DEBUG: Processing external row addition:', payload);
+
           // Decide target index and update data
           if (firstEmpty >= 0) {
             const next = [...prevData];
             next[firstEmpty] = row;
             console.log('🔧 DEBUG: Inserting into existing empty row:', firstEmpty);
-            // Inform listeners which row was used
+            
+            // Update active runsheet with new data
+            if (effectiveRunsheetId && currentRunsheet) {
+              setActiveRunsheet({
+                ...currentRunsheet,
+                data: next,
+                hasUnsavedChanges: true
+              });
+            }
+            
+            // Inform listeners which row was used (inserted)
             setTimeout(() => {
               window.dispatchEvent(new CustomEvent('externalRowPlaced', {
                 detail: {
@@ -559,8 +580,20 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             return next;
           }
 
+          // Append to end if no empty row found
           const appendedIndex = prevData.length;
+          const newData = [...prevData, row];
           console.log('🔧 DEBUG: Appending new row at index:', appendedIndex);
+          
+          // Update active runsheet with new data
+          if (effectiveRunsheetId && currentRunsheet) {
+            setActiveRunsheet({
+              ...currentRunsheet,
+              data: newData,
+              hasUnsavedChanges: true
+            });
+          }
+          
           // Inform listeners which row was used (appended)
           setTimeout(() => {
             window.dispatchEvent(new CustomEvent('externalRowPlaced', {
@@ -571,8 +604,9 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
               },
             }));
           }, 0);
+          
           setHasUnsavedChanges(true);
-          return [...prevData, row];
+          return newData;
         });
 
       } catch (e) {
@@ -587,7 +621,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       console.log('🔧 DEBUG: Removing externalAddRow event listener');
       window.removeEventListener('externalAddRow', handler as EventListener);
     };
-  }, []); // Empty dependency array to prevent re-mounting
+  }, [columns, currentRunsheet, setActiveRunsheet]); // Added dependencies to ensure fresh data
 
   // Ref for container width measurement
   const containerRef = useRef<HTMLDivElement>(null);

@@ -19,6 +19,14 @@ export function useRealtimeSync({
   const lastUpdateRef = useRef<string>('');
 
   const handleRealtimeUpdate = useCallback((payload: any) => {
+    console.log('📊 Skipping real-time update - no data changes detected');
+    
+    // Skip all real-time updates to prevent interference with user edits
+    // Real-time sync is disabled to prevent data conflicts and ensure user data integrity
+    return;
+    
+    // The below code is commented out to prevent real-time interference
+    /*
     console.log('Realtime update received:', payload);
     
     // Avoid processing our own updates
@@ -38,7 +46,8 @@ export function useRealtimeSync({
     }
 
     onUpdate?.(payload);
-  }, [onUpdate, toast]);
+    */
+  }, []);
 
   // Track our own updates to avoid processing them
   const trackOwnUpdate = useCallback((updateTime: string) => {
