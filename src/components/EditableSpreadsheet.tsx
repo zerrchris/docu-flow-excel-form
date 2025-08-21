@@ -288,8 +288,9 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       setLastAutoSaveTime(new Date());
       setHasUnsavedChanges(false);
       
-      // Update current runsheet ID if this was a new runsheet
-      if (!currentRunsheetId && result?.id) {
+      // Update current runsheet ID if this was a new runsheet or converted from temporary
+      if ((!currentRunsheetId || currentRunsheetId.startsWith('temp-')) && result?.id) {
+        console.log('🔄 Updating runsheet ID from', currentRunsheetId, 'to', result.id);
         setCurrentRunsheetId(result.id);
         setActiveRunsheet({
           id: result.id,

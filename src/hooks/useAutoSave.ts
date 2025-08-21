@@ -55,10 +55,10 @@ export function useAutoSave({
       return;
     }
 
-    // Don't attempt to save if we have a temporary runsheet ID
-    if (runsheetId && runsheetId.startsWith('temp-')) {
-      console.log('Auto-save skipped: temporary runsheet ID detected:', runsheetId);
-      return;
+    // For temporary runsheet IDs, we need to create a new runsheet instead of skipping
+    const isTemporaryId = runsheetId && runsheetId.startsWith('temp-');
+    if (isTemporaryId) {
+      console.log('Converting temporary runsheet to permanent:', runsheetId);
     }
 
     const currentStateHash = getCurrentStateHash();
@@ -84,12 +84,15 @@ export function useAutoSave({
 
       let result;
       
-      if (runsheetId) {
+      // For temporary IDs, treat as if no runsheetId exists (create new)
+      const effectiveRunsheetId = isTemporaryId ? null : runsheetId;
+      
+      if (effectiveRunsheetId) {
         // Try to update existing runsheet
         const { data: updateResult, error } = await supabase
           .from('runsheets')
           .update(runsheetData)
-          .eq('id', runsheetId)
+          .eq('id', effectiveRunsheetId)
           .eq('user_id', userId)
           .select('*');
 
