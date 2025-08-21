@@ -1386,8 +1386,8 @@ Image: [base64 image data]`;
     console.log('🔧 DocumentProcessor: spreadsheetData.length:', spreadsheetData.length);
     console.log('🔧 DocumentProcessor: documentMap.size:', documentMap.size);
     
-    // Check localStorage for active runsheet as fallback
-    let runsheetId = currentRunsheet?.id || location.state?.runsheet?.id;
+    // Check for active runsheet ID from multiple sources
+    let runsheetId = activeRunsheet?.id || currentRunsheet?.id || location.state?.runsheet?.id;
     
     if (!runsheetId) {
       try {
@@ -1604,9 +1604,15 @@ Image: [base64 image data]`;
       console.log('🔧 DOCUMENT_RESET: Clearing document preview after successful add');
       resetDocument();
       
-      // Navigate back to the runsheet
+      // Navigate back to the runsheet with the correct active runsheet
       console.log('🔧 NAVIGATION: Navigating back to runsheet after successful add');
-      navigate('/runsheet');
+      console.log('🔧 NAVIGATION: Using runsheet ID:', runsheetId);
+      navigate('/runsheet', { 
+        state: { 
+          runsheetId: runsheetId,
+          runsheet: activeRunsheet || currentRunsheet 
+        }
+      });
       
       // Show success message
       toast({
