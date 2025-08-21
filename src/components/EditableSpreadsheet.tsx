@@ -4804,9 +4804,7 @@ ${extractionFields}`
                   variant="outline"
                   size="sm"
                   className="gap-2"
-                  onClick={() => {
-                    console.log('🔧 DEBUG: Add Rows button clicked');
-                  }}
+                  onClick={() => setShowAddRowsDialog(true)}
                 >
                   <Plus className="h-4 w-4" />
                   Add Rows
