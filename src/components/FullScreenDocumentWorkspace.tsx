@@ -131,9 +131,21 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
           console.log('🔧 FullScreenDocumentWorkspace: Found pending document for row:', pendingDoc);
           
           if (pendingDoc) {
-            setDocumentUrl(pendingDoc.fileData);
-            setDocumentName(pendingDoc.fileName);
-            setIsPdf(pendingDoc.fileType === 'application/pdf' || pendingDoc.fileName.toLowerCase().endsWith('.pdf'));
+            // If we have a storage path, try to construct the document URL
+            if (pendingDoc.storagePath) {
+              const url = DocumentService.getDocumentUrl(pendingDoc.storagePath);
+              setDocumentUrl(url);
+              setDocumentName(pendingDoc.fileName);
+              setIsPdf(pendingDoc.fileName.toLowerCase().endsWith('.pdf'));
+            } else if (pendingDoc.fileData) {
+              // Fallback to fileData if available (blob URL)
+              setDocumentUrl(pendingDoc.fileData);
+              setDocumentName(pendingDoc.fileName);
+              setIsPdf(pendingDoc.fileType === 'application/pdf' || pendingDoc.fileName.toLowerCase().endsWith('.pdf'));
+            } else {
+              console.error('🔧 FullScreenDocumentWorkspace: Pending document found but no valid data');
+              setError(`Document data not available for row ${rowIndex}`);
+            }
           } else {
             console.error('🔧 FullScreenDocumentWorkspace: No document found in database or session storage');
             setError(`No document found for row ${rowIndex} in runsheet ${runsheetId}`);
