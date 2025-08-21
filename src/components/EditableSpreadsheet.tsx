@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Plus, Trash2, Check, X, ArrowUp, ArrowDown, Save, FolderOpen, Download, Upload, AlignLeft, AlignCenter, AlignRight, Cloud, ChevronDown, FileText, Archive, ExternalLink, AlertTriangle, FileStack, Settings, Eye, EyeOff, Sparkles } from 'lucide-react';
+import { Plus, Trash2, Check, X, ArrowUp, ArrowDown, Save, FolderOpen, Download, Upload, AlignLeft, AlignCenter, AlignRight, Cloud, ChevronDown, FileText, Archive, ExternalLink, AlertTriangle, FileStack, Settings, Eye, EyeOff, Sparkles, GripVertical } from 'lucide-react';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -271,6 +271,11 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [cellValidationErrors, setCellValidationErrors] = useState<Record<string, string>>({});
   const [isTableLoading, setIsTableLoading] = useState(false);
   const [lastEditedCell, setLastEditedCell] = useState<{rowIndex: number, column: string} | null>(null);
+  
+  // Drag and drop state for row reordering
+  const [draggedRowIndex, setDraggedRowIndex] = useState<number | null>(null);
+  const [dragOverRowIndex, setDragOverRowIndex] = useState<number | null>(null);
+  
   const [pendingDataInsertion, setPendingDataInsertion] = useState<{
     rowIndex: number;
     data: Record<string, string>;
@@ -4056,6 +4061,95 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     setRowsToAdd(1);
   };
 
+  // Drag and drop functions for row reordering
+  const handleRowDragStart = (e: React.DragEvent, rowIndex: number) => {
+    setDraggedRowIndex(rowIndex);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/html', rowIndex.toString());
+    
+    // Add some visual feedback
+    const target = e.target as HTMLElement;
+    target.style.opacity = '0.5';
+  };
+
+  const handleRowDragEnd = (e: React.DragEvent) => {
+    const target = e.target as HTMLElement;
+    target.style.opacity = '1';
+    setDraggedRowIndex(null);
+    setDragOverRowIndex(null);
+  };
+
+  const handleRowDragOver = (e: React.DragEvent, rowIndex: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    
+    if (draggedRowIndex !== null && draggedRowIndex !== rowIndex) {
+      setDragOverRowIndex(rowIndex);
+    }
+  };
+
+  const handleRowDragLeave = () => {
+    setDragOverRowIndex(null);
+  };
+
+  const handleRowDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    
+    if (draggedRowIndex === null || draggedRowIndex === dropIndex) {
+      return;
+    }
+
+    // Reorder the data array
+    setData(prev => {
+      const newData = [...prev];
+      const draggedItem = newData[draggedRowIndex];
+      
+      // Remove the dragged item
+      newData.splice(draggedRowIndex, 1);
+      
+      // Insert it at the new position
+      const insertIndex = draggedRowIndex < dropIndex ? dropIndex - 1 : dropIndex;
+      newData.splice(insertIndex, 0, draggedItem);
+      
+      return newData;
+    });
+
+    // Update document map to reflect new row positions
+    const newDocumentMap = new Map<number, DocumentRecord>();
+    documentMap.forEach((doc, mapRowIndex) => {
+      let newIndex = mapRowIndex;
+      
+      if (mapRowIndex === draggedRowIndex) {
+        // The dragged row gets the drop index (adjusted)
+        newIndex = draggedRowIndex < dropIndex ? dropIndex - 1 : dropIndex;
+      } else if (draggedRowIndex < dropIndex) {
+        // Moving down: rows between drag and drop shift up
+        if (mapRowIndex > draggedRowIndex && mapRowIndex < dropIndex) {
+          newIndex = mapRowIndex - 1;
+        }
+      } else {
+        // Moving up: rows between drop and drag shift down
+        if (mapRowIndex >= dropIndex && mapRowIndex < draggedRowIndex) {
+          newIndex = mapRowIndex + 1;
+        }
+      }
+      
+      newDocumentMap.set(newIndex, doc);
+    });
+    
+    updateDocumentMap(newDocumentMap);
+    setHasUnsavedChanges(true);
+    
+    // Reset drag state
+    setDraggedRowIndex(null);
+    setDragOverRowIndex(null);
+    
+    toast({
+      title: "Row moved",
+      description: `Row ${draggedRowIndex + 1} moved to position ${(draggedRowIndex < dropIndex ? dropIndex - 1 : dropIndex) + 1}`,
+    });
+  };
+
   const analyzeDocumentAndPopulateRow = async (file: File, targetRowIndex: number, forceOverwrite: boolean = false) => {
     try {
       console.log('🔍 Starting document analysis for:', file.name, 'type:', file.type, 'size:', file.size);
@@ -5182,16 +5276,22 @@ ${extractionFields}`
                          </tr>
                        )}
                    
-                       <tr 
-                         className={`relative transition-all duration-200 group hover:bg-muted/50 data-[state=selected]:bg-muted
-                           ${lastEditedCell?.rowIndex === rowIndex ? 'bg-green-50 dark:bg-green-900/20 animate-pulse' : 'hover:bg-muted/30'}
-                         `}
-                        style={{ 
-                          height: `${getRowHeight(rowIndex)}px`,
-                          minHeight: `${getRowHeight(rowIndex)}px`
-                        }}
+                        <tr 
+                          className={`relative transition-all duration-200 group hover:bg-muted/50 data-[state=selected]:bg-muted
+                            ${lastEditedCell?.rowIndex === rowIndex ? 'bg-green-50 dark:bg-green-900/20 animate-pulse' : 'hover:bg-muted/30'}
+                            ${draggedRowIndex === rowIndex ? 'opacity-50' : ''}
+                            ${dragOverRowIndex === rowIndex ? 'border-t-2 border-primary bg-primary/10' : ''}
+                          `}
+                         style={{ 
+                           height: `${getRowHeight(rowIndex)}px`,
+                           minHeight: `${getRowHeight(rowIndex)}px`
+                         }}
+                         draggable={false}
+                         onDragOver={(e) => handleRowDragOver(e, rowIndex)}
+                         onDragLeave={handleRowDragLeave}
+                         onDrop={(e) => handleRowDrop(e, rowIndex)}
                        >
-                     {/* Row Actions column - Row number and delete button */}
+                     {/* Row Actions column - Row number, drag handle, and delete button */}
                      <td 
                        className="border-r border-b border-border p-1 text-center bg-muted/30"
                        style={{ 
@@ -5203,6 +5303,19 @@ ${extractionFields}`
                      >
                        <div className="flex flex-col items-center justify-center gap-1 h-full">
                          <span className="text-xs text-muted-foreground font-mono">{rowIndex + 1}</span>
+                         
+                         {/* Drag Handle */}
+                         <div
+                           className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded transition-colors"
+                           draggable="true"
+                           onDragStart={(e) => handleRowDragStart(e, rowIndex)}
+                           onDragEnd={handleRowDragEnd}
+                           title="Drag to reorder row"
+                         >
+                           <GripVertical className="h-3 w-3 text-muted-foreground" />
+                         </div>
+                         
+                         {/* Delete Button */}
                          <Button
                            variant="ghost"
                            size="sm"
