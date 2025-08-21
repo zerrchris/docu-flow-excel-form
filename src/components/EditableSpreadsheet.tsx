@@ -5343,7 +5343,7 @@ ${extractionFields}`
                                   size="sm"
                                   onClick={() => moveRowUp(rowIndex)}
                                   disabled={rowIndex === 0}
-                                  className="h-6 w-6 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/20"
+                                  className="h-6 w-6 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/20 flex-shrink-0"
                                   title="Move row up"
                                 >
                                   <ArrowUp className="h-3 w-3" />
@@ -5353,7 +5353,7 @@ ${extractionFields}`
                                   size="sm"
                                   onClick={() => moveRowDown(rowIndex)}
                                   disabled={rowIndex >= data.length - 1}
-                                  className="h-6 w-6 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/20"
+                                  className="h-6 w-6 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/20 flex-shrink-0"
                                   title="Move row down"
                                 >
                                   <ArrowDown className="h-3 w-3" />
@@ -5370,7 +5370,7 @@ ${extractionFields}`
                                     deleteRow(rowIndex);
                                   }
                                 }}
-                                className="h-6 w-6 p-0 hover:bg-red-100 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400"
+                                className="h-6 w-6 p-0 hover:bg-red-100 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 flex-shrink-0"
                                 title="Delete row"
                               >
                                 <Trash2 className="h-3 w-3" />
