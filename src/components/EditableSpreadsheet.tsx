@@ -4081,7 +4081,19 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     // Check if mouse is within the container bounds
     const withinContainer = mouseY >= rect.top && mouseY <= rect.bottom;
     
+    console.log('🔧 Scroll Check:', {
+      mouseY,
+      rectTop: rect.top,
+      rectBottom: rect.bottom,
+      distanceFromTop,
+      distanceFromBottom,
+      withinContainer,
+      scrollZone,
+      hasAutoScrollInterval: !!autoScrollInterval
+    });
+    
     if (!withinContainer) {
+      console.log('🔧 Mouse outside container - stopping scroll');
       stopAutoScroll();
       return;
     }
@@ -4090,19 +4102,23 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     const nearBottom = distanceFromBottom < scrollZone && distanceFromBottom > 0;
     
     if (nearTop && tableContainerRef.current.scrollTop > 0) {
+      console.log('🔧 Near top - starting up scroll');
       if (!autoScrollInterval) {
         startAutoScroll('up');
       }
     } else if (nearBottom) {
       const maxScroll = tableContainerRef.current.scrollHeight - tableContainerRef.current.clientHeight;
       if (tableContainerRef.current.scrollTop < maxScroll) {
+        console.log('🔧 Near bottom - starting down scroll');
         if (!autoScrollInterval) {
           startAutoScroll('down');
         }
       } else {
+        console.log('🔧 At bottom limit - stopping scroll');
         stopAutoScroll();
       }
     } else {
+      console.log('🔧 Not in scroll zone - stopping scroll');
       stopAutoScroll();
     }
   };
@@ -4175,8 +4191,11 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
   const stopAutoScroll = () => {
     if (autoScrollInterval) {
+      console.log('🔧 Stopping auto-scroll interval');
       clearInterval(autoScrollInterval);
       setAutoScrollInterval(null);
+    } else {
+      console.log('🔧 Stop auto-scroll called but no interval exists');
     }
   };
 
