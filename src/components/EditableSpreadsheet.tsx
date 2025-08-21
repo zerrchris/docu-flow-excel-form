@@ -4088,9 +4088,10 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   };
 
   const startAutoScroll = (direction: 'up' | 'down') => {
-    // Clear existing interval
+    // Clear existing interval first to prevent multiple intervals
     if (autoScrollInterval) {
       clearInterval(autoScrollInterval);
+      setAutoScrollInterval(null);
     }
 
     const interval = setInterval(() => {
@@ -4118,6 +4119,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     
+    // Only handle row highlighting - auto-scroll is handled globally
     if (draggedRowIndex !== null && draggedRowIndex !== rowIndex) {
       setDragOverRowIndex(rowIndex);
     }
@@ -4127,43 +4129,47 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const handleGlobalDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     
-    // Auto-scroll logic - moved here so it works everywhere in the container
-    if (tableContainerRef.current && draggedRowIndex !== null) {
-      const rect = tableContainerRef.current.getBoundingClientRect();
-      const mouseY = e.clientY;
-      const scrollZone = 100; // pixels from edge to trigger scroll
-      
-      const distanceFromTop = mouseY - rect.top;
-      const distanceFromBottom = rect.bottom - mouseY;
-      
-      if (distanceFromTop < scrollZone && tableContainerRef.current.scrollTop > 0) {
-        // Near top edge and can scroll up
+    // Only handle auto-scroll if we're actually dragging a row
+    if (draggedRowIndex === null || !tableContainerRef.current) {
+      return;
+    }
+    
+    const rect = tableContainerRef.current.getBoundingClientRect();
+    const mouseY = e.clientY;
+    const scrollZone = 80; // Reduced scroll zone for more precise control
+    
+    const distanceFromTop = mouseY - rect.top;
+    const distanceFromBottom = rect.bottom - mouseY;
+    
+    // Check if we're in a scroll zone
+    const nearTop = distanceFromTop < scrollZone && distanceFromTop > 0;
+    const nearBottom = distanceFromBottom < scrollZone && distanceFromBottom > 0;
+    
+    if (nearTop && tableContainerRef.current.scrollTop > 0) {
+      // Near top edge and can scroll up
+      if (!autoScrollInterval) {
+        startAutoScroll('up');
+      }
+    } else if (nearBottom) {
+      // Near bottom edge - check if we can scroll down
+      const maxScroll = tableContainerRef.current.scrollHeight - tableContainerRef.current.clientHeight;
+      if (tableContainerRef.current.scrollTop < maxScroll) {
         if (!autoScrollInterval) {
-          startAutoScroll('up');
-        }
-      } else if (distanceFromBottom < scrollZone) {
-        // Near bottom edge
-        const maxScroll = tableContainerRef.current.scrollHeight - tableContainerRef.current.clientHeight;
-        if (tableContainerRef.current.scrollTop < maxScroll) {
-          // Can scroll down
-          if (!autoScrollInterval) {
-            startAutoScroll('down');
-          }
-        } else {
-          // At bottom, can't scroll more, stop auto-scroll
-          stopAutoScroll();
+          startAutoScroll('down');
         }
       } else {
-        // Not near edges, stop auto-scroll
+        // At bottom, stop scrolling
         stopAutoScroll();
       }
+    } else {
+      // Not in any scroll zone - stop scrolling completely
+      stopAutoScroll();
     }
   };
 
   const handleRowDragLeave = () => {
     setDragOverRowIndex(null);
-    // Stop auto-scroll when leaving row areas completely
-    stopAutoScroll();
+    // Don't stop auto-scroll here - let global handler manage it
   };
 
   const handleRowDrop = (e: React.DragEvent, dropIndex: number) => {
