@@ -55,6 +55,13 @@ export function useAutoSave({
       return;
     }
 
+    // CRITICAL: Never auto-save runsheets with default/untitled names
+    const forbiddenNames = ['Untitled Runsheet', 'untitled runsheet', 'Untitled', 'untitled'];
+    if (forbiddenNames.includes(runsheetName.trim())) {
+      console.log('🚫 Auto-save blocked: Refusing to save runsheet with default name:', runsheetName);
+      return;
+    }
+
     const currentStateHash = getCurrentStateHash();
     
     // Skip if no changes since last save
@@ -157,7 +164,11 @@ export function useAutoSave({
 
   // Auto-save when data changes (simplified - no complex state checking)
   useEffect(() => {
-    if (userId && runsheetName.trim() && columns.length > 0) {
+    // CRITICAL: Only auto-save if we have a proper user-defined name
+    const forbiddenNames = ['Untitled Runsheet', 'untitled runsheet', 'Untitled', 'untitled'];
+    const hasValidName = runsheetName.trim() && !forbiddenNames.includes(runsheetName.trim());
+    
+    if (userId && hasValidName && columns.length > 0) {
       save();
     }
   }, [runsheetName, columns, data, columnInstructions, userId, save]);
