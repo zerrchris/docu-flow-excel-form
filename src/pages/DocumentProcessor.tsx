@@ -258,8 +258,15 @@ const DocumentProcessor: React.FC = () => {
       loadedRef: loadedRunsheetRef.current,
       hasSpreadsheetData: spreadsheetData.length > 0,
       activeRunsheetName: currentRunsheet?.name,
-      locationState: location.state
+      locationState: location.state,
+      isFromAddOperation: location.state?.addedRowData
     });
+    
+    // Skip loading if this is from an add operation (we don't want to reload and lose the newly added data)
+    if (location.state?.addedRowData) {
+      console.log('🔄 Skipping runsheet load - this is from an add operation');
+      return;
+    }
     
     // Use ref to prevent infinite loops - only load each runsheet once
     if (selectedRunsheet && loadedRunsheetRef.current !== selectedRunsheet.id) {
@@ -762,10 +769,22 @@ const DocumentProcessor: React.FC = () => {
 
   // Function to go back to runsheet mode while preserving document
   const goBackToRunsheet = () => {
-    setIsDocumentMode(false);
-    // Collapse both document processor sections
-    setIsDocumentFrameExpanded(false);
-    setIsBatchProcessingExpanded(false);
+    console.log('🔧 goBackToRunsheet: Navigating back to runsheet');
+    
+    const runsheetForNavigation = currentRunsheet || activeRunsheet;
+    
+    if (runsheetForNavigation) {
+      navigate('/runsheet', { 
+        state: { 
+          runsheet: runsheetForNavigation
+        }
+      });
+    } else {
+      // If no runsheet is active, just exit document mode
+      setIsDocumentMode(false);
+      setIsDocumentFrameExpanded(false);
+      setIsBatchProcessingExpanded(false);
+    }
   };
 
   // Function to upload new document (resets everything)
@@ -1604,20 +1623,10 @@ Image: [base64 image data]`;
       console.log('🔧 DOCUMENT_RESET: Clearing document preview after successful add');
       resetDocument();
       
-      // Navigate back to the runsheet with the correct active runsheet
-      console.log('🔧 NAVIGATION: Navigating back to runsheet after successful add');
-      console.log('🔧 NAVIGATION: Using runsheet ID:', runsheetId);
-      navigate('/runsheet', { 
-        state: { 
-          runsheetId: runsheetId,
-          runsheet: activeRunsheet || currentRunsheet 
-        }
-      });
-      
       // Show success message
       toast({
         title: "Added to runsheet",
-        description: "Document has been successfully added to the runsheet. You can now add another document.",
+        description: "Document has been successfully added to the runsheet. You can now add another document or go back to the runsheet.",
       });
     }, 500); // Small delay to ensure the data was properly added first
   };
