@@ -5111,8 +5111,9 @@ ${extractionFields}`
                        )}
                    
                        <tr 
-                         className={`relative transition-all duration-200 group border border-border hover:bg-muted/50 data-[state=selected]:bg-muted
+                         className={`relative transition-all duration-200 group border-b border-r border-l border-border hover:bg-muted/50 data-[state=selected]:bg-muted
                            ${lastEditedCell?.rowIndex === rowIndex ? 'bg-green-50 dark:bg-green-900/20 animate-pulse border-green-300 dark:border-green-600' : 'hover:bg-muted/30 hover:border-muted-foreground/20'}
+                           ${rowIndex === 0 ? 'border-t' : ''}
                          `}
                         style={{ 
                           height: `${getRowHeight(rowIndex)}px`,
