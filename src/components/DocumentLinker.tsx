@@ -656,7 +656,7 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
         }}
       >
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 flex-1 min-w-0 max-w-[160px]">
+          <div className="flex items-center gap-2 flex-1 min-w-0 max-w-[120px]">
             {isImageUrl ? (
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 <img 
