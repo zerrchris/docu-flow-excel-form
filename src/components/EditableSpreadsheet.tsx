@@ -5498,49 +5498,51 @@ ${extractionFields}`
                          onDrop={(e) => handleRowDrop(e, rowIndex)}
                        >
                      {/* Row Actions column - Row number, drag handle, and delete button */}
-                     <td 
-                       className="border-r border-b border-border p-1 text-center bg-muted/30"
-                       style={{ 
-                         width: "50px", 
-                         minWidth: "50px",
-                         height: `${getRowHeight(rowIndex)}px`,
-                         minHeight: `${getRowHeight(rowIndex)}px`
-                       }}
-                     >
-                       <div className="flex flex-col items-center justify-center gap-1 h-full">
-                         <span className="text-xs text-muted-foreground font-mono">{rowIndex + 1}</span>
-                         
-                         {/* Drag Handle */}
-                         <div
-                           className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded transition-colors"
-                           draggable="true"
-                           onDragStart={(e) => handleRowDragStart(e, rowIndex)}
-                           onDragEnd={handleRowDragEnd}
-                           title="Drag to reorder row"
-                         >
-                           <GripVertical className="h-3 w-3 text-muted-foreground" />
-                         </div>
-                         
-                         {/* Delete Button */}
-                         <Button
-                           variant="ghost"
-                           size="sm"
-                           onClick={() => {
-                             if (hasRowData(row)) {
-                               if (confirm(`Are you sure you want to delete row ${rowIndex + 1}? This action cannot be undone.`)) {
-                                 deleteRow(rowIndex);
-                               }
-                             } else {
-                               deleteRow(rowIndex);
-                             }
-                           }}
-                           className="h-4 w-4 p-0 hover:bg-red-100 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400"
-                           title="Delete row"
-                         >
-                           <Trash2 className="h-2.5 w-2.5" />
-                         </Button>
-                       </div>
-                     </td>
+                      <td 
+                        className="border-r border-b border-border p-2 text-center bg-muted/30"
+                        style={{ 
+                          width: "75px", 
+                          minWidth: "75px",
+                          height: `${getRowHeight(rowIndex)}px`,
+                          minHeight: `${getRowHeight(rowIndex)}px`
+                        }}
+                      >
+                        <div className="flex items-center justify-between gap-1 h-full">
+                          <span className="text-xs text-muted-foreground font-mono">{rowIndex + 1}</span>
+                          
+                          <div className="flex items-center gap-1">
+                            {/* Drag Handle */}
+                            <div
+                              className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded transition-colors"
+                              draggable="true"
+                              onDragStart={(e) => handleRowDragStart(e, rowIndex)}
+                              onDragEnd={handleRowDragEnd}
+                              title="Drag to reorder row"
+                            >
+                              <GripVertical className="h-3 w-3 text-muted-foreground" />
+                            </div>
+                            
+                            {/* Delete Button */}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                if (hasRowData(row)) {
+                                  if (confirm(`Are you sure you want to delete row ${rowIndex + 1}? This action cannot be undone.`)) {
+                                    deleteRow(rowIndex);
+                                  }
+                                } else {
+                                  deleteRow(rowIndex);
+                                }
+                              }}
+                              className="h-6 w-6 p-0 hover:bg-red-100 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400"
+                              title="Delete row"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      </td>
                      
                      {columns.map((column) => {
                      const isSelected = selectedCell?.rowIndex === rowIndex && selectedCell?.column === column;
