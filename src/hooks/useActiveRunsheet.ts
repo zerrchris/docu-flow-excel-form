@@ -1,73 +1,67 @@
 import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface ActiveRunsheet {
   id: string;
   name: string;
-  data?: Record<string, string>[];
-  columns?: string[];
-  columnInstructions?: Record<string, string>;
-  lastSaveTime?: Date;
-  hasUnsavedChanges?: boolean;
+  data: Record<string, string>[];
+  columns: string[];
+  columnInstructions: Record<string, string>;
+  created_at?: string;
+  updated_at?: string;
 }
 
-const ACTIVE_RUNSHEET_KEY = 'activeRunsheet';
+const CURRENT_RUNSHEET_ID_KEY = 'currentRunsheetId';
 
-// Global state for single active runsheet
-let globalActiveRunsheet: ActiveRunsheet | null = null;
-let listeners: Set<(runsheet: ActiveRunsheet | null) => void> = new Set();
+// Simple global state for current runsheet ID only
+let globalCurrentRunsheetId: string | null = null;
+let listeners: Set<(runsheetId: string | null) => void> = new Set();
 
 const notifyListeners = () => {
-  listeners.forEach(listener => listener(globalActiveRunsheet));
+  listeners.forEach(listener => listener(globalCurrentRunsheetId));
 };
 
-const saveToLocalStorage = () => {
+const saveCurrentIdToLocalStorage = () => {
   try {
-    if (globalActiveRunsheet) {
-      localStorage.setItem(ACTIVE_RUNSHEET_KEY, JSON.stringify(globalActiveRunsheet));
+    if (globalCurrentRunsheetId) {
+      localStorage.setItem(CURRENT_RUNSHEET_ID_KEY, globalCurrentRunsheetId);
     } else {
-      localStorage.removeItem(ACTIVE_RUNSHEET_KEY);
+      localStorage.removeItem(CURRENT_RUNSHEET_ID_KEY);
     }
   } catch (error) {
-    console.error('Error saving active runsheet to localStorage:', error);
+    console.error('Error saving current runsheet ID to localStorage:', error);
   }
 };
 
-const loadFromLocalStorage = () => {
+const loadCurrentIdFromLocalStorage = () => {
   try {
-    const stored = localStorage.getItem(ACTIVE_RUNSHEET_KEY);
+    const stored = localStorage.getItem(CURRENT_RUNSHEET_ID_KEY);
     if (stored) {
-      const parsedRunsheet = JSON.parse(stored);
-      
-      // Ensure we have a valid runsheet with required properties
-      if (parsedRunsheet && parsedRunsheet.id && parsedRunsheet.name) {
-        globalActiveRunsheet = parsedRunsheet;
-        console.log('📋 Successfully loaded active runsheet from localStorage:', parsedRunsheet.name, parsedRunsheet.id);
-      } else {
-        console.warn('⚠️ Invalid active runsheet data in localStorage, clearing it');
-        localStorage.removeItem(ACTIVE_RUNSHEET_KEY);
-        globalActiveRunsheet = null;
-      }
+      globalCurrentRunsheetId = stored;
+      console.log('📋 Loaded current runsheet ID from localStorage:', stored);
     }
   } catch (error) {
-    console.error('Error loading active runsheet from localStorage:', error);
-    localStorage.removeItem(ACTIVE_RUNSHEET_KEY);
-    globalActiveRunsheet = null;
+    console.error('Error loading current runsheet ID from localStorage:', error);
+    localStorage.removeItem(CURRENT_RUNSHEET_ID_KEY);
+    globalCurrentRunsheetId = null;
   }
 };
 
 export const useActiveRunsheet = () => {
-  const [activeRunsheet, setActiveRunsheetState] = useState<ActiveRunsheet | null>(globalActiveRunsheet);
+  const [currentRunsheetId, setCurrentRunsheetIdState] = useState<string | null>(globalCurrentRunsheetId);
+  const [activeRunsheet, setActiveRunsheet] = useState<ActiveRunsheet | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     // Add this component as a listener
-    const listener = (runsheet: ActiveRunsheet | null) => {
-      setActiveRunsheetState(runsheet);
+    const listener = (runsheetId: string | null) => {
+      setCurrentRunsheetIdState(runsheetId);
     };
     listeners.add(listener);
     
     // Load from localStorage on mount if not already loaded
-    if (!globalActiveRunsheet) {
-      loadFromLocalStorage();
+    if (!globalCurrentRunsheetId) {
+      loadCurrentIdFromLocalStorage();
       notifyListeners();
     }
 
@@ -76,48 +70,99 @@ export const useActiveRunsheet = () => {
     };
   }, []);
 
-  const setActiveRunsheet = (runsheet: ActiveRunsheet) => {
-    // Ensure we have valid runsheet data before setting
-    if (!runsheet || !runsheet.id || !runsheet.name) {
-      console.error('⚠️ Attempted to set invalid active runsheet:', runsheet);
+  // Load runsheet data when ID changes
+  useEffect(() => {
+    const loadRunsheet = async () => {
+      if (!currentRunsheetId) {
+        setActiveRunsheet(null);
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          setActiveRunsheet(null);
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from('runsheets')
+          .select('*')
+          .eq('id', currentRunsheetId)
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (error) {
+          console.error('Error loading runsheet:', error);
+          // Clear invalid runsheet ID
+          clearActiveRunsheet();
+          return;
+        }
+
+        if (!data) {
+          console.log('Runsheet not found, clearing current ID');
+          clearActiveRunsheet();
+          return;
+        }
+
+        setActiveRunsheet({
+          id: data.id,
+          name: data.name,
+          data: Array.isArray(data.data) ? data.data as Record<string, string>[] : [],
+          columns: Array.isArray(data.columns) ? data.columns : [],
+          columnInstructions: typeof data.column_instructions === 'object' && data.column_instructions ? data.column_instructions as Record<string, string> : {},
+          created_at: data.created_at,
+          updated_at: data.updated_at
+        });
+      } catch (error) {
+        console.error('Error loading runsheet:', error);
+        setActiveRunsheet(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadRunsheet();
+  }, [currentRunsheetId]);
+
+  const setCurrentRunsheet = (runsheetId: string) => {
+    if (!runsheetId) {
+      console.error('⚠️ Attempted to set invalid runsheet ID');
       return;
     }
     
-    // Prevent unnecessary updates if the runsheet hasn't changed
-    if (globalActiveRunsheet && 
-        globalActiveRunsheet.id === runsheet.id && 
-        globalActiveRunsheet.name === runsheet.name &&
-        JSON.stringify(globalActiveRunsheet.data) === JSON.stringify(runsheet.data)) {
-      return; // No changes, skip update
-    }
-    
-    globalActiveRunsheet = runsheet;
-    // console.log('📋 Setting active runsheet:', runsheet.name, runsheet.id); // Commented out to reduce log noise
-    saveToLocalStorage();
+    globalCurrentRunsheetId = runsheetId;
+    saveCurrentIdToLocalStorage();
     notifyListeners();
-  };
-
-  const updateRunsheet = (runsheetId: string, updates: Partial<ActiveRunsheet>) => {
-    if (globalActiveRunsheet && globalActiveRunsheet.id === runsheetId) {
-      globalActiveRunsheet = { ...globalActiveRunsheet, ...updates };
-      saveToLocalStorage();
-      notifyListeners();
-    }
   };
 
   const clearActiveRunsheet = () => {
-    globalActiveRunsheet = null;
-    localStorage.removeItem(ACTIVE_RUNSHEET_KEY);
-    saveToLocalStorage();
+    globalCurrentRunsheetId = null;
+    localStorage.removeItem(CURRENT_RUNSHEET_ID_KEY);
     notifyListeners();
+  };
+
+  const refreshActiveRunsheet = async () => {
+    if (currentRunsheetId) {
+      // Force reload by temporarily clearing and resetting
+      const id = currentRunsheetId;
+      setCurrentRunsheetIdState(null);
+      setTimeout(() => setCurrentRunsheetIdState(id), 0);
+    }
   };
 
   return {
     activeRunsheet,
-    setActiveRunsheet,
+    currentRunsheetId,
+    isLoading,
+    setCurrentRunsheet,
     clearActiveRunsheet,
-    updateRunsheet,
+    refreshActiveRunsheet,
     hasActiveRunsheet: !!activeRunsheet,
-    currentRunsheet: activeRunsheet // For compatibility
+    // Legacy compatibility
+    currentRunsheet: activeRunsheet,
+    setActiveRunsheet: (runsheet: ActiveRunsheet) => setCurrentRunsheet(runsheet.id),
+    updateRunsheet: refreshActiveRunsheet
   };
 };

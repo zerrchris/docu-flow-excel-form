@@ -24,8 +24,7 @@ const Dashboard: React.FC = () => {
   const [showNameNewRunsheetDialog, setShowNameNewRunsheetDialog] = useState(false);
   const [newRunsheetName, setNewRunsheetName] = useState('');
   const navigate = useNavigate();
-  const { activeRunsheet, clearActiveRunsheet } = useActiveRunsheet();
-  const [isValidatingRunsheet, setIsValidatingRunsheet] = useState(false);
+  const { activeRunsheet } = useActiveRunsheet();
 
   useEffect(() => {
     const initAuth = async () => {
@@ -41,40 +40,6 @@ const Dashboard: React.FC = () => {
 
     initAuth();
   }, []);
-
-  // Validate active runsheet exists in database
-  useEffect(() => {
-    const validateActiveRunsheet = async () => {
-      if (!activeRunsheet || !user || isValidatingRunsheet) return;
-      
-      setIsValidatingRunsheet(true);
-      try {
-        const { data, error } = await supabase
-          .from('runsheets')
-          .select('id')
-          .eq('id', activeRunsheet.id)
-          .eq('user_id', user.id)
-          .maybeSingle();
-          
-        // If runsheet doesn't exist in database, clear it from localStorage
-        if (!data) {
-          console.log('🧹 Active runsheet no longer exists in database, clearing localStorage');
-          clearActiveRunsheet();
-          toast({
-            title: "Runsheet cleared",
-            description: "Your active runsheet was no longer available and has been cleared.",
-            variant: "default"
-          });
-        }
-      } catch (error) {
-        console.error('Error validating active runsheet:', error);
-      } finally {
-        setIsValidatingRunsheet(false);
-      }
-    };
-
-    validateActiveRunsheet();
-  }, [activeRunsheet, user, clearActiveRunsheet, isValidatingRunsheet]);
 
   const handleCreateNewRunsheet = async () => {
     if (!newRunsheetName.trim()) {

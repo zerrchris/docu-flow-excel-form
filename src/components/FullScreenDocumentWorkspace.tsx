@@ -58,7 +58,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
   const tableRef = useRef<HTMLDivElement>(null);
   
   // Get runsheet management hook for auto-saving changes
-  const { updateRunsheet, activeRunsheet } = useActiveRunsheet();
+  const { updateRunsheet, activeRunsheet, setCurrentRunsheet } = useActiveRunsheet();
   const { toast } = useToast();
   
   // Lock page scroll while workspace is open (robust, preserves position)
@@ -172,10 +172,8 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
       const updatedRunsheetData = [...(activeRunsheet.data || [])];
       updatedRunsheetData[rowIndex] = updatedData;
       
-      updateRunsheet(activeRunsheet.id, {
-        data: updatedRunsheetData,
-        hasUnsavedChanges: true
-      });
+      // Update active runsheet with new data - database-first approach will handle persistence
+      setCurrentRunsheet(activeRunsheet.id); // Trigger refresh
     }
   };
 
@@ -468,10 +466,8 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
           const updatedRunsheetData = [...(activeRunsheet.data || [])];
           updatedRunsheetData[rowIndex] = updatedData;
           
-          updateRunsheet(activeRunsheet.id, {
-            data: updatedRunsheetData,
-            hasUnsavedChanges: true
-          });
+          // Update active runsheet with new data - database-first approach will handle persistence
+          setCurrentRunsheet(activeRunsheet.id); // Trigger refresh
         }
 
         toast({

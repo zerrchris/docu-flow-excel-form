@@ -52,7 +52,6 @@ import FullScreenDocumentWorkspace from './FullScreenDocumentWorkspace';
 import ViewportPortal from './ViewportPortal';
 import { AutoSaveIndicator } from './AutoSaveIndicator';
 import { useAutoSave } from '@/hooks/useAutoSave';
-import { useRealtimeSync } from '@/hooks/useRealtimeSync';
 import DocumentWorkspaceButton from './DocumentWorkspaceButton';
 import type { User } from '@supabase/supabase-js';
 import { 
@@ -312,7 +311,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           id: result.id,
           name: runsheetName,
           data,
-          columns
+          columns,
+          columnInstructions
         });
       }
     },
@@ -322,16 +322,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     }
   });
 
-  // Disable real-time sync to prevent data conflicts
-  // Real-time sync was causing data to be overwritten when multiple updates occurred
-  const { trackOwnUpdate } = useRealtimeSync({
-    runsheetId: currentRunsheetId,
-    enabled: false, // ← Disabled to prevent data overwrites
-    onUpdate: (payload) => {
-      // Real-time updates disabled - relying on manual save/load only
-      console.log('Real-time update received but ignored:', payload);
-    }
-  });
+  // Real-time sync disabled - using database-first approach for single user
+  // No need for collaboration features since only one user per runsheet
 
   // Listen for document upload save requests
   React.useEffect(() => {
@@ -557,14 +549,12 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             next[firstEmpty] = row;
             console.log('🔧 DEBUG: Inserting into existing empty row:', firstEmpty);
             
-            // Update active runsheet with new data
-            if (effectiveRunsheetId && currentRunsheet) {
-              setActiveRunsheet({
-                ...currentRunsheet,
-                data: next,
-                hasUnsavedChanges: true
-              });
-            }
+          if (effectiveRunsheetId && currentRunsheet) {
+            setActiveRunsheet({
+              ...currentRunsheet,
+              data: next
+            });
+          }
             
             // Inform listeners which row was used (inserted)
             setTimeout(() => {
@@ -589,8 +579,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           if (effectiveRunsheetId && currentRunsheet) {
             setActiveRunsheet({
               ...currentRunsheet,
-              data: newData,
-              hasUnsavedChanges: true
+              data: newData
             });
           }
           
@@ -1688,9 +1677,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             name: finalName,
             data,
             columns,
-            columnInstructions,
-            hasUnsavedChanges: false,
-            lastSaveTime: new Date()
+            columnInstructions
           });
         }
       } else {
@@ -1780,9 +1767,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             name: finalName,
             data,
             columns,
-            columnInstructions,
-            hasUnsavedChanges: false,
-            lastSaveTime: new Date()
+            columnInstructions
           });
         }
       }
@@ -2058,9 +2043,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           name: finalName,
           data,
           columns,
-          columnInstructions,
-          hasUnsavedChanges: false,
-          lastSaveTime: new Date()
+          columnInstructions
         });
       }
       

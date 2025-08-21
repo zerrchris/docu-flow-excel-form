@@ -49,16 +49,10 @@ export function useAutoSave({
     });
   }, [runsheetId, runsheetName, columns, data, columnInstructions]);
 
-  // Core save function
+  // Simplified save function - database-first approach
   const performSave = useCallback(async (): Promise<void> => {
     if (!userId || !runsheetName.trim() || columns.length === 0) {
       return;
-    }
-
-    // For temporary runsheet IDs, we need to create a new runsheet instead of skipping
-    const isTemporaryId = runsheetId && runsheetId.startsWith('temp-');
-    if (isTemporaryId) {
-      console.log('Converting temporary runsheet to permanent:', runsheetId);
     }
 
     const currentStateHash = getCurrentStateHash();
@@ -84,56 +78,23 @@ export function useAutoSave({
 
       let result;
       
-      // For temporary IDs, treat as if no runsheetId exists (create new)
-      const effectiveRunsheetId = isTemporaryId ? null : runsheetId;
-      
-      if (effectiveRunsheetId) {
-        // Try to update existing runsheet
+      if (runsheetId && !runsheetId.startsWith('temp-')) {
+        // Update existing runsheet
         const { data: updateResult, error } = await supabase
           .from('runsheets')
           .update(runsheetData)
-          .eq('id', effectiveRunsheetId)
+          .eq('id', runsheetId)
           .eq('user_id', userId)
-          .select('*');
+          .select('*')
+          .single();
 
-        if (error) {
-          // If update fails due to duplicate name, use upsert instead
-          if (error.code === '23505') {
-            const { data: upsertResult, error: upsertError } = await supabase
-              .from('runsheets')
-              .upsert(runsheetData, {
-                onConflict: 'user_id,name'
-              })
-              .select('*')
-              .single();
-            
-            if (upsertError) throw upsertError;
-            result = upsertResult;
-          } else {
-            throw error;
-          }
-        } else if (!updateResult || updateResult.length === 0) {
-          // No rows were updated, try creating instead
-          const { data: insertResult, error: insertError } = await supabase
-            .from('runsheets')
-            .upsert(runsheetData, {
-              onConflict: 'user_id,name'
-            })
-            .select('*')
-            .single();
-          
-          if (insertError) throw insertError;
-          result = insertResult;
-        } else {
-          result = updateResult[0]; // Take first result since we removed .single()
-        }
+        if (error) throw error;
+        result = updateResult;
       } else {
-        // Create new runsheet - use upsert to handle duplicates
+        // Create new runsheet
         const { data: insertResult, error } = await supabase
           .from('runsheets')
-          .upsert(runsheetData, {
-            onConflict: 'user_id,name'
-          })
+          .insert(runsheetData)
           .select('*')
           .single();
 
@@ -152,7 +113,7 @@ export function useAutoSave({
       onSaveError?.(errorMessage);
       
       toast({
-        title: "Auto-save failed",
+        title: "Save failed",
         description: errorMessage,
         variant: "destructive",
       });
@@ -194,15 +155,12 @@ export function useAutoSave({
     };
   }, []);
 
-  // Auto-save when data changes
+  // Auto-save when data changes (simplified - no complex state checking)
   useEffect(() => {
-    const currentStateHash = getCurrentStateHash();
-    
-    // Only trigger auto-save if there are actual changes
-    if (currentStateHash !== lastSavedStateRef.current && userId) {
+    if (userId && runsheetName.trim() && columns.length > 0) {
       save();
     }
-  }, [runsheetName, columns, data, columnInstructions, userId, save, getCurrentStateHash]);
+  }, [runsheetName, columns, data, columnInstructions, userId, save]);
 
   return {
     save,

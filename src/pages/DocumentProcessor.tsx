@@ -2515,9 +2515,7 @@ Image: [base64 image data]`;
                                 name: runsheetName,
                                 data: spreadsheetData,
                                 columns,
-                                columnInstructions,
-                                hasUnsavedChanges: false,
-                                lastSaveTime: new Date()
+                                columnInstructions
                               });
                             }
 
@@ -2552,9 +2550,7 @@ Image: [base64 image data]`;
                       name: runsheetName,
                       data: spreadsheetData,
                       columns,
-                      columnInstructions,
-                      hasUnsavedChanges: false,
-                      lastSaveTime: new Date()
+                      columnInstructions
                     });
                   }
 
