@@ -316,15 +316,77 @@ const DocumentProcessor: React.FC = () => {
     }
   }, [location.state?.runsheet?.id]); // More specific dependency to reduce unnecessary re-runs
 
-  // Handle URL parameters for actions (upload, google-drive, etc.) and runsheet ID
+  // Handle URL parameters for actions (upload, google-drive, etc.) and runsheet ID - prioritize actions
   useEffect(() => {
     const action = searchParams.get('action');
     const runsheetId = searchParams.get('id') || searchParams.get('runsheet');
     console.log('DocumentProcessor useEffect - action from searchParams:', action);
     console.log('DocumentProcessor useEffect - runsheetId from searchParams:', runsheetId);
     
-    // Load specific runsheet if ID is provided
-    if (runsheetId && !loadedRunsheetRef.current) {
+    // Prioritize actions over loading active runsheet
+    if (action === 'upload') {
+      console.log('Upload action detected, triggering runsheet file dialog...');
+      
+      // Clear any active runsheet display to show upload interface
+      clearActiveRunsheet();
+      setSpreadsheetData([]);
+      setFormData({});
+      
+      // Small delay to ensure state is cleared before showing file dialog
+      setTimeout(() => {
+        // Use the hidden file input that's already in the DOM
+        const existingInput = document.getElementById('dashboard-upload-input') as HTMLInputElement;
+        
+        if (existingInput) {
+          console.log('🔧 Using existing hidden file input');
+          existingInput.click();
+        } else {
+          console.log('🔧 Creating new file input programmatically');
+          // Create a file input programmatically as fallback
+          const fileInput = document.createElement('input');
+          fileInput.type = 'file';
+          fileInput.accept = '.xlsx,.xls,.csv';
+          fileInput.multiple = false;
+          fileInput.style.display = 'none';
+          
+          // Use a simple event handler that calls our function
+          fileInput.onchange = (e) => {
+            console.log('🔧 Programmatic file input change event triggered');
+            handleDashboardFileSelect(e as any);
+          };
+          
+          document.body.appendChild(fileInput);
+          fileInput.click();
+          
+          // Clean up after a delay
+          setTimeout(() => {
+            if (document.body.contains(fileInput)) {
+              document.body.removeChild(fileInput);
+            }
+          }, 1000);
+        }
+      }, 100);
+      
+      return; // Don't process other actions if upload is happening
+    } else if (action === 'google-drive') {
+      console.log('Google Drive action detected, opening Google Drive picker...');
+      
+      // Clear any active runsheet display
+      clearActiveRunsheet();
+      setSpreadsheetData([]);
+      setFormData({});
+      
+      // Trigger the Google Drive picker in the EditableSpreadsheet component
+      setTimeout(() => {
+        const googleDriveEvent = new CustomEvent('openGoogleDrivePicker');
+        window.dispatchEvent(googleDriveEvent);
+      }, 100);
+      
+      return; // Don't process runsheet loading if google-drive action is happening
+    }
+    
+    // Load specific runsheet if ID is provided and no action is specified
+    if (runsheetId && !loadedRunsheetRef.current && !action) {
       console.log('Loading runsheet from URL parameter:', runsheetId);
       loadedRunsheetRef.current = runsheetId;
       
@@ -336,47 +398,6 @@ const DocumentProcessor: React.FC = () => {
         detail: { runsheetId, forceRefresh: fromExtension }
       });
       window.dispatchEvent(loadEvent);
-    }
-    
-    if (action === 'upload') {
-      console.log('Upload action detected, triggering runsheet file dialog...');
-      
-      // Use the hidden file input that's already in the DOM
-      const existingInput = document.getElementById('dashboard-upload-input') as HTMLInputElement;
-      
-      if (existingInput) {
-        console.log('🔧 Using existing hidden file input');
-        existingInput.click();
-      } else {
-        console.log('🔧 Creating new file input programmatically');
-        // Create a file input programmatically as fallback
-        const fileInput = document.createElement('input');
-        fileInput.type = 'file';
-        fileInput.accept = '.xlsx,.xls,.csv';
-        fileInput.multiple = false;
-        fileInput.style.display = 'none';
-        
-        // Use a simple event handler that calls our function
-        fileInput.onchange = (e) => {
-          console.log('🔧 Programmatic file input change event triggered');
-          handleDashboardFileSelect(e as any);
-        };
-        
-        document.body.appendChild(fileInput);
-        fileInput.click();
-        
-        // Clean up after a delay
-        setTimeout(() => {
-          if (document.body.contains(fileInput)) {
-            document.body.removeChild(fileInput);
-          }
-        }, 1000);
-      }
-    } else if (action === 'google-drive') {
-      console.log('Google Drive action detected, opening Google Drive picker...');
-      // Trigger the Google Drive picker in the EditableSpreadsheet component
-      const googleDriveEvent = new CustomEvent('openGoogleDrivePicker');
-      window.dispatchEvent(googleDriveEvent);
     }
   }, [searchParams, loadedRunsheetRef]);
 
