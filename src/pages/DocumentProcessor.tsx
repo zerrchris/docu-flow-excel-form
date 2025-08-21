@@ -8,7 +8,7 @@ import DocumentFrame from '@/components/DocumentFrame';
 import DocumentViewer from '@/components/DocumentViewer';
 import DataForm from '@/components/DataForm';
 import RealtimeVoiceInput from '@/components/RealtimeVoiceInput';
-import EditableSpreadsheet from '@/components/EditableSpreadsheet';
+import SimpleEditableSpreadsheet from '@/components/SimpleEditableSpreadsheet';
 import AuthButton from '@/components/AuthButton';
 import BatchProcessing from '@/components/BatchProcessing';
 import DocumentUpload from '@/components/DocumentUpload';
@@ -2092,7 +2092,7 @@ Image: [base64 image data]`;
             />
             
             <div className="mt-6">
-            <EditableSpreadsheet
+            <SimpleEditableSpreadsheet
               initialColumns={columns}
               initialData={spreadsheetData}
               onColumnChange={handleColumnsChange}
