@@ -1481,54 +1481,18 @@ Image: [base64 image data]`;
     console.log('Filtered data to match current columns:', finalData);
     console.log('Current columns (unchanged):', columns);
     
-    setSpreadsheetData(prev => {
-      console.log('🔧 DEBUG: Inside setSpreadsheetData callback, prev:', prev);
-      
-      // Find the first row that is both empty in spreadsheet data AND has no linked document
-      const firstEmptyRowIndex = prev.findIndex((row, index) => {
-        const isDataEmpty = Object.values(row).every(value => value.trim() === '');
-        const hasLinkedDocument = documentMap.has(index);
-        return isDataEmpty && !hasLinkedDocument;
-      });
-      
-      console.log('🔧 DEBUG: firstEmptyRowIndex:', firstEmptyRowIndex);
-      
-      let newData;
-      let targetRowIndex;
-      if (firstEmptyRowIndex >= 0) {
-        // Insert data into the first empty row
-        newData = [...prev];
-        newData[firstEmptyRowIndex] = { ...finalData };
-        targetRowIndex = firstEmptyRowIndex;
-        console.log('🔧 DEBUG: Inserting into existing row:', firstEmptyRowIndex);
-      } else {
-        // If no empty row found, append to the end
-        newData = [...prev, { ...finalData }];
-        targetRowIndex = prev.length; // New row index is the current length
-        console.log('🔧 DEBUG: Appending new row at index:', targetRowIndex);
-      }
-      
-      console.log('🔧 DEBUG: newData after update:', newData);
-      
-      // If data contains a storage path, create a document record
-      if (finalData['Storage Path']) {
-        console.log('🔧 DEBUG: Creating document record for targetRowIndex:', targetRowIndex);
-        createDocumentRecord(finalData, targetRowIndex);
-      }
-      
-      // Store targetRowIndex for toast message
-      setTimeout(() => {
-        toast({
-          title: "✅ Data Successfully Added",
-          description: `Document data has been added to row ${targetRowIndex + 1} in your runsheet without overwriting existing data.`,
-        });
-      }, 100);
-      
-      return newData;
-    });
-
-    // Also push the row into the spreadsheet component directly
+    // Let EditableSpreadsheet handle the data state management when there's an active runsheet
+    // Only dispatch the event to add the row to the actual spreadsheet component
+    console.log('🔧 DEBUG: Dispatching externalAddRow event to EditableSpreadsheet');
     window.dispatchEvent(new CustomEvent('externalAddRow', { detail: { data: finalData } }));
+
+    // Show success message (will be refined after EditableSpreadsheet processes the row)
+    setTimeout(() => {
+      toast({
+        title: "✅ Data Successfully Added",
+        description: `Document data has been added to your runsheet.`,
+      });
+    }, 100);
 
     // One-time listener to learn which row index the spreadsheet actually used
     const handleExternalRowPlaced = (event: CustomEvent) => {
