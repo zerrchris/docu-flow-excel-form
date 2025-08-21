@@ -1645,8 +1645,20 @@ Image: [base64 image data]`;
         targetRowIndex = prev.length;
       }
       
+      // Create document record and update documentMap immediately
       if (filteredData['Storage Path']) {
         createDocumentRecord(filteredData, targetRowIndex);
+        
+        // Update the documentMap immediately to track this document
+        const newDocumentMap = new Map(documentMap);
+        newDocumentMap.set(targetRowIndex, {
+          storagePath: filteredData['Storage Path'],
+          fileName: filteredData['Document File Name'] || file?.name || 'Unknown Document',
+          isPending: true,
+          timestamp: Date.now()
+        });
+        setDocumentMap(newDocumentMap);
+        console.log('🔧 DocumentProcessor: Updated documentMap for row', targetRowIndex, 'new size:', newDocumentMap.size);
       }
       
       return newData;
