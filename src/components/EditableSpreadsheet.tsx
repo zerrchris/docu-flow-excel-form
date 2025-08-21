@@ -4209,11 +4209,16 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     }
   };
 
-  // Simplified global drag over handler 
+  // Enhanced global drag over handler with immediate scroll check
   const handleGlobalDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     // Update mouse position for the periodic check
     currentMousePosition.current = { x: e.clientX, y: e.clientY };
+    
+    // Immediately check if we need to stop scrolling when mouse moves
+    if (draggedRowIndex !== null) {
+      checkScrollNeeds();
+    }
   };
 
   const handleRowDragLeave = () => {
