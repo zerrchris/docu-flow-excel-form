@@ -472,34 +472,49 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   
   // Listen for external add-row events (from DocumentProcessor)
   useEffect(() => {
+    console.log('🔧 DEBUG: Setting up externalAddRow event listener in EditableSpreadsheet');
+    
     const handler = (event: CustomEvent) => {
       try {
+        console.log('🔧 DEBUG: EditableSpreadsheet received externalAddRow event');
         const payload = (event as any).detail?.data as Record<string, string>;
         const eventRunsheetId = (event as any).detail?.runsheetId;
-        console.log('🔧 DEBUG: EditableSpreadsheet received externalAddRow event');
         console.log('🔧 DEBUG: payload:', payload);
         console.log('🔧 DEBUG: eventRunsheetId:', eventRunsheetId);
         console.log('🔧 DEBUG: currentRunsheetId:', currentRunsheetId);
-        if (!payload) return;
-
-        // Determine any new columns present in payload, ignoring non-data/system fields
-        const newCols = Object.keys(payload).filter((c) => {
-          if (columns.includes(c)) return false;
-          // Ignore system/meta fields and filename helper
-          if (c === 'Storage Path' || c === 'Document File Name') return false;
-          const val = (payload[c] || '').toString().trim();
-          // Only add columns that actually have a value to prevent reviving deleted columns
-          return val !== '';
-        });
-
-        if (newCols.length) {
-          const updated = [...columns, ...newCols];
-          setColumns(updated);
-          onColumnChange?.(updated);
+        
+        if (!payload) {
+          console.log('🔧 DEBUG: No payload found, returning');
+          return;
         }
 
-        setData((prev) => {
-          const effectiveCols = [...columns, ...newCols];
+        // Get current state values inside the handler to avoid stale closures
+        setData((prevData) => {
+          setColumns((prevColumns) => {
+            // Determine any new columns present in payload, ignoring non-data/system fields
+            const newCols = Object.keys(payload).filter((c) => {
+              if (prevColumns.includes(c)) return false;
+              // Ignore system/meta fields and filename helper
+              if (c === 'Storage Path' || c === 'Document File Name') return false;
+              const val = (payload[c] || '').toString().trim();
+              // Only add columns that actually have a value to prevent reviving deleted columns
+              return val !== '';
+            });
+
+            console.log('🔧 DEBUG: New columns to add:', newCols);
+
+            if (newCols.length) {
+              const updated = [...prevColumns, ...newCols];
+              console.log('🔧 DEBUG: Updated columns:', updated);
+              onColumnChange?.(updated);
+              return updated;
+            }
+            return prevColumns;
+          });
+
+          const currentColumns = columns;
+          const effectiveCols = [...currentColumns];
+          
           // Build filtered row matching current/effective columns
           const row: Record<string, string> = {};
           effectiveCols.forEach((col) => {
@@ -510,10 +525,10 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           }
 
           console.log('🔧 DEBUG: Built row for insertion:', row);
-          console.log('🔧 DEBUG: Current data length before insertion:', prev.length);
+          console.log('🔧 DEBUG: Current data length before insertion:', prevData.length);
 
           // Find first empty row without a linked document
-          const firstEmpty = prev.findIndex((r, idx) => {
+          const firstEmpty = prevData.findIndex((r, idx) => {
             const isEmpty = Object.values(r).every((v) => (v || '').toString().trim() === '');
             const hasDoc = documentMap.has(idx);
             return isEmpty && !hasDoc;
@@ -527,7 +542,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
           // Decide target index and update data
           if (firstEmpty >= 0) {
-            const next = [...prev];
+            const next = [...prevData];
             next[firstEmpty] = row;
             console.log('🔧 DEBUG: Inserting into existing empty row:', firstEmpty);
             // Inform listeners which row was used
@@ -540,10 +555,11 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                 },
               }));
             }, 0);
+            setHasUnsavedChanges(true);
             return next;
           }
 
-          const appendedIndex = prev.length;
+          const appendedIndex = prevData.length;
           console.log('🔧 DEBUG: Appending new row at index:', appendedIndex);
           // Inform listeners which row was used (appended)
           setTimeout(() => {
@@ -555,18 +571,23 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
               },
             }));
           }, 0);
-          return [...prev, row];
+          setHasUnsavedChanges(true);
+          return [...prevData, row];
         });
 
-        setHasUnsavedChanges(true);
       } catch (e) {
-        console.error('externalAddRow handler error', e);
+        console.error('🔧 DEBUG: externalAddRow handler error', e);
       }
     };
 
     window.addEventListener('externalAddRow', handler as EventListener);
-    return () => window.removeEventListener('externalAddRow', handler as EventListener);
-  }, [columns, documentMap, onColumnChange]);
+    console.log('🔧 DEBUG: externalAddRow event listener added');
+    
+    return () => {
+      console.log('🔧 DEBUG: Removing externalAddRow event listener');
+      window.removeEventListener('externalAddRow', handler as EventListener);
+    };
+  }, []); // Empty dependency array to prevent re-mounting
 
   // Ref for container width measurement
   const containerRef = useRef<HTMLDivElement>(null);
