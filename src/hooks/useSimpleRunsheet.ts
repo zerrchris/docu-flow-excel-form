@@ -37,8 +37,12 @@ export function useSimpleRunsheet({
     if (!userId) return null;
 
     try {
+      // Generate a unique name to avoid conflicts
+      const timestamp = Date.now();
+      const uniqueName = `${initialName} ${timestamp}`;
+      
       const newRunsheet = {
-        name: initialName,
+        name: uniqueName,
         columns: initialColumns,
         data: initialData.length > 0 ? initialData : Array.from({ length: 20 }, () => {
           const row: Record<string, string> = {};
