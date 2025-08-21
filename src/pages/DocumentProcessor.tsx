@@ -1387,7 +1387,7 @@ Image: [base64 image data]`;
     console.log('🔧 DocumentProcessor: documentMap.size:', documentMap.size);
     
     // Check for active runsheet ID from multiple sources
-    let runsheetId = activeRunsheet?.id || currentRunsheet?.id || location.state?.runsheet?.id;
+    let runsheetId = currentRunsheet?.id || activeRunsheet?.id || location.state?.runsheet?.id;
     
     if (!runsheetId) {
       try {

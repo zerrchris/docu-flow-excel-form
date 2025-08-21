@@ -130,12 +130,25 @@ const InlineDocumentViewer: React.FC<InlineDocumentViewerProps> = ({
     setRotation(prev => (prev + 90) % 360);
   };
 
-  // Trackpad/two-finger pan inside the viewer
+  // Improved wheel handling for smooth scrolling
   const handleImageWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setPanX(prev => prev - e.deltaX);
-    setPanY(prev => prev - e.deltaY);
+    // Only handle wheel events if zoomed in or using modifier keys
+    if (e.ctrlKey || e.metaKey || zoom > 1) {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      if (e.ctrlKey || e.metaKey) {
+        // Zoom with Ctrl/Cmd + scroll
+        const delta = -e.deltaY;
+        const zoomFactor = delta > 0 ? 1.1 : 0.9;
+        setZoom(prev => Math.max(0.25, Math.min(3, prev * zoomFactor)));
+      } else if (zoom > 1) {
+        // Pan when zoomed in
+        setPanX(prev => prev - e.deltaX * 0.5);
+        setPanY(prev => prev - e.deltaY * 0.5);
+      }
+    }
+    // Allow normal scrolling when not zoomed
   };
 
   const handleImageMouseDown = (e: React.MouseEvent) => {
@@ -219,18 +232,18 @@ const InlineDocumentViewer: React.FC<InlineDocumentViewerProps> = ({
       </div>
 
       {/* Document content */}
-      <div className="flex-1 overflow-hidden" onWheel={(e) => e.stopPropagation()}>
+      <div className="flex-1 overflow-auto">
         {isPdf ? (
           <PDFViewer file={null} previewUrl={documentUrl} />
         ) : (
           <div 
-            className="h-full overflow-auto overscroll-contain bg-muted/10 flex items-center justify-center"
+            className="h-full overflow-auto bg-muted/10 flex items-center justify-center"
             onWheel={handleImageWheel}
           >
             <img
               src={documentUrl}
               alt={documentName}
-              className="max-w-full max-h-full object-contain transition-transform duration-200 select-none cursor-grab active:cursor-grabbing"
+              className="max-w-none object-contain transition-transform duration-200 select-none cursor-grab active:cursor-grabbing"
               style={{
                 transform: `translate(${panX / zoom}px, ${panY / zoom}px) scale(${zoom}) rotate(${rotation}deg)`,
                 transformOrigin: 'center',

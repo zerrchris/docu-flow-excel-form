@@ -34,19 +34,23 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
   };
 
   const handleWheel = (e: React.WheelEvent) => {
-    if (e.ctrlKey || e.metaKey) {
+    // Only handle wheel events if we're zoomed in or using modifier keys
+    if (e.ctrlKey || e.metaKey || zoom > 1) {
       e.preventDefault();
       e.stopPropagation();
-      const delta = -e.deltaY;
-      const zoomFactor = delta > 0 ? 1.08 : 0.92;
-      setZoom(prev => Math.max(0.25, Math.min(5, prev * zoomFactor)));
-      return;
+      
+      if (e.ctrlKey || e.metaKey) {
+        // Zoom with Ctrl/Cmd + scroll
+        const delta = -e.deltaY;
+        const zoomFactor = delta > 0 ? 1.08 : 0.92;
+        setZoom(prev => Math.max(0.25, Math.min(5, prev * zoomFactor)));
+      } else if (zoom > 1) {
+        // Pan when zoomed in
+        setPanX(prev => prev - e.deltaX * 0.5);
+        setPanY(prev => prev - e.deltaY * 0.5);
+      }
     }
-    // Two-finger scroll pans the image instead of scrolling the page
-    e.preventDefault();
-    e.stopPropagation();
-    setPanX(prev => prev - e.deltaX);
-    setPanY(prev => prev - e.deltaY);
+    // Let normal page scrolling happen when not zoomed and no modifier keys
   };
   const getTouchDistance = (touches: React.TouchList) => {
     if (touches.length < 2) return 0;
@@ -200,7 +204,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
           )}
         </div>
       </div>
-      <div className="relative flex-1 bg-muted/20 flex items-center justify-center overflow-hidden min-h-0 overscroll-contain">
+      <div className="relative flex-1 bg-muted/20 flex items-center justify-center overflow-auto min-h-0">
         {!file && (
           <div className="text-center p-4 sm:p-8 text-muted-foreground max-w-sm mx-auto">
             <div className="flex flex-col items-center space-y-2">
@@ -213,19 +217,17 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
         
         {isImage && previewUrl && (
           <div 
-            className="w-full h-full overflow-hidden overscroll-contain"
+            className="w-full h-full overflow-auto"
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
+            onWheel={handleWheel}
           >
-            <div 
-              className="w-full h-full flex items-center justify-center"
-              onWheel={handleWheel}
-            >
+            <div className="w-full h-full flex items-center justify-center min-h-full">
               <img 
                 src={previewUrl} 
                 alt="Document Preview" 
-                className="rounded-lg transition-transform duration-200 select-none cursor-grab active:cursor-grabbing w-full"
+                className="rounded-lg transition-transform duration-200 select-none cursor-grab active:cursor-grabbing max-w-none"
                 style={{ 
                   transform: `scale(${zoom}) translate(${panX / zoom}px, ${panY / zoom}px)`,
                   transformOrigin: 'center',
