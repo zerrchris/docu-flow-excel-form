@@ -2154,18 +2154,25 @@ Image: [base64 image data]`;
                 size="sm"
                 onClick={async () => {
                   try {
+                    console.log('🔧 DEBUG: Auto-fill button clicked');
                     const prefs = await ExtractionPreferencesService.getDefaultPreferences();
+                    console.log('🔧 DEBUG: Retrieved preferences:', prefs);
                     const defaults = (prefs?.column_instructions as Record<string, string>) || DEFAULT_EXTRACTION_INSTRUCTIONS;
+                    console.log('🔧 DEBUG: Defaults to use:', defaults);
+                    console.log('🔧 DEBUG: Missing columns:', missingColumns);
                     let applied = 0;
                     setColumnInstructions(prev => {
                       const next = { ...prev } as Record<string, string>;
                       missingColumns.forEach(col => {
+                        console.log(`🔧 DEBUG: Processing column "${col}"`);
                         const suggestion = defaults[col] || DEFAULT_EXTRACTION_INSTRUCTIONS[col];
+                        console.log(`🔧 DEBUG: Suggestion for "${col}":`, suggestion);
                         if (suggestion && (!next[col] || next[col].trim() === '')) {
                           next[col] = suggestion;
                           applied++;
                         }
                       });
+                      console.log('🔧 DEBUG: Final instructions:', next);
                       return next;
                     });
                     if (applied > 0) {
