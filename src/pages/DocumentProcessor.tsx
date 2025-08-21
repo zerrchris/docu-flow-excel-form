@@ -2216,7 +2216,7 @@ Image: [base64 image data]`;
               onColumnInstructionsChange={setColumnInstructions}
               onUnsavedChanges={setHasUnsavedChanges}
               missingColumns={highlightMissingColumns ? missingColumns : []}
-              initialRunsheetName={location.state?.runsheet?.name}
+              initialRunsheetName={currentRunsheet?.name}
               initialRunsheetId={location.state?.runsheetId}
               onShowMultipleUpload={() => setShowMultipleFileUpload(true)}
               onDocumentMapChange={handleDocumentMapChange}
