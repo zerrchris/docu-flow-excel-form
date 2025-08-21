@@ -5111,9 +5111,8 @@ ${extractionFields}`
                        )}
                    
                        <tr 
-                         className={`relative transition-all duration-200 group border-b border-r border-l border-border hover:bg-muted/50 data-[state=selected]:bg-muted
-                           ${lastEditedCell?.rowIndex === rowIndex ? 'bg-green-50 dark:bg-green-900/20 animate-pulse border-green-300 dark:border-green-600' : 'hover:bg-muted/30 hover:border-muted-foreground/20'}
-                           ${rowIndex === 0 ? 'border-t' : ''}
+                         className={`relative transition-all duration-200 group hover:bg-muted/50 data-[state=selected]:bg-muted
+                           ${lastEditedCell?.rowIndex === rowIndex ? 'bg-green-50 dark:bg-green-900/20 animate-pulse' : 'hover:bg-muted/30'}
                          `}
                         style={{ 
                           height: `${getRowHeight(rowIndex)}px`,
@@ -5127,12 +5126,12 @@ ${extractionFields}`
                      const isInRange = isCellInRange(rowIndex, columnIndex);
                      
                      return (
-                         <td
-                          key={`${rowIndex}-${column}`}
-                           className={`border-r border-border last:border-r-0 relative cursor-text transition-all duration-200 group-hover:bg-muted/20
-                             ${isEditing ? 'p-0 z-20' : 'p-0'}
-                             ${cellValidationErrors[`${rowIndex}-${column}`] ? 'border-2 border-red-400 bg-red-50 dark:bg-red-900/20' : ''}
-                           `}
+                          <td
+                           key={`${rowIndex}-${column}`}
+                            className={`border-r border-b border-border last:border-r-0 relative cursor-text transition-all duration-200 group-hover:bg-muted/20
+                              ${isEditing ? 'p-0 z-20' : 'p-0'}
+                              ${cellValidationErrors[`${rowIndex}-${column}`] ? 'border-2 border-red-400 bg-red-50 dark:bg-red-900/20' : ''}
+                            `}
                              style={{ 
                                width: `${getColumnWidth(column)}px`, 
                                minWidth: `${getColumnWidth(column)}px`,
