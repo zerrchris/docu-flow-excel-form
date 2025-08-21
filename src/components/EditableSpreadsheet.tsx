@@ -4954,13 +4954,13 @@ ${extractionFields}`
             >
                <tr className="hover:bg-muted/50 transition-colors">
                  {columns.map((column) => (
-                   <th 
-                       key={column}
-                       className={`font-bold text-center border-r border-border relative p-0 last:border-r-0 cursor-move transition-all duration-200 h-12 px-4 text-left align-middle font-medium text-muted-foreground
-                          ${draggedColumn === column ? 'opacity-50 transform scale-95' : ''}
-                          ${dragOverColumn === column ? 'bg-primary/20 shadow-lg' : 'bg-background/95'}
-                          ${localMissingColumns.includes(column) ? 'bg-yellow-100 border-2 border-yellow-400 dark:bg-yellow-900/20 dark:border-yellow-500 animate-pulse shadow-yellow-200 dark:shadow-yellow-900' : 'hover:bg-muted/30'}
-                          backdrop-blur-sm`}
+                    <th 
+                        key={column}
+                        className={`font-bold text-center border-r border-b border-border relative p-0 last:border-r-0 cursor-move transition-all duration-200 h-12 px-4 text-left align-middle font-medium text-muted-foreground
+                           ${draggedColumn === column ? 'opacity-50 transform scale-95' : ''}
+                           ${dragOverColumn === column ? 'bg-primary/20 shadow-lg' : 'bg-background/95'}
+                           ${localMissingColumns.includes(column) ? 'bg-yellow-100 border-2 border-yellow-400 dark:bg-yellow-900/20 dark:border-yellow-500 animate-pulse shadow-yellow-200 dark:shadow-yellow-900' : 'hover:bg-muted/30'}
+                           backdrop-blur-sm`}
                         style={{ 
                           width: `${getColumnWidth(column)}px`, 
                           minWidth: `${getColumnWidth(column)}px`,
@@ -5039,8 +5039,8 @@ ${extractionFields}`
                  
                   {/* Document File Name column header - conditionally visible */}
                   {showDocumentFileNameColumn && (
-                      <th
-                       className="font-bold text-center border-r border-border relative p-0 bg-background sticky top-0"
+                       <th
+                        className="font-bold text-center border-r border-b border-border relative p-0 bg-background sticky top-0"
                        style={{ 
                          width: "200px", 
                          minWidth: "200px",
@@ -5057,8 +5057,8 @@ ${extractionFields}`
                   )}
                   
                   {/* Actions column header - not draggable */}
-                     <th
-                      className="font-bold text-center relative p-0 bg-background sticky top-0"
+                      <th
+                       className="font-bold text-center border-b border-border relative p-0 bg-background sticky top-0"
                       style={{ 
                         width: "600px", 
                         minWidth: "600px",
