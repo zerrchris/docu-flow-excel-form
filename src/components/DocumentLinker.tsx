@@ -910,10 +910,10 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                   e.stopPropagation(); // Prevent cell edit mode
                   handleRemoveDocument();
                 }}
-                className="h-7 w-7 p-1 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
+                className="h-7 w-7 p-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/20"
                 title="Unlink document from this row"
               >
-                <Unlink className="w-3.5 h-3.5" />
+                <Trash2 className="w-3.5 h-3.5" />
               </Button>
             </div>
           )}
