@@ -184,10 +184,19 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
       }
 
       // Normal upload flow when runsheet exists
+      // Validate inputs before creating FormData
+      if (!actualRunsheetId || typeof actualRunsheetId !== 'string' || actualRunsheetId.trim() === '') {
+        throw new Error('Invalid runsheet ID');
+      }
+      
+      if (typeof rowIndex !== 'number' || rowIndex < 0) {
+        throw new Error('Invalid row index');
+      }
+
       // Create FormData for the upload
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('runsheetId', actualRunsheetId);
+      formData.append('runsheetId', actualRunsheetId.trim());
       formData.append('rowIndex', rowIndex.toString());
       formData.append('originalFilename', file.name);
       formData.append('useSmartNaming', 'false'); // Disable auto smart naming on upload
