@@ -275,6 +275,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   // Drag and drop state for row reordering
   const [draggedRowIndex, setDraggedRowIndex] = useState<number | null>(null);
   const [dragOverRowIndex, setDragOverRowIndex] = useState<number | null>(null);
+  const [autoScrollInterval, setAutoScrollInterval] = useState<NodeJS.Timeout | null>(null);
+  const tableContainerRef = useRef<HTMLDivElement>(null);
   
   const [pendingDataInsertion, setPendingDataInsertion] = useState<{
     rowIndex: number;
@@ -4077,6 +4079,39 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     target.style.opacity = '1';
     setDraggedRowIndex(null);
     setDragOverRowIndex(null);
+    
+    // Clear auto-scroll interval
+    if (autoScrollInterval) {
+      clearInterval(autoScrollInterval);
+      setAutoScrollInterval(null);
+    }
+  };
+
+  const startAutoScroll = (direction: 'up' | 'down') => {
+    // Clear existing interval
+    if (autoScrollInterval) {
+      clearInterval(autoScrollInterval);
+    }
+
+    const interval = setInterval(() => {
+      if (tableContainerRef.current) {
+        const scrollAmount = 50; // pixels to scroll per interval
+        if (direction === 'up') {
+          tableContainerRef.current.scrollTop -= scrollAmount;
+        } else {
+          tableContainerRef.current.scrollTop += scrollAmount;
+        }
+      }
+    }, 100); // scroll every 100ms
+
+    setAutoScrollInterval(interval);
+  };
+
+  const stopAutoScroll = () => {
+    if (autoScrollInterval) {
+      clearInterval(autoScrollInterval);
+      setAutoScrollInterval(null);
+    }
   };
 
   const handleRowDragOver = (e: React.DragEvent, rowIndex: number) => {
@@ -4086,14 +4121,47 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     if (draggedRowIndex !== null && draggedRowIndex !== rowIndex) {
       setDragOverRowIndex(rowIndex);
     }
+
+    // Auto-scroll logic
+    if (tableContainerRef.current) {
+      const rect = tableContainerRef.current.getBoundingClientRect();
+      const mouseY = e.clientY;
+      const scrollZone = 100; // pixels from edge to trigger scroll
+      
+      const distanceFromTop = mouseY - rect.top;
+      const distanceFromBottom = rect.bottom - mouseY;
+      
+      if (distanceFromTop < scrollZone && tableContainerRef.current.scrollTop > 0) {
+        // Near top edge and can scroll up
+        if (!autoScrollInterval) {
+          startAutoScroll('up');
+        }
+      } else if (distanceFromBottom < scrollZone) {
+        // Near bottom edge
+        const maxScroll = tableContainerRef.current.scrollHeight - tableContainerRef.current.clientHeight;
+        if (tableContainerRef.current.scrollTop < maxScroll) {
+          // Can scroll down
+          if (!autoScrollInterval) {
+            startAutoScroll('down');
+          }
+        }
+      } else {
+        // Not near edges, stop auto-scroll
+        stopAutoScroll();
+      }
+    }
   };
 
   const handleRowDragLeave = () => {
     setDragOverRowIndex(null);
+    // Don't stop auto-scroll here as we might be moving between rows
   };
 
   const handleRowDrop = (e: React.DragEvent, dropIndex: number) => {
     e.preventDefault();
+    
+    // Stop auto-scroll
+    stopAutoScroll();
     
     if (draggedRowIndex === null || draggedRowIndex === dropIndex) {
       return;
@@ -5055,7 +5123,11 @@ ${extractionFields}`
 
         {/* Scrollable container optimized for sticky headers */}
         <div 
-          ref={containerRef}
+          ref={(node) => {
+            // Set both refs to the same element
+            if (containerRef.current !== node) containerRef.current = node;
+            if (tableContainerRef.current !== node) tableContainerRef.current = node;
+          }}
           className={`border rounded-md bg-background relative h-[750px] mx-6 overflow-auto transition-all duration-200 ${
             isScrolling ? 'scroll-smooth' : ''
           }`}
