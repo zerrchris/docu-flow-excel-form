@@ -5,7 +5,8 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { RotateCw, CheckCircle, Plus, Settings, ChevronDown, ChevronUp, Upload, Wand2, Trash2, Sparkles } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { RotateCw, CheckCircle, Plus, Settings, ChevronDown, ChevronUp, Upload, Wand2, Trash2, Sparkles, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import ReExtractDialog from '@/components/ReExtractDialog';
 import DataVerificationDialog from '@/components/DataVerificationDialog';
@@ -63,6 +64,9 @@ const DataForm: React.FC<DataFormProps> = ({
   
   // Verification dialog state
   const [verificationDialog, setVerificationDialog] = useState(false);
+  
+  // Warning dialog for back to runsheet
+  const [showBackWarning, setShowBackWarning] = useState(false);
 
   // Generate smart filename using user's naming preferences
   const generateSmartFilename = async () => {
@@ -577,7 +581,15 @@ const DataForm: React.FC<DataFormProps> = ({
           {onBackToRunsheet && (
             <Button
               variant="outline"
-              onClick={onBackToRunsheet}
+              onClick={() => {
+                // Check if there's processed data that hasn't been added
+                const hasProcessedData = Object.values(formData).some(value => value.trim() !== '');
+                if (hasProcessedData) {
+                  setShowBackWarning(true);
+                } else {
+                  onBackToRunsheet();
+                }
+              }}
               className="w-full sm:w-auto"
             >
               Back to Runsheet
@@ -618,6 +630,54 @@ const DataForm: React.FC<DataFormProps> = ({
         extractedData={formData}
         fileName={fileName}
       />
+
+      {/* Back to Runsheet Warning Dialog */}
+      <Dialog open={showBackWarning} onOpenChange={setShowBackWarning}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-warning" />
+              Document Not Added to Runsheet
+            </DialogTitle>
+            <DialogDescription>
+              You have processed document data that hasn't been added to your runsheet yet. 
+              If you go back now, this data will be lost.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowBackWarning(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="success"
+              onClick={() => {
+                setShowBackWarning(false);
+                // Check if there's extracted data to verify
+                const hasExtractedData = Object.values(formData).some(value => value.trim() !== '');
+                if (hasExtractedData) {
+                  setVerificationDialog(true);
+                } else {
+                  onAddToSpreadsheet();
+                }
+              }}
+            >
+              Add to Runsheet First
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={() => {
+                setShowBackWarning(false);
+                onBackToRunsheet?.();
+              }}
+            >
+              Go Back Anyway
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
