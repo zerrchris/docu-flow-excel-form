@@ -4,6 +4,8 @@ import { toast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Upload, FolderOpen, Plus, AlertTriangle, Smartphone, Files, Home, FileStack, RefreshCw } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import DocumentFrame from '@/components/DocumentFrame';
 import DocumentViewer from '@/components/DocumentViewer';
 import DataForm from '@/components/DataForm';
@@ -72,6 +74,10 @@ const DocumentProcessor: React.FC = () => {
   const [showMultipleFileUpload, setShowMultipleFileUpload] = useState(false);
   const [missingDataDialog, setMissingDataDialog] = useState(false);
   const [confirmAddFileDialog, setConfirmAddFileDialog] = useState(false);
+  
+  // New runsheet naming state
+  const [showNameRunsheetDialog, setShowNameRunsheetDialog] = useState(false);
+  const [newRunsheetName, setNewRunsheetName] = useState('');
   
   // Note: Navigation blocking removed since runsheet auto-saves
   const navigate = useNavigate();
@@ -208,6 +214,27 @@ const DocumentProcessor: React.FC = () => {
 
     loadUserPreferences();
   }, []);
+
+  // Prompt for runsheet name when starting fresh without an active runsheet
+  useEffect(() => {
+    const checkForRunsheetName = () => {
+      // Only prompt if:
+      // 1. We don't have an active runsheet
+      // 2. We're not loading preferences
+      // 3. We haven't already prompted (prevent loops)
+      // 4. There's no selected runsheet in location state
+      const hasLocationRunsheet = location.state?.runsheet;
+      
+      if (!activeRunsheet && !isLoadingPreferences && !hasLocationRunsheet && !showNameRunsheetDialog) {
+        console.log('🔔 No active runsheet detected - prompting for name');
+        setShowNameRunsheetDialog(true);
+      }
+    };
+
+    // Small delay to ensure all initialization is complete
+    const timer = setTimeout(checkForRunsheetName, 500);
+    return () => clearTimeout(timer);
+  }, [activeRunsheet, isLoadingPreferences, location.state, showNameRunsheetDialog]);
 
   // Ensure form fields match the active runsheet columns
   useEffect(() => {
@@ -1938,6 +1965,83 @@ Image: [base64 image data]`;
     });
   };
 
+  // Handle creating a new runsheet with user-provided name
+  const handleCreateNamedRunsheet = async () => {
+    if (!newRunsheetName.trim()) {
+      toast({
+        title: "Name required", 
+        description: "Please enter a name for your runsheet.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "Authentication required",
+          description: "Please sign in to create a runsheet.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Check if name already exists
+      const { data: existingRunsheets, error: checkError } = await supabase
+        .from('runsheets')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('name', newRunsheetName.trim());
+
+      if (checkError) throw checkError;
+
+      if (existingRunsheets && existingRunsheets.length > 0) {
+        toast({
+          title: "Name already exists",
+          description: "A runsheet with this name already exists. Please choose a different name.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Load user preferences for new runsheet
+      const preferences = await ExtractionPreferencesService.getDefaultPreferences();
+      const runsheetColumns = preferences?.columns || DEFAULT_COLUMNS;
+      const runsheetInstructions = preferences?.column_instructions || DEFAULT_EXTRACTION_INSTRUCTIONS;
+
+      // Set up the new runsheet locally
+      setActiveRunsheet({
+        id: `temp-${Date.now()}`, // Temporary ID until saved
+        name: newRunsheetName.trim(),
+        data: [],
+        columns: runsheetColumns,
+        columnInstructions: (runsheetInstructions as Record<string, string>) || DEFAULT_EXTRACTION_INSTRUCTIONS
+      });
+
+      setColumns(runsheetColumns);
+      setColumnInstructions((runsheetInstructions as Record<string, string>) || DEFAULT_EXTRACTION_INSTRUCTIONS);
+      setSpreadsheetData([]);
+      setFormData({});
+
+      setShowNameRunsheetDialog(false);
+      setNewRunsheetName('');
+
+      toast({
+        title: "Runsheet created",
+        description: `"${newRunsheetName.trim()}" is ready for your data.`,
+      });
+
+    } catch (error) {
+      console.error('Error creating runsheet:', error);
+      toast({
+        title: "Failed to create runsheet",
+        description: "There was an error creating your runsheet. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
 
   return (
     <div className="min-h-screen bg-background">
@@ -2574,6 +2678,56 @@ Image: [base64 image data]`;
             }}
             onClose={() => setShowMultipleFileUpload(false)}
           />
+        </DialogContent>
+      </Dialog>
+
+      {/* Name New Runsheet Dialog */}
+      <Dialog open={showNameRunsheetDialog} onOpenChange={(open) => {
+        if (!open && !activeRunsheet) {
+          // If user closes dialog without naming, redirect to dashboard
+          navigate('/app');
+        } else {
+          setShowNameRunsheetDialog(open);
+        }
+      }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Name Your Runsheet</DialogTitle>
+            <DialogDescription>
+              Give your runsheet a name to get started. This will help you organize and find your work later.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="runsheet-name">Runsheet Name</Label>
+              <Input
+                id="runsheet-name"
+                value={newRunsheetName}
+                onChange={(e) => setNewRunsheetName(e.target.value)}
+                placeholder="Enter runsheet name..."
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && newRunsheetName.trim()) {
+                    handleCreateNamedRunsheet();
+                  }
+                }}
+                autoFocus
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => navigate('/app')}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleCreateNamedRunsheet}
+              disabled={!newRunsheetName.trim()}
+            >
+              Create Runsheet
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
