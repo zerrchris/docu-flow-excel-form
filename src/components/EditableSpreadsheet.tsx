@@ -5110,15 +5110,15 @@ ${extractionFields}`
                          </tr>
                        )}
                    
-                      <tr 
-                        className={`relative transition-all duration-200 group border-b border-border transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted
-                          ${lastEditedCell?.rowIndex === rowIndex ? 'bg-green-50 dark:bg-green-900/20 animate-pulse' : 'hover:bg-muted/30'}
-                        `}
-                       style={{ 
-                         height: `${getRowHeight(rowIndex)}px`,
-                         minHeight: `${getRowHeight(rowIndex)}px`
-                       }}
-                     >
+                       <tr 
+                         className={`relative transition-all duration-200 group border border-border hover:bg-muted/50 data-[state=selected]:bg-muted
+                           ${lastEditedCell?.rowIndex === rowIndex ? 'bg-green-50 dark:bg-green-900/20 animate-pulse border-green-300 dark:border-green-600' : 'hover:bg-muted/30 hover:border-muted-foreground/20'}
+                         `}
+                        style={{ 
+                          height: `${getRowHeight(rowIndex)}px`,
+                          minHeight: `${getRowHeight(rowIndex)}px`
+                        }}
+                      >
                     {columns.map((column) => {
                      const isSelected = selectedCell?.rowIndex === rowIndex && selectedCell?.column === column;
                      const isEditing = editingCell?.rowIndex === rowIndex && editingCell?.column === column;
