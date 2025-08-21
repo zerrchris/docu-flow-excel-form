@@ -1339,6 +1339,8 @@ Image: [base64 image data]`;
     console.log('🔧 DocumentProcessor: formData:', formData);
     console.log('🔧 DocumentProcessor: activeRunsheet:', activeRunsheet);
     console.log('🔧 DocumentProcessor: location.state:', location.state);
+    console.log('🔧 DocumentProcessor: spreadsheetData.length:', spreadsheetData.length);
+    console.log('🔧 DocumentProcessor: documentMap.size:', documentMap.size);
     
     // Check localStorage for active runsheet as fallback
     let runsheetId = activeRunsheet?.id || location.state?.runsheet?.id;
