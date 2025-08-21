@@ -6,6 +6,8 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Trash2, Save, Download, Upload, Settings } from 'lucide-react';
+import ColumnPreferencesDialog from './ColumnPreferencesDialog';
+import DocumentNamingSettings from './DocumentNamingSettings';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { AutoSaveIndicator } from './AutoSaveIndicator';
@@ -61,6 +63,8 @@ const SimpleEditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   // Local state for editing
   const [editingCell, setEditingCell] = useState<{rowIndex: number, column: string} | null>(null);
   const [cellValue, setCellValue] = useState<string>('');
+  const [showColumnPreferences, setShowColumnPreferences] = useState(false);
+  const [showDocumentNaming, setShowDocumentNaming] = useState(false);
 
   // Get current user
   useEffect(() => {
@@ -184,6 +188,14 @@ const SimpleEditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             <Download className="w-4 h-4" />
             Export
           </Button>
+          <Button onClick={() => setShowColumnPreferences(true)} size="sm" variant="outline">
+            <Settings className="w-4 h-4" />
+            Columns
+          </Button>
+          <Button onClick={() => setShowDocumentNaming(true)} size="sm" variant="outline">
+            <Settings className="w-4 h-4" />
+            File Names
+          </Button>
           <Button onClick={forceSave} size="sm" variant="outline">
             <Save className="w-4 h-4" />
             Save
@@ -244,6 +256,37 @@ const SimpleEditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           </tbody>
         </table>
       </div>
+
+      {/* Column Preferences Dialog */}
+      <ColumnPreferencesDialog 
+        open={showColumnPreferences} 
+        onOpenChange={setShowColumnPreferences}
+        onPreferencesSaved={(newColumns, newInstructions) => {
+          updateRunsheet({ 
+            columns: newColumns, 
+            columnInstructions: newInstructions 
+          });
+        }}
+      />
+
+      {/* Document Naming Settings Dialog */}
+      {showDocumentNaming && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-background rounded-lg p-6 max-w-4xl max-h-[80vh] overflow-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold">Document Naming Settings</h2>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setShowDocumentNaming(false)}
+              >
+                ×
+              </Button>
+            </div>
+            <DocumentNamingSettings availableColumns={runsheet?.columns || []} />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
