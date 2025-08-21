@@ -16,6 +16,7 @@ import AuthButton from '@/components/AuthButton';
 import ActiveRunsheetButton from '@/components/ActiveRunsheetButton';
 import { FilePreview } from '@/components/FilePreview';
 import { GoogleDrivePicker } from '@/components/GoogleDrivePicker';
+import { useActiveRunsheet } from '@/hooks/useActiveRunsheet';
 import LogoMark from '@/components/LogoMark';
 
 interface StoredFile {
@@ -58,6 +59,7 @@ interface ProjectGroup {
 export const FileManager: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { activeRunsheet, clearActiveRunsheet } = useActiveRunsheet();
   const [files, setFiles] = useState<StoredFile[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [runsheets, setRunsheets] = useState<Runsheet[]>([]);
@@ -370,6 +372,12 @@ export const FileManager: React.FC = () => {
         .eq('id', selectedRunsheet.id);
 
       if (error) throw error;
+
+      // Clear active runsheet if the deleted runsheet was active
+      if (activeRunsheet && activeRunsheet.id === selectedRunsheet.id) {
+        console.log('🧹 Clearing active runsheet - deleted runsheet was active');
+        clearActiveRunsheet();
+      }
 
       toast({
         title: "Runsheet Deleted",
