@@ -1142,13 +1142,13 @@ export const FileManager: React.FC = () => {
           <p className="text-muted-foreground mb-4">
             {searchTerm 
               ? 'Try adjusting your search terms'
-              : 'Process some documents to create runsheets'
+              : 'Start your first runsheet to organize and analyze your documents'
             }
           </p>
           {!searchTerm && (
-            <Button onClick={() => navigate('/document-processor')} className="gap-2">
-              <FileSpreadsheet className="h-4 w-4" />
-              Go to Document Processor
+            <Button onClick={() => navigate('/runsheet')} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Start New Runsheet
             </Button>
           )}
         </Card>
