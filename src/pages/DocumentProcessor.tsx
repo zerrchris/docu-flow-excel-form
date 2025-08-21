@@ -1506,12 +1506,19 @@ Image: [base64 image data]`;
     // Only dispatch the event to add the row to the actual spreadsheet component
     console.log('🔧 DEBUG: Dispatching externalAddRow event to EditableSpreadsheet');
     console.log('🔧 DEBUG: runsheetId being passed:', runsheetId);
-    window.dispatchEvent(new CustomEvent('externalAddRow', { 
-      detail: { 
-        data: finalData,
-        runsheetId: runsheetId 
-      } 
-    }));
+    console.log('🔧 DEBUG: finalData being passed:', finalData);
+    
+    // Add a timeout to ensure the event is dispatched after any pending operations
+    setTimeout(() => {
+      console.log('🔧 DEBUG: Actually dispatching externalAddRow event now');
+      window.dispatchEvent(new CustomEvent('externalAddRow', { 
+        detail: { 
+          data: finalData,
+          runsheetId: runsheetId 
+        } 
+      }));
+      console.log('🔧 DEBUG: externalAddRow event dispatched');
+    }, 100);
 
     // Show success message (will be refined after EditableSpreadsheet processes the row)
     setTimeout(() => {
