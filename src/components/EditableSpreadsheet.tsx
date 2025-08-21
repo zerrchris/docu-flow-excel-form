@@ -942,26 +942,41 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           console.log('🔄 Real-time runsheet update received:', payload);
           if (payload.new && payload.new.id === currentRunsheetId) {
             const updatedRunsheet = payload.new;
-            console.log('📊 Updating runsheet data from real-time event');
             
-            // Update local state with new data
-            setData(updatedRunsheet.data || []);
-            setColumns(updatedRunsheet.columns || []);
-            setColumnInstructions(updatedRunsheet.column_instructions || {});
-            setRunsheetName(updatedRunsheet.name || 'Untitled Runsheet');
+            // Check if this update is actually different from current data
+            const currentDataString = JSON.stringify(data);
+            const newDataString = JSON.stringify(updatedRunsheet.data || []);
+            const hasDataChanged = currentDataString !== newDataString;
             
-            // Trigger callbacks
-            onDataChange?.(updatedRunsheet.data || []);
-            onColumnChange(updatedRunsheet.columns || []);
-            onColumnInstructionsChange?.(updatedRunsheet.column_instructions || {});
-            
-            
-            // Documents will be reloaded by the loadDocuments useEffect below
-            
-            toast({
-              title: "Runsheet updated",
-              description: "Your runsheet has been updated with new data from the extension.",
-            });
+            // Only update and show toast if data actually changed and we're not in the middle of a local update
+            if (hasDataChanged) {
+              console.log('📊 Updating runsheet data from real-time event');
+              
+              // Update local state with new data
+              setData(updatedRunsheet.data || []);
+              setColumns(updatedRunsheet.columns || []);
+              setColumnInstructions(updatedRunsheet.column_instructions || {});
+              setRunsheetName(updatedRunsheet.name || 'Untitled Runsheet');
+              
+              // Trigger callbacks
+              onDataChange?.(updatedRunsheet.data || []);
+              onColumnChange(updatedRunsheet.columns || []);
+              onColumnInstructionsChange?.(updatedRunsheet.column_instructions || {});
+              
+              // Only show toast for external updates (e.g., from extension)
+              // Check if the update came from URL params indicating extension sync
+              const urlParams = new URLSearchParams(window.location.search);
+              const isFromExtension = urlParams.get('from') === 'extension';
+              
+              if (isFromExtension) {
+                toast({
+                  title: "Runsheet updated",
+                  description: "Your runsheet has been updated with new data from the extension.",
+                });
+              }
+            } else {
+              console.log('📊 Skipping real-time update - no data changes detected');
+            }
           }
         }
       )
