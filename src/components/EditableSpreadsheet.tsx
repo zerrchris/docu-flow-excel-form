@@ -5501,8 +5501,8 @@ ${extractionFields}`
                       <td 
                         className="border-r border-b border-border p-2 text-center bg-muted/30"
                         style={{ 
-                          width: "95px", 
-                          minWidth: "95px",
+                          width: "120px", 
+                          minWidth: "120px",
                           height: `${getRowHeight(rowIndex)}px`,
                           minHeight: `${getRowHeight(rowIndex)}px`
                         }}
