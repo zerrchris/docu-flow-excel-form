@@ -4122,28 +4122,17 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     const checkInterval = setInterval(checkScrollNeeds, 100);
     setScrollCheckInterval(checkInterval);
     
-    // Track mouse position during drag - use document level for global coverage
+    // Track mouse position during drag - only update position, don't trigger scroll checks
     const handleMouseMove = (event: MouseEvent) => {
       currentMousePosition.current = { x: event.clientX, y: event.clientY };
-      // Immediately check scroll needs when mouse moves
-      checkScrollNeeds();
-    };
-    
-    const handleDragOver = (event: DragEvent) => {
-      event.preventDefault();
-      currentMousePosition.current = { x: event.clientX, y: event.clientY };
-      // Immediately check scroll needs on drag over
-      checkScrollNeeds();
     };
     
     // Attach to document for global coverage
     document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('dragover', handleDragOver);
     
-    // Clean up all event listeners when drag ends
+    // Clean up event listener when drag ends
     const cleanup = () => {
       document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('dragover', handleDragOver);
       document.removeEventListener('dragend', cleanup);
     };
     document.addEventListener('dragend', cleanup);
