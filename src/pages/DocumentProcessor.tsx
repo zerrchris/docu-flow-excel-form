@@ -374,7 +374,7 @@ const DocumentProcessor: React.FC = () => {
       }
     } else if (action === 'google-drive') {
       console.log('Google Drive action detected, opening Google Drive picker...');
-      // Trigger the Google Drive picker in the EditableSpreadsheet component
+      // Trigger the Google Drive picker in the SimpleEditableSpreadsheet component
       const googleDriveEvent = new CustomEvent('openGoogleDrivePicker');
       window.dispatchEvent(googleDriveEvent);
     }
@@ -408,7 +408,7 @@ const DocumentProcessor: React.FC = () => {
       }
       
       // Trigger the spreadsheet import functionality directly
-      // Create a custom event that the EditableSpreadsheet component can listen to
+      // Create a custom event that the SimpleEditableSpreadsheet component can listen to
       console.log('🔧 DocumentProcessor: Dispatching importRunsheetFile event with file:', selectedFile.name);
       const importEvent = new CustomEvent('importRunsheetFile', {
         detail: { file: selectedFile }
@@ -659,7 +659,7 @@ const DocumentProcessor: React.FC = () => {
     setHasUnsavedChanges(true); // Mark as unsaved when data changes
   };
 
-  // Handle document map changes from EditableSpreadsheet
+  // Handle document map changes from SimpleEditableSpreadsheet
   const handleDocumentMapChange = (newDocumentMap: Map<number, any>) => {
     console.log('Document map updated in DocumentProcessor:', newDocumentMap);
     setDocumentMap(newDocumentMap);

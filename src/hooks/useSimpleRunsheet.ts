@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
-interface SimpleRunsheet {
+interface RunsheetData {
   id: string;
   name: string;
   columns: string[];
@@ -11,46 +11,123 @@ interface SimpleRunsheet {
   userId: string;
 }
 
-interface UseSimpleRunsheetReturn {
-  runsheet: SimpleRunsheet | null;
-  isLoading: boolean;
-  isSaving: boolean;
-  createRunsheet: (name: string, columns: string[], instructions?: Record<string, string>) => Promise<string>;
-  loadRunsheet: (runsheetId: string) => Promise<void>;
-  updateData: (newData: Record<string, string>[]) => void;
-  updateColumns: (newColumns: string[]) => void;
-  updateColumnInstructions: (newInstructions: Record<string, string>) => void;
-  updateName: (newName: string) => void;
-  save: () => Promise<void>;
-  lastSavedAt: Date | null;
+interface UseSimpleRunsheetOptions {
+  initialName?: string;
+  initialColumns?: string[];
+  initialData?: Record<string, string>[];
+  initialColumnInstructions?: Record<string, string>;
+  userId?: string;
 }
 
-export function useSimpleRunsheet(): UseSimpleRunsheetReturn {
+export function useSimpleRunsheet({
+  initialName = 'Untitled Runsheet',
+  initialColumns = [],
+  initialData = [],
+  initialColumnInstructions = {},
+  userId
+}: UseSimpleRunsheetOptions) {
   const { toast } = useToast();
-  const [runsheet, setRunsheet] = useState<SimpleRunsheet | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [runsheet, setRunsheet] = useState<RunsheetData | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
-  const [saveTimeoutRef, setSaveTimeoutRef] = useState<NodeJS.Timeout | null>(null);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Auto-save when data changes
-  const debouncedSave = useCallback(() => {
-    if (saveTimeoutRef) {
-      clearTimeout(saveTimeoutRef);
+  // Create new runsheet immediately when initialized
+  const createRunsheet = useCallback(async () => {
+    if (!userId) return null;
+
+    try {
+      // Generate a unique name to avoid conflicts
+      const timestamp = Date.now();
+      const uniqueName = `${initialName} ${timestamp}`;
+      
+      const newRunsheet = {
+        name: uniqueName,
+        columns: initialColumns,
+        data: initialData.length > 0 ? initialData : Array.from({ length: 20 }, () => {
+          const row: Record<string, string> = {};
+          initialColumns.forEach(col => row[col] = '');
+          return row;
+        }),
+        column_instructions: initialColumnInstructions,
+        user_id: userId
+      };
+
+      const { data, error } = await supabase
+        .from('runsheets')
+        .insert(newRunsheet)
+        .select('*')
+        .single();
+
+      if (error) throw error;
+
+      const runsheetData: RunsheetData = {
+        id: data.id,
+        name: data.name,
+        columns: data.columns as string[],
+        data: data.data as Record<string, string>[],
+        columnInstructions: data.column_instructions as Record<string, string>,
+        userId: data.user_id
+      };
+
+      setRunsheet(runsheetData);
+      setLastSaved(new Date());
+      
+      console.log('✅ Created new runsheet with ID:', data.id);
+      return runsheetData;
+    } catch (error) {
+      console.error('Failed to create runsheet:', error);
+      toast({
+        title: "Error creating runsheet",
+        description: "Failed to create a new runsheet. Please try again.",
+        variant: "destructive"
+      });
+      return null;
     }
-    
-    const timeout = setTimeout(async () => {
-      if (runsheet) {
-        await save();
-      }
-    }, 1000); // 1 second debounce
-    
-    setSaveTimeoutRef(timeout);
-  }, [runsheet]);
+  }, [userId, initialName, initialColumns, initialData, initialColumnInstructions, toast]);
 
-  // Save to database
-  const save = useCallback(async (): Promise<void> => {
-    if (!runsheet || isSaving) return;
+  // Load existing runsheet by ID
+  const loadRunsheet = useCallback(async (runsheetId: string) => {
+    if (!userId) return null;
+
+    try {
+      const { data, error } = await supabase
+        .from('runsheets')
+        .select('*')
+        .eq('id', runsheetId)
+        .eq('user_id', userId)
+        .single();
+
+      if (error) throw error;
+
+      const runsheetData: RunsheetData = {
+        id: data.id,
+        name: data.name,
+        columns: data.columns as string[],
+        data: data.data as Record<string, string>[],
+        columnInstructions: data.column_instructions as Record<string, string>,
+        userId: data.user_id
+      };
+
+      setRunsheet(runsheetData);
+      setLastSaved(new Date());
+      
+      console.log('✅ Loaded runsheet:', data.name);
+      return runsheetData;
+    } catch (error) {
+      console.error('Failed to load runsheet:', error);
+      toast({
+        title: "Error loading runsheet",
+        description: "Failed to load the runsheet. Please try again.",
+        variant: "destructive"
+      });
+      return null;
+    }
+  }, [userId, toast]);
+
+  // Save current runsheet data
+  const saveRunsheet = useCallback(async () => {
+    if (!runsheet || !userId) return;
 
     setIsSaving(true);
     try {
@@ -64,173 +141,75 @@ export function useSimpleRunsheet(): UseSimpleRunsheetReturn {
           updated_at: new Date().toISOString()
         })
         .eq('id', runsheet.id)
-        .eq('user_id', runsheet.userId);
+        .eq('user_id', userId);
 
       if (error) throw error;
-      
-      setLastSavedAt(new Date());
-      console.log('✅ Runsheet saved successfully');
+
+      setLastSaved(new Date());
+      console.log('✅ Saved runsheet:', runsheet.name);
     } catch (error) {
-      console.error('❌ Failed to save runsheet:', error);
+      console.error('Failed to save runsheet:', error);
       toast({
-        title: "Save failed",
-        description: "Failed to save runsheet changes",
+        title: "Auto-save failed",
+        description: "Your changes couldn't be saved. Please try again.",
         variant: "destructive"
       });
     } finally {
       setIsSaving(false);
     }
-  }, [runsheet, isSaving, toast]);
+  }, [runsheet, userId, toast]);
 
-  // Create new runsheet
-  const createRunsheet = useCallback(async (
-    name: string, 
-    columns: string[], 
-    instructions: Record<string, string> = {}
-  ): Promise<string> => {
-    setIsLoading(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
-
-      // Add timestamp to name to ensure uniqueness
-      const timestamp = Date.now();
-      const uniqueName = `${name}_${timestamp}`;
-
-      const initialData = Array.from({ length: 20 }, () => {
-        const row: Record<string, string> = {};
-        columns.forEach(col => row[col] = '');
-        return row;
-      });
-
-      const { data, error } = await supabase
-        .from('runsheets')
-        .insert({
-          name: uniqueName,
-          columns,
-          data: initialData,
-          column_instructions: instructions,
-          user_id: user.id
-        })
-        .select('*')
-        .single();
-
-      if (error) throw error;
-
-      const newRunsheet: SimpleRunsheet = {
-        id: data.id,
-        name: data.name,
-        columns: data.columns,
-        data: data.data as Record<string, string>[],
-        columnInstructions: (data.column_instructions as Record<string, string>) || {},
-        userId: data.user_id
-      };
-
-      setRunsheet(newRunsheet);
-      setLastSavedAt(new Date());
-      
-      toast({
-        title: "Runsheet created",
-        description: `Created runsheet "${name}"`,
-        variant: "default"
-      });
-
-      return data.id;
-    } catch (error) {
-      console.error('❌ Failed to create runsheet:', error);
-      toast({
-        title: "Creation failed",
-        description: "Failed to create new runsheet",
-        variant: "destructive"
-      });
-      throw error;
-    } finally {
-      setIsLoading(false);
+  // Debounced save
+  const debouncedSave = useCallback(() => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
     }
-  }, [toast]);
+    
+    saveTimeoutRef.current = setTimeout(() => {
+      saveRunsheet();
+    }, 1000);
+  }, [saveRunsheet]);
 
-  // Load existing runsheet
-  const loadRunsheet = useCallback(async (runsheetId: string): Promise<void> => {
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('runsheets')
-        .select('*')
-        .eq('id', runsheetId)
-        .single();
+  // Update runsheet data and trigger save
+  const updateRunsheet = useCallback((updates: Partial<Omit<RunsheetData, 'id' | 'userId'>>) => {
+    if (!runsheet) return;
 
-      if (error) throw error;
+    setRunsheet(prev => {
+      if (!prev) return prev;
+      return { ...prev, ...updates };
+    });
+    
+    debouncedSave();
+  }, [runsheet, debouncedSave]);
 
-      const loadedRunsheet: SimpleRunsheet = {
-        id: data.id,
-        name: data.name,
-        columns: data.columns,
-        data: data.data as Record<string, string>[],
-        columnInstructions: (data.column_instructions as Record<string, string>) || {},
-        userId: data.user_id
-      };
-
-      setRunsheet(loadedRunsheet);
-      setLastSavedAt(new Date(data.updated_at));
-      
-      console.log('✅ Runsheet loaded successfully:', data.name);
-    } catch (error) {
-      console.error('❌ Failed to load runsheet:', error);
-      toast({
-        title: "Load failed",
-        description: "Failed to load runsheet",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
+  // Initialize runsheet
+  useEffect(() => {
+    if (!runsheet && userId) {
+      createRunsheet();
     }
-  }, [toast]);
+  }, [runsheet, userId, createRunsheet]);
 
-  // Update functions that trigger auto-save
-  const updateData = useCallback((newData: Record<string, string>[]) => {
-    if (!runsheet) return;
-    setRunsheet(prev => prev ? { ...prev, data: newData } : null);
-    debouncedSave();
-  }, [runsheet, debouncedSave]);
-
-  const updateColumns = useCallback((newColumns: string[]) => {
-    if (!runsheet) return;
-    setRunsheet(prev => prev ? { ...prev, columns: newColumns } : null);
-    debouncedSave();
-  }, [runsheet, debouncedSave]);
-
-  const updateColumnInstructions = useCallback((newInstructions: Record<string, string>) => {
-    if (!runsheet) return;
-    setRunsheet(prev => prev ? { ...prev, columnInstructions: newInstructions } : null);
-    debouncedSave();
-  }, [runsheet, debouncedSave]);
-
-  const updateName = useCallback((newName: string) => {
-    if (!runsheet) return;
-    setRunsheet(prev => prev ? { ...prev, name: newName } : null);
-    debouncedSave();
-  }, [runsheet, debouncedSave]);
-
-  // Cleanup timeout on unmount
+  // Cleanup
   useEffect(() => {
     return () => {
-      if (saveTimeoutRef) {
-        clearTimeout(saveTimeoutRef);
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [saveTimeoutRef]);
+  }, []);
 
   return {
     runsheet,
-    isLoading,
     isSaving,
+    lastSaved,
     createRunsheet,
     loadRunsheet,
-    updateData,
-    updateColumns,
-    updateColumnInstructions,
-    updateName,
-    save,
-    lastSavedAt
+    updateRunsheet,
+    saveRunsheet: () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+      return saveRunsheet();
+    }
   };
 }
