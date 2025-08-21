@@ -3126,10 +3126,11 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
   // Calculate total table width
   const getTotalTableWidth = () => {
+    const rowActionsWidth = 50; // New row actions column
     const dataColumnsWidth = columns.reduce((total, column) => total + getColumnWidth(column), 0);
     const documentFileNameWidth = showDocumentFileNameColumn ? 350 : 0;
     const actionsColumnWidth = 600; // Fixed width for actions column (Document Linker) - increased to show all buttons
-    return dataColumnsWidth + documentFileNameWidth + actionsColumnWidth;
+    return rowActionsWidth + dataColumnsWidth + documentFileNameWidth + actionsColumnWidth;
   };
 
   // Column resize handlers
@@ -5007,7 +5008,24 @@ ${extractionFields}`
               }}
             >
                <tr className="hover:bg-muted/50 transition-colors">
-                 {columns.map((column) => (
+                  {/* Row Actions column header */}
+                  <th
+                    className="font-bold text-center border-r border-b border-border relative p-0 bg-background sticky top-0"
+                    style={{ 
+                      width: "50px", 
+                      minWidth: "50px",
+                      backgroundColor: 'hsl(var(--background))',
+                      position: 'sticky',
+                      top: '0px',
+                      zIndex: 999
+                    }}
+                  >
+                    <div className="w-full h-full px-1 py-2 flex items-center justify-center">
+                      <span className="font-bold text-xs">#</span>
+                    </div>
+                  </th>
+                  
+                  {columns.map((column) => (
                     <th 
                         key={column}
                         className={`font-bold text-center border-r border-b border-border relative p-0 last:border-r-0 cursor-move transition-all duration-200 h-12 px-4 text-left align-middle font-medium text-muted-foreground
@@ -5154,7 +5172,7 @@ ${extractionFields}`
                            {/* Show inline document viewer above this row if it's selected */}
                           {inlineViewerRow === rowIndex && (
                          <tr>
-                           <td colSpan={columns.length + (showDocumentFileNameColumn ? 1 : 0) + 1} className="p-0 border-0">
+                           <td colSpan={1 + columns.length + (showDocumentFileNameColumn ? 1 : 0) + 1} className="p-0 border-0">
                              <InlineDocumentViewer
                                runsheetId={effectiveRunsheetId}
                                rowIndex={rowIndex}
@@ -5172,8 +5190,40 @@ ${extractionFields}`
                           height: `${getRowHeight(rowIndex)}px`,
                           minHeight: `${getRowHeight(rowIndex)}px`
                         }}
-                      >
-                    {columns.map((column) => {
+                       >
+                     {/* Row Actions column - Row number and delete button */}
+                     <td 
+                       className="border-r border-b border-border p-1 text-center bg-muted/30"
+                       style={{ 
+                         width: "50px", 
+                         minWidth: "50px",
+                         height: `${getRowHeight(rowIndex)}px`,
+                         minHeight: `${getRowHeight(rowIndex)}px`
+                       }}
+                     >
+                       <div className="flex flex-col items-center justify-center gap-1 h-full">
+                         <span className="text-xs text-muted-foreground font-mono">{rowIndex + 1}</span>
+                         <Button
+                           variant="ghost"
+                           size="sm"
+                           onClick={() => {
+                             if (hasRowData(row)) {
+                               if (confirm(`Are you sure you want to delete row ${rowIndex + 1}? This action cannot be undone.`)) {
+                                 deleteRow(rowIndex);
+                               }
+                             } else {
+                               deleteRow(rowIndex);
+                             }
+                           }}
+                           className="h-4 w-4 p-0 hover:bg-red-100 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400"
+                           title="Delete row"
+                         >
+                           <Trash2 className="h-2.5 w-2.5" />
+                         </Button>
+                       </div>
+                     </td>
+                     
+                     {columns.map((column) => {
                      const isSelected = selectedCell?.rowIndex === rowIndex && selectedCell?.column === column;
                      const isEditing = editingCell?.rowIndex === rowIndex && editingCell?.column === column;
                      const columnIndex = columns.indexOf(column);
@@ -5390,46 +5440,29 @@ ${extractionFields}`
                         }}
                      >
                          <div className="bg-background border border-border rounded-md p-2 h-full min-h-[60px] flex gap-2 overflow-visible">
-                           {/* Row Actions */}
-                            <div className="flex gap-1 items-center min-w-[80px]">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => moveRowUp(rowIndex)}
-                                  disabled={rowIndex === 0}
-                                  className="h-6 w-6 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/20 flex-shrink-0"
-                                  title="Move row up"
-                                >
-                                  <ArrowUp className="h-3 w-3" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => moveRowDown(rowIndex)}
-                                  disabled={rowIndex >= data.length - 1}
-                                  className="h-6 w-6 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/20 flex-shrink-0"
-                                  title="Move row down"
-                                >
-                                  <ArrowDown className="h-3 w-3" />
-                                </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  if (hasRowData(row)) {
-                                    if (confirm(`Are you sure you want to delete row ${rowIndex + 1}? This action cannot be undone.`)) {
-                                      deleteRow(rowIndex);
-                                    }
-                                  } else {
-                                    deleteRow(rowIndex);
-                                  }
-                                }}
-                                className="h-6 w-6 p-0 hover:bg-red-100 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 flex-shrink-0"
-                                title="Delete row"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            </div>
+                            {/* Row Actions (Move buttons only) */}
+                             <div className="flex gap-1 items-center min-w-[50px]">
+                                 <Button
+                                   variant="ghost"
+                                   size="sm"
+                                   onClick={() => moveRowUp(rowIndex)}
+                                   disabled={rowIndex === 0}
+                                   className="h-6 w-6 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/20 flex-shrink-0"
+                                   title="Move row up"
+                                 >
+                                   <ArrowUp className="h-3 w-3" />
+                                 </Button>
+                                 <Button
+                                   variant="ghost"
+                                   size="sm"
+                                   onClick={() => moveRowDown(rowIndex)}
+                                   disabled={rowIndex >= data.length - 1}
+                                   className="h-6 w-6 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/20 flex-shrink-0"
+                                   title="Move row down"
+                                 >
+                                   <ArrowDown className="h-3 w-3" />
+                                 </Button>
+                             </div>
                            
                            {/* Document Section */}
                            <div className="flex-1">
