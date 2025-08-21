@@ -656,13 +656,13 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
         }}
       >
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 flex-1">
+          <div className="flex items-center gap-2 flex-1 min-w-0 max-w-[160px]">
             {isImageUrl ? (
-              <div className="flex items-center gap-2 flex-1">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
                 <img 
                   src={filename} 
                   alt="Screenshot preview" 
-                  className="w-8 h-8 object-cover rounded border"
+                  className="w-8 h-8 object-cover rounded border flex-shrink-0"
                   onError={(e) => {
                     // Fallback to file icon if image fails to load
                     e.currentTarget.style.display = 'none';
@@ -671,7 +671,7 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                 />
                 <File className="w-4 h-4 text-muted-foreground flex-shrink-0 hidden" />
                 <span 
-                  className="text-sm font-medium truncate flex-1 cursor-pointer hover:text-primary" 
+                  className="text-sm font-medium truncate flex-1 min-w-0 cursor-pointer hover:text-primary" 
                   title={filename}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -689,7 +689,7 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                   <Input
                     value={editedFilename}
                     onChange={(e) => setEditedFilename(e.target.value)}
-                    className="h-6 text-xs flex-1"
+                    className="h-6 text-xs flex-1 min-w-0"
                     tabIndex={-1}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') handleRenameDocument();
@@ -702,8 +702,7 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                   />
                 ) : (
                   <span 
-                    className="text-sm font-medium truncate cursor-pointer hover:text-primary max-w-[350px] block" 
-                    style={{ maxWidth: '350px' }}
+                    className="text-sm font-medium truncate cursor-pointer hover:text-primary flex-1 min-w-0 block" 
                     title={filename}
                     onClick={() => {
                       setEditedFilename(filename);
