@@ -183,6 +183,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     });
   }, [columns, toast]);
 
+
   // Function to add rows to reach a specific total
   const ensureRowCount = useCallback((targetCount: number) => {
     setData(prev => {
@@ -3940,11 +3941,84 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [copySelection, pasteSelection]);
 
-  const deleteRow = (index: number) => {
-    const newData = [...data];
-    newData.splice(index, 1);
-    setData(newData);
-  };
+  // Function to delete a row
+  const deleteRow = useCallback((rowIndex: number) => {
+    setData(prev => {
+      const newData = prev.filter((_, index) => index !== rowIndex);
+      // Update document map to adjust indices
+      const newDocumentMap = new Map<number, DocumentRecord>();
+      documentMap.forEach((doc, mapRowIndex) => {
+        if (mapRowIndex < rowIndex) {
+          newDocumentMap.set(mapRowIndex, doc);
+        } else if (mapRowIndex > rowIndex) {
+          newDocumentMap.set(mapRowIndex - 1, doc);
+        }
+        // Skip the deleted row (mapRowIndex === rowIndex)
+      });
+      updateDocumentMap(newDocumentMap);
+      
+      setHasUnsavedChanges(true);
+      return newData;
+    });
+    
+    toast({
+      title: "Row deleted",
+      description: `Row ${rowIndex + 1} has been deleted.`,
+      variant: "default"
+    });
+  }, [documentMap, updateDocumentMap, toast]);
+
+  // Function to move row up
+  const moveRowUp = useCallback((rowIndex: number) => {
+    if (rowIndex <= 0) return;
+    
+    setData(prev => {
+      const newData = [...prev];
+      [newData[rowIndex - 1], newData[rowIndex]] = [newData[rowIndex], newData[rowIndex - 1]];
+      
+      // Update document map
+      const newDocumentMap = new Map<number, DocumentRecord>();
+      documentMap.forEach((doc, mapRowIndex) => {
+        if (mapRowIndex === rowIndex) {
+          newDocumentMap.set(rowIndex - 1, doc);
+        } else if (mapRowIndex === rowIndex - 1) {
+          newDocumentMap.set(rowIndex, doc);
+        } else {
+          newDocumentMap.set(mapRowIndex, doc);
+        }
+      });
+      updateDocumentMap(newDocumentMap);
+      
+      setHasUnsavedChanges(true);
+      return newData;
+    });
+  }, [documentMap, updateDocumentMap]);
+
+  // Function to move row down
+  const moveRowDown = useCallback((rowIndex: number) => {
+    setData(prev => {
+      if (rowIndex >= prev.length - 1) return prev;
+      
+      const newData = [...prev];
+      [newData[rowIndex], newData[rowIndex + 1]] = [newData[rowIndex + 1], newData[rowIndex]];
+      
+      // Update document map
+      const newDocumentMap = new Map<number, DocumentRecord>();
+      documentMap.forEach((doc, mapRowIndex) => {
+        if (mapRowIndex === rowIndex) {
+          newDocumentMap.set(rowIndex + 1, doc);
+        } else if (mapRowIndex === rowIndex + 1) {
+          newDocumentMap.set(rowIndex, doc);
+        } else {
+          newDocumentMap.set(mapRowIndex, doc);
+        }
+      });
+      updateDocumentMap(newDocumentMap);
+      
+      setHasUnsavedChanges(true);
+      return newData;
+    });
+  }, [documentMap, updateDocumentMap]);
 
   // Add rows function
   const addRows = () => {
@@ -5252,16 +5326,61 @@ ${extractionFields}`
                        );
                      })()}
                     
-                     {/* Actions column - Document management */}
-                     <td 
-                       className="p-0 overflow-hidden"
-                       style={{ 
-                         width: "600px", 
-                         minWidth: "600px",
-                         maxWidth: "600px"
-                       }}
-                    >
-                        <div className="bg-background border border-border rounded-md p-2 h-full min-h-[60px] flex flex-col gap-1 overflow-visible">
+                        {/* Actions column - Document management */}
+                      <td 
+                        className="p-0 overflow-hidden"
+                        style={{ 
+                          width: "650px", 
+                          minWidth: "650px",
+                          maxWidth: "650px"
+                        }}
+                     >
+                         <div className="bg-background border border-border rounded-md p-2 h-full min-h-[60px] flex gap-2 overflow-visible">
+                           {/* Row Actions */}
+                           <div className="flex flex-col gap-1 min-w-[80px]">
+                             <div className="flex gap-1">
+                               <Button
+                                 variant="ghost"
+                                 size="sm"
+                                 onClick={() => moveRowUp(rowIndex)}
+                                 disabled={rowIndex === 0}
+                                 className="h-6 w-6 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/20"
+                                 title="Move row up"
+                               >
+                                 <ArrowUp className="h-3 w-3" />
+                               </Button>
+                               <Button
+                                 variant="ghost"
+                                 size="sm"
+                                 onClick={() => moveRowDown(rowIndex)}
+                                 disabled={rowIndex >= data.length - 1}
+                                 className="h-6 w-6 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/20"
+                                 title="Move row down"
+                               >
+                                 <ArrowDown className="h-3 w-3" />
+                               </Button>
+                             </div>
+                             <Button
+                               variant="ghost"
+                               size="sm"
+                               onClick={() => {
+                                 if (hasRowData(row)) {
+                                   if (confirm(`Are you sure you want to delete row ${rowIndex + 1}? This action cannot be undone.`)) {
+                                     deleteRow(rowIndex);
+                                   }
+                                 } else {
+                                   deleteRow(rowIndex);
+                                 }
+                               }}
+                               className="h-6 w-full p-0 hover:bg-red-100 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400"
+                               title="Delete row"
+                             >
+                               <Trash2 className="h-3 w-3" />
+                             </Button>
+                           </div>
+                           
+                           {/* Document Section */}
+                           <div className="flex-1">
                           <DocumentLinker
                             key={`${rowIndex}-${row['Document File Name']}`}
                             runsheetId={effectiveRunsheetId}
@@ -5364,9 +5483,10 @@ ${extractionFields}`
                            isSpreadsheetUpload={true}
                            autoAnalyze={false}
                             rowData={row}
-                           />
-                         </div>
-                       </td>
+                            />
+                           </div>
+                          </div>
+                        </td>
                       
                        {/* Enhanced row resize handle */}
                        <div
