@@ -4029,6 +4029,33 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     });
   }, [documentMap, updateDocumentMap, toast]);
 
+  // Function to update document row_index in database
+  const updateDocumentRowIndexes = useCallback(async (newDocumentMap: Map<number, DocumentRecord>) => {
+    if (!currentRunsheet?.id) return;
+    
+    try {
+      const updates = Array.from(newDocumentMap.entries()).map(([rowIndex, doc]) => ({
+        id: doc.id,
+        row_index: rowIndex
+      }));
+      
+      for (const update of updates) {
+        const { error } = await supabase
+          .from('documents')
+          .update({ row_index: update.row_index, updated_at: new Date().toISOString() })
+          .eq('id', update.id);
+          
+        if (error) {
+          console.error('Error updating document row_index:', error);
+        }
+      }
+      
+      console.log('✅ Updated document row indexes after row move');
+    } catch (error) {
+      console.error('Error updating document row indexes:', error);
+    }
+  }, [currentRunsheet?.id]);
+
   // Function to move row up
   const moveRowUp = useCallback((rowIndex: number) => {
     if (rowIndex <= 0) return;
@@ -4050,10 +4077,13 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       });
       updateDocumentMap(newDocumentMap);
       
+      // Update database row indexes
+      updateDocumentRowIndexes(newDocumentMap);
+      
       setHasUnsavedChanges(true);
       return newData;
     });
-  }, [documentMap, updateDocumentMap]);
+  }, [documentMap, updateDocumentMap, updateDocumentRowIndexes]);
 
   // Function to move row down
   const moveRowDown = useCallback((rowIndex: number) => {
@@ -4076,10 +4106,13 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       });
       updateDocumentMap(newDocumentMap);
       
+      // Update database row indexes
+      updateDocumentRowIndexes(newDocumentMap);
+      
       setHasUnsavedChanges(true);
       return newData;
     });
-  }, [documentMap, updateDocumentMap]);
+  }, [documentMap, updateDocumentMap, updateDocumentRowIndexes]);
 
   // Add rows function
   const addRows = () => {
@@ -4304,6 +4337,10 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     });
     
     updateDocumentMap(newDocumentMap);
+    
+    // Update database row indexes
+    updateDocumentRowIndexes(newDocumentMap);
+    
     setHasUnsavedChanges(true);
     
     // Reset drag state
