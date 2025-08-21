@@ -903,12 +903,12 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
         >
         <div className="flex items-center justify-center gap-2">
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
             tabIndex={-1}
             onClick={openFileSelector}
             disabled={isUploading}
-            className="h-8 text-xs"
+            className="h-8 text-xs flex-1"
           >
             <Upload className="w-3 h-3 mr-1" />
             {isUploading ? 'Uploading...' : 'Add File'}

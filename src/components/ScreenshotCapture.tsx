@@ -90,11 +90,11 @@ export const ScreenshotCapture: React.FC<ScreenshotCaptureProps> = ({
   return (
     <Button
       onClick={handleStartDocumentCapture}
-      variant="gradient"
-      className={`gap-2 ${className}`}
+      variant="outline"
+      className={`gap-2 h-8 text-xs flex-1 ${className}`}
       tabIndex={-1}
     >
-      <Target className="h-4 w-4" />
+      <Target className="h-3 w-3" />
       Document Capture
     </Button>
   );

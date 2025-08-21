@@ -5068,26 +5068,26 @@ ${extractionFields}`
                         zIndex: 999
                       }}
                      >
-                   <div className="w-full h-full px-4 py-2 flex flex-col gap-1">
-                     <Button
-                       variant="outline"
-                       size="sm"
-                       onClick={() => setShowDocumentFileNameColumn(!showDocumentFileNameColumn)}
-                       className="text-xs"
-                     >
-                       {showDocumentFileNameColumn ? <EyeOff className="h-3 w-3 mr-1" /> : <Eye className="h-3 w-3 mr-1" />}
-                       {showDocumentFileNameColumn ? 'Hide' : 'Show'} File Name Column
-                     </Button>
-                       <Button
-                         variant="outline"
-                         size="sm"
-                         onClick={() => setShowDocumentNamingDialog(true)}
-                         className="text-xs"
-                       >
-                        <Sparkles className="h-3 w-3 mr-1 text-purple-600" />
-                         Smart File Name Settings
+                    <div className="w-full h-full px-4 py-2 flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowDocumentFileNameColumn(!showDocumentFileNameColumn)}
+                        className="h-8 text-xs flex-1"
+                      >
+                        {showDocumentFileNameColumn ? <EyeOff className="h-3 w-3 mr-1" /> : <Eye className="h-3 w-3 mr-1" />}
+                        {showDocumentFileNameColumn ? 'Hide' : 'Show'} File Name Column
                       </Button>
-                   </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowDocumentNamingDialog(true)}
+                          className="h-8 text-xs flex-1"
+                        >
+                         <Sparkles className="h-3 w-3 mr-1 text-purple-600" />
+                          Smart File Name Settings
+                       </Button>
+                    </div>
                   </th>
                 </tr>
              </thead>
