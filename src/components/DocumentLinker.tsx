@@ -717,7 +717,7 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
             )}
           </div>
           {!isEditingName && (
-            <div className="flex items-center gap-1 flex-nowrap flex-shrink-0">
+            <div className="flex items-center gap-0.5 flex-nowrap flex-shrink-0 min-w-fit">
               {/* Show Analyze button only for spreadsheet uploads with stored file */}
               {isSpreadsheetUpload && uploadedFile && onAnalyzeDocument && (
                 <Button
@@ -752,10 +752,10 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                       setIsAnalyzing(false);
                     }
                   }}
-                  className={`h-6 w-6 p-0 ${isAnalyzing ? 'text-blue-400' : 'text-blue-600 hover:text-blue-700'}`}
+                  className={`h-7 w-7 p-1 ${isAnalyzing ? 'text-blue-400' : 'text-blue-600 hover:text-blue-700'}`}
                   title={isAnalyzing ? "AI is thinking..." : "Analyze document and extract data"}
                 >
-                  <Brain className={`w-3 h-3 ${isAnalyzing ? 'animate-pulse' : ''}`} />
+                  <Brain className={`w-3.5 h-3.5 ${isAnalyzing ? 'animate-pulse' : ''}`} />
                 </Button>
               )}
                 {onOpenWorkspace && (
@@ -767,10 +767,10 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                       e.stopPropagation(); // Prevent cell edit mode
                       onOpenWorkspace();
                     }}
-                    className="h-6 w-6 p-0"
+                    className="h-7 w-7 p-1"
                     title="Open full-screen workspace"
                   >
-                    <Maximize2 className="w-3 h-3" />
+                    <Maximize2 className="w-3.5 h-3.5" />
                   </Button>
                 )}
                <Button
@@ -782,10 +782,10 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                    setEditedFilename(filename);
                    setIsEditingName(true);
                  }}
-                 className="h-6 w-6 p-0"
+                 className="h-7 w-7 p-1"
                  title="Edit filename"
                >
-                 <Edit2 className="w-3 h-3" />
+                 <Edit2 className="w-3.5 h-3.5" />
                 </Button>
                 {/* Smart Filename Generation Button - Only show if we have row data */}
                 {rowData && (
@@ -797,10 +797,10 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                       e.stopPropagation(); // Prevent cell edit mode
                       generateSmartFilename();
                     }}
-                    className="h-6 w-6 p-0 text-purple-600 hover:text-purple-700"
+                    className="h-7 w-7 p-1 text-purple-600 hover:text-purple-700"
                     title="Generate smart filename from row data"
                   >
-                    <Sparkles className="w-3 h-3" />
+                    <Sparkles className="w-3.5 h-3.5" />
                   </Button>
                 )}
                <Button
@@ -860,10 +860,10 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                     });
                   }
                 }}
-                className="h-6 w-6 p-0"
+                className="h-7 w-7 p-1"
                 title="View document"
               >
-                <ExternalLink className="w-3 h-3" />
+                <ExternalLink className="w-3.5 h-3.5" />
               </Button>
               <Button
                 variant="ghost"
@@ -873,10 +873,10 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                   e.stopPropagation(); // Prevent cell edit mode
                   handleRemoveDocument();
                 }}
-                className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                className="h-7 w-7 p-1 text-destructive hover:text-destructive"
                 title="Remove document"
               >
-                <Trash2 className="w-3 h-3" />
+                <Trash2 className="w-3.5 h-3.5" />
               </Button>
             </div>
           )}
