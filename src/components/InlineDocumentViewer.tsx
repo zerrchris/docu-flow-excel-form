@@ -222,9 +222,6 @@ const InlineDocumentViewer: React.FC<InlineDocumentViewerProps> = ({
               </Button>
             </>
           )}
-          <Button variant="outline" size="sm" onClick={openInNewWindow}>
-            <ExternalLink className="h-4 w-4" />
-          </Button>
           <Button variant="ghost" size="sm" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
