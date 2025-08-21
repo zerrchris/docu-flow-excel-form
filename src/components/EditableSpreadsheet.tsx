@@ -5337,8 +5337,7 @@ ${extractionFields}`
                      >
                          <div className="bg-background border border-border rounded-md p-2 h-full min-h-[60px] flex gap-2 overflow-visible">
                            {/* Row Actions */}
-                            <div className="flex flex-col gap-1 min-w-[80px]">
-                              <div className="flex gap-1 items-center justify-center">
+                            <div className="flex gap-1 items-center min-w-[80px]">
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -5359,25 +5358,24 @@ ${extractionFields}`
                                 >
                                   <ArrowDown className="h-3 w-3" />
                                 </Button>
-                              </div>
-                             <Button
-                               variant="ghost"
-                               size="sm"
-                               onClick={() => {
-                                 if (hasRowData(row)) {
-                                   if (confirm(`Are you sure you want to delete row ${rowIndex + 1}? This action cannot be undone.`)) {
-                                     deleteRow(rowIndex);
-                                   }
-                                 } else {
-                                   deleteRow(rowIndex);
-                                 }
-                               }}
-                               className="h-6 w-full p-0 hover:bg-red-100 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400"
-                               title="Delete row"
-                             >
-                               <Trash2 className="h-3 w-3" />
-                             </Button>
-                           </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  if (hasRowData(row)) {
+                                    if (confirm(`Are you sure you want to delete row ${rowIndex + 1}? This action cannot be undone.`)) {
+                                      deleteRow(rowIndex);
+                                    }
+                                  } else {
+                                    deleteRow(rowIndex);
+                                  }
+                                }}
+                                className="h-6 w-6 p-0 hover:bg-red-100 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400"
+                                title="Delete row"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
                            
                            {/* Document Section */}
                            <div className="flex-1">
