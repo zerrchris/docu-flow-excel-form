@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { Upload, File, ExternalLink, Trash2, Download, Edit2, Brain, Maximize2, Sparkles } from 'lucide-react';
+import { Upload, File, ExternalLink, Trash2, Download, Edit2, Brain, Maximize2, Sparkles, Unlink, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { ScreenshotCapture } from './ScreenshotCapture';
@@ -910,10 +910,10 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                   e.stopPropagation(); // Prevent cell edit mode
                   handleRemoveDocument();
                 }}
-                className="h-7 w-7 p-1 text-orange-600 hover:text-orange-700 hover:bg-orange-50 dark:hover:bg-orange-950/20"
+                className="h-7 w-7 p-1 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
                 title="Unlink document from this row"
               >
-                <ExternalLink className="w-3.5 h-3.5 rotate-180" />
+                <Unlink className="w-3.5 h-3.5" />
               </Button>
             </div>
           )}
