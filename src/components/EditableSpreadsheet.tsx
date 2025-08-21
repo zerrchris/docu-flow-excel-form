@@ -168,8 +168,6 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   // Function to manually add more rows
   const addMoreRows = useCallback((count: number) => {
     console.log('🔧 DEBUG: addMoreRows called with count:', count);
-    console.log('🔧 DEBUG: Current data length before adding:', data.length);
-    console.log('🔧 DEBUG: Current columns:', columns);
     
     setData(prev => {
       console.log('🔧 DEBUG: Previous data length:', prev.length);
@@ -189,7 +187,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       description: `Added ${count} new rows to the runsheet.`,
       variant: "default"
     });
-  }, [columns, toast, data.length]);
+  }, [columns, toast]);
 
 
   // Function to add rows to reach a specific total
