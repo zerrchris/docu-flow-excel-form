@@ -4121,9 +4121,14 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     if (draggedRowIndex !== null && draggedRowIndex !== rowIndex) {
       setDragOverRowIndex(rowIndex);
     }
+  };
 
-    // Auto-scroll logic
-    if (tableContainerRef.current) {
+  // Global drag over handler for the entire table container
+  const handleGlobalDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    
+    // Auto-scroll logic - moved here so it works everywhere in the container
+    if (tableContainerRef.current && draggedRowIndex !== null) {
       const rect = tableContainerRef.current.getBoundingClientRect();
       const mouseY = e.clientY;
       const scrollZone = 100; // pixels from edge to trigger scroll
@@ -4144,6 +4149,9 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           if (!autoScrollInterval) {
             startAutoScroll('down');
           }
+        } else {
+          // At bottom, can't scroll more, stop auto-scroll
+          stopAutoScroll();
         }
       } else {
         // Not near edges, stop auto-scroll
@@ -4154,7 +4162,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
   const handleRowDragLeave = () => {
     setDragOverRowIndex(null);
-    // Don't stop auto-scroll here as we might be moving between rows
+    // Stop auto-scroll when leaving row areas completely
+    stopAutoScroll();
   };
 
   const handleRowDrop = (e: React.DragEvent, dropIndex: number) => {
@@ -5140,6 +5149,7 @@ ${extractionFields}`
             isolation: 'isolate' // Create a new stacking context for sticky elements
           }}
           onScroll={handleScroll}
+          onDragOver={handleGlobalDragOver}
         >
           {/* Fixed table wrapper for proper sticky behavior */}
           <div 
