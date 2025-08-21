@@ -1484,7 +1484,13 @@ Image: [base64 image data]`;
     // Let EditableSpreadsheet handle the data state management when there's an active runsheet
     // Only dispatch the event to add the row to the actual spreadsheet component
     console.log('🔧 DEBUG: Dispatching externalAddRow event to EditableSpreadsheet');
-    window.dispatchEvent(new CustomEvent('externalAddRow', { detail: { data: finalData } }));
+    console.log('🔧 DEBUG: runsheetId being passed:', runsheetId);
+    window.dispatchEvent(new CustomEvent('externalAddRow', { 
+      detail: { 
+        data: finalData,
+        runsheetId: runsheetId 
+      } 
+    }));
 
     // Show success message (will be refined after EditableSpreadsheet processes the row)
     setTimeout(() => {

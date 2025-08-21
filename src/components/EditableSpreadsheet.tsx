@@ -467,6 +467,11 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     const handler = (event: CustomEvent) => {
       try {
         const payload = (event as any).detail?.data as Record<string, string>;
+        const eventRunsheetId = (event as any).detail?.runsheetId;
+        console.log('🔧 DEBUG: EditableSpreadsheet received externalAddRow event');
+        console.log('🔧 DEBUG: payload:', payload);
+        console.log('🔧 DEBUG: eventRunsheetId:', eventRunsheetId);
+        console.log('🔧 DEBUG: currentRunsheetId:', currentRunsheetId);
         if (!payload) return;
 
         // Determine any new columns present in payload, ignoring non-data/system fields
@@ -496,6 +501,9 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             row['Storage Path'] = payload['Storage Path'];
           }
 
+          console.log('🔧 DEBUG: Built row for insertion:', row);
+          console.log('🔧 DEBUG: Current data length before insertion:', prev.length);
+
           // Find first empty row without a linked document
           const firstEmpty = prev.findIndex((r, idx) => {
             const isEmpty = Object.values(r).every((v) => (v || '').toString().trim() === '');
@@ -503,10 +511,17 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             return isEmpty && !hasDoc;
           });
 
+          console.log('🔧 DEBUG: firstEmpty index found:', firstEmpty);
+
+          // Use the runsheet ID from the event or fall back to current
+          const effectiveRunsheetId = eventRunsheetId || currentRunsheetId;
+          console.log('🔧 DEBUG: Using effectiveRunsheetId:', effectiveRunsheetId);
+
           // Decide target index and update data
           if (firstEmpty >= 0) {
             const next = [...prev];
             next[firstEmpty] = row;
+            console.log('🔧 DEBUG: Inserting into existing empty row:', firstEmpty);
             // Inform listeners which row was used
             setTimeout(() => {
               window.dispatchEvent(new CustomEvent('externalRowPlaced', {
@@ -521,6 +536,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           }
 
           const appendedIndex = prev.length;
+          console.log('🔧 DEBUG: Appending new row at index:', appendedIndex);
           // Inform listeners which row was used (appended)
           setTimeout(() => {
             window.dispatchEvent(new CustomEvent('externalRowPlaced', {
