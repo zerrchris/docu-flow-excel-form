@@ -4581,6 +4581,9 @@ ${extractionFields}`
                   variant="outline"
                   size="sm"
                   className="gap-2"
+                  onClick={() => {
+                    console.log('🔧 DEBUG: Add Rows button clicked');
+                  }}
                 >
                   <Plus className="h-4 w-4" />
                   Add Rows
@@ -4588,19 +4591,47 @@ ${extractionFields}`
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => addMoreRows(10)}>
+                <DropdownMenuItem 
+                  onClick={(e) => {
+                    console.log('🔧 DEBUG: Add 10 rows clicked');
+                    e.preventDefault();
+                    e.stopPropagation();
+                    addMoreRows(10);
+                  }}
+                >
                   <Plus className="h-4 w-4 mr-2" />
                   Add 10 rows
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => addMoreRows(25)}>
+                <DropdownMenuItem 
+                  onClick={(e) => {
+                    console.log('🔧 DEBUG: Add 25 rows clicked');
+                    e.preventDefault();
+                    e.stopPropagation();
+                    addMoreRows(25);
+                  }}
+                >
                   <Plus className="h-4 w-4 mr-2" />
                   Add 25 rows
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => addMoreRows(50)}>
+                <DropdownMenuItem 
+                  onClick={(e) => {
+                    console.log('🔧 DEBUG: Add 50 rows clicked');
+                    e.preventDefault();
+                    e.stopPropagation();
+                    addMoreRows(50);
+                  }}
+                >
                   <Plus className="h-4 w-4 mr-2" />
                   Add 50 rows
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => addMoreRows(100)}>
+                <DropdownMenuItem 
+                  onClick={(e) => {
+                    console.log('🔧 DEBUG: Add 100 rows clicked');
+                    e.preventDefault();
+                    e.stopPropagation();
+                    addMoreRows(100);
+                  }}
+                >
                   <Plus className="h-4 w-4 mr-2" />
                   Add 100 rows
                 </DropdownMenuItem>
