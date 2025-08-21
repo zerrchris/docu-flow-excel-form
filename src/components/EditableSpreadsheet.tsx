@@ -5337,29 +5337,29 @@ ${extractionFields}`
                      >
                          <div className="bg-background border border-border rounded-md p-2 h-full min-h-[60px] flex gap-2 overflow-visible">
                            {/* Row Actions */}
-                           <div className="flex flex-col gap-1 min-w-[80px]">
-                             <div className="flex gap-1">
-                               <Button
-                                 variant="ghost"
-                                 size="sm"
-                                 onClick={() => moveRowUp(rowIndex)}
-                                 disabled={rowIndex === 0}
-                                 className="h-6 w-6 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/20"
-                                 title="Move row up"
-                               >
-                                 <ArrowUp className="h-3 w-3" />
-                               </Button>
-                               <Button
-                                 variant="ghost"
-                                 size="sm"
-                                 onClick={() => moveRowDown(rowIndex)}
-                                 disabled={rowIndex >= data.length - 1}
-                                 className="h-6 w-6 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/20"
-                                 title="Move row down"
-                               >
-                                 <ArrowDown className="h-3 w-3" />
-                               </Button>
-                             </div>
+                            <div className="flex flex-col gap-1 min-w-[80px]">
+                              <div className="flex gap-1 items-center justify-center">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => moveRowUp(rowIndex)}
+                                  disabled={rowIndex === 0}
+                                  className="h-6 w-6 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/20"
+                                  title="Move row up"
+                                >
+                                  <ArrowUp className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => moveRowDown(rowIndex)}
+                                  disabled={rowIndex >= data.length - 1}
+                                  className="h-6 w-6 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/20"
+                                  title="Move row down"
+                                >
+                                  <ArrowDown className="h-3 w-3" />
+                                </Button>
+                              </div>
                              <Button
                                variant="ghost"
                                size="sm"
