@@ -1039,15 +1039,12 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     };
   }, [currentRunsheetId, user]);
 
-  // Update runsheet name when initialRunsheetName prop changes or currentRunsheet changes
+  // Update runsheet name when initialRunsheetName prop changes
   useEffect(() => {
-    if (currentRunsheet?.name && currentRunsheet.name !== runsheetName) {
-      console.log('🔧 Updating runsheet name from currentRunsheet:', currentRunsheet.name);
-      setRunsheetName(currentRunsheet.name);
-    } else if (initialRunsheetName && initialRunsheetName !== runsheetName && !currentRunsheet?.name) {
+    if (initialRunsheetName && initialRunsheetName !== runsheetName) {
       setRunsheetName(initialRunsheetName);
     }
-  }, [initialRunsheetName, currentRunsheet?.name]);
+  }, [initialRunsheetName]);
 
   // Set initial runsheet ID if provided, or sync with restored active runsheet
   useEffect(() => {

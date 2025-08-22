@@ -6,9 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/components/ui/use-toast';
-import { X, Plus, GripVertical, Save, RotateCcw, Sparkles, Brain } from 'lucide-react';
+import { X, Plus, GripVertical, Save, RotateCcw } from 'lucide-react';
 import { ExtractionPreferencesService } from '@/services/extractionPreferences';
-import { supabase } from '@/integrations/supabase/client';
 
 interface ColumnPreferencesDialogProps {
   open: boolean;
@@ -27,9 +26,6 @@ const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
   const [selectedColumn, setSelectedColumn] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
-  const [documentType, setDocumentType] = useState('');
-  const [industryContext, setIndustryContext] = useState('');
 
   // Load current preferences when dialog opens
   useEffect(() => {
@@ -229,49 +225,6 @@ const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
     });
   };
 
-  const generateAIInstructions = async () => {
-    setIsGeneratingAI(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        throw new Error('User not authenticated');
-      }
-
-      console.log('Generating AI instructions for columns:', columns);
-
-      const { data, error } = await supabase.functions.invoke('generate-extraction-instructions', {
-        body: {
-          columns,
-          documentType: documentType || undefined,
-          industryContext: industryContext || undefined,
-          existingData: [], // Could pass sample data if available
-          userId: user.id
-        }
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      if (data.instructions) {
-        setColumnInstructions(data.instructions);
-        toast({
-          title: "AI Instructions Generated! ✨",
-          description: `Smart extraction instructions created${data.preferenceName ? ` and saved as "${data.preferenceName}"` : ''}.`,
-        });
-      }
-    } catch (error) {
-      console.error('Error generating AI instructions:', error);
-      toast({
-        title: "AI Generation Failed",
-        description: "Could not generate AI instructions. Please try again or create instructions manually.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsGeneratingAI(false);
-    }
-  };
-
   if (isLoading) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -374,57 +327,6 @@ const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
-            </div>
-            
-            {/* AI Instructions Section */}
-            <div className="space-y-3 p-4 border rounded-lg bg-gradient-to-r from-blue-50 to-purple-50">
-              <div className="flex items-center gap-2">
-                <Brain className="h-5 w-5 text-purple-600" />
-                <Label className="text-sm font-medium text-purple-900">AI-Powered Instructions</Label>
-              </div>
-              <p className="text-xs text-purple-700">
-                Let AI generate intelligent extraction instructions based on your document type and industry.
-              </p>
-              
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label className="text-xs text-purple-700">Document Type</Label>
-                  <Input
-                    placeholder="e.g., Real Estate Deeds"
-                    value={documentType}
-                    onChange={(e) => setDocumentType(e.target.value)}
-                    className="text-xs h-8"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs text-purple-700">Industry/Context</Label>
-                  <Input
-                    placeholder="e.g., Oil & Gas, Legal"
-                    value={industryContext}
-                    onChange={(e) => setIndustryContext(e.target.value)}
-                    className="text-xs h-8"
-                  />
-                </div>
-              </div>
-              
-              <Button
-                onClick={generateAIInstructions}
-                disabled={isGeneratingAI || columns.length === 0}
-                className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white"
-                size="sm"
-              >
-                {isGeneratingAI ? (
-                  <>
-                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-2"></div>
-                    Generating Smart Instructions...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-4 w-4 mr-2" />
-                    Generate AI Instructions
-                  </>
-                )}
-              </Button>
             </div>
           </div>
 

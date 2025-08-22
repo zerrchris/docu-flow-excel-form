@@ -4,8 +4,6 @@ import { toast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Upload, FolderOpen, Plus, AlertTriangle, Smartphone, Files, Home, FileStack, RefreshCw } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import DocumentFrame from '@/components/DocumentFrame';
 import DocumentViewer from '@/components/DocumentViewer';
 import DataForm from '@/components/DataForm';
@@ -42,13 +40,7 @@ const DEFAULT_EXTRACTION_INSTRUCTIONS: Record<string, string> = {
 
 const DocumentProcessor: React.FC = () => {
   // Hook to get active runsheet data  
-  const { activeRunsheet, setCurrentRunsheet, clearActiveRunsheet } = useActiveRunsheet();
-  
-  // Local state to override hook for temporary runsheets
-  const [localActiveRunsheet, setLocalActiveRunsheet] = useState<any>(null);
-  
-  // Get the current runsheet (either from hook or local state)
-  const currentRunsheet = localActiveRunsheet || activeRunsheet;
+  const { activeRunsheet, setActiveRunsheet, clearActiveRunsheet } = useActiveRunsheet();
   
   // View state
   const [isDocumentMode, setIsDocumentMode] = useState(false);
@@ -80,10 +72,6 @@ const DocumentProcessor: React.FC = () => {
   const [showMultipleFileUpload, setShowMultipleFileUpload] = useState(false);
   const [missingDataDialog, setMissingDataDialog] = useState(false);
   const [confirmAddFileDialog, setConfirmAddFileDialog] = useState(false);
-  
-  // New runsheet naming state
-  const [showNameRunsheetDialog, setShowNameRunsheetDialog] = useState(false);
-  const [newRunsheetName, setNewRunsheetName] = useState('');
   
   // Note: Navigation blocking removed since runsheet auto-saves
   const navigate = useNavigate();
@@ -221,31 +209,21 @@ const DocumentProcessor: React.FC = () => {
     loadUserPreferences();
   }, []);
 
-  // Prompt for runsheet name when starting fresh without an active runsheet
-  useEffect(() => {
-    // Only check once when component mounts or when currentRunsheet becomes null
-    // Don't include showNameRunsheetDialog in dependencies to prevent loops
-    if (!currentRunsheet && !isLoadingPreferences && !location.state?.runsheet) {
-      console.log('🔔 No active runsheet detected - prompting for name');
-      setShowNameRunsheetDialog(true);
-    }
-  }, [currentRunsheet, isLoadingPreferences, location.state?.runsheet]);
-
   // Ensure form fields match the active runsheet columns
   useEffect(() => {
-    if (currentRunsheet?.columns && currentRunsheet.columns.length) {
-      // Clean up preferences to match current runsheet columns
-      ExtractionPreferencesService.cleanupPreferences(currentRunsheet.columns);
+    if (activeRunsheet?.columns && activeRunsheet.columns.length) {
+      // Clean up preferences to match active runsheet columns
+      ExtractionPreferencesService.cleanupPreferences(activeRunsheet.columns);
       
-      setColumns(currentRunsheet.columns);
-      setColumnInstructions(currentRunsheet.columnInstructions || {});
+      setColumns(activeRunsheet.columns);
+      setColumnInstructions(activeRunsheet.columnInstructions || {});
       setFormData(prev => {
         const next: Record<string, string> = {};
-        currentRunsheet.columns!.forEach(col => { next[col] = prev[col] || ''; });
+        activeRunsheet.columns!.forEach(col => { next[col] = prev[col] || ''; });
         return next;
       });
     }
-  }, [currentRunsheet?.id, currentRunsheet?.columns]);
+  }, [activeRunsheet?.id, activeRunsheet?.columns]);
 
 
   // Handle selected runsheet from navigation state - with stability improvements
@@ -257,7 +235,7 @@ const DocumentProcessor: React.FC = () => {
       selectedRunsheetName: selectedRunsheet?.name,
       loadedRef: loadedRunsheetRef.current,
       hasSpreadsheetData: spreadsheetData.length > 0,
-      activeRunsheetName: currentRunsheet?.name,
+      activeRunsheetName: activeRunsheet?.name,
       locationState: location.state
     });
     
@@ -267,14 +245,13 @@ const DocumentProcessor: React.FC = () => {
       loadedRunsheetRef.current = selectedRunsheet.id;
       
       // Set active runsheet immediately
-      setLocalActiveRunsheet({
+      setActiveRunsheet({
         id: selectedRunsheet.id,
         name: selectedRunsheet.name,
         data: selectedRunsheet.data || [],
         columns: selectedRunsheet.columns || [],
         columnInstructions: selectedRunsheet.column_instructions || {}
       });
-      setCurrentRunsheet(selectedRunsheet.id);
       
       // Only load runsheet data if we don't already have spreadsheet data (to prevent data loss)
       if (selectedRunsheet.data && Array.isArray(selectedRunsheet.data) && spreadsheetData.length === 0) {
@@ -542,7 +519,7 @@ const DocumentProcessor: React.FC = () => {
       
       // ONLY clear spreadsheet data if we don't have an active runsheet
       // This prevents losing runsheet data when refreshing fields
-      const currentRunsheetId = currentRunsheet?.id || location.state?.runsheet?.id;
+      const currentRunsheetId = activeRunsheet?.id || location.state?.runsheet?.id;
       if (!currentRunsheetId) {
         console.log('No active runsheet - clearing spreadsheet data');
         setSpreadsheetData([]);
@@ -633,7 +610,7 @@ const DocumentProcessor: React.FC = () => {
         }
         
         // Get the current active runsheet ID
-        const currentRunsheetId = currentRunsheet?.id;
+        const currentRunsheetId = activeRunsheet?.id;
         if (!currentRunsheetId || currentRunsheetId.startsWith('temp-')) {
           console.log('🔧 PENDING_DOCS: No valid runsheet ID available, keeping documents pending');
           return;
@@ -690,7 +667,7 @@ const DocumentProcessor: React.FC = () => {
     return () => {
       window.removeEventListener('processPendingDocuments', handleProcessPendingDocuments);
     };
-  }, [currentRunsheet?.id]);
+  }, [activeRunsheet?.id]);
 
   // Handle navigation - no longer blocked since runsheet auto-saves
   const handleNavigation = useCallback((path: string) => {
@@ -1386,8 +1363,8 @@ Image: [base64 image data]`;
     console.log('🔧 DocumentProcessor: spreadsheetData.length:', spreadsheetData.length);
     console.log('🔧 DocumentProcessor: documentMap.size:', documentMap.size);
     
-    // Check for active runsheet ID from multiple sources
-    let runsheetId = currentRunsheet?.id || activeRunsheet?.id || location.state?.runsheet?.id;
+    // Check localStorage for active runsheet as fallback
+    let runsheetId = activeRunsheet?.id || location.state?.runsheet?.id;
     
     if (!runsheetId) {
       try {
@@ -1395,7 +1372,7 @@ Image: [base64 image data]`;
         if (storedRunsheet) {
           const parsed = JSON.parse(storedRunsheet);
           runsheetId = parsed.id;
-          setLocalActiveRunsheet(parsed);
+          setActiveRunsheet(parsed);
           console.log('🔧 DocumentProcessor: Found runsheet in localStorage:', parsed);
         }
       } catch (error) {
@@ -1604,15 +1581,9 @@ Image: [base64 image data]`;
       console.log('🔧 DOCUMENT_RESET: Clearing document preview after successful add');
       resetDocument();
       
-      // Navigate back to the runsheet with the correct active runsheet
+      // Navigate back to the runsheet
       console.log('🔧 NAVIGATION: Navigating back to runsheet after successful add');
-      console.log('🔧 NAVIGATION: Using runsheet ID:', runsheetId);
-      navigate('/runsheet', { 
-        state: { 
-          runsheetId: runsheetId,
-          runsheet: activeRunsheet || currentRunsheet 
-        }
-      });
+      navigate('/runsheet');
       
       // Show success message
       toast({
@@ -1732,7 +1703,7 @@ Image: [base64 image data]`;
       }
 
       // Prefer the explicitly provided runsheet ID
-      let runsheetId = forcedRunsheetId || currentRunsheet?.id || location.state?.runsheetId;
+      let runsheetId = forcedRunsheetId || activeRunsheet?.id || location.state?.runsheetId;
       
       // If no runsheet ID from context, try to get it from the current spreadsheet
       if (!runsheetId) {
@@ -1836,7 +1807,7 @@ Image: [base64 image data]`;
               runsheetId, 
               rowIndex,
               allPossibleIds: {
-                activeRunsheetId: currentRunsheet?.id,
+                activeRunsheetId: activeRunsheet?.id,
                 locationStateId: location.state?.runsheet?.id,
                 finalRunsheetId: runsheetId
               }
@@ -1868,7 +1839,7 @@ Image: [base64 image data]`;
               runsheetId, 
               rowIndex,
               allPossibleIds: {
-                activeRunsheetId: currentRunsheet?.id,
+                activeRunsheetId: activeRunsheet?.id,
                 locationStateId: location.state?.runsheet?.id,
                 finalRunsheetId: runsheetId
               }
@@ -1965,83 +1936,6 @@ Image: [base64 image data]`;
       title: "New runsheet started",
       description: "Started a fresh runsheet with your preferred columns.",
     });
-  };
-
-  // Handle creating a new runsheet with user-provided name
-  const handleCreateNamedRunsheet = async () => {
-    if (!newRunsheetName.trim()) {
-      toast({
-        title: "Name required", 
-        description: "Please enter a name for your runsheet.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast({
-          title: "Authentication required",
-          description: "Please sign in to create a runsheet.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Check if name already exists
-      const { data: existingRunsheets, error: checkError } = await supabase
-        .from('runsheets')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('name', newRunsheetName.trim());
-
-      if (checkError) throw checkError;
-
-      if (existingRunsheets && existingRunsheets.length > 0) {
-        toast({
-          title: "Name already exists",
-          description: "A runsheet with this name already exists. Please choose a different name.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Load user preferences for new runsheet
-      const preferences = await ExtractionPreferencesService.getDefaultPreferences();
-      const runsheetColumns = preferences?.columns || DEFAULT_COLUMNS;
-      const runsheetInstructions = preferences?.column_instructions || DEFAULT_EXTRACTION_INSTRUCTIONS;
-
-      // Set up the new runsheet locally
-      setLocalActiveRunsheet({
-        id: `temp-${Date.now()}`, // Temporary ID until saved
-        name: newRunsheetName.trim(),
-        data: [],
-        columns: runsheetColumns,
-        columnInstructions: (runsheetInstructions as Record<string, string>) || DEFAULT_EXTRACTION_INSTRUCTIONS
-      });
-
-      setColumns(runsheetColumns);
-      setColumnInstructions((runsheetInstructions as Record<string, string>) || DEFAULT_EXTRACTION_INSTRUCTIONS);
-      setSpreadsheetData([]);
-      setFormData({});
-
-      setShowNameRunsheetDialog(false);
-      setNewRunsheetName('');
-
-      toast({
-        title: "Runsheet created",
-        description: `"${newRunsheetName.trim()}" is ready for your data.`,
-      });
-
-    } catch (error) {
-      console.error('Error creating runsheet:', error);
-      toast({
-        title: "Failed to create runsheet",
-        description: "There was an error creating your runsheet. Please try again.",
-        variant: "destructive",
-      });
-    }
   };
 
 
@@ -2222,7 +2116,7 @@ Image: [base64 image data]`;
               onColumnInstructionsChange={setColumnInstructions}
               onUnsavedChanges={setHasUnsavedChanges}
               missingColumns={highlightMissingColumns ? missingColumns : []}
-              initialRunsheetName={currentRunsheet?.name}
+              initialRunsheetName={location.state?.runsheet?.name}
               initialRunsheetId={location.state?.runsheetId}
               onShowMultipleUpload={() => setShowMultipleFileUpload(true)}
               onDocumentMapChange={handleDocumentMapChange}
@@ -2525,8 +2419,8 @@ Image: [base64 image data]`;
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden p-0">
           <MultipleFileUpload
             runsheetData={{
-              id: currentRunsheet?.id || location.state?.runsheetId || 'temp-id',
-              name: currentRunsheet?.name || location.state?.runsheet?.name || 'Untitled Runsheet',
+              id: activeRunsheet?.id || location.state?.runsheetId || 'temp-id',
+              name: activeRunsheet?.name || location.state?.runsheet?.name || 'Untitled Runsheet',
               data: spreadsheetData
             }}
             onAutoSave={async () => {
@@ -2537,7 +2431,7 @@ Image: [base64 image data]`;
                   throw new Error('Not authenticated');
                 }
 
-                const runsheetName = currentRunsheet?.name || location.state?.runsheet?.name || 'Untitled Runsheet';
+                const runsheetName = activeRunsheet?.name || location.state?.runsheet?.name || 'Untitled Runsheet';
                 
                 console.log('Auto-saving runsheet:', { 
                   name: runsheetName, 
@@ -2546,8 +2440,8 @@ Image: [base64 image data]`;
                 });
 
                 // Check if runsheet already exists - update instead of insert if it has an ID
-                if (currentRunsheet?.id && !currentRunsheet.id.startsWith('temp-')) {
-                  console.log('Updating existing runsheet:', currentRunsheet.id);
+                if (activeRunsheet?.id && !activeRunsheet.id.startsWith('temp-')) {
+                  console.log('Updating existing runsheet:', activeRunsheet.id);
                   const { data: updateResult, error } = await supabase
                     .from('runsheets')
                     .update({
@@ -2557,7 +2451,7 @@ Image: [base64 image data]`;
                       column_instructions: columnInstructions,
                       updated_at: new Date().toISOString(),
                     })
-                    .eq('id', currentRunsheet.id)
+                    .eq('id', activeRunsheet.id)
                     .select('id')
                     .single();
 
@@ -2566,7 +2460,7 @@ Image: [base64 image data]`;
                     throw error;
                   }
 
-                  return currentRunsheet.id;
+                  return activeRunsheet.id;
                 } else {
                   // Insert new runsheet
                   console.log('Inserting new runsheet');
@@ -2615,14 +2509,15 @@ Image: [base64 image data]`;
                             if (updateError) throw updateError;
 
                             // Update the active runsheet with the existing ID
-                            setLocalActiveRunsheet({
-                              id: existingRunsheet.id,
-                              name: runsheetName,
-                              data: spreadsheetData,
-                              columns,
-                              columnInstructions
-                            });
-                            setCurrentRunsheet(existingRunsheet.id);
+                            if (setActiveRunsheet) {
+                              setActiveRunsheet({
+                                id: existingRunsheet.id,
+                                name: runsheetName,
+                                data: spreadsheetData,
+                                columns,
+                                columnInstructions
+                              });
+                            }
 
                             resolve(existingRunsheet.id);
                           } catch (overwriteError) {
@@ -2649,14 +2544,15 @@ Image: [base64 image data]`;
                   console.log('Auto-saved runsheet with ID:', insertResult.id);
                   
                   // Update the active runsheet with the new ID
-                  setLocalActiveRunsheet({
-                    id: insertResult.id,
-                    name: runsheetName,
-                    data: spreadsheetData,
-                    columns,
-                    columnInstructions
-                  });
-                  setCurrentRunsheet(insertResult.id);
+                  if (setActiveRunsheet) {
+                    setActiveRunsheet({
+                      id: insertResult.id,
+                      name: runsheetName,
+                      data: spreadsheetData,
+                      columns,
+                      columnInstructions
+                    });
+                  }
 
                   return insertResult.id;
                 }
@@ -2678,56 +2574,6 @@ Image: [base64 image data]`;
             }}
             onClose={() => setShowMultipleFileUpload(false)}
           />
-        </DialogContent>
-      </Dialog>
-
-      {/* Name New Runsheet Dialog */}
-      <Dialog open={showNameRunsheetDialog} onOpenChange={(open) => {
-        if (!open && !currentRunsheet) {
-          // If user closes dialog without naming, redirect to dashboard
-          navigate('/app');
-        } else {
-          setShowNameRunsheetDialog(open);
-        }
-      }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Name Your Runsheet</DialogTitle>
-            <DialogDescription>
-              Give your runsheet a name to get started. This will help you organize and find your work later.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="runsheet-name">Runsheet Name</Label>
-              <Input
-                id="runsheet-name"
-                value={newRunsheetName}
-                onChange={(e) => setNewRunsheetName(e.target.value)}
-                placeholder="Enter runsheet name..."
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && newRunsheetName.trim()) {
-                    handleCreateNamedRunsheet();
-                  }
-                }}
-                autoFocus
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => navigate('/app')}
-            >
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleCreateNamedRunsheet}
-              disabled={!newRunsheetName.trim()}
-            >
-              Create Runsheet
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
