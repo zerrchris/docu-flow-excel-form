@@ -770,20 +770,22 @@ const DocumentProcessor: React.FC = () => {
   // Function to go back to runsheet mode while preserving document
   const goBackToRunsheet = () => {
     console.log('🔧 goBackToRunsheet: Navigating back to runsheet');
+    console.log('🔧 goBackToRunsheet: currentRunsheet:', currentRunsheet);
+    console.log('🔧 goBackToRunsheet: activeRunsheet:', activeRunsheet);
     
     const runsheetForNavigation = currentRunsheet || activeRunsheet;
     
     if (runsheetForNavigation) {
+      console.log('🔧 goBackToRunsheet: Navigating to /runsheet with state:', runsheetForNavigation);
       navigate('/runsheet', { 
         state: { 
           runsheet: runsheetForNavigation
         }
       });
     } else {
-      // If no runsheet is active, just exit document mode
-      setIsDocumentMode(false);
-      setIsDocumentFrameExpanded(false);
-      setIsBatchProcessingExpanded(false);
+      // If no runsheet is active, navigate to dashboard
+      console.log('🔧 goBackToRunsheet: No runsheet found, navigating to dashboard');
+      navigate('/');
     }
   };
 
