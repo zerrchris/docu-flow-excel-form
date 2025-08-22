@@ -174,6 +174,12 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 sm:p-6 pb-4 border-b shrink-0 gap-2 sm:gap-0">
         <h3 className="text-lg sm:text-xl font-semibold text-foreground">Document Preview</h3>
         <div className="flex items-center gap-1 sm:gap-2 w-full sm:w-auto justify-end">
+          {file && (
+            <Button variant="outline" size="sm" onClick={openInNewWindow} className="px-3">
+              <span className="text-xs sm:text-sm">Open in new window</span>
+              <ExternalLink className="h-3 w-3 sm:h-4 sm:w-4 ml-2" />
+            </Button>
+          )}
           {file && isImage && (
             <>
               <div className="flex items-center gap-2 min-w-[120px]">
@@ -191,6 +197,9 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
               <span className="text-xs sm:text-sm text-muted-foreground min-w-[3rem] text-center">
                 {Math.round(zoom * 100)}%
               </span>
+              <Button variant="outline" size="sm" onClick={handleZoomReset} className="p-2 sm:px-3">
+                <RotateCcw className="h-3 w-3 sm:h-4 sm:w-4" />
+              </Button>
             </>
           )}
         </div>
