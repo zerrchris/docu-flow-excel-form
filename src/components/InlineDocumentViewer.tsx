@@ -219,13 +219,20 @@ const InlineDocumentViewer: React.FC<InlineDocumentViewerProps> = ({
       </div>
 
       {/* Document content */}
-      <div className="flex-1 overflow-hidden" onWheel={(e) => e.stopPropagation()}>
+      <div className="flex-1 overflow-hidden" style={{ scrollBehavior: 'smooth' }}>
         {isPdf ? (
           <PDFViewer file={null} previewUrl={documentUrl} />
         ) : (
           <div 
-            className="h-full overflow-auto overscroll-contain bg-muted/10 flex items-center justify-center"
-            onWheel={handleImageWheel}
+            className="h-full overflow-auto overscroll-none bg-muted/10 flex items-center justify-center"
+            style={{ 
+              scrollBehavior: 'smooth',
+              WebkitOverflowScrolling: 'touch'
+            }}
+            onWheel={(e) => {
+              e.stopPropagation(); // Prevent page scroll
+              handleImageWheel(e);
+            }}
           >
             <img
               src={documentUrl}

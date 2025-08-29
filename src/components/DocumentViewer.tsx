@@ -200,7 +200,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
           )}
         </div>
       </div>
-      <div className="relative flex-1 bg-muted/20 flex items-center justify-center overflow-hidden min-h-0 overscroll-contain">
+      <div className="relative flex-1 bg-muted/20 flex items-center justify-center overflow-hidden min-h-0" style={{ scrollBehavior: 'smooth' }}>
         {!file && (
           <div className="text-center p-4 sm:p-8 text-muted-foreground max-w-sm mx-auto">
             <div className="flex flex-col items-center space-y-2">
@@ -213,14 +213,21 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
         
         {isImage && previewUrl && (
           <div 
-            className="w-full h-full overflow-hidden overscroll-contain"
+            className="w-full h-full overflow-auto overscroll-none"
+            style={{ 
+              scrollBehavior: 'smooth',
+              WebkitOverflowScrolling: 'touch'
+            }}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
+            onWheel={(e) => {
+              e.stopPropagation(); // Prevent page scroll
+              handleWheel(e);
+            }}
           >
             <div 
-              className="w-full h-full flex items-center justify-center"
-              onWheel={handleWheel}
+              className="w-full h-full flex items-center justify-center min-h-full"
             >
               <img 
                 src={previewUrl} 

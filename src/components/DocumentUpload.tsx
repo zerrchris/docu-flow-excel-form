@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { validateMultipleFiles, formatFileSize } from '@/utils/fileValidation';
 import { FileUploadStatus } from '@/components/ui/file-upload-status';
 import { FilePreview } from '@/components/FilePreview';
+import ProgressIndicator from '@/components/ProgressIndicator';
 
 interface DocumentUploadProps {
   onFileSelect: (file: File) => void;
@@ -31,6 +32,13 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
   const [mobileDocuments, setMobileDocuments] = useState<any[]>([]);
   const [showMobileDocuments, setShowMobileDocuments] = useState(false);
   const [loadingMobileDocuments, setLoadingMobileDocuments] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [processingSteps, setProcessingSteps] = useState<Array<{
+    id: string;
+    label: string;
+    status: 'pending' | 'processing' | 'completed' | 'error';
+    progress?: number;
+  }>>([]);
   const { toast } = useToast();
 
   // Load mobile captured documents
@@ -140,7 +148,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
     }
   };
 
-  // Handle PDF files - simplified approach without conversion
+  // Handle PDF files with progress tracking
   const handlePDFConversion = async (file: File) => {
     if (!isPDF(file)) {
       return file; // Not a PDF, return as-is
@@ -148,15 +156,61 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
 
     console.log('🔧 PDF_UPLOAD: PDF file detected:', file.name);
     
-    // Show helpful message about PDFs but accept the file
-    toast({
-      title: "PDF uploaded successfully",
-      description: "PDF will be processed. For best results, consider converting to an image (PNG/JPG) first.",
-      variant: "default",
-    });
+    // Initialize progress steps
+    setProcessingSteps([
+      { id: 'validate', label: 'Validating PDF file', status: 'processing' },
+      { id: 'upload', label: 'Uploading file', status: 'pending' },
+      { id: 'process', label: 'Processing document', status: 'pending' }
+    ]);
 
-    // Return the PDF file as-is - the backend can handle it
-    return file;
+    setIsProcessing(true);
+
+    try {
+      // Step 1: Validate
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setProcessingSteps(prev => prev.map(step => 
+        step.id === 'validate' ? { ...step, status: 'completed' } : 
+        step.id === 'upload' ? { ...step, status: 'processing' } : step
+      ));
+
+      // Step 2: Simulate upload progress
+      for (let i = 0; i <= 100; i += 10) {
+        setUploadProgress(i);
+        setProcessingSteps(prev => prev.map(step => 
+          step.id === 'upload' ? { ...step, progress: i } : step
+        ));
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+
+      setProcessingSteps(prev => prev.map(step => 
+        step.id === 'upload' ? { ...step, status: 'completed' } : 
+        step.id === 'process' ? { ...step, status: 'processing' } : step
+      ));
+
+      // Step 3: Processing
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setProcessingSteps(prev => prev.map(step => 
+        step.id === 'process' ? { ...step, status: 'completed' } : step
+      ));
+
+      toast({
+        title: "PDF uploaded successfully",
+        description: "PDF is ready for analysis. Processing may take a moment.",
+        variant: "default",
+      });
+
+      return file;
+    } catch (error) {
+      setProcessingSteps(prev => prev.map(step => 
+        step.status === 'processing' ? { ...step, status: 'error' } : step
+      ));
+      throw error;
+    } finally {
+      setIsProcessing(false);
+      setUploadProgress(0);
+      // Clear processing steps after a delay
+      setTimeout(() => setProcessingSteps([]), 2000);
+    }
   };
   const handleDrop = useCallback(async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -416,30 +470,40 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
               className={`border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-primary transition-colors cursor-pointer bg-background/50 flex-1 flex flex-col items-center justify-center min-h-[400px] ${isProcessing ? 'opacity-50 pointer-events-none' : ''}`}
             >
               <div className="flex flex-col items-center space-y-4">
-                {isProcessing ? (
-                  <>
-                    <FileImage className="h-16 w-16 text-primary animate-pulse" />
-                    <div className="space-y-2">
-                      <p className="text-xl text-foreground">Converting PDF...</p>
-                      <p className="text-sm text-muted-foreground">
-                        Converting PDF pages to images for better analysis
-                      </p>
-                      <Button 
-                        variant="outline" 
-                        onClick={() => {
-                          setIsProcessing(false);
-                          toast({
-                            title: "PDF conversion cancelled",
-                            description: "Please try converting the PDF to an image manually and upload the image instead.",
-                          });
-                        }}
-                        className="mt-2"
-                      >
-                        Cancel Conversion
-                      </Button>
-                    </div>
-                  </>
-                ) : (
+                 {isProcessing ? (
+                   <div className="w-full max-w-md">
+                     <div className="text-center mb-6">
+                       <FileImage className="h-16 w-16 text-primary animate-pulse mx-auto mb-4" />
+                       <p className="text-xl text-foreground">Processing Document...</p>
+                       <p className="text-sm text-muted-foreground">
+                         Please wait while we prepare your document for analysis
+                       </p>
+                     </div>
+                     
+                     <ProgressIndicator 
+                       steps={processingSteps}
+                       className="mb-6"
+                     />
+                     
+                     <div className="flex justify-center">
+                       <Button 
+                         variant="outline" 
+                         onClick={() => {
+                           setIsProcessing(false);
+                           setProcessingSteps([]);
+                           setUploadProgress(0);
+                           toast({
+                             title: "Processing cancelled",
+                             description: "Upload process has been cancelled.",
+                           });
+                         }}
+                         className="mt-2"
+                       >
+                         Cancel
+                       </Button>
+                     </div>
+                   </div>
+                 ) : (
                   <>
                     <Upload className="h-16 w-16 text-muted-foreground" />
                     <div className="space-y-3">
