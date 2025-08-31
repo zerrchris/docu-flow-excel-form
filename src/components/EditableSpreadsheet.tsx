@@ -5625,29 +5625,8 @@ ${extractionFields}`
                                  title={documentMap.get(rowIndex)?.stored_filename || row[column] || ''}
                                >
                                    <span 
-                                     className={`truncate block w-full text-left cursor-pointer hover:text-primary`}
-                                     onClick={(e) => {
-                                       e.stopPropagation();
-                                       console.log('🔧 EditableSpreadsheet: Expanding inline viewer for row:', rowIndex);
-                                       console.log('🔧 EditableSpreadsheet: Document in map:', documentMap.get(rowIndex));
-                                       console.log('🔧 EditableSpreadsheet: Current runsheet ID:', effectiveRunsheetId);
-                                       
-                                       // Check for pending documents if not in map
-                                       const pendingDocs = JSON.parse(sessionStorage.getItem('pendingDocuments') || '[]');
-                                       const pendingDoc = pendingDocs.find((doc: any) => doc.rowIndex === rowIndex);
-                                       
-                                       if (documentMap.get(rowIndex) || pendingDoc) {
-                                         console.log('🔧 EditableSpreadsheet: Document found (map or pending), expanding viewer');
-                                         setInlineViewerRow(inlineViewerRow === rowIndex ? null : rowIndex);
-                                       } else {
-                                         console.log('🔧 EditableSpreadsheet: No document found for row:', rowIndex);
-                                         console.log('🔧 EditableSpreadsheet: Document map:', Array.from(documentMap.entries()));
-                                         console.log('🔧 EditableSpreadsheet: Pending docs:', pendingDocs);
-                                         // Try to expand anyway - the InlineDocumentViewer will handle the case where no document exists
-                                         setInlineViewerRow(inlineViewerRow === rowIndex ? null : rowIndex);
-                                       }
-                                     }}
-                                  >
+                                     className="truncate block w-full text-left"
+                                   >
                                     {documentMap.get(rowIndex)?.stored_filename || row[column] || ''}
                                   </span>
                                </div>
