@@ -3996,7 +3996,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   }, [copySelection, pasteSelection]);
 
   // Function to delete a row
-  const deleteRow = useCallback((rowIndex: number) => {
+  const deleteRow = useCallback(async (rowIndex: number) => {
     setData(prev => {
       const newData = prev.filter((_, index) => index !== rowIndex);
       // Update document map to adjust indices
@@ -4015,12 +4015,17 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       return newData;
     });
     
+    // Force immediate save to prevent real-time sync from restoring the deleted row
+    setTimeout(() => {
+      autoForceSave();
+    }, 100);
+    
     toast({
       title: "Row deleted",
       description: `Row ${rowIndex + 1} has been deleted.`,
       variant: "default"
     });
-  }, [documentMap, updateDocumentMap, toast]);
+  }, [documentMap, updateDocumentMap, autoForceSave, toast]);
 
   // Function to update document row_index in database
   const updateDocumentRowIndexes = useCallback(async (newDocumentMap: Map<number, DocumentRecord>) => {
