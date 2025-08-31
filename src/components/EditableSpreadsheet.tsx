@@ -490,8 +490,27 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         setData(prevData => {
           console.log('🔧 DEBUG: Current data before adding row:', prevData);
           
-          const newRowIndex = prevData.length;
-          console.log('🔧 DEBUG: Adding row at index:', newRowIndex);
+          // Find the first truly empty row (no data and no linked document)
+          const firstEmptyRowIndex = prevData.findIndex((row, index) => {
+            const isDataEmpty = Object.values(row).every(value => !value || value.trim() === '');
+            const hasLinkedDocument = documentMap.has(index);
+            return isDataEmpty && !hasLinkedDocument;
+          });
+          
+          let newRowIndex: number;
+          let newData: Record<string, string>[];
+          
+          if (firstEmptyRowIndex >= 0) {
+            // Use the empty row
+            newRowIndex = firstEmptyRowIndex;
+            newData = [...prevData];
+            console.log('🔧 DEBUG: Using existing empty row at index:', newRowIndex);
+          } else {
+            // Add to the end
+            newRowIndex = prevData.length;
+            newData = [...prevData];
+            console.log('🔧 DEBUG: Adding new row at index:', newRowIndex);
+          }
           
           // Convert payload to match current columns
           const filteredPayload: Record<string, string> = {};
@@ -512,8 +531,13 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           
           console.log('🔧 DEBUG: Filtered payload for current columns:', filteredPayload);
           
-          const newData = [...prevData, filteredPayload];
-          console.log('🔧 DEBUG: New data after adding row:', newData);
+          // Update the row with the new data
+          if (firstEmptyRowIndex >= 0) {
+            newData[newRowIndex] = filteredPayload;
+          } else {
+            newData.push(filteredPayload);
+          }
+          console.log('🔧 DEBUG: Updated data after adding row:', newData);
           
           // Update the document map to reflect the new row structure
           setTimeout(() => {
@@ -548,6 +572,21 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           }, 0);
           
           setHasUnsavedChanges(true);
+          
+          // Dispatch event to inform DocumentProcessor about the actual row placement
+          setTimeout(() => {
+            console.log('🔧 DEBUG: Dispatching externalRowPlaced event for row:', newRowIndex);
+            const storagePath = payload['Storage Path'];
+            if (storagePath) {
+              window.dispatchEvent(new CustomEvent('externalRowPlaced', {
+                detail: {
+                  rowIndex: newRowIndex,
+                  runsheetId: currentRunsheetId,
+                  storagePath: storagePath
+                }
+              }));
+            }
+          }, 50);
           
           return newData;
         });
