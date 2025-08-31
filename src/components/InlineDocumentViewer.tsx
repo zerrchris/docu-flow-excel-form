@@ -103,10 +103,18 @@ const InlineDocumentViewer: React.FC<InlineDocumentViewerProps> = ({
   useEffect(() => {
     const handler = (event: CustomEvent) => {
       const { runsheetId: evtId, rowIndex: evtRow } = (event as any).detail || {};
+      console.log('🔧 InlineDocumentViewer: documentRecordCreated event received');
+      console.log('🔧 InlineDocumentViewer: Event runsheetId:', evtId, 'Event rowIndex:', evtRow);
+      console.log('🔧 InlineDocumentViewer: Current runsheetId:', runsheetId, 'Current rowIndex:', rowIndex);
+      console.log('🔧 InlineDocumentViewer: IDs match:', evtId === runsheetId, 'Rows match:', evtRow === rowIndex);
+      
       if (!evtId && evtRow === undefined) return;
       if (evtId === runsheetId && evtRow === rowIndex) {
+        console.log('🔧 InlineDocumentViewer: Refreshing document viewer for matching event');
         setRetryCount(0);
         loadDocument();
+      } else {
+        console.log('🔧 InlineDocumentViewer: Event does not match current viewer - ignoring');
       }
     };
     window.addEventListener('documentRecordCreated', handler as EventListener);
