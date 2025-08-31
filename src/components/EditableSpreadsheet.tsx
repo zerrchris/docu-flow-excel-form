@@ -3147,7 +3147,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
   // Calculate total table width
   const getTotalTableWidth = () => {
-    const rowActionsWidth = 140; // Updated row actions column width
+    const rowActionsWidth = 130; // Updated row actions column width
     const dataColumnsWidth = columns.reduce((total, column) => total + getColumnWidth(column), 0);
     const documentFileNameWidth = showDocumentFileNameColumn ? 350 : 0;
     const actionsColumnWidth = 600; // Fixed width for actions column (Document Linker) - increased to show all buttons
@@ -5296,8 +5296,8 @@ ${extractionFields}`
                   <th
                     className="font-bold text-center border-r border-b border-border relative p-0 bg-background sticky top-0"
                     style={{ 
-                       width: "140px", 
-                       minWidth: "140px",
+                       width: "130px", 
+                       minWidth: "130px",
                       backgroundColor: 'hsl(var(--background))',
                       position: 'sticky',
                       top: '0px',
@@ -5485,8 +5485,8 @@ ${extractionFields}`
                       <td 
                         className="border-r border-b border-border p-2 text-center bg-muted/30"
                         style={{ 
-                           width: "140px", 
-                           minWidth: "140px",
+                           width: "130px", 
+                           minWidth: "130px",
                           height: `${getRowHeight(rowIndex)}px`,
                           minHeight: `${getRowHeight(rowIndex)}px`
                         }}
