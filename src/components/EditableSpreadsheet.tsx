@@ -481,111 +481,98 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           return;
         }
 
-        // Check for new columns and update if needed
-        setColumns((prevColumns) => {
-          // Determine any new columns present in payload
-          const newCols = Object.keys(payload).filter((c) => {
-            if (prevColumns.includes(c)) return false;
-            if (c === 'Storage Path' || c === 'Document File Name') return false;
-            if (c.startsWith('__')) return false; // Filter out debug fields like __operationId
-            const val = (payload[c] || '').toString().trim();
-            return val !== '';
-          });
+        // Ensure we only process events for our current runsheet
+        if (eventRunsheetId && currentRunsheetId && eventRunsheetId !== currentRunsheetId) {
+          console.log('🔧 DEBUG: Event is for different runsheet, ignoring');
+          return;
+        }
 
-          console.log('🔧 DEBUG: New columns to add:', newCols);
+        // Block real-time updates to prevent race conditions
+        console.log('🔧 DEBUG: Blocking real-time updates during row addition');
+        setBlockRealTimeUpdates(true);
 
-          if (newCols.length) {
-            const updated = [...prevColumns, ...newCols];
-            console.log('🔧 DEBUG: Updated columns:', updated);
-            onColumnChange?.(updated);
-            return updated;
-          }
-          return prevColumns;
-        });
-
-        // Add the row data
-        setData((prevData) => {
-          // Build row matching current columns
-          const row: Record<string, string> = {};
-          columns.forEach((col) => {
-            row[col] = payload[col] || '';
-          });
-          if (payload['Storage Path']) {
-            row['Storage Path'] = payload['Storage Path'];
-          }
-
-          console.log('🔧 DEBUG: Built row for insertion:', row);
-          console.log('🔧 DEBUG: Current data length before insertion:', prevData.length);
-
-          // Find first empty row
-          const firstEmpty = prevData.findIndex((r, idx) => {
-            const isEmpty = Object.values(r).every((v) => (v || '').toString().trim() === '');
-            const hasDoc = documentMap.has(idx);
-            return isEmpty && !hasDoc;
-          });
-
-          console.log('🔧 DEBUG: firstEmpty index found:', firstEmpty);
-
-          const effectiveRunsheetId = eventRunsheetId || currentRunsheetId;
-          console.log('🔧 DEBUG: Using effectiveRunsheetId:', effectiveRunsheetId);
-
-          if (firstEmpty >= 0) {
-            const next = [...prevData];
-            next[firstEmpty] = row;
-            console.log('🔧 DEBUG: Inserting into existing empty row:', firstEmpty);
+        setData(prevData => {
+          console.log('🔧 DEBUG: Current data before adding row:', prevData);
+          
+          const newRowIndex = prevData.length;
+          console.log('🔧 DEBUG: Adding row at index:', newRowIndex);
+          
+          // Convert payload to match current columns
+          const filteredPayload: Record<string, string> = {};
+          
+          // Include all current columns in the new row
+          columns.forEach(column => {
+            // Check if payload has this column (case-insensitive)
+            const payloadKey = Object.keys(payload).find(key => 
+              key.toLowerCase() === column.toLowerCase()
+            );
             
-            if (effectiveRunsheetId && currentRunsheet) {
-              setActiveRunsheet({
-                ...currentRunsheet,
-                data: next
-              });
+            if (payloadKey && payload[payloadKey]) {
+              filteredPayload[column] = payload[payloadKey];
+            } else {
+              filteredPayload[column] = '';
             }
+          });
+          
+          console.log('🔧 DEBUG: Filtered payload for current columns:', filteredPayload);
+          
+          const newData = [...prevData, filteredPayload];
+          console.log('🔧 DEBUG: New data after adding row:', newData);
+          
+          // Update the document map to reflect the new row structure
+          setTimeout(() => {
+            // Since we added a row, we need to check if there are any pending documents for this new row
+            console.log('🔧 DEBUG: Checking for pending documents for new row at index:', newRowIndex);
+            const pendingDocs = JSON.parse(sessionStorage.getItem('pendingDocuments') || '[]');
+            const pendingDoc = pendingDocs.find((doc: any) => doc.rowIndex === newRowIndex);
+            
+            if (pendingDoc) {
+              console.log('🔧 DEBUG: Found pending document for new row:', pendingDoc);
               
-             setTimeout(() => {
-               console.log('🔧 DEBUG: Dispatching externalRowPlaced event for firstEmpty row');
-               console.log('🔧 DEBUG: rowIndex:', firstEmpty, 'runsheetId:', effectiveRunsheetId, 'storagePath:', payload['Storage Path']);
-               window.dispatchEvent(new CustomEvent('externalRowPlaced', {
-                 detail: {
-                   rowIndex: firstEmpty,
-                   runsheetId: effectiveRunsheetId,
-                   storagePath: payload['Storage Path'] || null,
-                 },
-               }));
-             }, 0);
-            setHasUnsavedChanges(true);
-            return next;
-          }
-
-          // Append to end if no empty row found
-          const appendedIndex = prevData.length;
-          const newData = [...prevData, row];
-          console.log('🔧 DEBUG: Appending new row at index:', appendedIndex);
-          
-          if (effectiveRunsheetId && currentRunsheet) {
-            setActiveRunsheet({
-              ...currentRunsheet,
-              data: newData
-            });
-          }
-          
-           setTimeout(() => {
-             console.log('🔧 DEBUG: Dispatching externalRowPlaced event for appended row');
-             console.log('🔧 DEBUG: rowIndex:', appendedIndex, 'runsheetId:', effectiveRunsheetId, 'storagePath:', payload['Storage Path']);
-             window.dispatchEvent(new CustomEvent('externalRowPlaced', {
-               detail: {
-                 rowIndex: appendedIndex,
-                 runsheetId: effectiveRunsheetId,
-                 storagePath: payload['Storage Path'] || null,
-               },
-             }));
-           }, 0);
+              // Create a mock document record for the document map
+              const mockDocumentRecord: DocumentRecord = {
+                id: pendingDoc.id || 'pending',
+                file_path: pendingDoc.storagePath,
+                stored_filename: pendingDoc.fileName,
+                original_filename: pendingDoc.fileName,
+                content_type: pendingDoc.fileName.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg',
+                row_index: newRowIndex,
+                runsheet_id: currentRunsheetId || '',
+                user_id: '',
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                file_size: 0
+              };
+              
+              const newMap = new Map(documentMap);
+              newMap.set(newRowIndex, mockDocumentRecord);
+              console.log('🔧 DEBUG: Updated document map with new row document:', Array.from(newMap.entries()));
+              updateDocumentMap(newMap);
+            }
+          }, 0);
           
           setHasUnsavedChanges(true);
+          
+          // Force save immediately to prevent real-time conflicts
+          setTimeout(() => {
+            console.log('🔧 DEBUG: Force saving after external row addition');
+            autoForceSave().then(() => {
+              console.log('🔧 DEBUG: Force save completed, unblocking real-time updates');
+              setBlockRealTimeUpdates(false);
+            }).catch((error) => {
+              console.error('🔧 DEBUG: Force save failed:', error);
+              // Still unblock to avoid permanent blocking
+              setBlockRealTimeUpdates(false);
+            });
+          }, 200);
+          
           return newData;
         });
 
       } catch (e) {
         console.error('🔧 DEBUG: externalAddRow handler error', e);
+        // Ensure we unblock real-time updates even on error
+        setBlockRealTimeUpdates(false);
       }
     };
 
@@ -596,7 +583,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       console.log('🔧 DEBUG: Removing externalAddRow event listener');
       window.removeEventListener('externalAddRow', handler as EventListener);
     };
-  }, [columns, currentRunsheet, setActiveRunsheet, documentMap, currentRunsheetId, onColumnChange]);
+  }, [columns, currentRunsheet, setActiveRunsheet, documentMap, currentRunsheetId, onColumnChange, updateDocumentMap, autoForceSave]);
 
   // Ref for container width measurement
   const containerRef = useRef<HTMLDivElement>(null);
