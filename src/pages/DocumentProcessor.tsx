@@ -216,7 +216,29 @@ const DocumentProcessor: React.FC = () => {
       ExtractionPreferencesService.cleanupPreferences(activeRunsheet.columns);
       
       setColumns(activeRunsheet.columns);
-      setColumnInstructions(activeRunsheet.columnInstructions || {});
+      
+      // If runsheet has column instructions, use them. Otherwise, load from user preferences.
+      const loadColumnInstructions = async () => {
+        if (activeRunsheet.columnInstructions && Object.keys(activeRunsheet.columnInstructions).length > 0) {
+          setColumnInstructions(activeRunsheet.columnInstructions);
+        } else {
+          try {
+            // Load default extraction preferences if runsheet doesn't have instructions
+            const defaultPrefs = await ExtractionPreferencesService.getDefaultPreferences();
+            if (defaultPrefs?.column_instructions) {
+              setColumnInstructions(defaultPrefs.column_instructions as Record<string, string>);
+            } else {
+              setColumnInstructions({});
+            }
+          } catch (error) {
+            console.warn('Failed to load default extraction preferences:', error);
+            setColumnInstructions({});
+          }
+        }
+      };
+      
+      loadColumnInstructions();
+      
       setFormData(prev => {
         const next: Record<string, string> = {};
         activeRunsheet.columns!.forEach(col => { next[col] = prev[col] || ''; });
