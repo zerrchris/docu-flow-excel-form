@@ -983,9 +983,18 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             const newDataString = JSON.stringify(updatedRunsheet.data || []);
             const hasDataChanged = currentDataString !== newDataString;
             
-            // Only update and show toast if data actually changed and we're not in the middle of a local update
+            // Only update and show toast if data actually changed and we don't have unsaved changes
             if (hasDataChanged) {
-              console.log('📊 Updating runsheet data from real-time event');
+              console.log('📊 Real-time update received, checking if we should apply it');
+              
+              // Don't apply real-time updates if we have unsaved local changes
+              // This prevents deleted rows from reappearing while user is making changes
+              if (hasUnsavedChanges) {
+                console.log('🔒 Skipping real-time update - user has unsaved local changes');
+                return;
+              }
+              
+              console.log('📊 Applying real-time update to runsheet data');
               
               // Update local state with new data
               setData(updatedRunsheet.data || []);
