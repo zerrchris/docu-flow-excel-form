@@ -480,6 +480,134 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           return;
         }
 
+        // Check for new columns and update if needed
+        setColumns((prevColumns) => {
+          // Determine any new columns present in payload
+          const newCols = Object.keys(payload).filter((c) => {
+            if (prevColumns.includes(c)) return false;
+            if (c === 'Storage Path' || c === 'Document File Name') return false;
+            const val = (payload[c] || '').toString().trim();
+            return val !== '';
+          });
+
+          console.log('🔧 DEBUG: New columns to add:', newCols);
+
+          if (newCols.length) {
+            const updated = [...prevColumns, ...newCols];
+            console.log('🔧 DEBUG: Updated columns:', updated);
+            onColumnChange?.(updated);
+            return updated;
+          }
+          return prevColumns;
+        });
+
+        // Add the row data
+        setData((prevData) => {
+          // Build row matching current columns
+          const row: Record<string, string> = {};
+          columns.forEach((col) => {
+            row[col] = payload[col] || '';
+          });
+          if (payload['Storage Path']) {
+            row['Storage Path'] = payload['Storage Path'];
+          }
+
+          console.log('🔧 DEBUG: Built row for insertion:', row);
+          console.log('🔧 DEBUG: Current data length before insertion:', prevData.length);
+
+          // Find first empty row
+          const firstEmpty = prevData.findIndex((r, idx) => {
+            const isEmpty = Object.values(r).every((v) => (v || '').toString().trim() === '');
+            const hasDoc = documentMap.has(idx);
+            return isEmpty && !hasDoc;
+          });
+
+          console.log('🔧 DEBUG: firstEmpty index found:', firstEmpty);
+
+          const effectiveRunsheetId = eventRunsheetId || currentRunsheetId;
+          console.log('🔧 DEBUG: Using effectiveRunsheetId:', effectiveRunsheetId);
+
+          if (firstEmpty >= 0) {
+            const next = [...prevData];
+            next[firstEmpty] = row;
+            console.log('🔧 DEBUG: Inserting into existing empty row:', firstEmpty);
+            
+            if (effectiveRunsheetId && currentRunsheet) {
+              setActiveRunsheet({
+                ...currentRunsheet,
+                data: next
+              });
+            }
+              
+            setTimeout(() => {
+              window.dispatchEvent(new CustomEvent('externalRowPlaced', {
+                detail: {
+                  rowIndex: firstEmpty,
+                  runsheetId: effectiveRunsheetId,
+                  storagePath: payload['Storage Path'] || null,
+                },
+              }));
+            }, 0);
+            setHasUnsavedChanges(true);
+            return next;
+          }
+
+          // Append to end if no empty row found
+          const appendedIndex = prevData.length;
+          const newData = [...prevData, row];
+          console.log('🔧 DEBUG: Appending new row at index:', appendedIndex);
+          
+          if (effectiveRunsheetId && currentRunsheet) {
+            setActiveRunsheet({
+              ...currentRunsheet,
+              data: newData
+            });
+          }
+          
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('externalRowPlaced', {
+              detail: {
+                rowIndex: appendedIndex,
+                runsheetId: effectiveRunsheetId,
+                storagePath: payload['Storage Path'] || null,
+              },
+            }));
+          }, 0);
+          
+          setHasUnsavedChanges(true);
+          return newData;
+        });
+
+      } catch (e) {
+        console.error('🔧 DEBUG: externalAddRow handler error', e);
+      }
+    };
+
+    window.addEventListener('externalAddRow', handler as EventListener);
+    console.log('🔧 DEBUG: externalAddRow event listener added');
+    
+    return () => {
+      console.log('🔧 DEBUG: Removing externalAddRow event listener');
+      window.removeEventListener('externalAddRow', handler as EventListener);
+    };
+  }, [columns, currentRunsheet, setActiveRunsheet, documentMap, currentRunsheetId, onColumnChange]);
+  useEffect(() => {
+    console.log('🔧 DEBUG: Setting up externalAddRow event listener in EditableSpreadsheet');
+    
+    const handler = (event: CustomEvent) => {
+      try {
+        console.log('🔧 DEBUG: EditableSpreadsheet received externalAddRow event');
+        const payload = (event as any).detail?.data as Record<string, string>;
+        const eventRunsheetId = (event as any).detail?.runsheetId;
+        console.log('🔧 DEBUG: payload:', payload);
+        console.log('🔧 DEBUG: eventRunsheetId:', eventRunsheetId);
+        console.log('🔧 DEBUG: currentRunsheetId:', currentRunsheetId);
+        
+        if (!payload) {
+          console.log('🔧 DEBUG: No payload found, returning');
+          return;
+        }
+
         // Process the data addition
         const addRowData = (currentColumns: string[]) => {
           const effectiveCols = [...currentColumns];
