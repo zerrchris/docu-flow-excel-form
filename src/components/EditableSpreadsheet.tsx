@@ -4987,6 +4987,32 @@ ${extractionFields}`
               </DropdownMenuContent>
             </DropdownMenu>
             
+            {/* Document Analysis Workspace Button */}
+            {currentRunsheetId && (
+              <DocumentWorkspaceButton
+                runsheetId={currentRunsheetId}
+                availableColumns={columns}
+                onDataConfirmed={(data, file) => {
+                  // Dispatch the externalAddRow event to add data to the runsheet
+                  setTimeout(() => {
+                    console.log('🔧 DEBUG: Dispatching externalAddRow event from DocumentWorkspaceButton');
+                    window.dispatchEvent(new CustomEvent('externalAddRow', { 
+                      detail: { 
+                        data: {
+                          ...data,
+                          'Document File Name': file.name
+                        },
+                        runsheetId: currentRunsheetId 
+                      } 
+                    }));
+                  }, 0);
+                }}
+                buttonText="Add Document"
+                buttonVariant="default"
+                showIcon={true}
+              />
+            )}
+            
             {/* Upload Multiple Files Button */}
             {onShowMultipleUpload && (
               <Button
