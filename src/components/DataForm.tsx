@@ -172,14 +172,17 @@ const DataForm: React.FC<DataFormProps> = ({
 
   // Initialize all fields as visible when fields change - completely reset on field change
   useEffect(() => {
-    // Create a completely new visibility object with ONLY current fields
+    // Filter out debug fields like __operationId from user-visible fields
+    const userVisibleFields = fields.filter(field => !field.startsWith('__'));
+    
+    // Create a completely new visibility object with ONLY current user-visible fields
     const initialVisibility: Record<string, boolean> = {};
-    fields.forEach(field => {
+    userVisibleFields.forEach(field => {
       initialVisibility[field] = true; // Always start with all fields visible
     });
     // Completely replace the state - don't preserve any old field visibility
     setVisibleFields(initialVisibility);
-    console.log('DataForm: Completely resetting visible fields for new fields:', fields);
+    console.log('DataForm: Completely resetting visible fields for new fields:', userVisibleFields);
     console.log('DataForm: Old visible fields cleared, new visible fields:', Object.keys(initialVisibility));
     console.log('DEBUG: DataForm fields prop received:', fields);
     console.log('DEBUG: DataForm formData keys:', Object.keys(formData));
@@ -359,8 +362,9 @@ const DataForm: React.FC<DataFormProps> = ({
     }
   };
 
-  // Only show fields that exist in current fields AND are marked visible
-  const visibleFieldsList = fields.filter(field => visibleFields[field] === true);
+  // Only show fields that exist in current fields AND are marked visible (filter out debug fields)
+  const userVisibleFields = fields.filter(field => !field.startsWith('__'));
+  const visibleFieldsList = userVisibleFields.filter(field => visibleFields[field] === true);
   
   return (
     <div className="space-y-4">
@@ -385,7 +389,7 @@ const DataForm: React.FC<DataFormProps> = ({
             Select which fields to show in the form:
           </div>
           <div className="grid grid-cols-1 gap-2 p-3 border rounded-md bg-muted/30">
-            {fields.map((field) => (
+            {userVisibleFields.map((field) => (
               <div key={field} className="flex items-center space-x-2">
                 <Checkbox
                   id={`visible-${field}`}

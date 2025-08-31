@@ -1546,9 +1546,9 @@ Image: [base64 image data]`;
         detail: { 
           data: {
             ...finalData,
-            '__operationId': operationId // Add operation ID for debugging
+            '__operationId': operationId // Add operation ID for debugging (hidden from UI)
           },
-          runsheetId: runsheetId 
+          runsheetId: runsheetId
         } 
       }));
       console.log('🔧 DEBUG: externalAddRow event dispatched for operation:', operationId);
@@ -2282,7 +2282,7 @@ Image: [base64 image data]`;
               Skip for now
             </Button>
             <Button 
-              onClick={() => {
+              onClick={async () => {
                 // Save all the configured instructions
                 const hasValidInstructions = missingColumns.every(col => 
                   columnInstructions[col]?.trim()
@@ -2290,7 +2290,19 @@ Image: [base64 image data]`;
                 
                 if (hasValidInstructions) {
                   // Save as default preferences
-                  ExtractionPreferencesService.saveDefaultPreferences(columns, columnInstructions);
+                  await ExtractionPreferencesService.saveDefaultPreferences(columns, columnInstructions);
+                  
+                  // Immediately reload the preferences to ensure they're available for next document
+                  try {
+                    const updatedPrefs = await ExtractionPreferencesService.getDefaultPreferences();
+                    if (updatedPrefs?.column_instructions) {
+                      setColumnInstructions(updatedPrefs.column_instructions as Record<string, string>);
+                      console.log('✅ Reloaded column instructions after saving:', updatedPrefs.column_instructions);
+                    }
+                  } catch (error) {
+                    console.warn('Failed to reload preferences after saving:', error);
+                  }
+                  
                   toast({
                     title: "Instructions saved",
                     description: "Extraction instructions configured and saved as default.",
