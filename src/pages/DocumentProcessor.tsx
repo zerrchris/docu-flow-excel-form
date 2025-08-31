@@ -1625,9 +1625,8 @@ Image: [base64 image data]`;
       console.log('🔧 DOCUMENT_RESET: Clearing document preview after successful add');
       resetDocument();
       
-      // Navigate back to the runsheet
-      console.log('🔧 NAVIGATION: Navigating back to runsheet after successful add');
-      navigate('/runsheet');
+      // Don't navigate - just stay on the current page to avoid refresh
+      console.log('🔧 DOCUMENT_PROCESSOR: Staying on current page after successful add to prevent refresh');
       
       // Show success message
       toast({
