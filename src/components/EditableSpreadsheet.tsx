@@ -218,6 +218,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [rowsToAdd, setRowsToAdd] = useState<number>(1);
   const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
+  const [blockRealTimeUpdates, setBlockRealTimeUpdates] = useState(false);
   const [showColumnDialog, setShowColumnDialog] = useState(false);
   const [showColumnPreferencesDialog, setShowColumnPreferencesDialog] = useState(false);
   const [editingColumnName, setEditingColumnName] = useState<string>('');
@@ -986,11 +987,13 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             // Only update and show toast if data actually changed and we don't have unsaved changes
             if (hasDataChanged) {
               console.log('📊 Real-time update received, checking if we should apply it');
+              console.log('📊 hasUnsavedChanges:', hasUnsavedChanges, 'blockRealTimeUpdates:', blockRealTimeUpdates);
+              console.log('📊 Current data length:', data.length, 'New data length:', (updatedRunsheet.data || []).length);
               
-              // Don't apply real-time updates if we have unsaved local changes
+              // Don't apply real-time updates if we have unsaved local changes OR explicit block is active
               // This prevents deleted rows from reappearing while user is making changes
-              if (hasUnsavedChanges) {
-                console.log('🔒 Skipping real-time update - user has unsaved local changes');
+              if (hasUnsavedChanges || blockRealTimeUpdates) {
+                console.log('🔒 BLOCKING real-time update - user has unsaved local changes or explicit block active');
                 return;
               }
               
@@ -3997,8 +4000,17 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
 
   // Function to delete a row
   const deleteRow = useCallback(async (rowIndex: number) => {
+    console.log('🗑️ DELETING ROW:', rowIndex, 'hasUnsavedChanges before:', hasUnsavedChanges);
+    
+    // Immediately block real-time updates to prevent race condition
+    setBlockRealTimeUpdates(true);
+    // Also set unsaved changes flag  
+    setHasUnsavedChanges(true);
+    
     setData(prev => {
       const newData = prev.filter((_, index) => index !== rowIndex);
+      console.log('🗑️ Row deleted from local state, new data length:', newData.length);
+      
       // Update document map to adjust indices
       const newDocumentMap = new Map<number, DocumentRecord>();
       documentMap.forEach((doc, mapRowIndex) => {
@@ -4011,13 +4023,21 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       });
       updateDocumentMap(newDocumentMap);
       
-      setHasUnsavedChanges(true);
       return newData;
     });
     
     // Force immediate save to prevent real-time sync from restoring the deleted row
     setTimeout(() => {
-      autoForceSave();
+      console.log('🗑️ Force saving after row deletion');
+      autoForceSave().then(() => {
+        console.log('🗑️ Force save completed, unblocking real-time updates');
+        // Unblock real-time updates after successful save
+        setBlockRealTimeUpdates(false);
+      }).catch((error) => {
+        console.error('🗑️ Force save failed:', error);
+        // Still unblock to avoid permanent blocking
+        setBlockRealTimeUpdates(false);
+      });
     }, 100);
     
     toast({
@@ -4025,7 +4045,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       description: `Row ${rowIndex + 1} has been deleted.`,
       variant: "default"
     });
-  }, [documentMap, updateDocumentMap, autoForceSave, toast]);
+  }, [documentMap, updateDocumentMap, autoForceSave, hasUnsavedChanges, toast]);
 
   // Function to update document row_index in database
   const updateDocumentRowIndexes = useCallback(async (newDocumentMap: Map<number, DocumentRecord>) => {
