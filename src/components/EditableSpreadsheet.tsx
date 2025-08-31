@@ -598,9 +598,19 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             return prevColumns;
           }
         });
-        }
+      } catch (e) {
+        console.error('🔧 DEBUG: externalAddRow handler error', e);
+      }
+    };
 
-        // Get current state values inside the handler to avoid stale closures
+    window.addEventListener('externalAddRow', handler as EventListener);
+    console.log('🔧 DEBUG: externalAddRow event listener added');
+    
+    return () => {
+      console.log('🔧 DEBUG: Removing externalAddRow event listener');
+      window.removeEventListener('externalAddRow', handler as EventListener);
+    };
+  }, [columns, currentRunsheet, setActiveRunsheet]);
         setColumns((prevColumns) => {
           // Determine any new columns present in payload, ignoring non-data/system fields
           const newCols = Object.keys(payload).filter((c) => {
@@ -886,10 +896,6 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           
           setHasUnsavedChanges(true);
           return newData;
-        });
-            
-            return prevColumns;
-          }
         });
 
       } catch (e) {
