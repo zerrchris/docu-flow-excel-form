@@ -1485,7 +1485,11 @@ Image: [base64 image data]`;
     // For batch processing, we need to ensure all analyzed data columns are included
     // Check if we have data for columns that aren't in our current column set
     const newColumnsFromData = Object.keys(targetData).filter(key => 
-      !columns.includes(key) && key !== 'Storage Path' && targetData[key] && targetData[key].trim() !== ''
+      !columns.includes(key) && 
+      key !== 'Storage Path' && 
+      !key.startsWith('__') && // Filter out debug fields like __operationId
+      targetData[key] && 
+      targetData[key].trim() !== ''
     );
     
     // If we have new columns from analyzed data, add them to our columns
@@ -1649,7 +1653,11 @@ Image: [base64 image data]`;
     // Continue with the rest of the addToSpreadsheet logic
     // Check for new columns from analyzed data here too
     const newColumnsFromData = Object.keys(targetData).filter(key => 
-      !columns.includes(key) && key !== 'Storage Path' && targetData[key] && targetData[key].trim() !== ''
+      !columns.includes(key) && 
+      key !== 'Storage Path' && 
+      !key.startsWith('__') && // Filter out debug fields like __operationId
+      targetData[key] && 
+      targetData[key].trim() !== ''
     );
     
     // If we have new columns from analyzed data, add them to our columns

@@ -487,6 +487,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           const newCols = Object.keys(payload).filter((c) => {
             if (prevColumns.includes(c)) return false;
             if (c === 'Storage Path' || c === 'Document File Name') return false;
+            if (c.startsWith('__')) return false; // Filter out debug fields like __operationId
             const val = (payload[c] || '').toString().trim();
             return val !== '';
           });
