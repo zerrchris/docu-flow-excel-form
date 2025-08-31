@@ -52,7 +52,7 @@ import FullScreenDocumentWorkspace from './FullScreenDocumentWorkspace';
 import ViewportPortal from './ViewportPortal';
 import { AutoSaveIndicator } from './AutoSaveIndicator';
 import { useAutoSave } from '@/hooks/useAutoSave';
-import DocumentWorkspaceButton from './DocumentWorkspaceButton';
+
 import type { User } from '@supabase/supabase-js';
 import { 
   isRowEmpty, 
@@ -4842,33 +4842,6 @@ ${extractionFields}`
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            
-            {/* Document Analysis Workspace Button */}
-            {currentRunsheetId && (
-              <DocumentWorkspaceButton
-                runsheetId={currentRunsheetId}
-                availableColumns={columns}
-                onDataConfirmed={(data, file) => {
-                  // Dispatch the externalAddRow event to add data to the runsheet
-                  setTimeout(() => {
-                    console.log('🔧 DEBUG: Dispatching externalAddRow event from DocumentWorkspaceButton');
-                    window.dispatchEvent(new CustomEvent('externalAddRow', { 
-                      detail: { 
-                        data: {
-                          ...data,
-                          'Document File Name': file.name,
-                          'Storage Path': null // DocumentWorkspaceButton handles its own file storage
-                        },
-                        runsheetId: currentRunsheetId 
-                      } 
-                    }));
-                  }, 0);
-                }}
-                buttonText="Add Document"
-                buttonVariant="default"
-                showIcon={true}
-              />
-            )}
             
             {/* Upload Multiple Files Button */}
             {onShowMultipleUpload && (
