@@ -1530,16 +1530,28 @@ Image: [base64 image data]`;
     console.log('🔧 DEBUG: runsheetId being passed:', runsheetId);
     console.log('🔧 DEBUG: finalData being passed:', finalData);
     
+    
+    // Add a unique operation ID to help with debugging correlation
+    const operationId = `batch-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    console.log('🔧 DEBUG: Starting operation:', operationId);
+    console.log('🔧 DEBUG: Dispatching externalAddRow event to EditableSpreadsheet');
+    console.log('🔧 DEBUG: runsheetId being passed:', runsheetId);
+    console.log('🔧 DEBUG: finalData being passed:', finalData);
+    console.log('🔧 DEBUG: Storage Path in finalData:', finalData['Storage Path']);
+    
     // Add a timeout to ensure the event is dispatched after any pending operations
     setTimeout(() => {
-      console.log('🔧 DEBUG: Actually dispatching externalAddRow event now');
+      console.log('🔧 DEBUG: Actually dispatching externalAddRow event now for operation:', operationId);
       window.dispatchEvent(new CustomEvent('externalAddRow', { 
         detail: { 
-          data: finalData,
+          data: {
+            ...finalData,
+            '__operationId': operationId // Add operation ID for debugging
+          },
           runsheetId: runsheetId 
         } 
       }));
-      console.log('🔧 DEBUG: externalAddRow event dispatched');
+      console.log('🔧 DEBUG: externalAddRow event dispatched for operation:', operationId);
     }, 100);
 
     // Show success message (will be refined after EditableSpreadsheet processes the row)
@@ -1553,16 +1565,26 @@ Image: [base64 image data]`;
     // One-time listener to learn which row index the spreadsheet actually used
     const handleExternalRowPlaced = (event: CustomEvent) => {
       const detail = (event as any).detail || {};
+      console.log('🔧 DocumentProcessor: Received externalRowPlaced event:', detail);
+      console.log('🔧 DocumentProcessor: Comparing storagePath:', detail?.storagePath, 'vs finalData Storage Path:', finalData['Storage Path']);
+      
       // Correlate using storagePath to avoid mismatches when multiple adds happen
       if (detail?.storagePath && detail.storagePath === finalData['Storage Path']) {
+        console.log('🔧 DocumentProcessor: Storage paths match! Proceeding with document record creation');
         window.removeEventListener('externalRowPlaced', handleExternalRowPlaced as EventListener);
         const placedRunsheetId: string | undefined = detail.runsheetId;
         const placedRowIndex: number | undefined = detail.rowIndex;
+        console.log('🔧 DocumentProcessor: placedRunsheetId:', placedRunsheetId, 'placedRowIndex:', placedRowIndex);
+        
         if (placedRunsheetId && placedRowIndex !== undefined) {
-          console.log('🔧 Received externalRowPlaced event:', detail);
+          console.log('🔧 DocumentProcessor: About to call createDocumentRecord with rowIndex:', placedRowIndex);
+          console.log('🔧 DocumentProcessor: Document will be linked to row:', placedRowIndex, 'in runsheet:', placedRunsheetId);
           // Ensure the document record points to the correct row in the correct runsheet
           createDocumentRecord(finalData, placedRowIndex, placedRunsheetId);
         }
+      } else {
+        console.log('🔧 DocumentProcessor: Storage paths do not match, ignoring this externalRowPlaced event');
+        console.log('🔧 DocumentProcessor: Expected:', finalData['Storage Path'], 'Received:', detail?.storagePath);
       }
     };
     window.addEventListener('externalRowPlaced', handleExternalRowPlaced as EventListener);
