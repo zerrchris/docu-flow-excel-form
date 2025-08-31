@@ -9,7 +9,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { RotateCw, CheckCircle, Plus, Settings, ChevronDown, ChevronUp, Upload, Wand2, Trash2, Sparkles, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import ReExtractDialog from '@/components/ReExtractDialog';
-import DataVerificationDialog from '@/components/DataVerificationDialog';
 import { toast } from '@/hooks/use-toast';
 
 interface DataFormProps {
@@ -61,9 +60,6 @@ const DataForm: React.FC<DataFormProps> = ({
     currentValue: ''
   });
   const [isReExtracting, setIsReExtracting] = useState(false);
-  
-  // Verification dialog state
-  const [verificationDialog, setVerificationDialog] = useState(false);
   
   // Warning dialog for back to runsheet
   const [showBackWarning, setShowBackWarning] = useState(false);
@@ -557,13 +553,8 @@ const DataForm: React.FC<DataFormProps> = ({
                 return;
               }
               
-              // Check if there's extracted data to verify
-              const hasExtractedData = Object.values(formData).some(value => value.trim() !== '');
-              if (hasExtractedData) {
-                setVerificationDialog(true);
-              } else {
-                onAddToSpreadsheet();
-              }
+              // Directly add to spreadsheet - user has already verified data in the form fields
+              onAddToSpreadsheet();
             }}
             className="w-full sm:w-auto"
             disabled={isUploading}
@@ -622,18 +613,6 @@ const DataForm: React.FC<DataFormProps> = ({
         isLoading={isReExtracting}
       />
 
-      {/* Data Verification Dialog */}
-      <DataVerificationDialog
-        isOpen={verificationDialog}
-        onClose={() => setVerificationDialog(false)}
-        onConfirm={async () => {
-          setVerificationDialog(false);
-          await onAddToSpreadsheet();
-        }}
-        onEdit={() => setVerificationDialog(false)}
-        extractedData={formData}
-        fileName={fileName}
-      />
 
       {/* Back to Runsheet Warning Dialog */}
       <Dialog open={showBackWarning} onOpenChange={setShowBackWarning}>
@@ -659,13 +638,8 @@ const DataForm: React.FC<DataFormProps> = ({
               variant="success"
               onClick={() => {
                 setShowBackWarning(false);
-                // Check if there's extracted data to verify
-                const hasExtractedData = Object.values(formData).some(value => value.trim() !== '');
-                if (hasExtractedData) {
-                  setVerificationDialog(true);
-                } else {
-                  onAddToSpreadsheet();
-                }
+                // Directly add to spreadsheet - user has already verified data in the form fields
+                onAddToSpreadsheet();
               }}
             >
               Add to Runsheet First
