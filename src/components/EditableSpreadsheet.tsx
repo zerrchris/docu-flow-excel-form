@@ -218,7 +218,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [rowsToAdd, setRowsToAdd] = useState<number>(1);
   const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
-  const [blockRealTimeUpdates, setBlockRealTimeUpdates] = useState(false);
+  
   const [showColumnDialog, setShowColumnDialog] = useState(false);
   const [showColumnPreferencesDialog, setShowColumnPreferencesDialog] = useState(false);
   const [editingColumnName, setEditingColumnName] = useState<string>('');
@@ -487,10 +487,6 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           return;
         }
 
-        // Block real-time updates to prevent race conditions
-        console.log('🔧 DEBUG: Blocking real-time updates during row addition');
-        setBlockRealTimeUpdates(true);
-
         setData(prevData => {
           console.log('🔧 DEBUG: Current data before adding row:', prevData);
           
@@ -553,26 +549,11 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           
           setHasUnsavedChanges(true);
           
-          // Force save immediately to prevent real-time conflicts
-          setTimeout(() => {
-            console.log('🔧 DEBUG: Force saving after external row addition');
-            autoForceSave().then(() => {
-              console.log('🔧 DEBUG: Force save completed, unblocking real-time updates');
-              setBlockRealTimeUpdates(false);
-            }).catch((error) => {
-              console.error('🔧 DEBUG: Force save failed:', error);
-              // Still unblock to avoid permanent blocking
-              setBlockRealTimeUpdates(false);
-            });
-          }, 200);
-          
           return newData;
         });
 
       } catch (e) {
         console.error('🔧 DEBUG: externalAddRow handler error', e);
-        // Ensure we unblock real-time updates even on error
-        setBlockRealTimeUpdates(false);
       }
     };
 
@@ -947,81 +928,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   }, [isFromExtension, initialRunsheetId, currentRunsheetId]);
 
   // Set up real-time updates
-  useEffect(() => {
-    if (!currentRunsheetId || !user) return;
-
-    console.log('🔄 Setting up real-time updates for runsheet:', currentRunsheetId);
-    
-    const channel = supabase
-      .channel('runsheet-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'runsheets',
-          filter: `id=eq.${currentRunsheetId}`
-        },
-        (payload) => {
-          console.log('🔄 Real-time runsheet update received:', payload);
-          if (payload.new && payload.new.id === currentRunsheetId) {
-            const updatedRunsheet = payload.new;
-            
-            // Check if this update is actually different from current data
-            const currentDataString = JSON.stringify(data);
-            const newDataString = JSON.stringify(updatedRunsheet.data || []);
-            const hasDataChanged = currentDataString !== newDataString;
-            
-            // Only update and show toast if data actually changed and we don't have unsaved changes
-            if (hasDataChanged) {
-              console.log('📊 Real-time update received, checking if we should apply it');
-              console.log('📊 hasUnsavedChanges:', hasUnsavedChanges, 'blockRealTimeUpdates:', blockRealTimeUpdates);
-              console.log('📊 Current data length:', data.length, 'New data length:', (updatedRunsheet.data || []).length);
-              
-              // Don't apply real-time updates if we have unsaved local changes OR explicit block is active
-              // This prevents deleted rows from reappearing while user is making changes
-              if (hasUnsavedChanges || blockRealTimeUpdates) {
-                console.log('🔒 BLOCKING real-time update - user has unsaved local changes or explicit block active');
-                return;
-              }
-              
-              console.log('📊 Applying real-time update to runsheet data');
-              
-              // Update local state with new data
-              setData(updatedRunsheet.data || []);
-              setColumns(updatedRunsheet.columns || []);
-              setColumnInstructions(updatedRunsheet.column_instructions || {});
-              setRunsheetName(updatedRunsheet.name || 'Untitled Runsheet');
-              
-              // Trigger callbacks
-              onDataChange?.(updatedRunsheet.data || []);
-              onColumnChange(updatedRunsheet.columns || []);
-              onColumnInstructionsChange?.(updatedRunsheet.column_instructions || {});
-              
-              // Only show toast for external updates (e.g., from extension)
-              // Check if the update came from URL params indicating extension sync
-              const urlParams = new URLSearchParams(window.location.search);
-              const isFromExtension = urlParams.get('from') === 'extension';
-              
-              if (isFromExtension) {
-                toast({
-                  title: "Runsheet updated",
-                  description: "Your runsheet has been updated with new data from the extension.",
-                });
-              }
-            } else {
-              console.log('📊 Skipping real-time update - no data changes detected');
-            }
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      console.log('🔄 Cleaning up real-time subscription');
-      supabase.removeChannel(channel);
-    };
-  }, [currentRunsheetId, user]);
+  // Real-time updates removed to prevent data persistence issues
+  // Users can manually save and refresh when needed
 
   // Update runsheet name when initialRunsheetName prop changes
   useEffect(() => {
@@ -3990,9 +3898,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const deleteRow = useCallback(async (rowIndex: number) => {
     console.log('🗑️ DELETING ROW:', rowIndex, 'hasUnsavedChanges before:', hasUnsavedChanges);
     
-    // Immediately block real-time updates to prevent race condition
-    setBlockRealTimeUpdates(true);
-    // Also set unsaved changes flag  
+    // Set unsaved changes flag  
     setHasUnsavedChanges(true);
     
     setData(prev => {
@@ -4013,20 +3919,6 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       
       return newData;
     });
-    
-    // Force immediate save to prevent real-time sync from restoring the deleted row
-    setTimeout(() => {
-      console.log('🗑️ Force saving after row deletion');
-      autoForceSave().then(() => {
-        console.log('🗑️ Force save completed, unblocking real-time updates');
-        // Unblock real-time updates after successful save
-        setBlockRealTimeUpdates(false);
-      }).catch((error) => {
-        console.error('🗑️ Force save failed:', error);
-        // Still unblock to avoid permanent blocking
-        setBlockRealTimeUpdates(false);
-      });
-    }, 100);
     
     toast({
       title: "Row deleted",
