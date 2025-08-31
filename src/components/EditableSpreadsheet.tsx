@@ -539,15 +539,17 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
               });
             }
               
-            setTimeout(() => {
-              window.dispatchEvent(new CustomEvent('externalRowPlaced', {
-                detail: {
-                  rowIndex: firstEmpty,
-                  runsheetId: effectiveRunsheetId,
-                  storagePath: payload['Storage Path'] || null,
-                },
-              }));
-            }, 0);
+             setTimeout(() => {
+               console.log('🔧 DEBUG: Dispatching externalRowPlaced event for firstEmpty row');
+               console.log('🔧 DEBUG: rowIndex:', firstEmpty, 'runsheetId:', effectiveRunsheetId, 'storagePath:', payload['Storage Path']);
+               window.dispatchEvent(new CustomEvent('externalRowPlaced', {
+                 detail: {
+                   rowIndex: firstEmpty,
+                   runsheetId: effectiveRunsheetId,
+                   storagePath: payload['Storage Path'] || null,
+                 },
+               }));
+             }, 0);
             setHasUnsavedChanges(true);
             return next;
           }
@@ -564,168 +566,22 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             });
           }
           
-          setTimeout(() => {
-            window.dispatchEvent(new CustomEvent('externalRowPlaced', {
-              detail: {
-                rowIndex: appendedIndex,
-                runsheetId: effectiveRunsheetId,
-                storagePath: payload['Storage Path'] || null,
-              },
-            }));
-          }, 0);
+           setTimeout(() => {
+             console.log('🔧 DEBUG: Dispatching externalRowPlaced event for appended row');
+             console.log('🔧 DEBUG: rowIndex:', appendedIndex, 'runsheetId:', effectiveRunsheetId, 'storagePath:', payload['Storage Path']);
+             window.dispatchEvent(new CustomEvent('externalRowPlaced', {
+               detail: {
+                 rowIndex: appendedIndex,
+                 runsheetId: effectiveRunsheetId,
+                 storagePath: payload['Storage Path'] || null,
+               },
+             }));
+           }, 0);
           
           setHasUnsavedChanges(true);
           return newData;
         });
 
-      } catch (e) {
-        console.error('🔧 DEBUG: externalAddRow handler error', e);
-      }
-    };
-
-    window.addEventListener('externalAddRow', handler as EventListener);
-    console.log('🔧 DEBUG: externalAddRow event listener added');
-    
-    return () => {
-      console.log('🔧 DEBUG: Removing externalAddRow event listener');
-      window.removeEventListener('externalAddRow', handler as EventListener);
-    };
-  }, [columns, currentRunsheet, setActiveRunsheet, documentMap, currentRunsheetId, onColumnChange]);
-  useEffect(() => {
-    console.log('🔧 DEBUG: Setting up externalAddRow event listener in EditableSpreadsheet');
-    
-    const handler = (event: CustomEvent) => {
-      try {
-        console.log('🔧 DEBUG: EditableSpreadsheet received externalAddRow event');
-        const payload = (event as any).detail?.data as Record<string, string>;
-        const eventRunsheetId = (event as any).detail?.runsheetId;
-        console.log('🔧 DEBUG: payload:', payload);
-        console.log('🔧 DEBUG: eventRunsheetId:', eventRunsheetId);
-        console.log('🔧 DEBUG: currentRunsheetId:', currentRunsheetId);
-        
-        if (!payload) {
-          console.log('🔧 DEBUG: No payload found, returning');
-          return;
-        }
-
-        // Process the data addition
-        const addRowData = (currentColumns: string[]) => {
-          const effectiveCols = [...currentColumns];
-          
-          // Build filtered row matching current/effective columns
-          const row: Record<string, string> = {};
-          effectiveCols.forEach((col) => {
-            row[col] = payload[col] || '';
-          });
-          if (payload['Storage Path']) {
-            row['Storage Path'] = payload['Storage Path'];
-          }
-
-          console.log('🔧 DEBUG: Built row for insertion:', row);
-
-          setData((prevData) => {
-            console.log('🔧 DEBUG: Current data length before insertion:', prevData.length);
-
-            // Find first empty row without a linked document
-            const firstEmpty = prevData.findIndex((r, idx) => {
-              const isEmpty = Object.values(r).every((v) => (v || '').toString().trim() === '');
-              const hasDoc = documentMap.has(idx);
-              return isEmpty && !hasDoc;
-            });
-
-            console.log('🔧 DEBUG: firstEmpty index found:', firstEmpty);
-
-            // Use the runsheet ID from the event or fall back to current
-            const effectiveRunsheetId = eventRunsheetId || currentRunsheetId;
-            console.log('🔧 DEBUG: Using effectiveRunsheetId:', effectiveRunsheetId);
-
-            console.log('🔧 DEBUG: Processing external row addition:', payload);
-
-            // Decide target index and update data
-            if (firstEmpty >= 0) {
-              const next = [...prevData];
-              next[firstEmpty] = row;
-              console.log('🔧 DEBUG: Inserting into existing empty row:', firstEmpty);
-              
-              if (effectiveRunsheetId && currentRunsheet) {
-                setActiveRunsheet({
-                  ...currentRunsheet,
-                  data: next
-                });
-              }
-                
-              // Inform listeners which row was used (inserted)
-              setTimeout(() => {
-                window.dispatchEvent(new CustomEvent('externalRowPlaced', {
-                  detail: {
-                    rowIndex: firstEmpty,
-                    runsheetId: effectiveRunsheetId,
-                    storagePath: payload['Storage Path'] || null,
-                  },
-                }));
-              }, 0);
-              setHasUnsavedChanges(true);
-              return next;
-            }
-
-            // Append to end if no empty row found
-            const appendedIndex = prevData.length;
-            const newData = [...prevData, row];
-            console.log('🔧 DEBUG: Appending new row at index:', appendedIndex);
-            
-            // Update active runsheet with new data
-            if (effectiveRunsheetId && currentRunsheet) {
-              setActiveRunsheet({
-                ...currentRunsheet,
-                data: newData
-              });
-            }
-            
-            // Inform listeners which row was used (appended)
-            setTimeout(() => {
-              window.dispatchEvent(new CustomEvent('externalRowPlaced', {
-                detail: {
-                  rowIndex: appendedIndex,
-                  runsheetId: effectiveRunsheetId,
-                  storagePath: payload['Storage Path'] || null,
-                },
-              }));
-            }, 0);
-            
-            setHasUnsavedChanges(true);
-            return newData;
-          });
-        };
-
-        // Check for new columns and update if needed
-        setColumns((prevColumns) => {
-          // Determine any new columns present in payload, ignoring non-data/system fields
-          const newCols = Object.keys(payload).filter((c) => {
-            if (prevColumns.includes(c)) return false;
-            // Ignore system/meta fields and filename helper
-            if (c === 'Storage Path' || c === 'Document File Name') return false;
-            const val = (payload[c] || '').toString().trim();
-            // Only add columns that actually have a value to prevent reviving deleted columns
-            return val !== '';
-          });
-
-          console.log('🔧 DEBUG: New columns to add:', newCols);
-
-          if (newCols.length) {
-            const updated = [...prevColumns, ...newCols];
-            console.log('🔧 DEBUG: Updated columns:', updated);
-            onColumnChange?.(updated);
-            
-            // Process the row addition with updated columns
-            setTimeout(() => addRowData(updated), 0);
-            
-            return updated;
-          } else {
-            // No new columns, proceed with existing columns
-            addRowData(prevColumns);
-            return prevColumns;
-          }
-        });
       } catch (e) {
         console.error('🔧 DEBUG: externalAddRow handler error', e);
       }
@@ -5000,7 +4856,8 @@ ${extractionFields}`
                       detail: { 
                         data: {
                           ...data,
-                          'Document File Name': file.name
+                          'Document File Name': file.name,
+                          'Storage Path': null // DocumentWorkspaceButton handles its own file storage
                         },
                         runsheetId: currentRunsheetId 
                       } 
