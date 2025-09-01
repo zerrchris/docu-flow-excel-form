@@ -484,12 +484,16 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
         }
 
         setData(prevData => {
+          console.log('🔧 DEBUG: ===== ADDING NEW ROW =====');
           console.log('🔧 DEBUG: Current data before adding row:', prevData);
+          console.log('🔧 DEBUG: Current documentMap entries:', Array.from(documentMap.entries()));
+          console.log('🔧 DEBUG: Payload to add:', payload);
           
           // Find the first truly empty row (no data and no linked document)
           const firstEmptyRowIndex = prevData.findIndex((row, index) => {
             const isDataEmpty = Object.values(row).every(value => !value || value.trim() === '');
             const hasLinkedDocument = documentMap.has(index);
+            console.log(`🔧 DEBUG: Row ${index} - isEmpty: ${isDataEmpty}, hasDocument: ${hasLinkedDocument}, data:`, row);
             return isDataEmpty && !hasLinkedDocument;
           });
           
@@ -506,6 +510,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             newRowIndex = prevData.length;
             newData = [...prevData];
             console.log('🔧 DEBUG: Adding new row at index:', newRowIndex);
+            console.log('🔧 DEBUG: This will be row number:', newRowIndex + 1, 'in the UI');
           }
           
           // Convert payload to match current columns
