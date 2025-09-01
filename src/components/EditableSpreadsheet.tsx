@@ -641,7 +641,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
       console.log('🔧 DEBUG: Removing externalAddRow event listener');
       window.removeEventListener('externalAddRow', handler as EventListener);
     };
-  }, [columns, currentRunsheet, setActiveRunsheet, documentMap, currentRunsheetId, onColumnChange, updateDocumentMap, autoForceSave]);
+  }, []); // Empty dependency array to prevent frequent re-mounting of event listener
 
   // Ref for container width measurement
   const containerRef = useRef<HTMLDivElement>(null);
