@@ -3,19 +3,16 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowLeft, Eye, Edit2, Trash2, Search, Calendar, FileImage, Smartphone, Upload as UploadIcon, Download, CheckSquare, X, ChevronDown, ChevronRight, Folder, FolderOpen, FileSpreadsheet, ArrowUp, Home, Plus, FolderPlus, Move, Cloud, SortAsc, SortDesc, Play, Zap } from 'lucide-react';
+import { ArrowLeft, Eye, Edit2, Trash2, Search, FileImage, FileSpreadsheet, Plus, ArrowUp, Home } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import AuthButton from '@/components/AuthButton';
 import ActiveRunsheetButton from '@/components/ActiveRunsheetButton';
 import { FilePreview } from '@/components/FilePreview';
-import { GoogleDrivePicker } from '@/components/GoogleDrivePicker';
 import { useActiveRunsheet } from '@/hooks/useActiveRunsheet';
 import LogoMark from '@/components/LogoMark';
 
@@ -26,18 +23,8 @@ interface StoredFile {
   size: number;
   created_at: string;
   type: 'mobile' | 'uploaded';
-  project?: string;
   fullPath: string;
-  folder_id?: string;
-}
-
-interface Folder {
-  id: string;
-  name: string;
-  parent_folder_id?: string;
-  created_at: string;
-  updated_at: string;
-  user_id: string;
+  rowIndex?: number;
 }
 
 interface Runsheet {
@@ -50,135 +37,36 @@ interface Runsheet {
   column_instructions: Record<string, string>;
 }
 
-interface ProjectGroup {
-  name: string;
-  files: StoredFile[];
-  count: number;
-}
-
 export const FileManager: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { activeRunsheet, clearActiveRunsheet } = useActiveRunsheet();
-  const [files, setFiles] = useState<StoredFile[]>([]);
-  const [folders, setFolders] = useState<Folder[]>([]);
   const [runsheets, setRunsheets] = useState<Runsheet[]>([]);
-  const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
+  const [runsheetDocuments, setRunsheetDocuments] = useState<StoredFile[]>([]);
+  const [orphanedFiles, setOrphanedFiles] = useState<StoredFile[]>([]);
+  const [currentView, setCurrentView] = useState<'runsheets' | 'runsheet-details'>('runsheets');
+  const [currentRunsheetId, setCurrentRunsheetId] = useState<string | null>(null);
+  const [currentRunsheetName, setCurrentRunsheetName] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFile, setSelectedFile] = useState<StoredFile | null>(null);
   const [selectedRunsheet, setSelectedRunsheet] = useState<Runsheet | null>(null);
-  const [selectedFolder, setSelectedFolder] = useState<Folder | null>(null);
   const [showRenameDialog, setShowRenameDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [showCreateFolderDialog, setShowCreateFolderDialog] = useState(false);
-  const [showMoveDialog, setShowMoveDialog] = useState(false);
   const [newFileName, setNewFileName] = useState('');
-  const [newFolderName, setNewFolderName] = useState('');
   const [isRenaming, setIsRenaming] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isCreatingFolder, setIsCreatingFolder] = useState(false);
-  const [isMoving, setIsMoving] = useState(false);
-  const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
-  const [isSelectMode, setIsSelectMode] = useState(false);
-  const [currentFolder, setCurrentFolder] = useState<'root' | 'files' | 'runsheets'>('root');
-  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
-  const [showViewChoiceDialog, setShowViewChoiceDialog] = useState(false);
-  const [pendingViewItem, setPendingViewItem] = useState<{ type: 'file', item: StoredFile } | { type: 'runsheet', item: Runsheet } | null>(null);
-  const [draggedFile, setDraggedFile] = useState<StoredFile | null>(null);
-  const [sortBy, setSortBy] = useState<'name' | 'date' | 'size'>('date');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [showPreview, setShowPreview] = useState(false);
   const [previewFile, setPreviewFile] = useState<StoredFile | null>(null);
-  const [showGoogleDrive, setShowGoogleDrive] = useState(false);
-  const [showRunsheetDialog, setShowRunsheetDialog] = useState(false);
-  const [selectedFilesForRunsheet, setSelectedFilesForRunsheet] = useState<StoredFile[]>([]);
-  const [newRunsheetName, setNewRunsheetName] = useState('');
 
   useEffect(() => {
-    if (currentFolder === 'files') {
-      loadStoredFiles();
-    } else if (currentFolder === 'runsheets') {
+    if (currentView === 'runsheets') {
       loadRunsheets();
+      loadOrphanedFiles();
+    } else if (currentView === 'runsheet-details' && currentRunsheetId) {
+      loadRunsheetDocuments(currentRunsheetId);
     }
-  }, [currentFolder]);
-
-  const loadStoredFiles = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast({
-          title: "Authentication Required",
-          description: "Please sign in to view your files.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      setIsLoading(true);
-      
-      // Get all files recursively to handle project folders
-      const getAllFiles = async (path = '') => {
-        const { data, error } = await supabase.storage
-          .from('documents')
-          .list(`${user.id}${path}`, {
-            limit: 100,
-            sortBy: { column: 'created_at', order: 'desc' }
-          });
-        
-        if (error) throw error;
-        
-        let allFiles: any[] = [];
-        
-        for (const item of data || []) {
-          if (item.id === null) {
-            // This is a folder, recursively get its contents
-            const subFiles = await getAllFiles(`${path}/${item.name}`);
-            allFiles = allFiles.concat(subFiles);
-          } else {
-            // This is a file
-            allFiles.push({
-              ...item,
-              fullPath: `${path}/${item.name}`.replace(/^\//, ''),
-              project: path ? path.split('/').pop() : undefined
-            });
-          }
-        }
-        
-        return allFiles;
-      };
-
-      const allFiles = await getAllFiles();
-
-      const filesWithUrls = allFiles.map(file => {
-        const { data: urlData } = supabase.storage
-          .from('documents')
-          .getPublicUrl(`${user.id}/${file.fullPath}`);
-
-        return {
-          id: file.id || file.name,
-          name: file.name,
-          url: urlData.publicUrl,
-          size: file.metadata?.size || 0,
-          created_at: file.created_at || new Date().toISOString(),
-          type: file.name.startsWith('mobile_document') ? 'mobile' as const : 'uploaded' as const,
-          project: file.project,
-          fullPath: file.fullPath
-        };
-      });
-
-      setFiles(filesWithUrls);
-    } catch (error: any) {
-      console.error('Error loading files:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load stored files.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [currentView, currentRunsheetId]);
 
   const loadRunsheets = async () => {
     try {
@@ -202,7 +90,6 @@ export const FileManager: React.FC = () => {
 
       if (error) throw error;
 
-      // Transform the data to match our Runsheet interface
       const transformedRunsheets: Runsheet[] = (data || []).map(sheet => ({
         id: sheet.id,
         name: sheet.name,
@@ -228,54 +115,158 @@ export const FileManager: React.FC = () => {
     }
   };
 
-  const handleRename = async () => {
-    if (!newFileName.trim()) return;
-    
-    if (selectedFile) {
-      await handleRenameFile();
-    } else if (selectedRunsheet) {
-      await handleRenameRunsheet();
+  const loadOrphanedFiles = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('user_id', user.id)
+        .is('runsheet_id', null)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const filesWithUrls = (data || []).map(doc => ({
+        id: doc.id,
+        name: doc.original_filename,
+        url: supabase.storage.from('documents').getPublicUrl(doc.file_path).data.publicUrl,
+        size: doc.file_size || 0,
+        created_at: doc.created_at,
+        type: 'uploaded' as const,
+        fullPath: doc.file_path
+      }));
+
+      setOrphanedFiles(filesWithUrls);
+    } catch (error: any) {
+      console.error('Error loading orphaned files:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load orphaned files.",
+        variant: "destructive",
+      });
     }
   };
 
-  const handleRenameFile = async () => {
-    if (!selectedFile || !newFileName.trim()) return;
+  const loadRunsheetDocuments = async (runsheetId: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-    setIsRenaming(true);
+      const { data, error } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('runsheet_id', runsheetId)
+        .order('row_index', { ascending: true });
+
+      if (error) throw error;
+
+      const filesWithUrls = (data || []).map(doc => ({
+        id: doc.id,
+        name: doc.original_filename,
+        url: supabase.storage.from('documents').getPublicUrl(doc.file_path).data.publicUrl,
+        size: doc.file_size || 0,
+        created_at: doc.created_at,
+        type: 'uploaded' as const,
+        fullPath: doc.file_path,
+        rowIndex: doc.row_index
+      }));
+
+      setRunsheetDocuments(filesWithUrls);
+    } catch (error: any) {
+      console.error('Error loading runsheet documents:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load runsheet documents.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteRunsheet = async () => {
+    if (!selectedRunsheet) return;
+
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('runsheets')
+        .delete()
+        .eq('id', selectedRunsheet.id);
+
+      if (error) throw error;
+
+      if (activeRunsheet && activeRunsheet.id === selectedRunsheet.id) {
+        clearActiveRunsheet();
+      }
+
+      toast({
+        title: "Runsheet Deleted",
+        description: `"${selectedRunsheet.name}" has been deleted successfully.`,
+      });
+
+      setShowDeleteDialog(false);
+      setSelectedRunsheet(null);
+      loadRunsheets();
+    } catch (error: any) {
+      console.error('Error deleting runsheet:', error);
+      toast({
+        title: "Delete Failed",
+        description: error.message || "Failed to delete runsheet.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDeleteFile = async () => {
+    if (!selectedFile) return;
+
+    setIsDeleting(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
-      // Get the file extension
-      const fileExtension = selectedFile.name.split('.').pop();
-      const cleanNewName = newFileName.trim().replace(/[^a-zA-Z0-9\-_\s]/g, '').replace(/\s+/g, '_');
-      const newFullName = `${cleanNewName}.${fileExtension}`;
-
-      // Move the file to the new name
-      const { error } = await supabase.storage
+      // Delete from database
+      const { error: dbError } = await supabase
         .from('documents')
-        .move(`${user.id}/${selectedFile.fullPath}`, `${user.id}/${newFullName}`);
+        .delete()
+        .eq('id', selectedFile.id);
 
-      if (error) throw error;
+      if (dbError) throw dbError;
+
+      // Delete from storage
+      const { error: storageError } = await supabase.storage
+        .from('documents')
+        .remove([selectedFile.fullPath]);
+
+      if (storageError) throw storageError;
 
       toast({
-        title: "File Renamed",
-        description: `File renamed to "${newFullName}" successfully.`,
+        title: "File Deleted",
+        description: `"${selectedFile.name}" has been deleted successfully.`,
       });
 
-      setShowRenameDialog(false);
+      setShowDeleteDialog(false);
       setSelectedFile(null);
-      setNewFileName('');
-      loadStoredFiles(); // Refresh the list
+      
+      if (currentView === 'runsheet-details' && currentRunsheetId) {
+        loadRunsheetDocuments(currentRunsheetId);
+      } else {
+        loadOrphanedFiles();
+      }
     } catch (error: any) {
-      console.error('Error renaming file:', error);
+      console.error('Error deleting file:', error);
       toast({
-        title: "Rename Failed",
-        description: error.message || "Failed to rename file.",
+        title: "Delete Failed",
+        description: error.message || "Failed to delete file.",
         variant: "destructive",
       });
     } finally {
-      setIsRenaming(false);
+      setIsDeleting(false);
     }
   };
 
@@ -289,7 +280,6 @@ export const FileManager: React.FC = () => {
 
       const cleanNewName = newFileName.trim();
 
-      // Update the runsheet name in the database
       const { error } = await supabase
         .from('runsheets')
         .update({ name: cleanNewName })
@@ -306,7 +296,7 @@ export const FileManager: React.FC = () => {
       setShowRenameDialog(false);
       setSelectedRunsheet(null);
       setNewFileName('');
-      loadRunsheets(); // Refresh the list
+      loadRunsheets();
     } catch (error: any) {
       console.error('Error renaming runsheet:', error);
       toast({
@@ -319,769 +309,21 @@ export const FileManager: React.FC = () => {
     }
   };
 
-  const handleDelete = async () => {
-    if (currentFolder === 'files' && selectedFile) {
-      await handleDeleteFile();
-    } else if (currentFolder === 'runsheets' && selectedRunsheet) {
-      await handleDeleteRunsheet();
-    }
-  };
+  const filteredRunsheets = runsheets.filter(runsheet =>
+    runsheet.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-  const handleDeleteFile = async () => {
-    if (!selectedFile) return;
-
-    setIsDeleting(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
-
-      const { error } = await supabase.storage
-        .from('documents')
-        .remove([`${user.id}/${selectedFile.fullPath}`]);
-
-      if (error) throw error;
-
-      toast({
-        title: "File Deleted",
-        description: `"${selectedFile.name}" has been deleted successfully.`,
-      });
-
-      setShowDeleteDialog(false);
-      setSelectedFile(null);
-      loadStoredFiles(); // Refresh the list
-    } catch (error: any) {
-      console.error('Error deleting file:', error);
-      toast({
-        title: "Delete Failed",
-        description: error.message || "Failed to delete file.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  const handleDeleteRunsheet = async () => {
-    if (!selectedRunsheet) return;
-
-    setIsDeleting(true);
-    try {
-      const { error } = await supabase
-        .from('runsheets')
-        .delete()
-        .eq('id', selectedRunsheet.id);
-
-      if (error) throw error;
-
-      // Clear active runsheet if the deleted runsheet was active
-      if (activeRunsheet && activeRunsheet.id === selectedRunsheet.id) {
-        console.log('🧹 Clearing active runsheet - deleted runsheet was active');
-        clearActiveRunsheet();
-      }
-
-      toast({
-        title: "Runsheet Deleted",
-        description: `"${selectedRunsheet.name}" has been deleted successfully.`,
-      });
-
-      setShowDeleteDialog(false);
-      setSelectedRunsheet(null);
-      loadRunsheets(); // Refresh the list
-    } catch (error: any) {
-      console.error('Error deleting runsheet:', error);
-      toast({
-        title: "Delete Failed",
-        description: error.message || "Failed to delete runsheet.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  const handleDeleteSelected = async () => {
-    if (selectedFiles.size === 0) return;
-    
-    setIsDeleting(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
-
-      if (currentFolder === 'files') {
-        // Get paths of selected files
-        const selectedFilePaths = files
-          .filter(file => selectedFiles.has(file.id))
-          .map(file => `${user.id}/${file.fullPath}`);
-        
-        const { error } = await supabase.storage
-          .from('documents')
-          .remove(selectedFilePaths);
-
-        if (error) throw error;
-      } else if (currentFolder === 'runsheets') {
-        // Delete selected runsheets
-        const selectedRunsheetIds = Array.from(selectedFiles);
-        
-        const { error } = await supabase
-          .from('runsheets')
-          .delete()
-          .in('id', selectedRunsheetIds);
-
-        if (error) throw error;
-      }
-
-      toast({
-        title: "Items Deleted",
-        description: `Successfully deleted ${selectedFiles.size} items.`,
-      });
-
-      setSelectedFiles(new Set());
-      setIsSelectMode(false);
-      
-      if (currentFolder === 'files') {
-        loadStoredFiles();
-      } else if (currentFolder === 'runsheets') {
-        loadRunsheets();
-      }
-    } catch (error: any) {
-      console.error('Error deleting selected items:', error);
-      toast({
-        title: "Delete Failed",
-        description: error.message || "Failed to delete selected items.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  const handleDownloadSelected = async () => {
-    if (selectedFiles.size === 0) return;
-    
-    if (currentFolder === 'files') {
-      const selectedFileList = files.filter(file => selectedFiles.has(file.id));
-      
-      for (const file of selectedFileList) {
-        try {
-          const response = await fetch(file.url);
-          const blob = await response.blob();
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = file.name;
-          document.body.appendChild(a);
-          a.click();
-          window.URL.revokeObjectURL(url);
-          document.body.removeChild(a);
-        } catch (error) {
-          console.error(`Error downloading ${file.name}:`, error);
-        }
-      }
-    } else if (currentFolder === 'runsheets') {
-      // Download runsheets as Excel files
-      const selectedRunsheetList = runsheets.filter(sheet => selectedFiles.has(sheet.id));
-      
-      for (const sheet of selectedRunsheetList) {
-        try {
-          // Here you would implement Excel export
-          // For now, just download as JSON
-          const dataStr = JSON.stringify(sheet, null, 2);
-          const dataBlob = new Blob([dataStr], { type: 'application/json' });
-          const url = window.URL.createObjectURL(dataBlob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `${sheet.name}.json`;
-          document.body.appendChild(a);
-          a.click();
-          window.URL.revokeObjectURL(url);
-          document.body.removeChild(a);
-        } catch (error) {
-          console.error(`Error downloading ${sheet.name}:`, error);
-        }
-      }
-    }
-    
-    toast({
-      title: "Downloads Started",
-      description: `Started downloading ${selectedFiles.size} items.`,
-    });
-  };
-
-  const toggleSelectMode = () => {
-    setIsSelectMode(!isSelectMode);
-    setSelectedFiles(new Set());
-  };
-
-  const selectAllItems = () => {
-    const currentItems = currentFolder === 'files' ? filteredFiles : filteredRunsheets;
-    if (selectedFiles.size === currentItems.length) {
-      setSelectedFiles(new Set());
-    } else {
-      setSelectedFiles(new Set(currentItems.map(item => item.id)));
-    }
-  };
-
-  const toggleFileSelection = (fileId: string) => {
-    const newSelection = new Set(selectedFiles);
-    if (newSelection.has(fileId)) {
-      newSelection.delete(fileId);
-    } else {
-      newSelection.add(fileId);
-    }
-    setSelectedFiles(newSelection);
-  };
-
-  const toggleProjectExpansion = (projectName: string) => {
-    const newExpanded = new Set(expandedProjects);
-    if (newExpanded.has(projectName)) {
-      newExpanded.delete(projectName);
-    } else {
-      newExpanded.add(projectName);
-    }
-    setExpandedProjects(newExpanded);
-  };
-
-  // Sorting function
-  const sortItems = <T extends { name: string; created_at: string; size?: number }>(items: T[]): T[] => {
-    return [...items].sort((a, b) => {
-      let comparison = 0;
-      
-      switch (sortBy) {
-        case 'name':
-          comparison = a.name.localeCompare(b.name);
-          break;
-        case 'date':
-          comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-          break;
-        case 'size':
-          comparison = (a.size || 0) - (b.size || 0);
-          break;
-      }
-      
-      return sortOrder === 'asc' ? comparison : -comparison;
-    });
-  };
-
-  const filteredFiles = sortItems(files.filter(file =>
+  const filteredDocuments = runsheetDocuments.filter(file =>
     file.name.toLowerCase().includes(searchTerm.toLowerCase())
-  ));
-
-  const filteredRunsheets = sortItems(runsheets.filter(sheet =>
-    sheet.name.toLowerCase().includes(searchTerm.toLowerCase())
-  ));
-
-  // Group files by project
-  const groupedFiles = React.useMemo(() => {
-    const groups: { [key: string]: StoredFile[] } = {};
-    
-    filteredFiles.forEach(file => {
-      const projectName = file.project || 'Individual Files';
-      if (!groups[projectName]) {
-        groups[projectName] = [];
-      }
-      groups[projectName].push(file);
-    });
-
-    return groups;
-  }, [filteredFiles]);
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 KB';
-    const MB = bytes / (1024 * 1024);
-    return MB > 1 ? `${MB.toFixed(1)} MB` : `${(bytes / 1024).toFixed(0)} KB`;
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const openRenameDialog = (file: StoredFile) => {
-    setSelectedFile(file);
-    // Remove file extension for editing
-    const nameWithoutExt = file.name.replace(/\.[^/.]+$/, '');
-    setNewFileName(nameWithoutExt);
-    setShowRenameDialog(true);
-  };
-
-  const openRenameRunsheetDialog = (runsheet: Runsheet) => {
-    setSelectedRunsheet(runsheet);
-    setSelectedFile(null);
-    setNewFileName(runsheet.name);
-    setShowRenameDialog(true);
-  };
-
-  const openDeleteDialog = (file?: StoredFile, runsheet?: Runsheet) => {
-    if (file) {
-      setSelectedFile(file);
-      setSelectedRunsheet(null);
-    } else if (runsheet) {
-      setSelectedRunsheet(runsheet);
-      setSelectedFile(null);
-    }
-    setShowDeleteDialog(true);
-  };
-
-  const handlePreview = (file: StoredFile) => {
-    setPreviewFile(file);
-    setShowPreview(true);
-  };
-
-  const openRunsheet = (runsheet: Runsheet) => {
-    navigate(`/runsheet?runsheet=${runsheet.id}`);
-  };
-
-  const handleFilesForRunsheet = () => {
-    if (selectedFiles.size === 0) return;
-    
-    const selectedFileList = files.filter(file => selectedFiles.has(file.id));
-    setSelectedFilesForRunsheet(selectedFileList);
-    setNewRunsheetName(`Files Runsheet ${new Date().toLocaleDateString()}`);
-    setShowRunsheetDialog(true);
-  };
-
-  const processFilesIntoRunsheet = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
-
-      // Create a new runsheet with selected files
-      const newRunsheet = {
-        name: newRunsheetName.trim() || `Files Runsheet ${new Date().toLocaleDateString()}`,
-        columns: ['filename', 'size', 'type', 'created_date'],
-        data: selectedFilesForRunsheet.map(file => ({
-          filename: file.name,
-          size: formatFileSize(file.size),
-          type: file.type,
-          created_date: formatDate(file.created_at)
-        })),
-        column_instructions: {
-          filename: 'Original file name',
-          size: 'File size in bytes',
-          type: 'Source type (mobile or uploaded)',
-          created_date: 'Date the file was created'
-        }
-      };
-
-      const { data, error } = await supabase
-        .from('runsheets')
-        .insert({
-          user_id: user.id,
-          name: newRunsheet.name,
-          columns: newRunsheet.columns,
-          data: newRunsheet.data,
-          column_instructions: newRunsheet.column_instructions
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      toast({
-        title: "Runsheet Created",
-        description: `Created runsheet with ${selectedFilesForRunsheet.length} files`,
-      });
-
-      // Navigate to the new runsheet
-      navigate(`/runsheet?runsheet=${data.id}`);
-    } catch (error: any) {
-      console.error('Error creating runsheet:', error);
-      toast({
-        title: "Error",
-        description: "Failed to create runsheet from files",
-        variant: "destructive",
-      });
-    } finally {
-      setShowRunsheetDialog(false);
-      setSelectedFilesForRunsheet([]);
-      setNewRunsheetName('');
-    }
-  };
-
-  const handleViewChoice = (item: StoredFile | Runsheet, type: 'file' | 'runsheet') => {
-    console.log('handleViewChoice called:', { item, type });
-    if (type === 'file') {
-      setPendingViewItem({ type: 'file', item: item as StoredFile });
-    } else {
-      setPendingViewItem({ type: 'runsheet', item: item as Runsheet });
-    }
-    console.log('Setting showViewChoiceDialog to true');
-    setShowViewChoiceDialog(true);
-  };
-
-  const handleViewInCurrentTab = () => {
-    if (!pendingViewItem) return;
-    
-    if (pendingViewItem.type === 'file') {
-      window.open(pendingViewItem.item.url, '_self');
-    } else {
-      navigate(`/runsheet?runsheet=${pendingViewItem.item.id}`);
-    }
-    
-    setShowViewChoiceDialog(false);
-    setPendingViewItem(null);
-  };
-
-  const handleViewInNewTab = () => {
-    if (!pendingViewItem) return;
-    
-    if (pendingViewItem.type === 'file') {
-      window.open(pendingViewItem.item.url, '_blank');
-    } else {
-      window.open(`/runsheet?runsheet=${pendingViewItem.item.id}`, '_blank');
-    }
-    
-    setShowViewChoiceDialog(false);
-    setPendingViewItem(null);
-  };
-
-  const renderFileCard = (file: StoredFile) => (
-    <Card key={file.id} className="p-4 hover:shadow-md transition-shadow">
-      <div className="space-y-3">
-        {/* File Preview */}
-        <div className="relative w-full h-32 bg-muted rounded overflow-hidden">
-          <img
-            src={file.url}
-            alt={file.name}
-            className="w-full h-full object-cover"
-            onError={(e) => {
-              e.currentTarget.style.display = 'none';
-            }}
-          />
-        </div>
-
-        {/* File Info */}
-        <div className="space-y-2">
-          <div className="flex items-start justify-between gap-2">
-            <h3 className="font-medium text-sm truncate flex-1" title={file.name}>
-              {file.name}
-            </h3>
-            <Badge variant={file.type === 'mobile' ? 'default' : 'secondary'} className="text-xs">
-              {file.type === 'mobile' ? (
-                <><Smartphone className="h-3 w-3 mr-1" /> Mobile</>
-              ) : (
-                <><UploadIcon className="h-3 w-3 mr-1" /> Upload</>
-              )}
-            </Badge>
-          </div>
-          
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Calendar className="h-3 w-3" />
-            <span>{formatDate(file.created_at)}</span>
-            <span>•</span>
-            <span>{formatFileSize(file.size)}</span>
-          </div>
-        </div>
-
-        {/* Actions */}
-        <div className="flex gap-2">
-          {isSelectMode ? (
-            <Button
-              variant={selectedFiles.has(file.id) ? "default" : "outline"}
-              size="sm"
-              onClick={() => toggleFileSelection(file.id)}
-              className="flex-1"
-            >
-              {selectedFiles.has(file.id) ? '✓ Selected' : 'Select'}
-            </Button>
-          ) : (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handlePreview(file)}
-                className="flex-1 gap-2"
-              >
-                <Eye className="h-3 w-3" />
-                Preview
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => openRenameDialog(file)}
-                className="gap-2"
-              >
-                <Edit2 className="h-3 w-3" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => openDeleteDialog(file)}
-                className="gap-2 text-destructive hover:text-destructive"
-              >
-                <Trash2 className="h-3 w-3" />
-              </Button>
-            </>
-          )}
-        </div>
-      </div>
-    </Card>
   );
 
-  const renderRunsheetCard = (runsheet: Runsheet) => (
-    <Card key={runsheet.id} className="p-4 hover:shadow-md transition-shadow">
-      <div className="space-y-3">
-        {/* Runsheet Preview */}
-        <div className="relative w-full h-32 bg-muted rounded overflow-hidden flex items-center justify-center">
-          <FileSpreadsheet className="h-12 w-12 text-muted-foreground" />
-        </div>
-
-        {/* Runsheet Info */}
-        <div className="space-y-2">
-          <div className="flex items-start justify-between gap-2">
-            <h3 className="font-medium text-sm truncate flex-1" title={runsheet.name}>
-              {runsheet.name}
-            </h3>
-            <Badge variant="default" className="text-xs">
-              <FileSpreadsheet className="h-3 w-3 mr-1" />
-              Runsheet
-            </Badge>
-          </div>
-          
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Calendar className="h-3 w-3" />
-            <span>{formatDate(runsheet.updated_at)}</span>
-            <span>•</span>
-            <span>{runsheet.data.length} rows</span>
-          </div>
-        </div>
-
-        {/* Actions */}
-        <div className="flex gap-2">
-          {isSelectMode ? (
-            <Button
-              variant={selectedFiles.has(runsheet.id) ? "default" : "outline"}
-              size="sm"
-              onClick={() => toggleFileSelection(runsheet.id)}
-              className="flex-1"
-            >
-              {selectedFiles.has(runsheet.id) ? '✓ Selected' : 'Select'}
-            </Button>
-          ) : (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => openRenameRunsheetDialog(runsheet)}
-                className="flex-1 gap-2"
-              >
-                <Edit2 className="h-3 w-3" />
-                Rename
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => window.open(`/runsheet?runsheet=${runsheet.id}`, '_blank')}
-                className="gap-2 text-xs"
-              >
-                New Tab
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => openDeleteDialog(undefined, runsheet)}
-                className="gap-2 text-destructive hover:text-destructive"
-              >
-                <Trash2 className="h-3 w-3" />
-              </Button>
-            </>
-          )}
-        </div>
-      </div>
-    </Card>
-  );
-
-  const renderRootView = () => (
-    <div className="space-y-6">
-      <Card className="p-8 text-center">
-        <Folder className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-        <h3 className="text-xl font-medium mb-2">File Manager</h3>
-        <p className="text-muted-foreground mb-6">
-          Organize and manage your documents and runsheets
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-md mx-auto">
-          <Card 
-            className="p-6 cursor-pointer hover:shadow-md transition-shadow border-primary/20 hover:border-primary/40"
-            onClick={() => setCurrentFolder('files')}
-          >
-            <Folder className="h-8 w-8 mx-auto mb-3 text-primary" />
-            <h4 className="font-medium mb-2">Files</h4>
-            <p className="text-sm text-muted-foreground">
-              Your uploaded documents
-            </p>
-          </Card>
-          <Card 
-            className="p-6 cursor-pointer hover:shadow-md transition-shadow border-primary/20 hover:border-primary/40"
-            onClick={() => setCurrentFolder('runsheets')}
-          >
-            <FileSpreadsheet className="h-8 w-8 mx-auto mb-3 text-primary" />
-            <h4 className="font-medium mb-2">Run Sheets</h4>
-            <p className="text-sm text-muted-foreground">
-              Saved spreadsheet data
-            </p>
-          </Card>
-        </div>
-      </Card>
-    </div>
-  );
-
-  const renderFilesView = () => (
-    <div className="space-y-6">
-      {/* Search, Sort and Stats */}
-      <Card className="p-4">
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search files..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <div className="flex gap-4 text-sm text-muted-foreground">
-              <span>{files.length} total files</span>
-              <span>•</span>
-              <span>{files.filter(f => f.type === 'mobile').length} mobile captured</span>
-              <span>•</span>
-              <span>{files.filter(f => f.type === 'uploaded').length} uploaded</span>
-            </div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-            <div className="flex gap-2 items-center">
-              <span className="text-sm font-medium">Sort by:</span>
-              <Select value={sortBy} onValueChange={(value: 'name' | 'date' | 'size') => setSortBy(value)}>
-                <SelectTrigger className="w-32">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="name">Name</SelectItem>
-                  <SelectItem value="date">Date</SelectItem>
-                  <SelectItem value="size">Size</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-              >
-                {sortOrder === 'asc' ? <SortAsc className="h-4 w-4" /> : <SortDesc className="h-4 w-4" />}
-              </Button>
-            </div>
-
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowGoogleDrive(true)}
-                className="gap-2"
-              >
-                <Cloud className="h-4 w-4" />
-                Import from Google Drive
-              </Button>
-              {isSelectMode && selectedFiles.size > 0 && (
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={handleFilesForRunsheet}
-                  className="gap-2"
-                >
-                  <Zap className="h-4 w-4" />
-                  Create Runsheet ({selectedFiles.size})
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      {/* Files Content */}
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1, 2, 3, 4, 5, 6].map(i => (
-            <Card key={i} className="p-4 animate-pulse">
-              <div className="space-y-3">
-                <div className="w-full h-32 bg-muted rounded"></div>
-                <div className="h-4 bg-muted rounded w-3/4"></div>
-                <div className="h-3 bg-muted rounded w-1/2"></div>
-              </div>
-            </Card>
-          ))}
-        </div>
-      ) : filteredFiles.length === 0 ? (
-        <Card className="p-8 text-center">
-          <FileImage className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-          <h3 className="text-lg font-medium mb-2">
-            {searchTerm ? 'No files found' : 'No stored files'}
-          </h3>
-          <p className="text-muted-foreground mb-4">
-            {searchTerm 
-              ? 'Try adjusting your search terms'
-              : 'Upload documents or use Mobile Capture to get started'
-            }
-          </p>
-          {!searchTerm && (
-            <Button onClick={() => navigate('/mobile-capture')} className="gap-2">
-              <Smartphone className="h-4 w-4" />
-              Go to Mobile Capture
-            </Button>
-          )}
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {Object.entries(groupedFiles).map(([projectName, projectFiles]) => (
-            <Card key={projectName} className="overflow-hidden">
-              <Collapsible
-                open={expandedProjects.has(projectName)}
-                onOpenChange={() => toggleProjectExpansion(projectName)}
-              >
-                <CollapsibleTrigger asChild>
-                  <div className="flex items-center justify-between p-4 hover:bg-muted/50 cursor-pointer">
-                    <div className="flex items-center gap-3">
-                      {expandedProjects.has(projectName) ? (
-                        <FolderOpen className="h-5 w-5 text-primary" />
-                      ) : (
-                        <Folder className="h-5 w-5 text-muted-foreground" />
-                      )}
-                      <div>
-                        <h3 className="font-medium">{projectName}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {projectFiles.length} file{projectFiles.length !== 1 ? 's' : ''}
-                        </p>
-                      </div>
-                    </div>
-                    {expandedProjects.has(projectName) ? (
-                      <ChevronDown className="h-4 w-4" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4" />
-                    )}
-                  </div>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <div className="p-4 pt-0">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {projectFiles.map(renderFileCard)}
-                    </div>
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
-            </Card>
-          ))}
-        </div>
-      )}
-    </div>
+  const filteredOrphanedFiles = orphanedFiles.filter(file =>
+    file.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const renderRunsheetsView = () => (
     <div className="space-y-6">
-      {/* Search, Sort and Stats */}
+      {/* Search and Stats */}
       <Card className="p-4">
         <div className="flex flex-col gap-4">
           <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
@@ -1095,143 +337,281 @@ export const FileManager: React.FC = () => {
               />
             </div>
             <div className="flex gap-4 text-sm text-muted-foreground">
-              <span>{runsheets.length} total runsheets</span>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="flex gap-2 items-center">
-              <span className="text-sm font-medium">Sort by:</span>
-              <Select value={sortBy} onValueChange={(value: 'name' | 'date' | 'size') => setSortBy(value)}>
-                <SelectTrigger className="w-32">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="name">Name</SelectItem>
-                  <SelectItem value="date">Date</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-              >
-                {sortOrder === 'asc' ? <SortAsc className="h-4 w-4" /> : <SortDesc className="h-4 w-4" />}
-              </Button>
+              <span>{runsheets.length} runsheets</span>
+              <span>•</span>
+              <span>{orphanedFiles.length} orphaned files</span>
             </div>
           </div>
         </div>
       </Card>
 
-      {/* Runsheets Content */}
-      {isLoading ? (
-        <Card className="p-4">
-          <div className="animate-pulse space-y-4">
-            <div className="h-10 bg-muted rounded"></div>
-            {[1, 2, 3, 4, 5].map(i => (
-              <div key={i} className="h-12 bg-muted rounded"></div>
-            ))}
-          </div>
-        </Card>
-      ) : filteredRunsheets.length === 0 ? (
-        <Card className="p-8 text-center">
-          <FileSpreadsheet className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-          <h3 className="text-lg font-medium mb-2">
-            {searchTerm ? 'No runsheets found' : 'No saved runsheets'}
-          </h3>
-          <p className="text-muted-foreground mb-4">
-            {searchTerm 
-              ? 'Try adjusting your search terms'
-              : 'Start your first runsheet to organize and analyze your documents'
-            }
-          </p>
-          {!searchTerm && (
+      {/* Runsheets Section */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold">Runsheets</h3>
+          <Button onClick={() => navigate('/runsheet')} size="sm" className="gap-2">
+            <Plus className="h-4 w-4" />
+            New Runsheet
+          </Button>
+        </div>
+        
+        {isLoading ? (
+          <Card className="p-4">
+            <div className="animate-pulse space-y-4">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="h-12 bg-muted rounded"></div>
+              ))}
+            </div>
+          </Card>
+        ) : filteredRunsheets.length === 0 ? (
+          <Card className="p-8 text-center">
+            <FileSpreadsheet className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+            <h4 className="text-lg font-medium mb-2">No runsheets found</h4>
+            <p className="text-muted-foreground mb-4">
+              Create your first runsheet to organize and analyze documents
+            </p>
             <Button onClick={() => navigate('/runsheet')} className="gap-2">
               <Plus className="h-4 w-4" />
               Start New Runsheet
             </Button>
-          )}
+          </Card>
+        ) : (
+          <Card>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Rows</TableHead>
+                  <TableHead>Documents</TableHead>
+                  <TableHead>Last Modified</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredRunsheets.map((runsheet) => (
+                  <TableRow 
+                    key={runsheet.id}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => {
+                      setCurrentRunsheetId(runsheet.id);
+                      setCurrentRunsheetName(runsheet.name);
+                      setCurrentView('runsheet-details');
+                    }}
+                  >
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        <FileSpreadsheet className="h-4 w-4 text-primary" />
+                        {runsheet.name}
+                      </div>
+                    </TableCell>
+                    <TableCell>{runsheet.data.length}</TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">
+                        View docs
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {new Date(runsheet.updated_at).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/runsheet?id=${runsheet.id}`);
+                          }}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedRunsheet(runsheet);
+                            setNewFileName(runsheet.name);
+                            setShowRenameDialog(true);
+                          }}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedRunsheet(runsheet);
+                            setShowDeleteDialog(true);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
+        )}
+      </div>
+
+      {/* Orphaned Files Section */}
+      {orphanedFiles.length > 0 && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold">Unlinked Documents</h3>
+          <Card>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Size</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredOrphanedFiles.map((file) => (
+                  <TableRow key={file.id}>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        <FileImage className="h-4 w-4 text-muted-foreground" />
+                        {file.name}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {(file.size / (1024 * 1024)).toFixed(1)} MB
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {new Date(file.created_at).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setPreviewFile(file);
+                            setShowPreview(true);
+                          }}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedFile(file);
+                            setShowDeleteDialog(true);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderRunsheetDetailsView = () => (
+    <div className="space-y-6">
+      {/* Search and Stats */}
+      <Card className="p-4">
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search documents..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <div className="flex gap-4 text-sm text-muted-foreground">
+              <span>{runsheetDocuments.length} documents</span>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* Documents */}
+      {filteredDocuments.length === 0 ? (
+        <Card className="p-8 text-center">
+          <FileImage className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+          <h4 className="text-lg font-medium mb-2">No documents found</h4>
+          <p className="text-muted-foreground mb-4">
+            No documents are linked to this runsheet yet
+          </p>
+          <Button onClick={() => navigate(`/runsheet?id=${currentRunsheetId}`)} className="gap-2">
+            <Edit2 className="h-4 w-4" />
+            Edit Runsheet
+          </Button>
         </Card>
       ) : (
         <Card>
           <Table>
             <TableHeader>
               <TableRow>
-                {isSelectMode && (
-                  <TableHead className="w-12">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={selectAllItems}
-                      className="p-0 h-6 w-6"
-                    >
-                      <CheckSquare className="h-4 w-4" />
-                    </Button>
-                  </TableHead>
-                )}
-                <TableHead>Name</TableHead>
-                <TableHead>Rows</TableHead>
-                <TableHead>Last Modified</TableHead>
+                <TableHead>Document</TableHead>
+                <TableHead>Row</TableHead>
+                <TableHead>Size</TableHead>
+                <TableHead>Date</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredRunsheets.map((runsheet) => (
-                <TableRow key={runsheet.id}>
-                  {isSelectMode && (
-                    <TableCell>
+              {filteredDocuments.map((file) => (
+                <TableRow key={file.id}>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      <FileImage className="h-4 w-4 text-muted-foreground" />
+                      {file.name}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline">
+                      Row {file.rowIndex ?? '?'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {(file.size / (1024 * 1024)).toFixed(1)} MB
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {new Date(file.created_at).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-1">
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => toggleFileSelection(runsheet.id)}
-                        className="p-0 h-6 w-6"
+                        onClick={() => {
+                          setPreviewFile(file);
+                          setShowPreview(true);
+                        }}
                       >
-                        {selectedFiles.has(runsheet.id) ? (
-                          <CheckSquare className="h-4 w-4 text-primary" />
-                        ) : (
-                          <div className="h-4 w-4 border rounded" />
-                        )}
+                        <Eye className="h-4 w-4" />
                       </Button>
-                    </TableCell>
-                  )}
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <FileSpreadsheet className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">{runsheet.name}</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedFile(file);
+                          setShowDeleteDialog(true);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </TableCell>
-                  <TableCell>{runsheet.data.length}</TableCell>
-                  <TableCell>{formatDate(runsheet.updated_at)}</TableCell>
-                   <TableCell className="text-right">
-                     <div className="flex justify-end gap-2">
-                       <Button
-                         variant="default"
-                         size="sm"
-                         onClick={() => openRunsheet(runsheet)}
-                         className="gap-1"
-                       >
-                         <Eye className="h-3 w-3" />
-                         Open
-                       </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openRenameRunsheetDialog(runsheet)}
-                          className="gap-1"
-                        >
-                          <Edit2 className="h-3 w-3" />
-                          Rename
-                        </Button>
-                       <Button
-                         variant="ghost"
-                         size="sm"
-                         onClick={() => openDeleteDialog(undefined, runsheet)}
-                         className="gap-1 text-destructive hover:text-destructive"
-                       >
-                         <Trash2 className="h-3 w-3" />
-                       </Button>
-                     </div>
-                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -1241,193 +621,68 @@ export const FileManager: React.FC = () => {
     </div>
   );
 
-  const currentItems = currentFolder === 'files' ? filteredFiles : 
-                      currentFolder === 'runsheets' ? filteredRunsheets : [];
-
-  const refreshCurrentFolder = () => {
-    if (currentFolder === 'files') {
-      loadStoredFiles();
-    } else if (currentFolder === 'runsheets') {
-      loadRunsheets();
-    }
-  };
-
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b w-full">
-        <div className="container mx-auto px-4 py-4">
+      <div className="border-b">
+        <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
-            <Link to="/" className="flex items-center gap-4">
-              <LogoMark 
-                className="h-12 w-12 text-primary" 
-                title="RunsheetPro" 
-              />
-              <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                RunsheetPro
-              </h1>
-            </Link>
             <div className="flex items-center gap-4">
-              <Button
-                variant="default"
-                size="sm"
-                onClick={() => navigate('/app')}
-                className="gap-2"
-              >
-                <Home className="h-4 w-4" />
-                Dashboard
-              </Button>
+              <Link to="/" className="flex items-center gap-2">
+                <LogoMark />
+                <span className="font-semibold text-lg">Document Extractor</span>
+              </Link>
+              {currentView === 'runsheet-details' && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setCurrentView('runsheets')}
+                  className="gap-2"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to Runsheets
+                </Button>
+              )}
+              <h2 className="text-xl font-semibold">
+                {currentView === 'runsheets' ? 'Runsheets & Documents' : 
+                 `${currentRunsheetName} - Documents`}
+              </h2>
+            </div>
+            
+            <div className="flex items-center gap-2">
               <ActiveRunsheetButton />
               <AuthButton />
             </div>
           </div>
         </div>
-      </header>
-
-      {/* Navigation Breadcrumb */}
-      <div className="border-b bg-muted/30">
-        <div className="container mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {currentFolder === 'root' ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => navigate('/app')}
-                  className="gap-2"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  Back to App
-                </Button>
-              ) : (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setCurrentFolder('root');
-                    setSearchTerm('');
-                    setSelectedFiles(new Set());
-                    setIsSelectMode(false);
-                  }}
-                  className="gap-2"
-                >
-                  <ArrowUp className="h-4 w-4" />
-                  Back to File Manager
-                </Button>
-              )}
-              <h2 className="text-xl font-semibold">
-                {currentFolder === 'root' ? 'File Manager' :
-                 currentFolder === 'files' ? 'Files' : 'Run Sheets'}
-              </h2>
-            </div>
-            
-            {currentFolder !== 'root' && (
-              <div className="flex gap-2">
-                {isSelectMode ? (
-                  <>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setIsSelectMode(false)}
-                      className="gap-2"
-                    >
-                      <X className="h-4 w-4" />
-                      Cancel
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={selectAllItems}
-                      disabled={currentItems.length === 0}
-                      className="gap-2"
-                    >
-                      <CheckSquare className="h-4 w-4" />
-                      {selectedFiles.size === currentItems.length ? 'Deselect All' : 'Select All'}
-                    </Button>
-                    {selectedFiles.size > 0 && (
-                      <>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleDownloadSelected}
-                          className="gap-2"
-                        >
-                          <Download className="h-4 w-4" />
-                          Download ({selectedFiles.size})
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={handleDeleteSelected}
-                          disabled={isDeleting}
-                          className="gap-2"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          {isDeleting ? 'Deleting...' : `Delete (${selectedFiles.size})`}
-                        </Button>
-                      </>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={toggleSelectMode}
-                      disabled={currentItems.length === 0}
-                      className="gap-2"
-                    >
-                      <CheckSquare className="h-4 w-4" />
-                      Select
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={refreshCurrentFolder}
-                      disabled={isLoading}
-                    >
-                      {isLoading ? 'Loading...' : 'Refresh'}
-                    </Button>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
       </div>
 
       <div className="container mx-auto p-4">
-        {currentFolder === 'root' && renderRootView()}
-        {currentFolder === 'files' && renderFilesView()}
-        {currentFolder === 'runsheets' && renderRunsheetsView()}
+        {currentView === 'runsheets' && renderRunsheetsView()}
+        {currentView === 'runsheet-details' && renderRunsheetDetailsView()}
       </div>
 
       {/* Rename Dialog */}
       <Dialog open={showRenameDialog} onOpenChange={setShowRenameDialog}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Rename {selectedFile ? 'File' : 'Runsheet'}</DialogTitle>
+            <DialogTitle>Rename Runsheet</DialogTitle>
             <DialogDescription>
-              Enter a new name for "{selectedFile?.name || selectedRunsheet?.name}"
+              Enter a new name for this runsheet.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
+          <div className="grid gap-4 py-4">
             <Input
+              placeholder="Enter new name"
               value={newFileName}
               onChange={(e) => setNewFileName(e.target.value)}
-              placeholder="Enter new file name..."
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  handleRename();
-                }
-              }}
             />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowRenameDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={handleRename} disabled={isRenaming || !newFileName.trim()}>
+            <Button onClick={handleRenameRunsheet} disabled={isRenaming || !newFileName.trim()}>
               {isRenaming ? 'Renaming...' : 'Rename'}
             </Button>
           </DialogFooter>
@@ -1435,118 +690,42 @@ export const FileManager: React.FC = () => {
       </Dialog>
 
       {/* Delete Dialog */}
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>
-              Delete {selectedFile ? 'File' : 'Runsheet'}
-            </DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete "{selectedFile?.name || selectedRunsheet?.name}"? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
-              {isDeleting ? 'Deleting...' : 'Delete'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* View Choice Dialog */}
-      <AlertDialog open={showViewChoiceDialog} onOpenChange={setShowViewChoiceDialog}>
-        <AlertDialogContent className="z-[9999]">
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>How would you like to open this {pendingViewItem?.type === 'file' ? 'file' : 'runsheet'}?</AlertDialogTitle>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              Choose whether to open "{pendingViewItem?.item.name}" in the current tab or a new tab.
+              This action cannot be undone. This will permanently delete{' '}
+              {selectedFile ? `the file "${selectedFile.name}"` : 
+               selectedRunsheet ? `the runsheet "${selectedRunsheet.name}"` : 'this item'}.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="flex gap-2">
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleViewInCurrentTab}
-              className="bg-secondary text-secondary-foreground hover:bg-secondary/90"
+              onClick={selectedFile ? handleDeleteFile : handleDeleteRunsheet}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Current Tab
-            </AlertDialogAction>
-            <AlertDialogAction onClick={handleViewInNewTab}>
-              New Tab
+              {isDeleting ? 'Deleting...' : 'Delete'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
       {/* File Preview Dialog */}
-      <FilePreview
-        file={previewFile}
-        isOpen={showPreview}
-        onClose={() => setShowPreview(false)}
-      />
-
-      {/* Google Drive Picker */}
-      <GoogleDrivePicker
-        isOpen={showGoogleDrive}
-        onClose={() => setShowGoogleDrive(false)}
-        onFilesImported={loadStoredFiles}
-      />
-
-      {/* Create Runsheet from Files Dialog */}
-      <Dialog open={showRunsheetDialog} onOpenChange={setShowRunsheetDialog}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Create Runsheet from Files</DialogTitle>
-            <DialogDescription>
-              Create a new runsheet with information from {selectedFilesForRunsheet.length} selected files.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label htmlFor="runsheet-name" className="text-sm font-medium">
-                  Runsheet Name
-                </label>
-                <Input
-                  id="runsheet-name"
-                  value={newRunsheetName}
-                  onChange={(e) => setNewRunsheetName(e.target.value)}
-                  placeholder="Enter runsheet name..."
-                />
-              </div>
-              <div className="space-y-2">
-                <h4 className="font-medium">Selected Files:</h4>
-                <div className="max-h-40 overflow-auto space-y-1">
-                {selectedFilesForRunsheet.map((file) => (
-                  <div key={file.id} className="flex items-center gap-2 text-sm p-2 bg-muted rounded">
-                    <span className="flex-1 truncate">{file.name}</span>
-                    <span className="text-muted-foreground">{formatFileSize(file.size)}</span>
-                  </div>
-                ))}
-               </div>
-               <p className="text-sm text-muted-foreground">
-                 The runsheet will contain file names, sizes, types, and creation dates.
-               </p>
-               </div>
-             </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowRunsheetDialog(false)}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={processFilesIntoRunsheet} 
-              className="gap-2"
-              disabled={!newRunsheetName.trim()}
-            >
-              <Play className="h-4 w-4" />
-              Create Runsheet
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {showPreview && previewFile && (
+        <Dialog open={showPreview} onOpenChange={setShowPreview}>
+          <DialogContent className="max-w-4xl max-h-[90vh]">
+            <DialogHeader>
+              <DialogTitle>{previewFile.name}</DialogTitle>
+            </DialogHeader>
+            <div className="max-h-[70vh] overflow-auto">
+              <FilePreview file={previewFile} />
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };
