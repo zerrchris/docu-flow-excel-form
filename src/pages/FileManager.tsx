@@ -81,7 +81,7 @@ export const FileManager: React.FC = () => {
   const [isMoving, setIsMoving] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const [isSelectMode, setIsSelectMode] = useState(false);
-  const [currentFolder, setCurrentFolder] = useState<'root' | 'projects' | 'runsheets'>('root');
+  const [currentFolder, setCurrentFolder] = useState<'root' | 'files' | 'runsheets'>('root');
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   const [showViewChoiceDialog, setShowViewChoiceDialog] = useState(false);
   const [pendingViewItem, setPendingViewItem] = useState<{ type: 'file', item: StoredFile } | { type: 'runsheet', item: Runsheet } | null>(null);
@@ -96,7 +96,7 @@ export const FileManager: React.FC = () => {
   const [newRunsheetName, setNewRunsheetName] = useState('');
 
   useEffect(() => {
-    if (currentFolder === 'projects') {
+    if (currentFolder === 'files') {
       loadStoredFiles();
     } else if (currentFolder === 'runsheets') {
       loadRunsheets();
@@ -320,7 +320,7 @@ export const FileManager: React.FC = () => {
   };
 
   const handleDelete = async () => {
-    if (currentFolder === 'projects' && selectedFile) {
+    if (currentFolder === 'files' && selectedFile) {
       await handleDeleteFile();
     } else if (currentFolder === 'runsheets' && selectedRunsheet) {
       await handleDeleteRunsheet();
@@ -407,7 +407,7 @@ export const FileManager: React.FC = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
-      if (currentFolder === 'projects') {
+      if (currentFolder === 'files') {
         // Get paths of selected files
         const selectedFilePaths = files
           .filter(file => selectedFiles.has(file.id))
@@ -438,7 +438,7 @@ export const FileManager: React.FC = () => {
       setSelectedFiles(new Set());
       setIsSelectMode(false);
       
-      if (currentFolder === 'projects') {
+      if (currentFolder === 'files') {
         loadStoredFiles();
       } else if (currentFolder === 'runsheets') {
         loadRunsheets();
@@ -458,7 +458,7 @@ export const FileManager: React.FC = () => {
   const handleDownloadSelected = async () => {
     if (selectedFiles.size === 0) return;
     
-    if (currentFolder === 'projects') {
+    if (currentFolder === 'files') {
       const selectedFileList = files.filter(file => selectedFiles.has(file.id));
       
       for (const file of selectedFileList) {
@@ -513,7 +513,7 @@ export const FileManager: React.FC = () => {
   };
 
   const selectAllItems = () => {
-    const currentItems = currentFolder === 'projects' ? filteredFiles : filteredRunsheets;
+    const currentItems = currentFolder === 'files' ? filteredFiles : filteredRunsheets;
     if (selectedFiles.size === currentItems.length) {
       setSelectedFiles(new Set());
     } else {
@@ -907,12 +907,12 @@ export const FileManager: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-md mx-auto">
           <Card 
             className="p-6 cursor-pointer hover:shadow-md transition-shadow border-primary/20 hover:border-primary/40"
-            onClick={() => setCurrentFolder('projects')}
+            onClick={() => setCurrentFolder('files')}
           >
             <Folder className="h-8 w-8 mx-auto mb-3 text-primary" />
-            <h4 className="font-medium mb-2">Projects</h4>
+            <h4 className="font-medium mb-2">Files</h4>
             <p className="text-sm text-muted-foreground">
-              Documents organized by project
+              Your uploaded documents
             </p>
           </Card>
           <Card 
@@ -930,7 +930,7 @@ export const FileManager: React.FC = () => {
     </div>
   );
 
-  const renderProjectsView = () => (
+  const renderFilesView = () => (
     <div className="space-y-6">
       {/* Search, Sort and Stats */}
       <Card className="p-4">
@@ -1241,11 +1241,11 @@ export const FileManager: React.FC = () => {
     </div>
   );
 
-  const currentItems = currentFolder === 'projects' ? filteredFiles : 
+  const currentItems = currentFolder === 'files' ? filteredFiles : 
                       currentFolder === 'runsheets' ? filteredRunsheets : [];
 
   const refreshCurrentFolder = () => {
-    if (currentFolder === 'projects') {
+    if (currentFolder === 'files') {
       loadStoredFiles();
     } else if (currentFolder === 'runsheets') {
       loadRunsheets();
@@ -1317,7 +1317,7 @@ export const FileManager: React.FC = () => {
               )}
               <h2 className="text-xl font-semibold">
                 {currentFolder === 'root' ? 'File Manager' :
-                 currentFolder === 'projects' ? 'Projects' : 'Run Sheets'}
+                 currentFolder === 'files' ? 'Files' : 'Run Sheets'}
               </h2>
             </div>
             
@@ -1398,7 +1398,7 @@ export const FileManager: React.FC = () => {
 
       <div className="container mx-auto p-4">
         {currentFolder === 'root' && renderRootView()}
-        {currentFolder === 'projects' && renderProjectsView()}
+        {currentFolder === 'files' && renderFilesView()}
         {currentFolder === 'runsheets' && renderRunsheetsView()}
       </div>
 
