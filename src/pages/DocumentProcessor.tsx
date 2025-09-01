@@ -1567,6 +1567,7 @@ Image: [base64 image data]`;
     }, 100);
 
     // One-time listener to learn which row index the spreadsheet actually used
+    console.log('🔧 DocumentProcessor: Setting up externalRowPlaced event listener for storage path:', finalData['Storage Path']);
     const handleExternalRowPlaced = (event: CustomEvent) => {
       const detail = (event as any).detail || {};
       console.log('🔧 DocumentProcessor: Received externalRowPlaced event:', detail);
@@ -1592,6 +1593,12 @@ Image: [base64 image data]`;
       }
     };
     window.addEventListener('externalRowPlaced', handleExternalRowPlaced as EventListener);
+    
+    // Set a cleanup timeout in case the event never fires
+    setTimeout(() => {
+      console.log('🔧 DocumentProcessor: Timeout reached, removing externalRowPlaced listener');
+      window.removeEventListener('externalRowPlaced', handleExternalRowPlaced as EventListener);
+    }, 5000);
 
     // Auto-save the runsheet after adding data to show filename options
     setTimeout(async () => {
