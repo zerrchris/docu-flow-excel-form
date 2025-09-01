@@ -72,6 +72,7 @@ const DocumentProcessor: React.FC = () => {
   const [showMultipleFileUpload, setShowMultipleFileUpload] = useState(false);
   const [missingDataDialog, setMissingDataDialog] = useState(false);
   const [confirmAddFileDialog, setConfirmAddFileDialog] = useState(false);
+  const [hasAddedToSpreadsheet, setHasAddedToSpreadsheet] = useState(false);
   
   // Note: Navigation blocking removed since runsheet auto-saves
   const navigate = useNavigate();
@@ -769,6 +770,7 @@ const DocumentProcessor: React.FC = () => {
 
   // Function to upload new document (resets everything)
   const uploadNewDocument = () => {
+    setHasAddedToSpreadsheet(false); // Reset the added state
     resetDocument();
     setIsDocumentMode(false);
   };
@@ -1607,6 +1609,14 @@ Image: [base64 image data]`;
       description: `Document has been added to row ${spreadsheetData.length + 1}.`,
     });
     
+    // Clear the form data and mark as added
+    const emptyFormData: Record<string, string> = {};
+    columns.forEach(column => {
+      emptyFormData[column] = '';
+    });
+    setFormData(emptyFormData);
+    setHasAddedToSpreadsheet(true);
+    
     // Navigate back to the runsheet after successful add
     if (runsheetId) {
       setTimeout(() => {
@@ -2045,7 +2055,7 @@ Image: [base64 image data]`;
                     onBackToRunsheet={goBackToRunsheet}
                     isAnalyzing={isAnalyzing}
                     isUploading={false}
-                    hasAddedToSpreadsheet={false}
+                    hasAddedToSpreadsheet={hasAddedToSpreadsheet}
                     fileUrl={storageUrl}
                     fileName={file?.name}
                     columnInstructions={columnInstructions}
