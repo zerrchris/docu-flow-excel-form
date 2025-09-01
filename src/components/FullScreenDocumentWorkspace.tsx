@@ -147,8 +147,25 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
               setError(`Document data not available for row ${rowIndex}`);
             }
           } else {
-            console.error('🔧 FullScreenDocumentWorkspace: No document found in database or session storage');
-            setError(`No document found for row ${rowIndex} in runsheet ${runsheetId}`);
+            console.log('🔧 FullScreenDocumentWorkspace: No pending document in session, checking rowData Storage Path...');
+            
+            // Check if the row data has a Storage Path (from batch processing)
+            const storagePath = rowData['Storage Path'];
+            const documentFileName = rowData['Document File Name'];
+            
+            console.log('🔧 FullScreenDocumentWorkspace: Storage Path:', storagePath);
+            console.log('🔧 FullScreenDocumentWorkspace: Document File Name:', documentFileName);
+            
+            if (storagePath) {
+              console.log('🔧 FullScreenDocumentWorkspace: Found Storage Path in rowData, constructing document URL');
+              const url = DocumentService.getDocumentUrl(storagePath);
+              setDocumentUrl(url);
+              setDocumentName(documentFileName || 'Document');
+              setIsPdf(documentFileName?.toLowerCase().endsWith('.pdf') || false);
+            } else {
+              console.error('🔧 FullScreenDocumentWorkspace: No document found in database, session storage, or rowData Storage Path');
+              setError(`No document found for row ${rowIndex} in runsheet ${runsheetId}`);
+            }
           }
         }
       } catch (error) {
