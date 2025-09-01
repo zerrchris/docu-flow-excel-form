@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowLeft, Eye, Edit2, Trash2, Search, FileImage, FileSpreadsheet, Plus, ArrowUp, Home } from 'lucide-react';
+import { ArrowLeft, Eye, Edit2, Trash2, Search, FileImage, FileSpreadsheet, Plus, ArrowUp, Home, Type } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -422,6 +422,7 @@ export const FileManager: React.FC = () => {
                             e.stopPropagation();
                             navigate(`/runsheet?id=${runsheet.id}`);
                           }}
+                          title="Edit runsheet"
                         >
                           <Edit2 className="h-4 w-4" />
                         </Button>
@@ -434,8 +435,9 @@ export const FileManager: React.FC = () => {
                             setNewFileName(runsheet.name);
                             setShowRenameDialog(true);
                           }}
+                          title="Rename runsheet"
                         >
-                          <Edit2 className="h-4 w-4" />
+                          <Type className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
@@ -445,6 +447,7 @@ export const FileManager: React.FC = () => {
                             setSelectedRunsheet(runsheet);
                             setShowDeleteDialog(true);
                           }}
+                          title="Delete runsheet"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
