@@ -109,6 +109,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
         setError(null);
         
         console.log('🔧 FullScreenDocumentWorkspace: Loading document for runsheet:', runsheetId, 'row:', rowIndex);
+        console.log('🔧 FullScreenDocumentWorkspace: Current rowData:', rowData);
         
         // Try to load from database first
         const document = await DocumentService.getDocumentForRow(runsheetId, rowIndex);
@@ -155,15 +156,19 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
             
             console.log('🔧 FullScreenDocumentWorkspace: Storage Path:', storagePath);
             console.log('🔧 FullScreenDocumentWorkspace: Document File Name:', documentFileName);
+            console.log('🔧 FullScreenDocumentWorkspace: Row data keys:', Object.keys(rowData));
             
             if (storagePath) {
               console.log('🔧 FullScreenDocumentWorkspace: Found Storage Path in rowData, constructing document URL');
               const url = DocumentService.getDocumentUrl(storagePath);
+              console.log('🔧 FullScreenDocumentWorkspace: Constructed URL from Storage Path:', url);
               setDocumentUrl(url);
               setDocumentName(documentFileName || 'Document');
               setIsPdf(documentFileName?.toLowerCase().endsWith('.pdf') || false);
+              console.log('🔧 FullScreenDocumentWorkspace: Document loaded from Storage Path successfully');
             } else {
               console.error('🔧 FullScreenDocumentWorkspace: No document found in database, session storage, or rowData Storage Path');
+              console.log('🔧 FullScreenDocumentWorkspace: Available rowData:', rowData);
               setError(`No document found for row ${rowIndex} in runsheet ${runsheetId}`);
             }
           }
