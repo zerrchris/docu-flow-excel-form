@@ -713,19 +713,12 @@ export const FileManager: React.FC = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* File Preview Dialog */}
-      {showPreview && previewFile && (
-        <Dialog open={showPreview} onOpenChange={setShowPreview}>
-          <DialogContent className="max-w-4xl max-h-[90vh]">
-            <DialogHeader>
-              <DialogTitle>{previewFile.name}</DialogTitle>
-            </DialogHeader>
-            <div className="max-h-[70vh] overflow-auto">
-              <FilePreview file={previewFile} />
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
+      {/* File Preview */}
+      <FilePreview 
+        file={previewFile}
+        isOpen={showPreview}
+        onClose={() => setShowPreview(false)}
+      />
     </div>
   );
 };
