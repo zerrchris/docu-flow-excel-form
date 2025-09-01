@@ -1409,40 +1409,76 @@ Image: [base64 image data]`;
     
     if (!runsheetId || runsheetId.startsWith('temp-')) {
       // We need a proper saved runsheet to add documents
-      // Trigger the save process and wait for it to complete
       console.log('🔧 ADD_TO_SPREADSHEET: Need to save runsheet first before adding documents');
       
-      // Dispatch save request and wait for response
-      const savePromise = new Promise<{ success: boolean; runsheetId?: string; error?: string }>((resolve) => {
-        const handleSaveResponse = (event: CustomEvent) => {
-          window.removeEventListener('runsheetSaveResponse', handleSaveResponse as EventListener);
-          resolve(event.detail);
-        };
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          toast({
+            title: "Authentication required",
+            description: "Please sign in to save documents.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        // Create a new runsheet with current columns and the first row of data
+        const runsheetName = `Runsheet ${new Date().toLocaleDateString()}`;
+        const initialData = [targetData];
+
+        const { data: newRunsheet, error } = await supabase
+          .from('runsheets')
+          .insert({
+            name: runsheetName,
+            user_id: user.id,
+            columns: columns,
+            data: initialData,
+            column_instructions: columnInstructions
+          })
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Error creating runsheet:', error);
+          toast({
+            title: "Failed to create runsheet",
+            description: error.message,
+            variant: "destructive",
+          });
+          return;
+        }
+
+        runsheetId = newRunsheet.id;
+        console.log('🔧 ADD_TO_SPREADSHEET: Created new runsheet with ID:', runsheetId);
         
-        window.addEventListener('runsheetSaveResponse', handleSaveResponse as EventListener);
-        
-        // Request the save
-        window.dispatchEvent(new CustomEvent('saveRunsheetBeforeUpload', {
-          detail: { 
-            operation: 'addToSpreadsheet',
-            data: dataToAdd || formData
-          }
-        }));
-      });
-      
-      const saveResult = await savePromise;
-      
-      if (!saveResult.success) {
+        // Update the spreadsheet data and active runsheet
+        setSpreadsheetData(initialData);
+        setActiveRunsheet({
+          id: newRunsheet.id,
+          name: newRunsheet.name,
+          data: initialData,
+          columns: columns,
+          columnInstructions: columnInstructions
+        });
+
         toast({
-          title: "Cannot add to runsheet",
-          description: saveResult.error || "Please save your runsheet first.",
+          title: "Document added to new runsheet",
+          description: `Created "${runsheetName}" and added your document.`,
+        });
+        
+        // Navigate to the runsheet without the action parameter
+        navigate(`/runsheet?id=${runsheetId}`, { replace: true });
+        return; // Exit early since we've already added the data
+        
+      } catch (error) {
+        console.error('Error creating runsheet:', error);
+        toast({
+          title: "Failed to create runsheet",
+          description: "Please try again.",
           variant: "destructive",
         });
         return;
       }
-      
-      runsheetId = saveResult.runsheetId!;
-      console.log('🔧 ADD_TO_SPREADSHEET: Received saved runsheet ID:', runsheetId);
     }
     
     
