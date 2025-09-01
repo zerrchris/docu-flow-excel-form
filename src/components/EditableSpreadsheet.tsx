@@ -578,6 +578,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
             console.log('🔧 DEBUG: Dispatching externalRowPlaced event for row:', newRowIndex);
             const storagePath = payload['Storage Path'];
             if (storagePath) {
+              console.log('🔧 DEBUG: Dispatching externalRowPlaced with storagePath:', storagePath, 'rowIndex:', newRowIndex, 'runsheetId:', currentRunsheetId);
               window.dispatchEvent(new CustomEvent('externalRowPlaced', {
                 detail: {
                   rowIndex: newRowIndex,
@@ -585,6 +586,8 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                   storagePath: storagePath
                 }
               }));
+            } else {
+              console.log('🔧 DEBUG: No storage path found in payload:', payload);
             }
           }, 50);
           
