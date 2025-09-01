@@ -575,6 +575,14 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
           
           setHasUnsavedChanges(true);
           
+          // For batch processing, trigger immediate auto-save to prevent data loss on refresh
+          if (payload['Storage Path']) {
+            console.log('🔧 AUTO_SAVE: Triggering immediate auto-save for batch processing');
+            setTimeout(() => {
+              autoSave();
+            }, 200); // Short delay to allow state updates to complete
+          }
+          
           // Dispatch event to inform DocumentProcessor about the actual row placement
           setTimeout(() => {
             console.log('🔧 DEBUG: *** DISPATCHING externalRowPlaced event ***');
@@ -593,6 +601,27 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
                 }
               }));
               console.log('🔧 DEBUG: *** externalRowPlaced event DISPATCHED ***');
+              
+              // CRITICAL: Force immediate save to database to prevent data loss on refresh
+              console.log('🔧 AUTO_SAVE: Forcing immediate save after batch processing to prevent data loss');
+              if (currentRunsheet && currentRunsheetId) {
+                setTimeout(async () => {
+                  try {
+                    const updatedRunsheet = {
+                      ...currentRunsheet,
+                      data: newData,
+                      updated_at: new Date().toISOString()
+                    };
+                    
+                    console.log('🔧 AUTO_SAVE: Saving runsheet data to prevent loss on refresh');
+                    await setActiveRunsheet(updatedRunsheet);
+                    console.log('🔧 AUTO_SAVE: Runsheet saved successfully after batch processing');
+                  } catch (error) {
+                    console.error('🔧 AUTO_SAVE: Failed to save runsheet after batch processing:', error);
+                  }
+                }, 100); // Small delay to ensure state is fully updated
+              }
+              
             } else {
               console.log('🔧 DEBUG: No storage path found in payload:', payload);
             }
