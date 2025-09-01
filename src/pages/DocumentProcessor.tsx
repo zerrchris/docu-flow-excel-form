@@ -1568,16 +1568,13 @@ Image: [base64 image data]`;
     console.log('Filtered data to match current columns:', finalData);
     console.log('Current columns (unchanged):', columns);
     
-    // Simple direct approach - update spreadsheet data directly
-    console.log('🔧 DEBUG: Using direct state update approach');
-    console.log('🔧 DEBUG: runsheetId:', runsheetId);
-    console.log('🔧 DEBUG: finalData:', finalData);
-    
     // Update spreadsheet data directly and create document record
     let newRowIndex;
+    let updatedSpreadsheetData;
     setSpreadsheetData(prev => {
       const newData = [...prev, finalData];
       newRowIndex = newData.length - 1; // Store the actual row index
+      updatedSpreadsheetData = newData; // Store the updated data for saving
       console.log('🔧 DEBUG: Updated spreadsheet data directly:', newData);
       console.log('🔧 DEBUG: New row will be at index:', newRowIndex);
       return newData;
@@ -1651,18 +1648,17 @@ Image: [base64 image data]`;
       });
     }
     
-    // Immediately save the updated spreadsheet data to the database
+    // Immediately save the updated spreadsheet data to the database using the captured data
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (user && runsheetId && activeRunsheet) {
-        // Get the current spreadsheet data that includes the new row
-        const currentData = [...spreadsheetData, finalData];
+      if (user && runsheetId && activeRunsheet && updatedSpreadsheetData) {
+        console.log('🔧 DEBUG: Saving updated spreadsheet data:', updatedSpreadsheetData);
         
         // Update the runsheet in the database
         const { error: saveError } = await supabase
           .from('runsheets')
           .update({
-            data: currentData,
+            data: updatedSpreadsheetData,
             updated_at: new Date().toISOString()
           })
           .eq('id', runsheetId)
@@ -1677,10 +1673,17 @@ Image: [base64 image data]`;
           if (activeRunsheet) {
             setActiveRunsheet({
               ...activeRunsheet,
-              data: currentData
+              data: updatedSpreadsheetData
             });
           }
         }
+      } else {
+        console.log('🔧 DEBUG: Missing data for save:', {
+          hasUser: !!user,
+          runsheetId,
+          hasActiveRunsheet: !!activeRunsheet,
+          hasUpdatedData: !!updatedSpreadsheetData
+        });
       }
     } catch (error) {
       console.error('Error in immediate save after document addition:', error);
