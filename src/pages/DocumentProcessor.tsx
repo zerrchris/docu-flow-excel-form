@@ -1588,6 +1588,15 @@ Image: [base64 image data]`;
         if (placedRunsheetId && placedRowIndex !== undefined) {
           console.log('🔧 DocumentProcessor: About to call createDocumentRecord with rowIndex:', placedRowIndex);
           console.log('🔧 DocumentProcessor: Document will be linked to row:', placedRowIndex, 'in runsheet:', placedRunsheetId);
+          
+          // Check if document record already exists for this row to prevent duplicates
+          console.log('🔧 DocumentProcessor: Checking for existing document at row:', placedRowIndex);
+          const existingDoc = documentMap.get(placedRowIndex);
+          if (existingDoc) {
+            console.log('🔧 DocumentProcessor: Document already exists for row', placedRowIndex, '- skipping creation to prevent duplicates');
+            return;
+          }
+          
           // Ensure the document record points to the correct row in the correct runsheet
           createDocumentRecord(finalData, placedRowIndex, placedRunsheetId);
         }
