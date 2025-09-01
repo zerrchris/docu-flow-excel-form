@@ -1423,11 +1423,11 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       setHasUnsavedChanges(true);
       onUnsavedChanges?.(true);
       
-      // Delayed auto-save: save 30 seconds after the last change to give user time for navigation prompts
+      // Immediate auto-save for critical changes, delayed for regular edits
+      // This ensures deletions and major changes are saved immediately
       const timeoutId = setTimeout(() => {
-        // Use auto-save instead of old autoSaveRunsheet
         autoSave();
-      }, 30000); // Increased from 3 seconds to 30 seconds
+      }, 2000); // Reduced from 30 seconds to 2 seconds for faster saves
       
       return () => clearTimeout(timeoutId);
     }
@@ -3971,40 +3971,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [copySelection, pasteSelection]);
-
-  // Function to delete a row
-  const deleteRow = useCallback(async (rowIndex: number) => {
-    console.log('🗑️ DELETING ROW:', rowIndex, 'hasUnsavedChanges before:', hasUnsavedChanges);
-    
-    // Set unsaved changes flag  
-    setHasUnsavedChanges(true);
-    
-    setData(prev => {
-      const newData = prev.filter((_, index) => index !== rowIndex);
-      console.log('🗑️ Row deleted from local state, new data length:', newData.length);
-      
-      // Update document map to adjust indices
-      const newDocumentMap = new Map<number, DocumentRecord>();
-      documentMap.forEach((doc, mapRowIndex) => {
-        if (mapRowIndex < rowIndex) {
-          newDocumentMap.set(mapRowIndex, doc);
-        } else if (mapRowIndex > rowIndex) {
-          newDocumentMap.set(mapRowIndex - 1, doc);
-        }
-        // Skip the deleted row (mapRowIndex === rowIndex)
-      });
-      updateDocumentMap(newDocumentMap);
-      
-      return newData;
-    });
-    
-    toast({
-      title: "Row deleted",
-      description: `Row ${rowIndex + 1} has been deleted.`,
-      variant: "default"
-    });
-  }, [documentMap, updateDocumentMap, autoForceSave, hasUnsavedChanges, toast]);
-
+  
   // Function to update document row_index in database
   const updateDocumentRowIndexes = useCallback(async (newDocumentMap: Map<number, DocumentRecord>) => {
     if (!currentRunsheet?.id) return;
@@ -4031,6 +3998,91 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       console.error('Error updating document row indexes:', error);
     }
   }, [currentRunsheet?.id]);
+
+  // Function to delete a row
+  const deleteRow = useCallback(async (rowIndex: number) => {
+    console.log('🗑️ DELETING ROW:', rowIndex, 'hasUnsavedChanges before:', hasUnsavedChanges);
+    
+    // Set unsaved changes flag  
+    setHasUnsavedChanges(true);
+    
+    // Update local state first
+    const newData = data.filter((_, index) => index !== rowIndex);
+    setData(newData);
+    console.log('🗑️ Row deleted from local state, new data length:', newData.length);
+    
+    // Update document map to adjust indices
+    const newDocumentMap = new Map<number, DocumentRecord>();
+    documentMap.forEach((doc, mapRowIndex) => {
+      if (mapRowIndex < rowIndex) {
+        newDocumentMap.set(mapRowIndex, doc);
+      } else if (mapRowIndex > rowIndex) {
+        newDocumentMap.set(mapRowIndex - 1, doc);
+      }
+      // Skip the deleted row (mapRowIndex === rowIndex)
+    });
+    updateDocumentMap(newDocumentMap);
+    
+    // IMMEDIATE SAVE - Don't wait for auto-save timer
+    try {
+      console.log('🗑️ IMMEDIATE SAVE: Saving deletion immediately to prevent data loss on refresh');
+      
+      if (currentRunsheet?.id && user) {
+        const updatedRunsheet = {
+          name: runsheetName,
+          columns: columns,
+          data: newData,
+          column_instructions: columnInstructions,
+          user_id: user.id,
+          updated_at: new Date().toISOString(),
+        };
+
+        const { error } = await supabase
+          .from('runsheets')
+          .update(updatedRunsheet)
+          .eq('id', currentRunsheet.id)
+          .eq('user_id', user.id);
+
+        if (error) {
+          console.error('🗑️ SAVE ERROR: Failed to save deletion immediately:', error);
+          throw error;
+        }
+
+        console.log('🗑️ SAVE SUCCESS: Deletion saved immediately to database');
+        
+        // Update the last saved state to match current state
+        const newSavedState = JSON.stringify({
+          data: newData,
+          columns: columns,
+          runsheetName,
+          columnInstructions
+        });
+        setLastSavedState(newSavedState);
+        setHasUnsavedChanges(false);
+        onUnsavedChanges?.(false);
+        
+        // Update document row indexes in database
+        updateDocumentRowIndexes(newDocumentMap);
+        
+        toast({
+          title: "Row deleted and saved",
+          description: `Row ${rowIndex + 1} has been deleted and changes saved immediately.`,
+          variant: "default"
+        });
+      }
+    } catch (error) {
+      console.error('🗑️ SAVE ERROR: Failed to save deletion:', error);
+      toast({
+        title: "Delete failed",
+        description: "Failed to save deletion. Please try again.",
+        variant: "destructive"
+      });
+      
+      // Revert the deletion on save failure
+      setData(data);
+      updateDocumentMap(documentMap);
+    }
+  }, [data, documentMap, updateDocumentMap, hasUnsavedChanges, toast, currentRunsheet, user, runsheetName, columns, columnInstructions, onUnsavedChanges, updateDocumentRowIndexes]);
 
   // Function to move row up
   const moveRowUp = useCallback((rowIndex: number) => {
