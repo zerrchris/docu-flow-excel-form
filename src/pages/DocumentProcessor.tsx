@@ -1385,6 +1385,9 @@ Image: [base64 image data]`;
     console.log('🔧 DocumentProcessor: spreadsheetData.length:', spreadsheetData.length);
     console.log('🔧 DocumentProcessor: documentMap.size:', documentMap.size);
     
+    // Use formData as fallback when dataToAdd is not provided
+    const targetData = dataToAdd || formData;
+    
     // Check localStorage for active runsheet as fallback
     let runsheetId = activeRunsheet?.id || location.state?.runsheet?.id;
     
@@ -1442,7 +1445,6 @@ Image: [base64 image data]`;
       console.log('🔧 ADD_TO_SPREADSHEET: Received saved runsheet ID:', runsheetId);
     }
     
-    const targetData = dataToAdd || formData;
     
     // No longer auto-generate smart filenames - use original filename by default
     if (!targetData['Document File Name'] || targetData['Document File Name'].trim() === '') {
