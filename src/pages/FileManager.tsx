@@ -305,7 +305,15 @@ export const FileManager: React.FC = () => {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold">Runsheets</h3>
-          <Button onClick={() => navigate('/runsheet')} size="sm" className="gap-2">
+          <Button 
+            onClick={() => {
+              // Clear active runsheet and navigate to create new one
+              clearActiveRunsheet();
+              navigate('/runsheet?action=new');
+            }} 
+            size="sm" 
+            className="gap-2"
+          >
             <Plus className="h-4 w-4" />
             New Runsheet
           </Button>
