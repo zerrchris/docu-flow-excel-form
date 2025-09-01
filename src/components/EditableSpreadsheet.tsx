@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Plus, Trash2, Check, X, ArrowUp, ArrowDown, Save, FolderOpen, Download, Upload, AlignLeft, AlignCenter, AlignRight, Cloud, ChevronDown, FileText, Archive, ExternalLink, AlertTriangle, FileStack, Settings, Eye, EyeOff, Sparkles, GripVertical } from 'lucide-react';
+import { Plus, Trash2, Check, X, ArrowUp, ArrowDown, Save, FolderOpen, Download, Upload, AlignLeft, AlignCenter, AlignRight, Cloud, ChevronDown, FileText, Archive, ExternalLink, AlertTriangle, FileStack, Settings, Eye, EyeOff, Sparkles } from 'lucide-react';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -270,13 +270,7 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
   const [isTableLoading, setIsTableLoading] = useState(false);
   const [lastEditedCell, setLastEditedCell] = useState<{rowIndex: number, column: string} | null>(null);
   
-  // Drag and drop state for row reordering
-  const [draggedRowIndex, setDraggedRowIndex] = useState<number | null>(null);
-  const [dragOverRowIndex, setDragOverRowIndex] = useState<number | null>(null);
-  const [autoScrollInterval, setAutoScrollInterval] = useState<NodeJS.Timeout | null>(null);
-  const [scrollCheckInterval, setScrollCheckInterval] = useState<NodeJS.Timeout | null>(null);
   const tableContainerRef = useRef<HTMLDivElement>(null);
-  const currentMousePosition = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   
   const [pendingDataInsertion, setPendingDataInsertion] = useState<{
     rowIndex: number;
@@ -4102,232 +4096,6 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     setRowsToAdd(1);
   };
 
-  // Drag and drop functions for row reordering
-  const checkScrollNeeds = () => {
-    if (draggedRowIndex === null || !tableContainerRef.current) {
-      return;
-    }
-    
-    const rect = tableContainerRef.current.getBoundingClientRect();
-    const mouseY = currentMousePosition.current.y;
-    const scrollZone = 80;
-    
-    const distanceFromTop = mouseY - rect.top;
-    const distanceFromBottom = rect.bottom - mouseY;
-    
-    // Check if mouse is within the container bounds
-    const withinContainer = mouseY >= rect.top && mouseY <= rect.bottom;
-    
-    console.log('🔧 Scroll Check:', {
-      mouseY,
-      rectTop: rect.top,
-      rectBottom: rect.bottom,
-      distanceFromTop,
-      distanceFromBottom,
-      withinContainer,
-      scrollZone,
-      hasAutoScrollInterval: !!autoScrollInterval
-    });
-    
-    if (!withinContainer) {
-      console.log('🔧 Mouse outside container - stopping scroll');
-      stopAutoScroll();
-      return;
-    }
-    
-    const nearTop = distanceFromTop < scrollZone && distanceFromTop > 0;
-    const nearBottom = distanceFromBottom < scrollZone && distanceFromBottom > 0;
-    
-    if (nearTop && tableContainerRef.current.scrollTop > 0) {
-      console.log('🔧 Near top - starting up scroll');
-      if (!autoScrollInterval) {
-        startAutoScroll('up');
-      }
-    } else if (nearBottom) {
-      const maxScroll = tableContainerRef.current.scrollHeight - tableContainerRef.current.clientHeight;
-      if (tableContainerRef.current.scrollTop < maxScroll) {
-        console.log('🔧 Near bottom - starting down scroll');
-        if (!autoScrollInterval) {
-          startAutoScroll('down');
-        }
-      } else {
-        console.log('🔧 At bottom limit - stopping scroll');
-        stopAutoScroll();
-      }
-    } else {
-      console.log('🔧 Not in scroll zone - stopping scroll');
-      stopAutoScroll();
-    }
-  };
-
-  const handleRowDragStart = (e: React.DragEvent, rowIndex: number) => {
-    setDraggedRowIndex(rowIndex);
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/html', rowIndex.toString());
-    
-    // Start periodic scroll checking
-    const checkInterval = setInterval(checkScrollNeeds, 100);
-    setScrollCheckInterval(checkInterval);
-    
-    // Track mouse position during drag - only update position, don't trigger scroll checks
-    const handleMouseMove = (event: MouseEvent) => {
-      currentMousePosition.current = { x: event.clientX, y: event.clientY };
-    };
-    
-    // Attach to document for global coverage
-    document.addEventListener('mousemove', handleMouseMove);
-    
-    // Clean up event listener when drag ends
-    const cleanup = () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('dragend', cleanup);
-    };
-    document.addEventListener('dragend', cleanup);
-    
-    // Add some visual feedback
-    const target = e.target as HTMLElement;
-    target.style.opacity = '0.5';
-  };
-
-  const handleRowDragEnd = (e: React.DragEvent) => {
-    const target = e.target as HTMLElement;
-    target.style.opacity = '1';
-    setDraggedRowIndex(null);
-    setDragOverRowIndex(null);
-    
-    // Clear both auto-scroll and scroll check intervals
-    if (autoScrollInterval) {
-      clearInterval(autoScrollInterval);
-      setAutoScrollInterval(null);
-    }
-    if (scrollCheckInterval) {
-      clearInterval(scrollCheckInterval);
-      setScrollCheckInterval(null);
-    }
-  };
-
-  const startAutoScroll = (direction: 'up' | 'down') => {
-    // Clear existing interval first to prevent multiple intervals
-    if (autoScrollInterval) {
-      clearInterval(autoScrollInterval);
-      setAutoScrollInterval(null);
-    }
-
-    const interval = setInterval(() => {
-      if (tableContainerRef.current) {
-        const scrollAmount = 50; // pixels to scroll per interval
-        if (direction === 'up') {
-          tableContainerRef.current.scrollTop -= scrollAmount;
-        } else {
-          tableContainerRef.current.scrollTop += scrollAmount;
-        }
-      }
-    }, 100); // scroll every 100ms
-
-    setAutoScrollInterval(interval);
-  };
-
-  const stopAutoScroll = () => {
-    if (autoScrollInterval) {
-      console.log('🔧 Stopping auto-scroll interval');
-      clearInterval(autoScrollInterval);
-      setAutoScrollInterval(null);
-    } else {
-      console.log('🔧 Stop auto-scroll called but no interval exists');
-    }
-  };
-
-  const handleRowDragOver = (e: React.DragEvent, rowIndex: number) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    
-    // Only handle row highlighting - auto-scroll is handled globally
-    if (draggedRowIndex !== null && draggedRowIndex !== rowIndex) {
-      setDragOverRowIndex(rowIndex);
-    }
-  };
-
-  // Enhanced global drag over handler with immediate scroll check
-  const handleGlobalDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    // Update mouse position for the periodic check
-    currentMousePosition.current = { x: e.clientX, y: e.clientY };
-    
-    // Immediately check if we need to stop scrolling when mouse moves
-    if (draggedRowIndex !== null) {
-      checkScrollNeeds();
-    }
-  };
-
-  const handleRowDragLeave = () => {
-    setDragOverRowIndex(null);
-    // Don't stop auto-scroll here - let global handler manage it
-  };
-
-  const handleRowDrop = (e: React.DragEvent, dropIndex: number) => {
-    e.preventDefault();
-    
-    // Stop auto-scroll
-    stopAutoScroll();
-    
-    if (draggedRowIndex === null || draggedRowIndex === dropIndex) {
-      return;
-    }
-
-    // Reorder the data array
-    setData(prev => {
-      const newData = [...prev];
-      const draggedItem = newData[draggedRowIndex];
-      
-      // Remove the dragged item
-      newData.splice(draggedRowIndex, 1);
-      
-      // Insert it at the new position
-      const insertIndex = draggedRowIndex < dropIndex ? dropIndex - 1 : dropIndex;
-      newData.splice(insertIndex, 0, draggedItem);
-      
-      return newData;
-    });
-
-    // Update document map to reflect new row positions
-    const newDocumentMap = new Map<number, DocumentRecord>();
-    documentMap.forEach((doc, mapRowIndex) => {
-      let newIndex = mapRowIndex;
-      
-      if (mapRowIndex === draggedRowIndex) {
-        // The dragged row gets the drop index (adjusted)
-        newIndex = draggedRowIndex < dropIndex ? dropIndex - 1 : dropIndex;
-      } else if (draggedRowIndex < dropIndex) {
-        // Moving down: rows between drag and drop shift up
-        if (mapRowIndex > draggedRowIndex && mapRowIndex < dropIndex) {
-          newIndex = mapRowIndex - 1;
-        }
-      } else {
-        // Moving up: rows between drop and drag shift down
-        if (mapRowIndex >= dropIndex && mapRowIndex < draggedRowIndex) {
-          newIndex = mapRowIndex + 1;
-        }
-      }
-      
-      newDocumentMap.set(newIndex, doc);
-    });
-    
-    updateDocumentMap(newDocumentMap);
-    
-    // Update database row indexes
-    updateDocumentRowIndexes(newDocumentMap);
-    
-    setHasUnsavedChanges(true);
-    
-    // Reset drag state
-    setDraggedRowIndex(null);
-    setDragOverRowIndex(null);
-    
-    toast({
-      title: "Row moved",
-      description: `Row ${draggedRowIndex + 1} moved to position ${(draggedRowIndex < dropIndex ? dropIndex - 1 : dropIndex) + 1}`,
-    });
-  };
 
   const analyzeDocumentAndPopulateRow = async (file: File, targetRowIndex: number, forceOverwrite: boolean = false) => {
     try {
@@ -5249,7 +5017,6 @@ ${extractionFields}`
             isolation: 'isolate' // Create a new stacking context for sticky elements
           }}
           onScroll={handleScroll}
-          onDragOver={handleGlobalDragOver}
         >
           {/* Fixed table wrapper for proper sticky behavior */}
           <div 
@@ -5461,17 +5228,11 @@ ${extractionFields}`
                         <tr 
                           className={`relative transition-all duration-200 group hover:bg-muted/50 data-[state=selected]:bg-muted
                             ${lastEditedCell?.rowIndex === rowIndex ? 'bg-green-50 dark:bg-green-900/20 animate-pulse' : 'hover:bg-muted/30'}
-                            ${draggedRowIndex === rowIndex ? 'opacity-50' : ''}
-                            ${dragOverRowIndex === rowIndex ? 'border-t-2 border-primary bg-primary/10' : ''}
                           `}
                          style={{ 
                            height: `${getRowHeight(rowIndex)}px`,
                            minHeight: `${getRowHeight(rowIndex)}px`
                          }}
-                         draggable={false}
-                         onDragOver={(e) => handleRowDragOver(e, rowIndex)}
-                         onDragLeave={handleRowDragLeave}
-                         onDrop={(e) => handleRowDrop(e, rowIndex)}
                        >
                      {/* Row Actions column - Row number, drag handle, and delete button */}
                       <td 
@@ -5487,16 +5248,6 @@ ${extractionFields}`
                           <span className="text-xs text-muted-foreground font-mono">{rowIndex + 1}</span>
                           
                           <div className="flex items-center gap-1">
-                            {/* Drag Handle */}
-                            <div
-                              className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded transition-colors"
-                              draggable="true"
-                              onDragStart={(e) => handleRowDragStart(e, rowIndex)}
-                              onDragEnd={handleRowDragEnd}
-                              title="Drag to reorder row"
-                            >
-                              <GripVertical className="h-3 w-3 text-muted-foreground" />
-                            </div>
                             
                             {/* Delete Button */}
                             <Button
