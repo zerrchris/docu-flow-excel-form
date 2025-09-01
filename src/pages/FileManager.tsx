@@ -630,7 +630,7 @@ export const FileManager: React.FC = () => {
             <div className="flex items-center gap-4">
               <Link to="/" className="flex items-center gap-2">
                 <LogoMark />
-                <span className="font-semibold text-lg">Document Extractor</span>
+                <span className="font-semibold text-lg">Runsheet Pro</span>
               </Link>
               {currentView === 'runsheet-details' && (
                 <Button
@@ -650,6 +650,15 @@ export const FileManager: React.FC = () => {
             </div>
             
             <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate('/dashboard')}
+                className="gap-2"
+              >
+                <Home className="h-4 w-4" />
+                Dashboard
+              </Button>
               <ActiveRunsheetButton />
               <AuthButton />
             </div>
