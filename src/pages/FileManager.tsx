@@ -651,7 +651,6 @@ export const FileManager: React.FC = () => {
             
             <div className="flex items-center gap-2">
               <Button
-                variant="outline"
                 size="sm"
                 onClick={() => navigate('/dashboard')}
                 className="gap-2"
