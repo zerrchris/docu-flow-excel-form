@@ -1566,138 +1566,29 @@ Image: [base64 image data]`;
     console.log('Filtered data to match current columns:', finalData);
     console.log('Current columns (unchanged):', columns);
     
-    // Let EditableSpreadsheet handle the data state management when there's an active runsheet
-    // Only dispatch the event to add the row to the actual spreadsheet component
-    console.log('🔧 DEBUG: Dispatching externalAddRow event to EditableSpreadsheet');
-    console.log('🔧 DEBUG: runsheetId being passed:', runsheetId);
-    console.log('🔧 DEBUG: finalData being passed:', finalData);
+    // Simple direct approach - update spreadsheet data directly
+    console.log('🔧 DEBUG: Using direct state update approach');
+    console.log('🔧 DEBUG: runsheetId:', runsheetId);
+    console.log('🔧 DEBUG: finalData:', finalData);
     
+    // Update spreadsheet data directly
+    setSpreadsheetData(prev => {
+      const newData = [...prev, finalData];
+      console.log('🔧 DEBUG: Updated spreadsheet data directly:', newData);
+      return newData;
+    });
     
-    // Add a unique operation ID to help with debugging correlation
-    const operationId = `batch-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    console.log('🔧 DEBUG: Starting operation:', operationId);
-    console.log('🔧 DEBUG: Dispatching externalAddRow event to EditableSpreadsheet');
-    console.log('🔧 DEBUG: runsheetId being passed:', runsheetId);
-    console.log('🔧 DEBUG: finalData being passed:', finalData);
-    console.log('🔧 DEBUG: Storage Path in finalData:', finalData['Storage Path']);
+    // Create document record for the new row
+    if (finalData['Storage Path']) {
+      const newRowIndex = spreadsheetData.length;
+      console.log('🔧 DEBUG: Creating document record for row:', newRowIndex);
+      createDocumentRecord(finalData, newRowIndex, runsheetId);
+    }
     
-    // Add a timeout to ensure the event is dispatched after any pending operations
-    setTimeout(() => {
-      console.log('🔧 DEBUG: Actually dispatching externalAddRow event now for operation:', operationId);
-      window.dispatchEvent(new CustomEvent('externalAddRow', { 
-        detail: { 
-          data: {
-            ...finalData,
-            '__operationId': operationId // Add operation ID for debugging (hidden from UI)
-          },
-          runsheetId: runsheetId
-        } 
-      }));
-      console.log('🔧 DEBUG: externalAddRow event dispatched for operation:', operationId);
-    }, 100);
-
-    // Show success message (will be refined after EditableSpreadsheet processes the row)
-    setTimeout(() => {
-      toast({
-        title: "✅ Data Successfully Added",
-        description: `Document data has been added to your runsheet.`,
-      });
-    }, 100);
-
-    // One-time listener to learn which row index the spreadsheet actually used
-    console.log('🔧 DocumentProcessor: Setting up externalRowPlaced event listener for storage path:', finalData['Storage Path']);
-    console.log('🔧 DocumentProcessor: Event listener setup at timestamp:', Date.now());
-    const handleExternalRowPlaced = (event: CustomEvent) => {
-      const detail = (event as any).detail || {};
-      console.log('🔧 DocumentProcessor: *** RECEIVED externalRowPlaced event ***');
-      console.log('🔧 DocumentProcessor: Event timestamp:', Date.now());
-      console.log('🔧 DocumentProcessor: Event detail:', detail);
-      console.log('🔧 DocumentProcessor: Expected storage path:', finalData['Storage Path']);
-      console.log('🔧 DocumentProcessor: Received storage path:', detail?.storagePath);
-      
-      // Correlate using storagePath to avoid mismatches when multiple adds happen
-      if (detail?.storagePath && detail.storagePath === finalData['Storage Path']) {
-        console.log('🔧 DocumentProcessor: Storage paths match! Proceeding with document record creation');
-        window.removeEventListener('externalRowPlaced', handleExternalRowPlaced as EventListener);
-        const placedRunsheetId: string | undefined = detail.runsheetId;
-        const placedRowIndex: number | undefined = detail.rowIndex;
-        console.log('🔧 DocumentProcessor: placedRunsheetId:', placedRunsheetId, 'placedRowIndex:', placedRowIndex);
-        
-        if (placedRunsheetId && placedRowIndex !== undefined) {
-          console.log('🔧 DocumentProcessor: About to call createDocumentRecord with rowIndex:', placedRowIndex);
-          console.log('🔧 DocumentProcessor: Document will be linked to row:', placedRowIndex, 'in runsheet:', placedRunsheetId);
-          
-          // Check if document record already exists for this row to prevent duplicates
-          console.log('🔧 DocumentProcessor: Checking for existing document at row:', placedRowIndex);
-          const existingDoc = documentMap.get(placedRowIndex);
-          if (existingDoc) {
-            console.log('🔧 DocumentProcessor: Document already exists for row', placedRowIndex, '- skipping creation to prevent duplicates');
-            return;
-          }
-          
-          // Ensure the document record points to the correct row in the correct runsheet
-          createDocumentRecord(finalData, placedRowIndex, placedRunsheetId);
-        }
-      } else {
-        console.log('🔧 DocumentProcessor: Storage paths do not match, ignoring this externalRowPlaced event');
-        console.log('🔧 DocumentProcessor: Expected:', finalData['Storage Path'], 'Received:', detail?.storagePath);
-      }
-    };
-    console.log('🔧 DocumentProcessor: Adding externalRowPlaced event listener to window');
-    window.addEventListener('externalRowPlaced', handleExternalRowPlaced as EventListener);
-    console.log('🔧 DocumentProcessor: Event listener added successfully');
-    
-    // Set a cleanup timeout in case the event never fires
-    setTimeout(() => {
-      console.log('🔧 DocumentProcessor: Timeout reached (5s), removing externalRowPlaced listener');
-      window.removeEventListener('externalRowPlaced', handleExternalRowPlaced as EventListener);
-    }, 5000);
-
-    // Auto-save the runsheet after adding data to show filename options
-    setTimeout(async () => {
-      console.log('🔧 AUTO_SAVE: Starting auto-save after add to spreadsheet');
-      
-      // First save the runsheet to get a proper ID - force save immediately
-      const saveEvent = new CustomEvent('forceSaveRunsheet');
-      window.dispatchEvent(saveEvent);
-      
-      // Wait for the save to complete, then process any pending documents
-      setTimeout(() => {
-        console.log('🔧 AUTO_SAVE: Processing pending documents after save delay');
-        const pendingDocs = JSON.parse(sessionStorage.getItem('pendingDocuments') || '[]');
-        if (pendingDocs.length > 0) {
-          console.log('🔧 AUTO_SAVE: Found pending documents to process:', pendingDocs);
-          // Process pending documents after save
-          setTimeout(() => {
-            window.dispatchEvent(new CustomEvent('processPendingDocuments'));
-          }, 1000);
-        }
-      }, 2000); // Give more time for the save operation to complete
-    }, 200); // Increased delay to ensure spreadsheet state is updated first
-    
-    // Reset form data for next entry - use current columns (which may have been updated)
-    // Only reset after a successful add to prevent loss of data
-    setTimeout(() => {
-      console.log('🔧 FORM_RESET: Resetting form data after successful add');
-      const emptyFormData: Record<string, string> = {};
-      columns.forEach(column => {
-        emptyFormData[column] = '';
-      });
-      setFormData(emptyFormData);
-      
-      // Also reset the document to allow adding a new one
-      console.log('🔧 DOCUMENT_RESET: Clearing document preview after successful add');
-      resetDocument();
-      
-      // Don't navigate - just stay on the current page to avoid refresh
-      console.log('🔧 DOCUMENT_PROCESSOR: Staying on current page after successful add to prevent refresh');
-      
-      // Show success message
-      toast({
-        title: "Added to runsheet",
-        description: "Document has been successfully added to the runsheet. You can now add another document.",
-      });
-    }, 500); // Small delay to ensure the data was properly added first
+    toast({
+      title: "✅ Document Added Successfully",
+      description: `Document has been added to row ${spreadsheetData.length + 1}.`,
+    });
   };
 
   // Continue adding to spreadsheet without validation (used after user confirms)

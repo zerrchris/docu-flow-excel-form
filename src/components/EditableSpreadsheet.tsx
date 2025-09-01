@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useActiveRunsheet } from '@/hooks/useActiveRunsheet';
 
@@ -79,19 +79,20 @@ interface SpreadsheetProps {
   onDocumentMapChange?: (documentMap: Map<number, DocumentRecord>) => void;
 }
 
-const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({ 
-  initialColumns, 
-  initialData,
-  onColumnChange,
-  onDataChange,
-  onColumnInstructionsChange,
-  onUnsavedChanges,
-  missingColumns = [],
-  initialRunsheetName,
-  initialRunsheetId,
-  onShowMultipleUpload,
-  onDocumentMapChange
-}) => {
+const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
+  const {
+    initialColumns, 
+    initialData,
+    onColumnChange,
+    onDataChange,
+    onColumnInstructionsChange,
+    onUnsavedChanges,
+    missingColumns = [],
+    initialRunsheetName,
+    initialRunsheetId,
+    onShowMultipleUpload,
+    onDocumentMapChange
+  } = props;
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -6094,6 +6095,6 @@ ${extractionFields}`
         />
       </div>
     );
-};
+});
 
 export default EditableSpreadsheet;
