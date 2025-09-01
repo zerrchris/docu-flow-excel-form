@@ -726,7 +726,10 @@ export const FileManager: React.FC = () => {
       <FilePreview 
         file={previewFile}
         isOpen={showPreview}
-        onClose={() => setShowPreview(false)}
+        onClose={() => {
+          setShowPreview(false);
+          setPreviewFile(null);
+        }}
       />
     </div>
   );
