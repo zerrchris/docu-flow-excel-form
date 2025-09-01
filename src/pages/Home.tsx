@@ -93,9 +93,6 @@ const Home: React.FC = () => {
                     Open App
                   </Button>
                 </Link>
-                <Link to="/lease-check-assistant">
-                  <Button variant="outline" size="lg">Lease Check Assistant</Button>
-                </Link>
               </>
             ) : (
               <Link to="/signin">

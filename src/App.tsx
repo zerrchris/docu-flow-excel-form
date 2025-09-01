@@ -20,8 +20,6 @@ import NotFound from "./pages/NotFound";
 import GoogleAuthCallback from "./components/GoogleAuthCallback";
 import CapturePopupPage from "./pages/CapturePopup";
 import AuthStatus from "./pages/AuthStatus";
-import LeaseCheck from "./pages/LeaseCheck";
-import LeaseCheckAssistant from "./pages/LeaseCheckAssistant";
  
 const queryClient = new QueryClient();
  
@@ -48,8 +46,6 @@ const App = () => (
             <Route path="/google-auth-callback" element={<GoogleAuthCallback />} />
             <Route path="/capture-popup" element={<CapturePopupPage />} />
             <Route path="/auth-status" element={<AuthStatus />} />
-            <Route path="/lease-check" element={<LeaseCheck />} />
-            <Route path="/lease-check-assistant" element={<LeaseCheckAssistant />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

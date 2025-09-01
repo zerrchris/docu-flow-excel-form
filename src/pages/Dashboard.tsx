@@ -104,12 +104,6 @@ const Dashboard: React.FC = () => {
       action: "open-dialog"
     },
     {
-      title: "Lease Check Analyzer",
-      description: "Analyze oil and gas runsheet documents for lease status and mineral ownership",
-      icon: Search,
-      path: "/lease-check"
-    },
-    {
       title: "Upload Runsheet",
       description: "Upload files from your device",
       icon: Upload,
