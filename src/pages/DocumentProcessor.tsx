@@ -1568,10 +1568,14 @@ Image: [base64 image data]`;
 
     // One-time listener to learn which row index the spreadsheet actually used
     console.log('🔧 DocumentProcessor: Setting up externalRowPlaced event listener for storage path:', finalData['Storage Path']);
+    console.log('🔧 DocumentProcessor: Event listener setup at timestamp:', Date.now());
     const handleExternalRowPlaced = (event: CustomEvent) => {
       const detail = (event as any).detail || {};
-      console.log('🔧 DocumentProcessor: Received externalRowPlaced event:', detail);
-      console.log('🔧 DocumentProcessor: Comparing storagePath:', detail?.storagePath, 'vs finalData Storage Path:', finalData['Storage Path']);
+      console.log('🔧 DocumentProcessor: *** RECEIVED externalRowPlaced event ***');
+      console.log('🔧 DocumentProcessor: Event timestamp:', Date.now());
+      console.log('🔧 DocumentProcessor: Event detail:', detail);
+      console.log('🔧 DocumentProcessor: Expected storage path:', finalData['Storage Path']);
+      console.log('🔧 DocumentProcessor: Received storage path:', detail?.storagePath);
       
       // Correlate using storagePath to avoid mismatches when multiple adds happen
       if (detail?.storagePath && detail.storagePath === finalData['Storage Path']) {
@@ -1592,11 +1596,13 @@ Image: [base64 image data]`;
         console.log('🔧 DocumentProcessor: Expected:', finalData['Storage Path'], 'Received:', detail?.storagePath);
       }
     };
+    console.log('🔧 DocumentProcessor: Adding externalRowPlaced event listener to window');
     window.addEventListener('externalRowPlaced', handleExternalRowPlaced as EventListener);
+    console.log('🔧 DocumentProcessor: Event listener added successfully');
     
     // Set a cleanup timeout in case the event never fires
     setTimeout(() => {
-      console.log('🔧 DocumentProcessor: Timeout reached, removing externalRowPlaced listener');
+      console.log('🔧 DocumentProcessor: Timeout reached (5s), removing externalRowPlaced listener');
       window.removeEventListener('externalRowPlaced', handleExternalRowPlaced as EventListener);
     }, 5000);
 
