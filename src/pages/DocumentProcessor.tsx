@@ -1651,6 +1651,41 @@ Image: [base64 image data]`;
       });
     }
     
+    // Immediately save the updated spreadsheet data to the database
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user && runsheetId && activeRunsheet) {
+        // Get the current spreadsheet data that includes the new row
+        const currentData = [...spreadsheetData, finalData];
+        
+        // Update the runsheet in the database
+        const { error: saveError } = await supabase
+          .from('runsheets')
+          .update({
+            data: currentData,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', runsheetId)
+          .eq('user_id', user.id);
+          
+        if (saveError) {
+          console.error('Error saving runsheet after document addition:', saveError);
+        } else {
+          console.log('🔧 Successfully saved runsheet with new document row');
+          
+          // Update the active runsheet state to match the database
+          if (activeRunsheet) {
+            setActiveRunsheet({
+              ...activeRunsheet,
+              data: currentData
+            });
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error in immediate save after document addition:', error);
+    }
+    
     toast({
       title: "✅ Document Added Successfully",
       description: `Document has been added to row ${spreadsheetData.length + 1}.`,
