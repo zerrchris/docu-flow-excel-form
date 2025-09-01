@@ -1571,18 +1571,35 @@ Image: [base64 image data]`;
     console.log('🔧 DEBUG: runsheetId:', runsheetId);
     console.log('🔧 DEBUG: finalData:', finalData);
     
-    // Update spreadsheet data directly
+    // Update spreadsheet data directly and create document record
+    let newRowIndex;
     setSpreadsheetData(prev => {
       const newData = [...prev, finalData];
+      newRowIndex = newData.length - 1; // Store the actual row index
       console.log('🔧 DEBUG: Updated spreadsheet data directly:', newData);
+      console.log('🔧 DEBUG: New row will be at index:', newRowIndex);
       return newData;
     });
     
-    // Create document record for the new row
-    if (finalData['Storage Path']) {
-      const newRowIndex = spreadsheetData.length;
+    // Create document record for the new row and update document map
+    if (finalData['Storage Path'] && newRowIndex !== undefined) {
       console.log('🔧 DEBUG: Creating document record for row:', newRowIndex);
-      createDocumentRecord(finalData, newRowIndex, runsheetId);
+      
+      // Create the document record and wait for it
+      await createDocumentRecord(finalData, newRowIndex, runsheetId);
+      
+      // Update document map immediately to show the document is linked
+      setDocumentMap(prev => {
+        const newMap = new Map(prev);
+        newMap.set(newRowIndex, {
+          storagePath: finalData['Storage Path'],
+          fileName: finalData['Document File Name'] || file?.name || 'Unknown Document',
+          isPending: false,
+          timestamp: Date.now()
+        });
+        console.log('🔧 DEBUG: Updated document map with new document at row:', newRowIndex);
+        return newMap;
+      });
     }
     
     toast({
