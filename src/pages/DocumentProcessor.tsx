@@ -1604,11 +1604,11 @@ Image: [base64 image data]`;
     setTimeout(async () => {
       console.log('🔧 AUTO_SAVE: Starting auto-save after add to spreadsheet');
       
-      // First save the runsheet to get a proper ID
-      const saveEvent = new CustomEvent('saveRunsheet');
+      // First save the runsheet to get a proper ID - force save immediately
+      const saveEvent = new CustomEvent('forceSaveRunsheet');
       window.dispatchEvent(saveEvent);
       
-      // Wait a bit for the save to complete, then process any pending documents
+      // Wait for the save to complete, then process any pending documents
       setTimeout(() => {
         console.log('🔧 AUTO_SAVE: Processing pending documents after save delay');
         const pendingDocs = JSON.parse(sessionStorage.getItem('pendingDocuments') || '[]');
@@ -1619,8 +1619,8 @@ Image: [base64 image data]`;
             window.dispatchEvent(new CustomEvent('processPendingDocuments'));
           }, 1000);
         }
-      }, 1500); // Give the save operation time to complete
-    }, 100);
+      }, 2000); // Give more time for the save operation to complete
+    }, 200); // Increased delay to ensure spreadsheet state is updated first
     
     // Reset form data for next entry - use current columns (which may have been updated)
     // Only reset after a successful add to prevent loss of data

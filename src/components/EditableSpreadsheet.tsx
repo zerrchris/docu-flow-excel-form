@@ -454,12 +454,14 @@ const EditableSpreadsheet: React.FC<SpreadsheetProps> = ({
     };
     
     window.addEventListener('saveRunsheet', handleSaveEvent);
+    window.addEventListener('forceSaveRunsheet', handleSaveEvent);
     
     return () => {
       window.removeEventListener('saveRunsheetBeforeUpload', handleSaveRequest as EventListener);
       window.removeEventListener('createNewRunsheetFromDashboard', handleDashboardNewRunsheet as EventListener);
       window.removeEventListener('startNewRunsheet', handleStartNewRunsheet as EventListener);
       window.removeEventListener('saveRunsheet', handleSaveEvent);
+      window.removeEventListener('forceSaveRunsheet', handleSaveEvent);
     };
   }, [currentRunsheetId, runsheetName, data, columns, columnInstructions]);
   
