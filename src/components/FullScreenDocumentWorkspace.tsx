@@ -167,9 +167,40 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
               setIsPdf(documentFileName?.toLowerCase().endsWith('.pdf') || false);
               console.log('🔧 FullScreenDocumentWorkspace: Document loaded from Storage Path successfully');
             } else {
-              console.error('🔧 FullScreenDocumentWorkspace: No document found in database, session storage, or rowData Storage Path');
-              console.log('🔧 FullScreenDocumentWorkspace: Available rowData:', rowData);
-              setError(`No document found for row ${rowIndex} in runsheet ${runsheetId}`);
+              // Storage Path not in row data, try querying database directly
+              console.log('🔧 FullScreenDocumentWorkspace: No Storage Path in rowData, querying database for document at row:', rowIndex);
+              
+              try {
+                const { data: documents, error } = await supabase
+                  .from('documents')
+                  .select('file_path, original_filename')
+                  .eq('runsheet_id', runsheetId)
+                  .eq('row_index', rowIndex)
+                  .limit(1);
+                
+                if (error) {
+                  console.error('🔧 FullScreenDocumentWorkspace: Database query error:', error);
+                  throw error;
+                }
+                
+                if (documents && documents.length > 0) {
+                  const doc = documents[0];
+                  console.log('🔧 FullScreenDocumentWorkspace: Found document in database:', doc);
+                  const url = DocumentService.getDocumentUrl(doc.file_path);
+                  console.log('🔧 FullScreenDocumentWorkspace: Constructed URL from database:', url);
+                  setDocumentUrl(url);
+                  setDocumentName(doc.original_filename || 'Document');
+                  setIsPdf(doc.original_filename?.toLowerCase().endsWith('.pdf') || false);
+                  console.log('🔧 FullScreenDocumentWorkspace: Document loaded from database successfully');
+                } else {
+                  console.error('🔧 FullScreenDocumentWorkspace: No document found in database, session storage, or rowData Storage Path');
+                  console.log('🔧 FullScreenDocumentWorkspace: Available rowData:', rowData);
+                  setError(`No document found for row ${rowIndex} in runsheet ${runsheetId}`);
+                }
+              } catch (dbError) {
+                console.error('🔧 FullScreenDocumentWorkspace: Error querying database for document:', dbError);
+                setError(`No document found for row ${rowIndex} in runsheet ${runsheetId}`);
+              }
             }
           }
         }
