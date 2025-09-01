@@ -1584,8 +1584,55 @@ Image: [base64 image data]`;
     });
     
     // Create document record for the new row and update document map
-    if (finalData['Storage Path'] && newRowIndex !== undefined) {
+    // This should happen regardless of whether we have a Storage Path or not
+    if (newRowIndex !== undefined) {
       console.log('🔧 DEBUG: Creating document record for row:', newRowIndex);
+      
+      // If we have a file but no storage path, upload it now
+      if (file && !finalData['Storage Path']) {
+        console.log('🔧 DEBUG: No storage path found, uploading file now');
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            // Generate a unique filename
+            const timestamp = Date.now();
+            const randomSuffix = Math.random().toString(36).substring(2, 8);
+            const fileExtension = file.name.split('.').pop() || 'pdf';
+            const uniqueFilename = `${user.id}/${timestamp}_${randomSuffix}.${fileExtension}`;
+            
+            // Upload to storage
+            const { data: uploadData, error: uploadError } = await supabase.storage
+              .from('documents')
+              .upload(uniqueFilename, file, {
+                cacheControl: '3600',
+                upsert: false
+              });
+              
+            if (uploadError) {
+              console.error('Error uploading file:', uploadError);
+            } else {
+              // Get the public URL
+              const { data: urlData } = supabase.storage
+                .from('documents')
+                .getPublicUrl(uniqueFilename);
+              
+              finalData['Storage Path'] = urlData.publicUrl;
+              console.log('🔧 DEBUG: File uploaded successfully, storage path:', finalData['Storage Path']);
+              
+              // Also update the spreadsheet data with the storage path
+              setSpreadsheetData(prev => {
+                const newData = [...prev];
+                if (newData[newRowIndex]) {
+                  newData[newRowIndex]['Storage Path'] = finalData['Storage Path'];
+                }
+                return newData;
+              });
+            }
+          }
+        } catch (error) {
+          console.error('Error uploading file:', error);
+        }
+      }
       
       // Create the document record and wait for it
       await createDocumentRecord(finalData, newRowIndex, runsheetId);
@@ -1594,7 +1641,7 @@ Image: [base64 image data]`;
       setDocumentMap(prev => {
         const newMap = new Map(prev);
         newMap.set(newRowIndex, {
-          storagePath: finalData['Storage Path'],
+          storagePath: finalData['Storage Path'] || '',
           fileName: finalData['Document File Name'] || file?.name || 'Unknown Document',
           isPending: false,
           timestamp: Date.now()
@@ -1808,9 +1855,13 @@ Image: [base64 image data]`;
       const storagePath = data['Storage Path'];
       const fileName = data['Document File Name'] || file?.name || 'Unknown Document';
       
-      if (storagePath) {
-        console.log('🔧 DocumentProcessor: Ensuring document record with runsheet ID:', runsheetId);
+      // Even if we don't have a storage path, we should still create a document record
+      // This helps track that a document exists for this row
+      
+      console.log('🔧 DocumentProcessor: Ensuring document record with runsheet ID:', runsheetId);
 
+      // If we have a storage path, check for existing records by storage path
+      if (storagePath) {
         // Idempotency: check if the record for this storagePath already exists for this runsheet
         const { data: existing, error: existingErr } = await supabase
           .from('documents')
@@ -1851,15 +1902,45 @@ Image: [base64 image data]`;
           }));
           return;
         }
+      } else {
+        // If no storage path, check if we already have a document record for this row
+        const { data: existing, error: existingErr } = await supabase
+          .from('documents')
+          .select('id')
+          .eq('runsheet_id', runsheetId)
+          .eq('row_index', rowIndex)
+          .maybeSingle();
+
+        if (existingErr) {
+          console.error('Error checking for existing document record by row:', existingErr);
+        }
+
+        if (existing) {
+          console.log('🔧 Document record already exists for row', rowIndex);
+          // Notify listeners
+          window.dispatchEvent(new CustomEvent('documentRecordCreated', {
+            detail: { 
+              runsheetId, 
+              rowIndex,
+              allPossibleIds: {
+                activeRunsheetId: activeRunsheet?.id,
+                locationStateId: location.state?.runsheet?.id,
+                finalRunsheetId: runsheetId
+              }
+            }
+          }));
+          return;
+        }
+      }
         
-        // Insert new record
+        // Insert new record - even without storage path, we track the document
         const { error } = await supabase
           .from('documents')
           .insert({
             user_id: user.id,
             runsheet_id: runsheetId,
             row_index: rowIndex,
-            file_path: storagePath,
+            file_path: storagePath || '', // Use empty string if no storage path
             stored_filename: fileName,
             original_filename: fileName,
             content_type: file?.type || 'application/pdf'
@@ -1882,7 +1963,6 @@ Image: [base64 image data]`;
             }
           }));
         }
-      }
     } catch (error) {
       console.error('Error in createDocumentRecord:', error);
     }
