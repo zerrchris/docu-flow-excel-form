@@ -1589,6 +1589,13 @@ Image: [base64 image data]`;
       title: "✅ Document Added Successfully",
       description: `Document has been added to row ${spreadsheetData.length + 1}.`,
     });
+    
+    // Navigate back to the runsheet after successful add
+    if (runsheetId) {
+      setTimeout(() => {
+        navigate(`/runsheet?id=${runsheetId}`, { replace: true });
+      }, 1000); // Small delay to show toast
+    }
   };
 
   // Continue adding to spreadsheet without validation (used after user confirms)
