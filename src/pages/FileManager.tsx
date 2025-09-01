@@ -43,7 +43,6 @@ export const FileManager: React.FC = () => {
   const { activeRunsheet, clearActiveRunsheet } = useActiveRunsheet();
   const [runsheets, setRunsheets] = useState<Runsheet[]>([]);
   const [runsheetDocuments, setRunsheetDocuments] = useState<StoredFile[]>([]);
-  const [orphanedFiles, setOrphanedFiles] = useState<StoredFile[]>([]);
   const [currentView, setCurrentView] = useState<'runsheets' | 'runsheet-details'>('runsheets');
   const [currentRunsheetId, setCurrentRunsheetId] = useState<string | null>(null);
   const [currentRunsheetName, setCurrentRunsheetName] = useState<string>('');
@@ -62,7 +61,6 @@ export const FileManager: React.FC = () => {
   useEffect(() => {
     if (currentView === 'runsheets') {
       loadRunsheets();
-      loadOrphanedFiles();
     } else if (currentView === 'runsheet-details' && currentRunsheetId) {
       loadRunsheetDocuments(currentRunsheetId);
     }
@@ -115,40 +113,6 @@ export const FileManager: React.FC = () => {
     }
   };
 
-  const loadOrphanedFiles = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data, error } = await supabase
-        .from('documents')
-        .select('*')
-        .eq('user_id', user.id)
-        .is('runsheet_id', null)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      const filesWithUrls = (data || []).map(doc => ({
-        id: doc.id,
-        name: doc.original_filename,
-        url: supabase.storage.from('documents').getPublicUrl(doc.file_path).data.publicUrl,
-        size: doc.file_size || 0,
-        created_at: doc.created_at,
-        type: 'uploaded' as const,
-        fullPath: doc.file_path
-      }));
-
-      setOrphanedFiles(filesWithUrls);
-    } catch (error: any) {
-      console.error('Error loading orphaned files:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load orphaned files.",
-        variant: "destructive",
-      });
-    }
-  };
 
   const loadRunsheetDocuments = async (runsheetId: string) => {
     try {
@@ -255,8 +219,6 @@ export const FileManager: React.FC = () => {
       
       if (currentView === 'runsheet-details' && currentRunsheetId) {
         loadRunsheetDocuments(currentRunsheetId);
-      } else {
-        loadOrphanedFiles();
       }
     } catch (error: any) {
       console.error('Error deleting file:', error);
@@ -317,10 +279,6 @@ export const FileManager: React.FC = () => {
     file.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const filteredOrphanedFiles = orphanedFiles.filter(file =>
-    file.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   const renderRunsheetsView = () => (
     <div className="space-y-6">
       {/* Search and Stats */}
@@ -338,8 +296,6 @@ export const FileManager: React.FC = () => {
             </div>
             <div className="flex gap-4 text-sm text-muted-foreground">
               <span>{runsheets.length} runsheets</span>
-              <span>•</span>
-              <span>{orphanedFiles.length} orphaned files</span>
             </div>
           </div>
         </div>
@@ -460,67 +416,6 @@ export const FileManager: React.FC = () => {
           </Card>
         )}
       </div>
-
-      {/* Orphaned Files Section */}
-      {orphanedFiles.length > 0 && (
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Unlinked Documents</h3>
-          <Card>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Size</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredOrphanedFiles.map((file) => (
-                  <TableRow key={file.id}>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
-                        <FileImage className="h-4 w-4 text-muted-foreground" />
-                        {file.name}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {(file.size / (1024 * 1024)).toFixed(1)} MB
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {new Date(file.created_at).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setPreviewFile(file);
-                            setShowPreview(true);
-                          }}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedFile(file);
-                            setShowDeleteDialog(true);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Card>
-        </div>
-      )}
     </div>
   );
 
