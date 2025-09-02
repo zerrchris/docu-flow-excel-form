@@ -462,10 +462,24 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     window.addEventListener('saveRunsheet', handleSaveEvent);
     window.addEventListener('forceSaveRunsheet', handleSaveEvent);
     
+    // Handle adding more rows when documents are added beyond current row count
+    const handleAddMoreRowsForDocument = (event: CustomEvent) => {
+      const { requiredRowIndex } = event.detail;
+      console.log('🔧 EditableSpreadsheet: Adding more rows for document at index:', requiredRowIndex);
+      
+      // Calculate how many rows we need to add
+      const currentRowCount = data.length;
+      const rowsToAdd = Math.max(20, requiredRowIndex - currentRowCount + 10); // Add extra buffer
+      
+      addMoreRows(rowsToAdd);
+    };
+    
+    window.addEventListener('addMoreRowsForDocument', handleAddMoreRowsForDocument as EventListener);
     return () => {
       window.removeEventListener('saveRunsheetBeforeUpload', handleSaveRequest as EventListener);
       window.removeEventListener('createNewRunsheetFromDashboard', handleDashboardNewRunsheet as EventListener);
       window.removeEventListener('startNewRunsheet', handleStartNewRunsheet as EventListener);
+      window.removeEventListener('addMoreRowsForDocument', handleAddMoreRowsForDocument as EventListener);
       window.removeEventListener('saveRunsheet', handleSaveEvent);
       window.removeEventListener('forceSaveRunsheet', handleSaveEvent);
     };

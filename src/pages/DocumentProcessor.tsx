@@ -1784,10 +1784,6 @@ Image: [base64 image data]`;
       console.error('Error in immediate save after document addition:', error);
     }
     
-    toast({
-      title: "✅ Document Added Successfully",
-      description: `Document has been added to row ${spreadsheetData.length + 1}.`,
-    });
     
     // Clear the form data and mark as added
     const emptyFormData: Record<string, string> = {};
@@ -1847,6 +1843,8 @@ Image: [base64 image data]`;
       filteredData['Storage Path'] = targetData['Storage Path'];
     }
     
+    let actualTargetRowIndex = 0;
+    
     setSpreadsheetData(prev => {
       const firstEmptyRowIndex = prev.findIndex((row, index) => {
         const isDataEmpty = Object.values(row).every(value => value.trim() === '');
@@ -1859,30 +1857,43 @@ Image: [base64 image data]`;
       if (firstEmptyRowIndex >= 0) {
         newData = [...prev];
         newData[firstEmptyRowIndex] = { ...filteredData };
-        targetRowIndex = firstEmptyRowIndex;
+        actualTargetRowIndex = firstEmptyRowIndex;
       } else {
+        // If no empty row exists, we need to add a new row
+        // But first ensure we have enough rows in the spreadsheet for display
+        actualTargetRowIndex = prev.length;
         newData = [...prev, { ...filteredData }];
-        targetRowIndex = prev.length;
+        
+        // If we're adding beyond row 100, we need to tell the EditableSpreadsheet to add more rows
+        if (actualTargetRowIndex >= 100) {
+          // Dispatch event to add more rows to the spreadsheet display
+          const addRowsEvent = new CustomEvent('addMoreRowsForDocument', {
+            detail: { requiredRowIndex: actualTargetRowIndex }
+          });
+          window.dispatchEvent(addRowsEvent);
+        }
       }
       
       // Create document record and update documentMap immediately
       if (filteredData['Storage Path']) {
-        createDocumentRecord(filteredData, targetRowIndex);
+        createDocumentRecord(filteredData, actualTargetRowIndex);
         
         // Update the documentMap immediately to track this document
         const newDocumentMap = new Map(documentMap);
-        newDocumentMap.set(targetRowIndex, {
+        newDocumentMap.set(actualTargetRowIndex, {
           storagePath: filteredData['Storage Path'],
           fileName: filteredData['Document File Name'] || file?.name || 'Unknown Document',
           isPending: true,
           timestamp: Date.now()
         });
         setDocumentMap(newDocumentMap);
-        console.log('🔧 DocumentProcessor: Updated documentMap for row', targetRowIndex, 'new size:', newDocumentMap.size);
+        console.log('🔧 DocumentProcessor: Updated documentMap for row', actualTargetRowIndex, 'new size:', newDocumentMap.size);
       }
       
       return newData;
     });
+    
+    console.log('🔧 DocumentProcessor: Document will be added to row:', actualTargetRowIndex + 1);
     
     setTimeout(() => {
       const saveEvent = new CustomEvent('saveRunsheet');
