@@ -471,6 +471,13 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
       if (onUploadComplete) {
         onUploadComplete(successCount);
       }
+
+      // Auto-close the modal after successful upload
+      if (onClose && errorCount === 0) {
+        setTimeout(() => {
+          onClose();
+        }, 1500); // Close after 1.5 seconds to let user see the success message
+      }
     }
   };
 
@@ -636,12 +643,6 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
               >
                 {isUploading ? 'Uploading...' : `Upload ${pendingFiles} Files`}
               </Button>
-              
-              {onClose && (
-                <Button variant="outline" onClick={onClose}>
-                  Close
-                </Button>
-              )}
             </div>
           </div>
         )}
