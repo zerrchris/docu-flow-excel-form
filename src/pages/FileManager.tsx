@@ -504,7 +504,7 @@ export const FileManager: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline">
-                      Row {file.rowIndex ?? '?'}
+                      Row {file.rowIndex !== undefined ? file.rowIndex + 1 : '?'}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-muted-foreground">
