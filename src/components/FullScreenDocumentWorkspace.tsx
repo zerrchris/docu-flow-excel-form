@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { X, ZoomIn, ZoomOut, RotateCcw, ExternalLink, ArrowLeft, Brain, AlertTriangle } from 'lucide-react';
 import { DocumentService } from '@/services/documentService';
 import { ExtractionPreferencesService } from '@/services/extractionPreferences';
+import { ColumnWidthPreferencesService } from '@/services/columnWidthPreferences';
 import { useActiveRunsheet } from '@/hooks/useActiveRunsheet';
 import PDFViewer from './PDFViewer';
 import { useToast } from '@/hooks/use-toast';
@@ -282,7 +283,9 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
         ...prev,
         [column]: newWidth
       }));
-      
+
+      // Save to preferences and notify parent
+      ColumnWidthPreferencesService.saveColumnWidth(column, newWidth, runsheetId);
       if (onColumnWidthChange) {
         onColumnWidthChange(column, newWidth);
       }

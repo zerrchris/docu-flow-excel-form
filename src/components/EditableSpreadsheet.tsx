@@ -45,6 +45,7 @@ import DocumentUpload from './DocumentUpload';
 import DocumentLinker from './DocumentLinker';
 import { DocumentService, type DocumentRecord } from '@/services/documentService';
 import { ExtractionPreferencesService } from '@/services/extractionPreferences';
+import { ColumnWidthPreferencesService } from '@/services/columnWidthPreferences';
 import DocumentNamingSettings from './DocumentNamingSettings';
 import InlineDocumentViewer from './InlineDocumentViewer';
 import ColumnPreferencesDialog from './ColumnPreferencesDialog';
@@ -3202,6 +3203,13 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
           [resizing.column]: newWidth
         }));
         setHasManuallyResizedColumns(true);
+        
+        // Save the preference immediately
+        ColumnWidthPreferencesService.saveColumnWidth(
+          resizing.column,
+          newWidth,
+          currentRunsheet?.id
+        );
       }
       
       if (resizingRow) {
@@ -4051,6 +4059,32 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       console.error('Error updating document row indexes:', error);
     }
   }, [currentRunsheet?.id, user, documentMap]);
+
+  // Reset column widths to default
+  const resetColumnWidths = useCallback(async () => {
+    try {
+      // Clear saved preferences
+      if (currentRunsheet?.id) {
+        await ColumnWidthPreferencesService.deleteRunsheetPreferences(currentRunsheet.id);
+      }
+      
+      // Reset local state
+      setColumnWidths({});
+      setHasManuallyResizedColumns(false);
+      
+      toast({
+        title: "Column widths reset",
+        description: "Column widths have been reset to default values.",
+      });
+    } catch (error) {
+      console.error('Error resetting column widths:', error);
+      toast({
+        title: "Error",
+        description: "Failed to reset column widths.",
+        variant: "destructive",
+      });
+    }
+  }, [currentRunsheet?.id, toast]);
 
   // Function to delete a row
   const deleteRow = useCallback(async (rowIndex: number) => {
@@ -6200,6 +6234,7 @@ ${extractionFields}`
             // Also update the onColumnInstructionsChange callback if it exists
             onColumnInstructionsChange?.(newInstructions);
           }}
+          onResetColumnWidths={resetColumnWidths}
         />
       </div>
     );

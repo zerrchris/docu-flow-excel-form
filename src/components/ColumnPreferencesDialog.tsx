@@ -13,12 +13,14 @@ interface ColumnPreferencesDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onPreferencesSaved?: (columns: string[], instructions: Record<string, string>) => void;
+  onResetColumnWidths?: () => void;
 }
 
 const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
   open,
   onOpenChange,
-  onPreferencesSaved
+  onPreferencesSaved,
+  onResetColumnWidths
 }) => {
   const [columns, setColumns] = useState<string[]>([]);
   const [columnInstructions, setColumnInstructions] = useState<Record<string, string>>({});
@@ -357,7 +359,7 @@ const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
 
         {/* Footer */}
         <div className="flex justify-between items-center pt-4 border-t">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             <Button
               variant="outline"
               onClick={resetToDefaults}
@@ -365,8 +367,21 @@ const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
               aria-label="Reset column preferences to comprehensive defaults"
             >
               <RotateCcw className="h-4 w-4 mr-2" />
-              Reset to Comprehensive Defaults
+              Reset Columns
             </Button>
+            {onResetColumnWidths && (
+              <Button
+                variant="outline"
+                onClick={onResetColumnWidths}
+                className="text-xs border-orange-500 text-orange-600 hover:bg-orange-50"
+                aria-label="Reset column widths to default values"
+              >
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Reset Column Widths
+              </Button>
+            )}
+          </div>
+          <div className="flex-1">
             <p className="text-xs text-muted-foreground">
               These settings will apply to all new runsheets you create.
             </p>

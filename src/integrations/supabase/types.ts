@@ -265,6 +265,36 @@ export type Database = {
         }
         Relationships: []
       }
+      user_column_width_preferences: {
+        Row: {
+          column_name: string
+          created_at: string
+          id: string
+          runsheet_id: string | null
+          updated_at: string
+          user_id: string
+          width: number
+        }
+        Insert: {
+          column_name: string
+          created_at?: string
+          id?: string
+          runsheet_id?: string | null
+          updated_at?: string
+          user_id: string
+          width: number
+        }
+        Update: {
+          column_name?: string
+          created_at?: string
+          id?: string
+          runsheet_id?: string | null
+          updated_at?: string
+          user_id?: string
+          width?: number
+        }
+        Relationships: []
+      }
       user_document_naming_preferences: {
         Row: {
           created_at: string
