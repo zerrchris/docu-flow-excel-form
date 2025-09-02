@@ -1895,15 +1895,28 @@ Image: [base64 image data]`;
     
     console.log('🔧 DocumentProcessor: Document will be added to row:', actualTargetRowIndex + 1);
     
-    setTimeout(() => {
-      const saveEvent = new CustomEvent('saveRunsheet');
-      window.dispatchEvent(saveEvent);
-    }, 100);
-    
-    toast({
-      title: "File added to spreadsheet",
-      description: "The file has been added with just the filename.",
-    });
+    // Immediately save the runsheet to ensure data persistence
+    // Use setTimeout to ensure state has been updated before saving
+    setTimeout(async () => {
+      try {
+        const saveEvent = new CustomEvent('forceSaveRunsheet');
+        window.dispatchEvent(saveEvent);
+        console.log('🔧 DocumentProcessor: Triggered immediate save after document addition');
+        
+        // Show success message with save confirmation
+        toast({
+          title: "✅ Document Added & Saved", 
+          description: `Document has been added to row ${actualTargetRowIndex + 1} and automatically saved.`,
+        });
+      } catch (error) {
+        console.error('🔧 DocumentProcessor: Error triggering immediate save:', error);
+        toast({
+          title: "⚠️ Document Added", 
+          description: `Document added to row ${actualTargetRowIndex + 1}, but auto-save may have failed. Please save manually.`,
+          variant: "destructive"
+        });
+      }
+    }, 200); // Small delay to ensure state updates have completed
 
     const emptyFormData: Record<string, string> = {};
     columns.forEach(column => {
