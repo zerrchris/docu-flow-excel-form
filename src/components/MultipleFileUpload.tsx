@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -39,11 +39,50 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
   const [files, setFiles] = useState<FileUploadStatus[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [currentRunsheetData, setCurrentRunsheetData] = useState<{
+    id: string;
+    name: string;
+    data: Record<string, string>[];
+    columns?: string[];
+  } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const { activeRunsheet } = useActiveRunsheet();
   // Use prop data if provided, otherwise fall back to hook
-  const currentRunsheet = propRunsheetData || activeRunsheet;
+  const currentRunsheet = propRunsheetData || currentRunsheetData || activeRunsheet;
+
+  // Fetch fresh runsheet data when component mounts if we don't have prop data
+  useEffect(() => {
+    const fetchRunsheetData = async () => {
+      if (propRunsheetData || !activeRunsheet?.id) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('runsheets')
+          .select('*')
+          .eq('id', activeRunsheet.id)
+          .maybeSingle();
+
+        if (error) {
+          console.error('Error fetching runsheet data:', error);
+          return;
+        }
+
+        if (data) {
+          setCurrentRunsheetData({
+            id: data.id,
+            name: data.name,
+            data: Array.isArray(data.data) ? data.data as Record<string, string>[] : [],
+            columns: Array.isArray(data.columns) ? data.columns as string[] : []
+          });
+        }
+      } catch (error) {
+        console.error('Error in fetchRunsheetData:', error);
+      }
+    };
+
+    fetchRunsheetData();
+  }, [activeRunsheet?.id, propRunsheetData]);
 
   const getFileIcon = (file: File) => {
     const type = file.type;
