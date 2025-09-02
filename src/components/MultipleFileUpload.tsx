@@ -25,6 +25,7 @@ interface MultipleFileUploadProps {
     id: string;
     name: string;
     data: Record<string, string>[];
+    columns?: string[];
   };
   onAutoSave?: () => Promise<string | null>; // Returns the saved runsheet ID or null if save failed
 }
@@ -265,6 +266,17 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
     };
 
     const runsheetData = currentRunsheet.data || [];
+    
+    // If runsheet data is empty or very small, create default empty rows to work with
+    if (runsheetData.length === 0) {
+      console.log('🔧 No runsheet data found, creating default rows');
+      const columnNames = currentRunsheet.columns || ['Column 1'];
+      for (let i = 0; i < 10; i++) {
+        const newRow: Record<string, string> = {};
+        columnNames.forEach(col => newRow[col] = '');
+        runsheetData.push(newRow);
+      }
+    }
     
     // Find all empty rows that we can use (considering both text data and document links)
     const emptyRows = runsheetData
