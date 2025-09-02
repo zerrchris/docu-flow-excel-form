@@ -130,7 +130,7 @@ export const FileManager: React.FC = () => {
 
       const filesWithUrls = (data || []).map(doc => ({
         id: doc.id,
-        name: doc.original_filename,
+        name: doc.stored_filename || doc.original_filename,
         url: supabase.storage.from('documents').getPublicUrl(doc.file_path).data.publicUrl,
         size: doc.file_size || 0,
         created_at: doc.created_at,
