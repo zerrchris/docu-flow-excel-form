@@ -14,6 +14,21 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Check if OpenAI API key is configured
+  if (!openAIApiKey) {
+    console.error('OpenAI API key is not configured');
+    return new Response(
+      JSON.stringify({ 
+        error: 'OpenAI API key is not configured. Please add OPENAI_API_KEY to Edge Function secrets.',
+        details: 'Missing OPENAI_API_KEY environment variable'
+      }),
+      { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    );
+  }
+
   try {
     const { prompt, imageData, systemMessage = "You are a precise document analysis assistant. Extract information that is clearly visible and readable in the document. If information is not clearly present, use empty string ''. Return ONLY valid JSON with field names as keys and extracted text as values. No markdown, no explanations, no additional text - just clean JSON." } = await req.json();
 
