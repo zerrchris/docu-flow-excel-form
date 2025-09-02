@@ -1935,11 +1935,18 @@ Image: [base64 image data]`;
       }
     }, 200); // Small delay to ensure state updates have completed
 
+    // Clear both form data AND the uploaded document
     const emptyFormData: Record<string, string> = {};
     columns.forEach(column => {
       emptyFormData[column] = '';
     });
     setFormData(emptyFormData);
+    
+    // Clear the document from the processor
+    setFile(null);
+    setPreviewUrl(null);
+    setStorageUrl(null);
+    console.log('🔧 DocumentProcessor: Cleared form data and document after adding to spreadsheet');
   };
 
   // Helper function to create or correct a document record in the database
