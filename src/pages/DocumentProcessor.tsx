@@ -21,6 +21,7 @@ import { useActiveRunsheet } from '@/hooks/useActiveRunsheet';
 import { useAutoSave } from '@/hooks/useAutoSave';
 import { DataRecoveryDialog } from '@/components/DataRecoveryDialog';
 import { supabase } from '@/integrations/supabase/client';
+import { isRowEmpty } from '@/utils/rowValidation';
 
 import LogoMark from '@/components/LogoMark';
 
@@ -1857,18 +1858,17 @@ Image: [base64 image data]`;
       console.log('🔧 ROW_FINDER: DocumentMap entries:', Array.from(documentMap.entries()));
       
       const firstEmptyRowIndex = prev.findIndex((row, index) => {
-        const rowValues = Object.values(row);
-        const isDataEmpty = rowValues.every(value => value === '' || value.trim() === '');
         const hasLinkedDocument = documentMap.has(index);
+        const isEmpty = isRowEmpty(row, hasLinkedDocument);
         
         console.log(`🔧 ROW_FINDER: Row ${index} check:`, {
-          rowValues,
-          isDataEmpty,
+          rowData: row,
           hasLinkedDocument,
-          shouldUse: isDataEmpty && !hasLinkedDocument
+          isEmpty,
+          shouldUse: isEmpty
         });
         
-        return isDataEmpty && !hasLinkedDocument;
+        return isEmpty;
       });
       
       console.log('🔧 ROW_FINDER: First empty row index found:', firstEmptyRowIndex);

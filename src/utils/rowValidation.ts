@@ -11,7 +11,12 @@ export interface ValidationResult {
 /**
  * Check if a row is completely empty
  */
-export const isRowEmpty = (row: Record<string, string>): boolean => {
+export const isRowEmpty = (row: Record<string, string>, hasLinkedDocument?: boolean): boolean => {
+  // If there's a linked document, the row is not empty
+  if (hasLinkedDocument) {
+    return false;
+  }
+  
   return Object.values(row).every(value => 
     !value || 
     value.toString().trim() === '' || 
@@ -22,7 +27,12 @@ export const isRowEmpty = (row: Record<string, string>): boolean => {
 /**
  * Check if a row has any meaningful data
  */
-export const hasRowData = (row: Record<string, string>): boolean => {
+export const hasRowData = (row: Record<string, string>, hasLinkedDocument?: boolean): boolean => {
+  // If there's a linked document, the row has data
+  if (hasLinkedDocument) {
+    return true;
+  }
+  
   return Object.values(row).some(value => 
     value && 
     value.toString().trim() !== '' && 
@@ -33,9 +43,13 @@ export const hasRowData = (row: Record<string, string>): boolean => {
 /**
  * Find the first empty row in a dataset
  */
-export const findFirstEmptyRow = (data: Record<string, string>[]): number => {
+export const findFirstEmptyRow = (
+  data: Record<string, string>[], 
+  documentMap?: Map<number, any>
+): number => {
   for (let i = 0; i < data.length; i++) {
-    if (isRowEmpty(data[i])) {
+    const hasLinkedDocument = documentMap?.has(i) || false;
+    if (isRowEmpty(data[i], hasLinkedDocument)) {
       return i;
     }
   }
@@ -83,12 +97,13 @@ export const validateDataForInsertion = (
 export const validateRowForInsertion = (
   row: Record<string, string>, 
   rowIndex: number,
-  allowOverwrite: boolean = false
+  allowOverwrite: boolean = false,
+  hasLinkedDocument?: boolean
 ): ValidationResult => {
-  if (!allowOverwrite && hasRowData(row)) {
+  if (!allowOverwrite && hasRowData(row, hasLinkedDocument)) {
     return {
       isValid: false,
-      error: `Row ${rowIndex + 1} already contains data. To prevent overwriting, please select an empty row or explicitly allow overwriting.`
+      error: `Row ${rowIndex + 1} already contains data${hasLinkedDocument ? ' and has a linked document' : ''}. To prevent overwriting, please select an empty row or explicitly allow overwriting.`
     };
   }
 
