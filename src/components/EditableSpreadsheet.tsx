@@ -4467,13 +4467,10 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         imageData = await dataUrlPromise;
       }
 
-      // Call analyze-document edge function
-      const response = await fetch('https://xnpmrafjjqsissbtempj.supabase.co/functions/v1/analyze-document', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      // Call analyze-document edge function using Supabase client
+      console.log('🔍 Calling analyze-document edge function...');
+      const { data: analysisResult, error: functionError } = await supabase.functions.invoke('analyze-document', {
+        body: {
           imageData,
           prompt: `Analyze this document and extract the following information. 
 
@@ -4487,15 +4484,20 @@ IMPORTANT INSTRUCTIONS:
 Return the data as a JSON object with the exact field names specified:
 
 ${extractionFields}`
-        }),
+        }
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to analyze document');
+      if (functionError) {
+        console.error('🔍 Edge function error:', functionError);
+        throw new Error(functionError.message || 'Failed to analyze document');
       }
 
-      const analysisResult = await response.json();
+      if (!analysisResult) {
+        console.error('🔍 No analysis result returned');
+        throw new Error('No analysis result returned from server');
+      }
+
+      console.log('🔍 Edge function response:', analysisResult);
       const generatedText = analysisResult.generatedText || '';
       
       console.log('🔍 FULL AI response object:', analysisResult);
