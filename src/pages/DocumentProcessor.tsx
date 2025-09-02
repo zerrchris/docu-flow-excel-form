@@ -2487,7 +2487,7 @@ Image: [base64 image data]`;
               onUnsavedChanges={setHasUnsavedChanges}
               missingColumns={highlightMissingColumns ? missingColumns : []}
               initialRunsheetName={location.state?.runsheet?.name}
-              initialRunsheetId={location.state?.runsheetId}
+              initialRunsheetId={location.state?.runsheetId || searchParams.get('id') || searchParams.get('runsheet')}
               onShowMultipleUpload={() => setShowMultipleFileUpload(true)}
               onDocumentMapChange={handleDocumentMapChange}
             />
