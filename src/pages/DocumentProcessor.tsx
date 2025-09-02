@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-do
 import { toast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Upload, FolderOpen, Plus, AlertTriangle, Smartphone, Files, Home, FileStack, RefreshCw } from 'lucide-react';
+import { Upload, FolderOpen, Plus, AlertTriangle, Smartphone, Files, Home, FileStack, RefreshCw, Bug } from 'lucide-react';
 import DocumentFrame from '@/components/DocumentFrame';
 import DocumentViewer from '@/components/DocumentViewer';
 import DataForm from '@/components/DataForm';
@@ -13,6 +13,7 @@ import AuthButton from '@/components/AuthButton';
 import BatchProcessing from '@/components/BatchProcessing';
 import DocumentUpload from '@/components/DocumentUpload';
 import MultipleFileUpload from '@/components/MultipleFileUpload';
+import { StorageDebugDialog } from '@/components/StorageDebugDialog';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 import { GoogleDrivePicker } from '@/components/GoogleDrivePicker';
 import { ExtractionPreferencesService } from '@/services/extractionPreferences';
@@ -78,6 +79,7 @@ const DocumentProcessor: React.FC = () => {
   const [hasAddedToSpreadsheet, setHasAddedToSpreadsheet] = useState(false);
   const [showDataRecovery, setShowDataRecovery] = useState(false);
   const [recoveryData, setRecoveryData] = useState<any>(null);
+  const [showStorageDebug, setShowStorageDebug] = useState(false);
   
   // Note: Navigation blocking removed since runsheet auto-saves
   const navigate = useNavigate();
@@ -2346,6 +2348,16 @@ Image: [base64 image data]`;
                     <Upload className="h-4 w-4" />
                     Upload New Document
                   </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowStorageDebug(true)}
+                    className="gap-2"
+                    title="Debug Storage Issues"
+                  >
+                    <Bug className="h-4 w-4" />
+                    Debug
+                  </Button>
                   <AuthButton />
                 </div>
               </div>
@@ -2975,6 +2987,13 @@ Image: [base64 image data]`;
           }}
         />
       )}
+
+      {/* Storage Debug Dialog */}
+      <StorageDebugDialog
+        open={showStorageDebug}
+        onOpenChange={setShowStorageDebug}
+        runsheetId={activeRunsheet?.id || location.state?.runsheetId || searchParams.get('id') || undefined}
+      />
     </div>
   );
 };
