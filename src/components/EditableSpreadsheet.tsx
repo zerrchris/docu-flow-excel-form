@@ -4445,6 +4445,10 @@ ${extractionFields}`
       const analysisResult = await response.json();
       const generatedText = analysisResult.generatedText || '';
       
+      console.log('🔍 FULL AI response object:', analysisResult);
+      console.log('🔍 Generated text length:', generatedText.length);
+      console.log('🔍 Generated text content:', generatedText);
+      
       console.log('🔍 Raw AI response:', generatedText);
       
       // Parse the JSON response from AI
@@ -4605,15 +4609,23 @@ ${extractionFields}`
       console.log('🔍 Row data after update:', newData[targetRowIndex]);
       
       setData(newData);
+      console.log('🔍 setData called with:', newData);
+      console.log('🔍 onDataChange callback exists:', !!onDataChange);
       onDataChange?.(newData);
+      console.log('🔍 onDataChange called');
 
       // Show success message with details
       const populatedFields = Object.keys(cleanMappedData);
+      console.log('🔍 About to show success toast for populated fields:', populatedFields);
+      console.log('🔍 Clean mapped data:', cleanMappedData);
+      
       toast({
         title: "Document analyzed successfully",
         description: `Data extracted and added to row ${targetRowIndex + 1}. Populated fields: ${populatedFields.join(', ')}`,
         variant: "default"
       });
+      
+      console.log('🔍 Analysis completed successfully for row:', targetRowIndex);
 
 
     } catch (error) {
