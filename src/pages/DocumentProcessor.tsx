@@ -18,6 +18,8 @@ import { GoogleDrivePicker } from '@/components/GoogleDrivePicker';
 import { ExtractionPreferencesService } from '@/services/extractionPreferences';
 import { AdminSettingsService } from '@/services/adminSettings';
 import { useActiveRunsheet } from '@/hooks/useActiveRunsheet';
+import { useAutoSave } from '@/hooks/useAutoSave';
+import { DataRecoveryDialog } from '@/components/DataRecoveryDialog';
 import { supabase } from '@/integrations/supabase/client';
 
 import LogoMark from '@/components/LogoMark';
@@ -73,6 +75,8 @@ const DocumentProcessor: React.FC = () => {
   const [missingDataDialog, setMissingDataDialog] = useState(false);
   const [confirmAddFileDialog, setConfirmAddFileDialog] = useState(false);
   const [hasAddedToSpreadsheet, setHasAddedToSpreadsheet] = useState(false);
+  const [showDataRecovery, setShowDataRecovery] = useState(false);
+  const [recoveryData, setRecoveryData] = useState<any>(null);
   
   // Note: Navigation blocking removed since runsheet auto-saves
   const navigate = useNavigate();
@@ -88,7 +92,83 @@ const DocumentProcessor: React.FC = () => {
   // Add state to track user activity to prevent unwanted refreshes
   const [hasUserActivity, setHasUserActivity] = useState(false);
   const [lastActivityTime, setLastActivityTime] = useState<number>(Date.now());
+
+  // Get current user for autosave
+  const [currentUser, setCurrentUser] = useState<any>(null);
   
+  // Initialize autosave with localStorage backup
+  const { save, forceSave, isSaving, saveToLocalStorage, loadFromLocalStorage } = useAutoSave({
+    runsheetId: activeRunsheet?.id,
+    runsheetName: activeRunsheet?.name || '',
+    columns,
+    data: spreadsheetData,
+    columnInstructions,
+    userId: currentUser?.id,
+    onSaveSuccess: (result) => {
+      console.log('Autosave successful:', result);
+      setHasUnsavedChanges(false);
+    },
+    onSaveError: (error) => {
+      console.error('Autosave failed:', error);
+      toast({
+        title: "Auto-save failed",
+        description: "Your changes are backed up locally and will be saved when connection is restored.",
+        variant: "destructive",
+      });
+    }
+  });
+  
+  // Load current user for autosave
+  useEffect(() => {
+    const loadUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setCurrentUser(user);
+    };
+    loadUser();
+  }, []);
+
+  // Check for backup data when runsheet changes
+  useEffect(() => {
+    if (activeRunsheet?.id && currentUser) {
+      const backupData = loadFromLocalStorage(activeRunsheet.id);
+      if (backupData && backupData.lastSaved) {
+        // Compare backup with current data
+        const backupRowCount = backupData.data?.length || 0;
+        const currentRowCount = spreadsheetData.length;
+        
+        // Show recovery dialog if backup has more data or is significantly newer
+        if (backupRowCount > currentRowCount) {
+          setRecoveryData({
+            backup: backupData,
+            current: { dataRows: currentRowCount }
+          });
+          setShowDataRecovery(true);
+        }
+      }
+    }
+  }, [activeRunsheet?.id, currentUser, loadFromLocalStorage]);
+
+  // Data recovery handlers
+  const handleUseBackupData = () => {
+    if (recoveryData?.backup) {
+      const backup = recoveryData.backup;
+      setSpreadsheetData(backup.data || []);
+      setColumns(backup.columns || DEFAULT_COLUMNS);
+      setColumnInstructions(backup.columnInstructions || {});
+      toast({
+        title: "Backup data restored",
+        description: "Your previously saved work has been restored.",
+      });
+    }
+    setShowDataRecovery(false);
+    setRecoveryData(null);
+  };
+
+  const handleKeepCurrentData = () => {
+    setShowDataRecovery(false);
+    setRecoveryData(null);
+  };
+
   // Track user activity to prevent data loss
   useEffect(() => {
     const trackActivity = () => {
@@ -2742,6 +2822,23 @@ Image: [base64 image data]`;
           />
         </DialogContent>
       </Dialog>
+
+      {/* Data Recovery Dialog */}
+      {recoveryData && (
+        <DataRecoveryDialog
+          isOpen={showDataRecovery}
+          onClose={handleKeepCurrentData}
+          onUseBackup={handleUseBackupData}
+          onKeepCurrent={handleKeepCurrentData}
+          backupData={{
+            lastSaved: recoveryData.backup?.lastSaved || '',
+            dataRows: recoveryData.backup?.data?.length || 0
+          }}
+          currentData={{
+            dataRows: recoveryData.current?.dataRows || 0
+          }}
+        />
+      )}
     </div>
   );
 };

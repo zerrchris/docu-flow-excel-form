@@ -19,6 +19,8 @@ interface AutoSaveResult {
   save: () => Promise<void>;
   forceSave: () => Promise<void>;
   isSaving: boolean;
+  saveToLocalStorage: () => void;
+  loadFromLocalStorage: (targetRunsheetId?: string) => any;
 }
 
 export function useAutoSave({
@@ -48,6 +50,40 @@ export function useAutoSave({
       columnInstructions
     });
   }, [runsheetId, runsheetName, columns, data, columnInstructions]);
+
+  // Save to localStorage for immediate persistence (backup)
+  const saveToLocalStorage = useCallback(() => {
+    if (!runsheetName.trim() || columns.length === 0) return;
+    
+    try {
+      const localStorageKey = `runsheet_backup_${runsheetId || 'temp'}`;
+      const backupData = {
+        runsheetId,
+        runsheetName,
+        columns,
+        data,
+        columnInstructions,
+        lastSaved: new Date().toISOString()
+      };
+      localStorage.setItem(localStorageKey, JSON.stringify(backupData));
+    } catch (error) {
+      console.error('Failed to save to localStorage:', error);
+    }
+  }, [runsheetId, runsheetName, columns, data, columnInstructions]);
+
+  // Load from localStorage on mount
+  const loadFromLocalStorage = useCallback((targetRunsheetId?: string) => {
+    if (!targetRunsheetId) return null;
+    
+    try {
+      const localStorageKey = `runsheet_backup_${targetRunsheetId}`;
+      const saved = localStorage.getItem(localStorageKey);
+      return saved ? JSON.parse(saved) : null;
+    } catch (error) {
+      console.error('Failed to load from localStorage:', error);
+      return null;
+    }
+  }, []);
 
   // Simplified save function - database-first approach
   const performSave = useCallback(async (): Promise<void> => {
@@ -169,13 +205,18 @@ export function useAutoSave({
     const hasValidName = runsheetName.trim() && !forbiddenNames.includes(runsheetName.trim());
     
     if (userId && hasValidName && columns.length > 0) {
+      // Save to localStorage immediately for backup
+      saveToLocalStorage();
+      // Debounced save to database
       save();
     }
-  }, [runsheetName, columns, data, columnInstructions, userId, save]);
+  }, [runsheetName, columns, data, columnInstructions, userId, save, saveToLocalStorage]);
 
   return {
     save,
     forceSave,
-    isSaving: isSavingRef.current
+    isSaving: isSavingRef.current,
+    saveToLocalStorage,
+    loadFromLocalStorage
   };
 }
