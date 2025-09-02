@@ -544,27 +544,8 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
         onUploadComplete(successCount);
       }
 
-      // Auto-close the modal after successful upload
-      if (onClose) {
-        console.log('🔧 Starting auto-close sequence:', { errorCount, successCount });
-        // Always close if there are successful uploads, even if some failed
-        if (successCount > 0) {
-          setTimeout(() => {
-            console.log('🔧 Dispatching final refresh event');
-            window.dispatchEvent(new CustomEvent('refreshRunsheetData', {
-              detail: { runsheetId }
-            }));
-            
-            // Close the modal after ensuring refresh
-            setTimeout(() => {
-              console.log('🔧 Closing modal via auto-close');
-              onClose();
-            }, 500);
-          }, 1000);
-        }
-      } else {
-        console.log('🔧 Auto-close skipped: no onClose callback');
-      }
+      // Let users manually close with the "Done" button for better control
+      console.log('🔧 Upload complete:', { successCount, errorCount });
     }
   };
 
