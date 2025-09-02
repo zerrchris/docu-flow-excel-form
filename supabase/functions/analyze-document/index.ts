@@ -187,9 +187,20 @@ serve(async (req) => {
 
     if (!response.ok) {
       const error = await response.text();
-      console.error('OpenAI API error:', error);
+      console.error('OpenAI API error response:', response.status, response.statusText);
+      console.error('OpenAI API error details:', error);
+      
+      // Try to parse error for more specific message
+      let errorMessage = 'Failed to analyze document';
+      try {
+        const errorData = JSON.parse(error);
+        errorMessage = errorData.error?.message || errorData.message || errorMessage;
+      } catch (e) {
+        errorMessage = error || errorMessage;
+      }
+      
       return new Response(
-        JSON.stringify({ error: 'Failed to analyze document', details: error }),
+        JSON.stringify({ error: errorMessage, details: error }),
         { 
           status: response.status, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
