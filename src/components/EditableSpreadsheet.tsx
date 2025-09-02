@@ -1287,12 +1287,15 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
             console.log('🔧 EditableSpreadsheet: refreshRunsheetData - Current data length:', data.length);
             console.log('🔧 EditableSpreadsheet: refreshRunsheetData - New data from DB:', runsheet.data);
             // Properly type-cast the data from JSON to the expected format
-            // Preserve the current row count if it's larger than what's in the database
+            // FIXED: Don't preserve empty rows - only count actual data rows
             const newData = (runsheet.data as Record<string, string>[]) || [];
-            const targetRowCount = Math.max(newData.length, data.length, 100); // Keep current count if larger
+            const actualDataRowCount = newData.filter(row => 
+              Object.values(row).some(value => value && String(value).trim() !== '')
+            ).length;
+            const targetRowCount = Math.max(actualDataRowCount, 20); // Ensure minimum 20 rows for UX
             const dataWithMinRows = ensureMinimumRows(newData, (runsheet.columns as string[]) || []);
             
-            // If we had more rows locally, preserve that count
+            // Only add extra rows if we need more than what we have
             if (targetRowCount > dataWithMinRows.length) {
               const additionalRows = Array.from({ length: targetRowCount - dataWithMinRows.length }, () => {
                 const row: Record<string, string> = {};
@@ -2265,9 +2268,16 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     // For new/empty runsheets, use the minimum required rows
     const hasActualData = runsheet.data && runsheet.data.length > 0 && 
       runsheet.data.some((row: any) => Object.values(row).some(value => value && String(value).trim() !== ''));
-    const targetRowCount = hasActualData ? Math.max(dataWithMinRows.length, data.length) : dataWithMinRows.length;
+    
+    // FIXED: Don't preserve empty rows - only preserve if we actually have more data rows
+    const actualDataRowCount = runsheet.data ? runsheet.data.filter((row: any) => 
+      Object.values(row).some(value => value && String(value).trim() !== '')
+    ).length : 0;
+    
+    const targetRowCount = hasActualData ? Math.max(dataWithMinRows.length, actualDataRowCount) : dataWithMinRows.length;
     
     console.log('🔧 Debug: hasActualData:', hasActualData);
+    console.log('🔧 Debug: actualDataRowCount:', actualDataRowCount);
     console.log('🔧 Debug: dataWithMinRows.length:', dataWithMinRows.length);
     console.log('🔧 Debug: current data.length:', data.length);
     console.log('🔧 Debug: targetRowCount:', targetRowCount);
