@@ -575,8 +575,8 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
   const errorFiles = files.filter(f => f.status === 'error').length;
 
   return (
-    <Card className="p-6 w-full max-w-2xl mx-auto">
-      <div className="space-y-4">
+    <Card className="p-6 w-full max-w-2xl mx-auto max-h-[85vh] overflow-y-auto">
+      <div className="space-y-4 flex-shrink-0">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold">Upload Multiple Files</h3>
         </div>
@@ -584,8 +584,9 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
         <p className="text-sm text-muted-foreground">
           Files will be automatically linked to the next available rows in your runsheet.
         </p>
+      </div>
 
-        {/* File Drop Zone */}
+      <div className="space-y-4 mt-4">
         <div
           className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
             isDragOver 
