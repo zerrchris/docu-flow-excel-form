@@ -726,12 +726,21 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
             </Button>
             
             <div className="flex items-center space-x-2">
-              <Button
-                onClick={uploadFiles}
-                disabled={isUploading || files.every(f => f.status === 'success')}
-              >
-                {isUploading ? 'Uploading...' : `Upload ${pendingFiles} Files`}
-              </Button>
+              {files.every(f => f.status === 'success' || f.status === 'error') && files.some(f => f.status === 'success') ? (
+                <Button
+                  onClick={onClose}
+                  variant="default"
+                >
+                  Done
+                </Button>
+              ) : (
+                <Button
+                  onClick={uploadFiles}
+                  disabled={isUploading || files.every(f => f.status === 'success')}
+                >
+                  {isUploading ? 'Uploading...' : `Upload ${pendingFiles} Files`}
+                </Button>
+              )}
             </div>
           </div>
         )}
