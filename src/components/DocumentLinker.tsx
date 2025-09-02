@@ -806,12 +806,9 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                         throw new Error('No file available for analysis');
                       }
                       
-                      await onAnalyzeDocument(fileToAnalyze, filename);
-                      
-                      toast({
-                        title: "Analysis Complete",
-                        description: "Data has been extracted and applied to the row.",
-                      });
+                       await onAnalyzeDocument(fileToAnalyze, filename);
+                       
+                       // Success toast is shown by the analysis function itself
                     } catch (error) {
                       console.error('Analysis error:', error);
                       toast({
