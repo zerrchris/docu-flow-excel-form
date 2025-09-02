@@ -103,6 +103,8 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
   };
 
   const handleFileSelect = useCallback((selectedFiles: FileList) => {
+    console.log('🔧 handleFileSelect called with files:', selectedFiles.length);
+    
     if (!currentRunsheet) {
       toast({
         title: "No active runsheet",
@@ -114,13 +116,23 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
 
     // Add selected files to the upload queue
     const fileArray = Array.from(selectedFiles);
-    const newFiles = fileArray.map(file => ({
-      file,
-      status: 'pending' as const,
-      progress: 0
-    }));
+    console.log('🔧 Converting FileList to array:', fileArray.length, 'files');
+    
+    const newFiles = fileArray.map((file, index) => {
+      console.log(`🔧 Processing file ${index}: ${file.name}`);
+      return {
+        file,
+        status: 'pending' as const,
+        progress: 0
+      };
+    });
 
-    setFiles(prev => [...prev, ...newFiles]);
+    console.log('🔧 Adding', newFiles.length, 'files to queue');
+    setFiles(prev => {
+      const updated = [...prev, ...newFiles];
+      console.log('🔧 Total files in queue:', updated.length);
+      return updated;
+    });
   }, [currentRunsheet]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -385,9 +397,14 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
     // Start from the first empty row, or the end if no empty rows exist
     let currentRowIndex = emptyRows.length > 0 ? emptyRows[0] : runsheetData.length;
 
+    console.log('🔧 Starting upload loop for', pendingFiles.length, 'files');
+    
     for (let i = 0; i < pendingFiles.length; i++) {
       const fileUpload = pendingFiles[i];
       const fileIndex = files.findIndex(f => f.file === fileUpload.file);
+      
+      console.log(`🔧 Processing file ${i+1}/${pendingFiles.length}: ${fileUpload.file.name}`);
+      console.log(`🔧 File index in queue: ${fileIndex}, Row index: ${currentRowIndex}`);
 
       // Update status to uploading
       setFiles(prev => prev.map((f, index) => 
