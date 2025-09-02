@@ -139,7 +139,9 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
     e.preventDefault();
     setIsDragOver(false);
     
+    console.log('🔧 Drop event triggered');
     if (e.dataTransfer.files) {
+      console.log('🔧 Files in drop:', e.dataTransfer.files.length);
       handleFileSelect(e.dataTransfer.files);
     }
   }, [handleFileSelect]);
@@ -606,7 +608,13 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
             multiple
             accept="image/*,application/pdf"
             className="hidden"
-            onChange={(e) => e.target.files && handleFileSelect(e.target.files)}
+            onChange={(e) => {
+              console.log('🔧 File input onChange triggered');
+              if (e.target.files) {
+                console.log('🔧 Files in input:', e.target.files.length);
+                handleFileSelect(e.target.files);
+              }
+            }}
           />
         </div>
 
