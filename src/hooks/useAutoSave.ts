@@ -204,7 +204,12 @@ export function useAutoSave({
     const forbiddenNames = ['Untitled Runsheet', 'untitled runsheet', 'Untitled', 'untitled'];
     const hasValidName = runsheetName.trim() && !forbiddenNames.includes(runsheetName.trim());
     
-    if (userId && hasValidName && columns.length > 0) {
+    // CRITICAL: Don't auto-save if data is completely empty (prevents overwriting extracted data on load)
+    const hasAnyData = data.some(row => 
+      Object.values(row).some(value => value && value.trim() !== '')
+    );
+    
+    if (userId && hasValidName && columns.length > 0 && hasAnyData) {
       // Save to localStorage immediately for backup
       saveToLocalStorage();
       // Debounced save to database
