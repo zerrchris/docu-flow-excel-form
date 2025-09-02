@@ -96,26 +96,46 @@ export class DocumentService {
           continue; // Skip if error or no change needed
         }
 
-        // Construct new file path
+        // Construct new file path with conflict resolution
         const pathParts = doc.file_path.split('/');
-        const newFilePath = `${pathParts[0]}/${pathParts[1]}/${newFilename}`;
+        let finalFilename = newFilename;
+        let finalFilePath = `${pathParts[0]}/${pathParts[1]}/${finalFilename}`;
+        let attempt = 1;
+        
+        // Check if file already exists and generate unique name if needed
+        while (attempt <= 10) { // Limit attempts to prevent infinite loop
+          const { error: moveError } = await supabase.storage
+            .from('documents')
+            .move(doc.file_path, finalFilePath);
 
-        // Move file in storage
-        const { error: moveError } = await supabase.storage
-          .from('documents')
-          .move(doc.file_path, newFilePath);
+          if (!moveError) {
+            // Success - file moved
+            break;
+          } else if (moveError.message?.includes('already exists') || moveError.message?.includes('Duplicate')) {
+            // File exists, try with suffix
+            const extension = finalFilename.includes('.') ? '.' + finalFilename.split('.').pop() : '';
+            const nameWithoutExt = finalFilename.replace(new RegExp(extension.replace('.', '\\.') + '$'), '');
+            finalFilename = `${nameWithoutExt}_${attempt}${extension}`;
+            finalFilePath = `${pathParts[0]}/${pathParts[1]}/${finalFilename}`;
+            attempt++;
+          } else {
+            // Other error, log and skip
+            console.error('Error moving file:', moveError);
+            finalFilename = null; // Mark as failed
+            break;
+          }
+        }
 
-        if (moveError) {
-          console.error('Error moving file:', moveError);
-          continue;
+        if (!finalFilename) {
+          continue; // Skip if we couldn't move the file
         }
 
         // Update document record
         const { error: updateError } = await supabase
           .from('documents')
           .update({
-            stored_filename: newFilename,
-            file_path: newFilePath,
+            stored_filename: finalFilename,
+            file_path: finalFilePath,
             updated_at: new Date().toISOString()
           })
           .eq('id', doc.id);
@@ -125,9 +145,9 @@ export class DocumentService {
           // Try to move file back
           await supabase.storage
             .from('documents')
-            .move(newFilePath, doc.file_path);
+            .move(finalFilePath, doc.file_path);
         } else {
-          console.log(`Renamed document: ${doc.stored_filename} -> ${newFilename}`);
+          console.log(`Renamed document: ${doc.stored_filename} -> ${finalFilename}`);
         }
       }
     } catch (error) {
