@@ -918,7 +918,12 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
           const hasActiveRunsheet = !!currentRunsheet;
           const hasCurrentRunsheet = currentRunsheetId || initialRunsheetId;
           
-          if (stateAge < 5 * 60 * 1000 && !hasActiveRunsheet && !hasCurrentRunsheet) { // Only restore if less than 5 minutes old and no active work
+          // Only restore if: recent, no active work, AND no meaningful database data exists
+          const hasMeaningfulDatabaseData = initialData.some(row => 
+            Object.values(row).some(value => value && value.trim() !== '' && value !== 'Document File Name')
+          );
+          
+          if (stateAge < 5 * 60 * 1000 && !hasActiveRunsheet && !hasCurrentRunsheet && !hasMeaningfulDatabaseData) { // Only restore if less than 5 minutes old, no active work, AND no database data
             console.log('🔄 Restoring temporary navigation state');
             
             if (state.data) setData(state.data);
