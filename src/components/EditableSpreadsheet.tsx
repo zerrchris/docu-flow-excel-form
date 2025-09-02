@@ -412,7 +412,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     // Handle new runsheet start from DocumentProcessor
     const handleStartNewRunsheet = (event: CustomEvent) => {
       console.log('🧹 EditableSpreadsheet: Received startNewRunsheet event');
-      const { clearDocuments, clearStorage } = event.detail || {};
+      const { clearDocuments, clearStorage, isNewRunsheet } = event.detail || {};
       
       if (clearDocuments) {
         // Clear document map completely
@@ -436,6 +436,17 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         setSelectedRange(null);
         
         console.log('🧹 EditableSpreadsheet: Cleared runsheet state and data');
+      }
+      
+      // CRITICAL: If this is a new runsheet, prevent any backup data restoration
+      if (isNewRunsheet) {
+        // Set a flag to prevent backup restoration for the next few seconds
+        const preventBackupKey = 'prevent_backup_restoration';
+        sessionStorage.setItem(preventBackupKey, Date.now().toString());
+        setTimeout(() => {
+          sessionStorage.removeItem(preventBackupKey);
+        }, 5000); // Prevent restoration for 5 seconds
+        console.log('🧹 EditableSpreadsheet: Set backup prevention flag for new runsheet');
       }
     };
     

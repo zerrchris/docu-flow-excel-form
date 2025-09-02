@@ -130,6 +130,21 @@ const DocumentProcessor: React.FC = () => {
   // Check for backup data when runsheet changes
   useEffect(() => {
     if (activeRunsheet?.id && currentUser) {
+      // Check if backup restoration is temporarily prevented (during new runsheet creation)
+      const preventBackupKey = 'prevent_backup_restoration';
+      const preventBackupUntil = sessionStorage.getItem(preventBackupKey);
+      
+      if (preventBackupUntil) {
+        const preventUntilTime = parseInt(preventBackupUntil);
+        if (Date.now() - preventUntilTime < 5000) {
+          console.log('🚫 Backup restoration prevented - new runsheet in progress');
+          return;
+        } else {
+          // Cleanup expired flag
+          sessionStorage.removeItem(preventBackupKey);
+        }
+      }
+      
       const backupData = loadFromLocalStorage(activeRunsheet.id);
       if (backupData && backupData.lastSaved) {
         // Compare backup with current data
@@ -146,7 +161,7 @@ const DocumentProcessor: React.FC = () => {
         }
       }
     }
-  }, [activeRunsheet?.id, currentUser, loadFromLocalStorage]);
+  }, [activeRunsheet?.id, currentUser, loadFromLocalStorage, spreadsheetData.length]);
 
   // Data recovery handlers
   const handleUseBackupData = () => {
@@ -2113,6 +2128,16 @@ Image: [base64 image data]`;
       // Clear active runsheet from localStorage and state
       localStorage.removeItem('activeRunsheet');
       console.log('🧹 Cleared active runsheet from localStorage');
+      
+      // CRITICAL: Clear ALL runsheet backups from localStorage to prevent data restoration
+      const keys = Object.keys(localStorage);
+      keys.forEach(key => {
+        if (key.startsWith('runsheet_backup_')) {
+          localStorage.removeItem(key);
+          console.log(`🧹 Cleared backup: ${key}`);
+        }
+      });
+      
     } catch (error) {
       console.error('Error clearing storage during new runsheet:', error);
     }
@@ -2126,8 +2151,11 @@ Image: [base64 image data]`;
     setFormData({});
     setDocumentMap(new Map()); // Clear document map
     
-    // Clear active runsheet state using the hook
+    // Clear active runsheet state using the hook BEFORE clearing other state
     clearActiveRunsheet();
+    
+    // Navigate to clean URL without runsheet ID to prevent reload issues
+    navigate('/runsheet', { replace: true });
     
     // Clear unsaved changes flag
     setHasUnsavedChanges(false);
@@ -2162,14 +2190,16 @@ Image: [base64 image data]`;
     
     // Dispatch event to reset the spreadsheet to fresh state
     const resetEvent = new CustomEvent('startNewRunsheet', {
-      detail: { clearDocuments: true, clearStorage: true }
+      detail: { clearDocuments: true, clearStorage: true, isNewRunsheet: true }
     });
     window.dispatchEvent(resetEvent);
     
     toast({
       title: "New runsheet started",
-      description: "Started a fresh runsheet with your preferred columns.",
+      description: "You're now working on a fresh runsheet.",
     });
+    
+    console.log('🧹 DocumentProcessor: New runsheet creation completed successfully');
   };
 
 
