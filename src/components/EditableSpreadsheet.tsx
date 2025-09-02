@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Plus, Trash2, Check, X, ArrowUp, ArrowDown, Save, FolderOpen, Download, Upload, AlignLeft, AlignCenter, AlignRight, Cloud, ChevronDown, FileText, Archive, ExternalLink, AlertTriangle, FileStack, Settings, Eye, EyeOff, Sparkles } from 'lucide-react';
+import { Plus, Trash2, Check, X, ArrowUp, ArrowDown, Save, FolderOpen, Download, Upload, AlignLeft, AlignCenter, AlignRight, Cloud, ChevronDown, FileText, Archive, ExternalLink, AlertTriangle, FileStack, Settings, Eye, EyeOff, Sparkles, Bug } from 'lucide-react';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -53,6 +53,7 @@ import FullScreenDocumentWorkspace from './FullScreenDocumentWorkspace';
 import ViewportPortal from './ViewportPortal';
 import { AutoSaveIndicator } from './AutoSaveIndicator';
 import { useAutoSave } from '@/hooks/useAutoSave';
+import { StorageDebugDialog } from './StorageDebugDialog';
 
 import type { User } from '@supabase/supabase-js';
 import { 
@@ -240,6 +241,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   const [hasManuallyResizedColumns, setHasManuallyResizedColumns] = useState(false);
   const [documentMap, setDocumentMap] = useState<Map<number, DocumentRecord>>(new Map());
   const [currentRunsheetId, setCurrentRunsheetId] = useState<string | null>(null);
+  const [showStorageDebug, setShowStorageDebug] = useState(false);
 
   // Resolve a reliable runsheet ID for document operations (inline viewer, linking)
   const effectiveRunsheetId = currentRunsheetId || currentRunsheet?.id || (() => {
@@ -4723,6 +4725,18 @@ ${extractionFields}`
               {isSaving || autoSaving ? 'Saving...' : 'Save & Close'}
             </Button>
 
+            {/* Storage Debug Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowStorageDebug(true)}
+              className="gap-2"
+              title="Debug Storage Issues"
+            >
+              <Bug className="h-4 w-4" />
+              Debug
+            </Button>
+
             {/* Download Button */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -6235,6 +6249,13 @@ ${extractionFields}`
             onColumnInstructionsChange?.(newInstructions);
           }}
           onResetColumnWidths={resetColumnWidths}
+        />
+
+        {/* Storage Debug Dialog */}
+        <StorageDebugDialog
+          open={showStorageDebug}
+          onOpenChange={setShowStorageDebug}
+          runsheetId={effectiveRunsheetId}
         />
       </div>
     );
