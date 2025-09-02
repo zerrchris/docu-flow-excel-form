@@ -698,7 +698,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
 
   // Sync data with initialData prop changes
   useEffect(() => {
-    // Don't override data if we have an emergency draft or meaningful existing data
+    // Don't override data if we have an emergency draft
     const hasEmergencyDraft = (() => {
       try {
         const emergencyDraft = localStorage.getItem('runsheet-emergency-draft');
@@ -708,17 +708,13 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       }
     })();
     
-    // Check if current data has meaningful content
-    const hasExistingData = data.some(row => 
-      Object.values(row).some(value => value && value.trim() !== '')
-    );
-    
-    // Only sync with initialData if we don't have emergency draft or existing data
-    if (hasEmergencyDraft || hasExistingData) {
-      console.log('🔒 Preserving existing data - skipping initialData sync');
+    // Skip if there's an emergency draft
+    if (hasEmergencyDraft) {
+      console.log('🔒 Preserving emergency draft - skipping initialData sync');
       return;
     }
     
+    // Always ensure we have minimum rows
     const minRows = 20;
     const existingRows = initialData.length;
     const emptyRows = Array.from({ length: Math.max(0, minRows - existingRows) }, () => {
@@ -728,15 +724,20 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     });
     const newData = [...initialData, ...emptyRows];
     
-    // Only update if the data actually changed
+    // Update data with fresh database data
     setData(prevData => {
-      if (JSON.stringify(prevData) !== JSON.stringify(newData)) {
-        console.log('🔄 Syncing with initialData');
+      // If the new data has more content than previous, always update
+      const newDataHasContent = newData.some(row => 
+        Object.values(row).some(value => value && value.trim() !== '' && value !== 'Document File Name')
+      );
+      
+      if (newDataHasContent || JSON.stringify(prevData) !== JSON.stringify(newData)) {
+        console.log('🔄 Syncing with fresh database data');
         return newData;
       }
       return prevData;
     });
-  }, [initialData, initialColumns, data]);
+  }, [initialData, initialColumns]);
 
   // Sync currentRunsheetId with active runsheet on mount and when currentRunsheet changes
   useEffect(() => {
