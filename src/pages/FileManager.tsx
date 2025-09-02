@@ -189,16 +189,29 @@ export const FileManager: React.FC = () => {
   const handleDeleteFile = async () => {
     if (!selectedFile) return;
 
+    // Check if this file is linked to a runsheet
+    if (selectedFile.rowIndex !== undefined) {
+      toast({
+        title: "Cannot Delete",
+        description: `This document is linked to Row ${selectedFile.rowIndex + 1} of a runsheet. To delete it, first unlink it from the runsheet.`,
+        variant: "destructive",
+      });
+      setShowDeleteDialog(false);
+      setSelectedFile(null);
+      return;
+    }
+
     setIsDeleting(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
-      // Delete from database
+      // Delete from database - only for unlinked files
       const { error: dbError } = await supabase
         .from('documents')
         .delete()
-        .eq('id', selectedFile.id);
+        .eq('id', selectedFile.id)
+        .is('runsheet_id', null); // Only delete if not linked to any runsheet
 
       if (dbError) throw dbError;
 
@@ -207,18 +220,24 @@ export const FileManager: React.FC = () => {
         .from('documents')
         .remove([selectedFile.fullPath]);
 
-      if (storageError) throw storageError;
+      if (storageError) {
+        console.warn('Storage deletion failed:', storageError);
+        // Don't throw here as database record is already deleted
+      }
 
       toast({
-        title: "File Deleted",
-        description: `"${selectedFile.name}" has been deleted successfully.`,
+        title: "Success",
+        description: `File "${selectedFile.name}" has been deleted.`,
       });
 
       setShowDeleteDialog(false);
       setSelectedFile(null);
       
-      if (currentView === 'runsheet-details' && currentRunsheetId) {
-        loadRunsheetDocuments(currentRunsheetId);
+      // Refresh the appropriate view
+      if (currentView === 'runsheets') {
+        loadRunsheets();
+      } else {
+        loadRunsheetDocuments(currentRunsheetId!);
       }
     } catch (error: any) {
       console.error('Error deleting file:', error);
@@ -506,16 +525,18 @@ export const FileManager: React.FC = () => {
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedFile(file);
-                          setShowDeleteDialog(true);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                       <Button
+                         variant="ghost"
+                         size="sm"
+                         onClick={() => {
+                           setSelectedFile(file);
+                           setShowDeleteDialog(true);
+                         }}
+                         disabled={file.rowIndex !== undefined}
+                         title={file.rowIndex !== undefined ? `Cannot delete - linked to Row ${file.rowIndex + 1}` : "Delete document"}
+                       >
+                         <Trash2 className={`h-4 w-4 ${file.rowIndex !== undefined ? 'text-muted-foreground' : ''}`} />
+                       </Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -609,9 +630,18 @@ export const FileManager: React.FC = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete{' '}
-              {selectedFile ? `the file "${selectedFile.name}"` : 
-               selectedRunsheet ? `the runsheet "${selectedRunsheet.name}"` : 'this item'}.
+              {selectedFile && selectedFile.rowIndex !== undefined ? (
+                <>
+                  This document is linked to Row {selectedFile.rowIndex + 1} of a runsheet and cannot be deleted from here. 
+                  To delete it, first unlink it from the runsheet or delete the runsheet row.
+                </>
+              ) : selectedFile ? (
+                <>This action cannot be undone. This will permanently delete the file "{selectedFile.name}".</>
+              ) : selectedRunsheet ? (
+                <>This action cannot be undone. This will permanently delete the runsheet "{selectedRunsheet.name}" and all its linked documents.</>
+              ) : (
+                'This action cannot be undone.'
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

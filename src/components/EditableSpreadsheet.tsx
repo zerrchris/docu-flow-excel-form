@@ -4009,30 +4009,48 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   
   // Function to update document row_index in database
   const updateDocumentRowIndexes = useCallback(async (newDocumentMap: Map<number, DocumentRecord>) => {
-    if (!currentRunsheet?.id) return;
+    if (!currentRunsheet?.id || !user) return;
     
     try {
-      const updates = Array.from(newDocumentMap.entries()).map(([rowIndex, doc]) => ({
-        id: doc.id,
-        row_index: rowIndex
-      }));
+      // Create row mappings from old to new positions
+      const rowMappings: { oldIndex: number, newIndex: number }[] = [];
       
-      for (const update of updates) {
-        const { error } = await supabase
-          .from('documents')
-          .update({ row_index: update.row_index, updated_at: new Date().toISOString() })
-          .eq('id', update.id);
-          
-        if (error) {
-          console.error('Error updating document row_index:', error);
+      // Compare the new document map with the current one to find changes
+      newDocumentMap.forEach((doc, newIndex) => {
+        // Find where this document was before
+        for (const [oldIndex, oldDoc] of documentMap.entries()) {
+          if (oldDoc.id === doc.id && oldIndex !== newIndex) {
+            rowMappings.push({ oldIndex, newIndex });
+            break;
+          }
         }
+      });
+
+      if (rowMappings.length === 0) {
+        console.log('No document row changes detected');
+        return;
+      }
+
+      console.log('Syncing document row changes:', rowMappings);
+
+      // Call the edge function to sync document rows
+      const { error } = await supabase.functions.invoke('sync-document-rows', {
+        body: {
+          runsheetId: currentRunsheet.id,
+          rowMappings
+        }
+      });
+
+      if (error) {
+        console.error('Error syncing document rows:', error);
+        throw error;
       }
       
       console.log('✅ Updated document row indexes after row move');
     } catch (error) {
       console.error('Error updating document row indexes:', error);
     }
-  }, [currentRunsheet?.id]);
+  }, [currentRunsheet?.id, user, documentMap]);
 
   // Function to delete a row
   const deleteRow = useCallback(async (rowIndex: number) => {
