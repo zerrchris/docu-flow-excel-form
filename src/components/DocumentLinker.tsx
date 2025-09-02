@@ -772,7 +772,41 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                         description: "AI is thinking... extracting data from your document.",
                       });
                       
-                      await onAnalyzeDocument(uploadedFile, filename);
+                      // If we have an uploaded file, use it; otherwise fetch from storage
+                      let fileToAnalyze = uploadedFile;
+                      
+                      if (!fileToAnalyze && documentPath) {
+                        console.log('🔧 No uploaded file, fetching from storage:', documentPath);
+                        
+                        // Fetch the file from Supabase storage
+                        const { data: fileBlob, error } = await supabase.storage
+                          .from('documents')
+                          .download(documentPath);
+                        
+                        if (error) {
+                          throw new Error(`Failed to fetch file: ${error.message}`);
+                        }
+                        
+                        if (!fileBlob) {
+                          throw new Error('File not found in storage');
+                        }
+                        
+                         // Convert blob to File object
+                         const fileOptions = { type: fileBlob.type || 'application/octet-stream' };
+                         fileToAnalyze = new (globalThis as any).File([fileBlob], filename || 'document', fileOptions);
+                        
+                        console.log('🔧 Downloaded file from storage:', {
+                          name: fileToAnalyze.name,
+                          size: fileToAnalyze.size,
+                          type: fileToAnalyze.type
+                        });
+                      }
+                      
+                      if (!fileToAnalyze) {
+                        throw new Error('No file available for analysis');
+                      }
+                      
+                      await onAnalyzeDocument(fileToAnalyze, filename);
                       
                       toast({
                         title: "Analysis Complete",
