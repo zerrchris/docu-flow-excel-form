@@ -2107,10 +2107,62 @@ Image: [base64 image data]`;
       setPendingNavigation({ path: 'new-runsheet' });
       setShowNavigationDialog(true);
     } else {
-      startNewRunsheet();
+      startNewRunsheetSimple();
     }
   };
 
+  // NEW: Simplified new runsheet creation using the same pattern as Dashboard
+  const startNewRunsheetSimple = async () => {
+    console.log('🧹 DocumentProcessor: Starting new runsheet (simplified approach)');
+    
+    // Clear active runsheet state first
+    clearActiveRunsheet();
+    
+    // Navigate to clean URL without runsheet ID
+    navigate('/runsheet', { replace: true });
+    
+    // Load user preferences for new runsheet
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      let initialColumns = DEFAULT_COLUMNS;
+      let initialInstructions = DEFAULT_EXTRACTION_INSTRUCTIONS;
+      
+      if (user) {
+        const preferences = await ExtractionPreferencesService.getDefaultPreferences();
+        if (preferences && preferences.columns && preferences.column_instructions) {
+          initialColumns = preferences.columns;
+          initialInstructions = preferences.column_instructions as Record<string, string>;
+        }
+      }
+      
+      // Use the same successful pattern as Dashboard
+      setTimeout(() => {
+        const event = new CustomEvent('createNewRunsheetFromDashboard', {
+          detail: {
+            name: 'Untitled Runsheet',
+            columns: initialColumns,
+            instructions: initialInstructions
+          }
+        });
+        window.dispatchEvent(event);
+        
+        toast({
+          title: "New runsheet started",
+          description: "You're now working on a fresh runsheet.",
+        });
+      }, 100); // Small delay to ensure navigation completes
+      
+    } catch (error) {
+      console.error('Error starting new runsheet:', error);
+      toast({
+        title: "Error",
+        description: "Failed to start new runsheet. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // OLD: Keep the complex version as fallback (but don't use it)
   const startNewRunsheet = async () => {
     // Clear the loaded runsheet ref to allow fresh loading
     loadedRunsheetRef.current = null;
@@ -2571,7 +2623,7 @@ Image: [base64 image data]`;
                 setShowNavigationDialog(false);
                 if (pendingNavigation) {
                   if (pendingNavigation.path === 'new-runsheet') {
-                    startNewRunsheet();
+                      startNewRunsheetSimple();
                   } else if (pendingNavigation.state) {
                     navigate(pendingNavigation.path, { state: pendingNavigation.state });
                   } else {
@@ -2596,7 +2648,7 @@ Image: [base64 image data]`;
                   setShowNavigationDialog(false);
                   if (pendingNavigation) {
                     if (pendingNavigation.path === 'new-runsheet') {
-                      startNewRunsheet();
+                      startNewRunsheetSimple();
                     } else if (pendingNavigation.state) {
                       navigate(pendingNavigation.path, { state: pendingNavigation.state });
                     } else {
