@@ -59,6 +59,12 @@ export class DocumentService {
    * Get public URL for a document
    */
   static getDocumentUrl(filePath: string): string {
+    // If the path is already a full URL, return it as-is
+    if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
+      return filePath;
+    }
+    
+    // Otherwise, generate the public URL from the storage path
     const { data } = supabase.storage
       .from('documents')
       .getPublicUrl(filePath);
