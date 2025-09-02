@@ -1785,7 +1785,7 @@ Image: [base64 image data]`;
     }
     
     
-    // Clear the form data and mark as added
+    // Clear the form data, document, and mark as added
     const emptyFormData: Record<string, string> = {};
     columns.forEach(column => {
       emptyFormData[column] = '';
@@ -1793,12 +1793,18 @@ Image: [base64 image data]`;
     setFormData(emptyFormData);
     setHasAddedToSpreadsheet(true);
     
-    // Navigate back to the runsheet after successful add
-    if (runsheetId) {
-      setTimeout(() => {
-        navigate(`/runsheet?id=${runsheetId}`, { replace: true });
-      }, 1000); // Small delay to show toast
-    }
+    // Clear the document from the processor so it's ready for next document
+    setFile(null);
+    setPreviewUrl(null);
+    setStorageUrl(null);
+    console.log('🔧 DocumentProcessor: Cleared form data and document after adding to spreadsheet');
+    
+    // Don't navigate away - keep user in processor for next document
+    // if (runsheetId) {
+    //   setTimeout(() => {
+    //     navigate(`/runsheet?id=${runsheetId}`, { replace: true });
+    //   }, 1000); // Small delay to show toast
+    // }
   };
 
   // Continue adding to spreadsheet without validation (used after user confirms)
@@ -1942,11 +1948,11 @@ Image: [base64 image data]`;
     });
     setFormData(emptyFormData);
     
-    // Clear the document from the processor
+    // Clear the document from the processor so it's ready for next document
     setFile(null);
     setPreviewUrl(null);
     setStorageUrl(null);
-    console.log('🔧 DocumentProcessor: Cleared form data and document after adding to spreadsheet');
+    console.log('🔧 DocumentProcessor: Cleared form data and document after adding to spreadsheet (continue function)');
   };
 
   // Helper function to create or correct a document record in the database
