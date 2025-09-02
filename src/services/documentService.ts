@@ -172,16 +172,7 @@ export class DocumentService {
         return false;
       }
 
-      // Delete from storage
-      const { error: storageError } = await supabase.storage
-        .from('documents')
-        .remove([doc.file_path]);
-
-      if (storageError) {
-        console.error('Error deleting file from storage:', storageError);
-      }
-
-      // Delete database record
+      // Delete database record first (safer approach)
       const { error: dbError } = await supabase
         .from('documents')
         .delete()
@@ -192,9 +183,73 @@ export class DocumentService {
         return false;
       }
 
+      // Delete from storage (even if this fails, the database is clean)
+      const { error: storageError } = await supabase.storage
+        .from('documents')
+        .remove([doc.file_path]);
+
+      if (storageError) {
+        console.error('Error deleting file from storage (orphaned file created):', storageError);
+        // Log this for potential cleanup later, but don't fail the operation
+      }
+
       return true;
     } catch (error) {
       console.error('Error in deleteDocument:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Delete all documents for a runsheet (cascade delete)
+   */
+  static async deleteDocumentsForRunsheet(runsheetId: string): Promise<boolean> {
+    try {
+      // Get all documents for this runsheet
+      const { data: documents, error: fetchError } = await supabase
+        .from('documents')
+        .select('id, file_path')
+        .eq('runsheet_id', runsheetId);
+
+      if (fetchError) {
+        console.error('Error fetching documents for runsheet deletion:', fetchError);
+        return false;
+      }
+
+      if (!documents || documents.length === 0) {
+        return true; // No documents to delete
+      }
+
+      // Collect all file paths for batch deletion
+      const filePaths = documents.map(doc => doc.file_path);
+
+      // Delete database records first
+      const { error: dbError } = await supabase
+        .from('documents')
+        .delete()
+        .eq('runsheet_id', runsheetId);
+
+      if (dbError) {
+        console.error('Error deleting document records for runsheet:', dbError);
+        return false;
+      }
+
+      // Delete files from storage in batch
+      if (filePaths.length > 0) {
+        const { error: storageError } = await supabase.storage
+          .from('documents')
+          .remove(filePaths);
+
+        if (storageError) {
+          console.error('Error deleting files from storage for runsheet (orphaned files created):', storageError);
+          // Log this for potential cleanup later, but don't fail the operation
+        }
+      }
+
+      console.log(`Deleted ${documents.length} documents for runsheet ${runsheetId}`);
+      return true;
+    } catch (error) {
+      console.error('Error in deleteDocumentsForRunsheet:', error);
       return false;
     }
   }

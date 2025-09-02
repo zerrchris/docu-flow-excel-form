@@ -15,6 +15,7 @@ import ActiveRunsheetButton from '@/components/ActiveRunsheetButton';
 import { FilePreview } from '@/components/FilePreview';
 import { useActiveRunsheet } from '@/hooks/useActiveRunsheet';
 import LogoMark from '@/components/LogoMark';
+import { DocumentService } from '@/services/documentService';
 
 interface StoredFile {
   id: string;
@@ -155,6 +156,12 @@ export const FileManager: React.FC = () => {
 
     setIsDeleting(true);
     try {
+      // First delete all associated documents (cascade delete)
+      const deleteSuccess = await DocumentService.deleteDocumentsForRunsheet(selectedRunsheet.id);
+      if (!deleteSuccess) {
+        throw new Error('Failed to delete associated documents');
+      }
+
       const { error } = await supabase
         .from('runsheets')
         .delete()
@@ -168,7 +175,7 @@ export const FileManager: React.FC = () => {
 
       toast({
         title: "Runsheet Deleted",
-        description: `"${selectedRunsheet.name}" has been deleted successfully.`,
+        description: `"${selectedRunsheet.name}" and all associated documents have been deleted successfully.`,
       });
 
       setShowDeleteDialog(false);
