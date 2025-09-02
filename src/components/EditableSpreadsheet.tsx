@@ -4248,6 +4248,16 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     try {
       console.log('🔍 Starting document analysis for:', file.name, 'type:', file.type, 'size:', file.size);
       
+      // Check for empty or corrupted files
+      if (file.size === 0) {
+        toast({
+          title: "File is empty",
+          description: "The linked file appears to be empty or corrupted. Please re-upload the document.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
       // Check if the file is a PDF and handle appropriately
       if (file.type === 'application/pdf') {
         toast({
