@@ -1846,21 +1846,38 @@ Image: [base64 image data]`;
     let actualTargetRowIndex = 0;
     
     setSpreadsheetData(prev => {
+      console.log('🔧 ROW_FINDER: Starting row search, current data length:', prev.length);
+      console.log('🔧 ROW_FINDER: DocumentMap size:', documentMap.size);
+      console.log('🔧 ROW_FINDER: DocumentMap entries:', Array.from(documentMap.entries()));
+      
       const firstEmptyRowIndex = prev.findIndex((row, index) => {
-        const isDataEmpty = Object.values(row).every(value => value.trim() === '');
+        const rowValues = Object.values(row);
+        const isDataEmpty = rowValues.every(value => value === '' || value.trim() === '');
         const hasLinkedDocument = documentMap.has(index);
+        
+        console.log(`🔧 ROW_FINDER: Row ${index} check:`, {
+          rowValues,
+          isDataEmpty,
+          hasLinkedDocument,
+          shouldUse: isDataEmpty && !hasLinkedDocument
+        });
+        
         return isDataEmpty && !hasLinkedDocument;
       });
+      
+      console.log('🔧 ROW_FINDER: First empty row index found:', firstEmptyRowIndex);
       
       let newData;
       let targetRowIndex;
       if (firstEmptyRowIndex >= 0) {
+        console.log('🔧 ROW_FINDER: Using existing empty row:', firstEmptyRowIndex);
         newData = [...prev];
         newData[firstEmptyRowIndex] = { ...filteredData };
         actualTargetRowIndex = firstEmptyRowIndex;
       } else {
         // If no empty row exists, we need to add a new row
         // But first ensure we have enough rows in the spreadsheet for display
+        console.log('🔧 ROW_FINDER: No empty row found, adding new row at index:', prev.length);
         actualTargetRowIndex = prev.length;
         newData = [...prev, { ...filteredData }];
         
