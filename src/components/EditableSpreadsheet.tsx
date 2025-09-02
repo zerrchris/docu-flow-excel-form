@@ -5789,35 +5789,14 @@ ${extractionFields}`
                              rowData[col].trim() !== ''
                            );
 
-                            if (hasExistingData) {
-                              // Show insertion preview and warning
-                              setPendingDataInsertion({
-                                rowIndex,
-                                data: row,
-                                hasExistingData: true
-                              });
-                              setShowInsertionPreview(true);
-                              
-                              // Also show the existing dialog
-                              setPendingAnalysis({ file, filename, rowIndex });
-                              setShowAnalyzeWarningDialog(true);
-                            } else {
-                              // Show insertion preview for empty row
-                              setPendingDataInsertion({
-                                rowIndex,
-                                data: {},
-                                hasExistingData: false
-                              });
-                              setShowInsertionPreview(true);
-                              
-                              // Proceed with analysis after brief preview
-                              setTimeout(() => {
-                                setShowInsertionPreview(false);
-                                setPendingDataInsertion(null);
-                              }, 1000);
-                              
-                              await analyzeDocumentAndPopulateRow(file, rowIndex);
-                            }
+                             if (hasExistingData) {
+                               // Show warning dialog for rows with existing data
+                               setPendingAnalysis({ file, filename, rowIndex });
+                               setShowAnalyzeWarningDialog(true);
+                             } else {
+                               // For empty rows, proceed directly with analysis
+                               await analyzeDocumentAndPopulateRow(file, rowIndex);
+                             }
                           }}
                            onOpenWorkspace={() => {
                              console.log('🔧 EditableSpreadsheet: Opening full screen workspace for rowIndex:', rowIndex, '(display row:', rowIndex + 1, ')');
