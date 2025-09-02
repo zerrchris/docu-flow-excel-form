@@ -287,7 +287,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   // Initialize auto-save hook
   const { save: autoSave, forceSave: autoForceSave, isSaving: autoSaving } = useAutoSave({
     runsheetId: currentRunsheetId,
-    runsheetName,
+    runsheetName: runsheetName === 'Untitled Runsheet' && currentRunsheet?.name ? currentRunsheet.name : runsheetName,
     columns,
     data,
     columnInstructions,
@@ -2291,6 +2291,48 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     console.log('🔧 Debug: Setting runsheet data:', runsheet.data);
     console.log('🔧 Debug: Data length:', runsheet.data?.length);
     console.log('🔧 Debug: First row sample:', runsheet.data?.[0]);
+    
+    // CRITICAL FIX: If database has empty data but this is an existing runsheet, try to recover from localStorage
+    if ((!runsheet.data || runsheet.data.length === 0) && runsheet.id) {
+      console.log('🚨 CRITICAL: Database shows empty data for existing runsheet. Attempting recovery...');
+      
+      try {
+        // Try to recover from localStorage backup
+        const backupKey = `runsheet_backup_${runsheet.id}`;
+        const backup = localStorage.getItem(backupKey);
+        if (backup) {
+          const backupData = JSON.parse(backup);
+          if (backupData.data && backupData.data.length > 0) {
+            console.log('✅ RECOVERED: Found data in localStorage backup, restoring...');
+            runsheet.data = backupData.data;
+            
+            // Immediately save the recovered data back to database
+            console.log('💾 EMERGENCY SAVE: Restoring lost data to database...');
+            const { error } = await supabase.functions.invoke('save-runsheet', {
+              body: {
+                name: runsheet.name,
+                columns: runsheet.columns,
+                data: backupData.data,
+                column_instructions: runsheet.column_instructions,
+                user_id: user?.id,
+                updated_at: new Date().toISOString(),
+              }
+            });
+            
+            if (!error) {
+              console.log('✅ SUCCESS: Lost data has been restored to database');
+              toast({
+                title: "Data Recovered",
+                description: "Lost data was successfully recovered from local backup and restored to database.",
+                variant: "default"
+              });
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Failed to recover from backup:', error);
+      }
+    }
     const dataWithMinRows = ensureMinimumRows(runsheet.data || [], runsheet.columns || []);
     // Only preserve current row count if we're loading a runsheet with actual data
     // For new/empty runsheets, use the minimum required rows
