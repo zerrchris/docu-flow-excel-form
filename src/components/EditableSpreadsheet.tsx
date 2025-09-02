@@ -4969,13 +4969,16 @@ ${extractionFields}`
                              onColumnChange(DEFAULT_COLUMNS);
                              onColumnInstructionsChange?.(DEFAULT_EXTRACTION_INSTRUCTIONS);
                              
-                             setShowNameNewRunsheetDialog(false);
-                             setNewRunsheetName('');
-                             
-                             toast({
-                               title: "New runsheet created",
-                               description: `"${finalName}" is ready for your data.`,
-                             });
+                              setShowNameNewRunsheetDialog(false);
+                              setNewRunsheetName('');
+                              
+                              // Navigate to a clean runsheet URL without ID
+                              navigate('/runsheet', { replace: true });
+                              
+                              toast({
+                                title: "New runsheet created",
+                                description: `"${finalName}" is ready for your data.`,
+                              });
                           }
                         }}
                         autoFocus
