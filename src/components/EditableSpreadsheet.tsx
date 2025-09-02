@@ -920,10 +920,27 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
           
           // Only restore if: recent, no active work, AND no meaningful database data exists
           const hasMeaningfulDatabaseData = initialData.some(row => 
-            Object.values(row).some(value => value && value.trim() !== '' && value !== 'Document File Name')
+            Object.values(row).some(value => 
+              value && 
+              value.trim() !== '' && 
+              value !== 'Document File Name' && 
+              value !== 'N/A' && 
+              value.length > 0
+            )
           );
           
-          if (stateAge < 5 * 60 * 1000 && !hasActiveRunsheet && !hasCurrentRunsheet && !hasMeaningfulDatabaseData) { // Only restore if less than 5 minutes old, no active work, AND no database data
+          // Also check if current data state has meaningful content (extracted data)
+          const hasCurrentData = data.some(row => 
+            Object.values(row).some(value => 
+              value && 
+              value.trim() !== '' && 
+              value !== 'Document File Name' && 
+              value !== 'N/A' && 
+              value.length > 0
+            )
+          );
+
+          if (stateAge < 5 * 60 * 1000 && !hasActiveRunsheet && !hasCurrentRunsheet && !hasMeaningfulDatabaseData && !hasCurrentData) { // CRITICAL: Don't restore if we have current extracted data
             console.log('🔄 Restoring temporary navigation state');
             
             if (state.data) setData(state.data);
