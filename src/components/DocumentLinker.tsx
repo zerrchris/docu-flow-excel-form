@@ -772,11 +772,12 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                         description: "AI is thinking... extracting data from your document.",
                       });
                       
-                       // If we have an uploaded file, use it; otherwise fetch from storage
-                       let fileToAnalyze = uploadedFile;
+                       // For existing documents, always fetch from storage to ensure we get the actual file
+                       // Only use uploadedFile if we don't have a documentPath (brand new upload)
+                       let fileToAnalyze = (!documentPath && uploadedFile && uploadedFile.size > 0) ? uploadedFile : null;
                        
                        if (!fileToAnalyze && documentPath) {
-                         console.log('🔧 No uploaded file, fetching from storage:', documentPath);
+                         console.log('🔧 Fetching from storage for existing document:', documentPath);
                          
                          // Fetch the file from Supabase storage
                          const { data: fileBlob, error } = await supabase.storage
@@ -809,12 +810,8 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                            size: fileToAnalyze.size,
                            type: fileToAnalyze.type
                          });
-                       } else if (uploadedFile) {
-                         console.log('🔧 Using uploaded file:', {
-                           name: uploadedFile.name,
-                           size: uploadedFile.size,
-                           type: uploadedFile.type
-                         });
+                       } else if (!fileToAnalyze) {
+                         throw new Error('No valid file found - please re-upload the document');
                        }
                       
                       if (!fileToAnalyze) {
