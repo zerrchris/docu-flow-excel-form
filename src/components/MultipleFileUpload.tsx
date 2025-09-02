@@ -579,11 +579,6 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold">Upload Multiple Files</h3>
-          {onClose && (
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              <X className="h-4 w-4" />
-            </Button>
-          )}
         </div>
 
         <p className="text-sm text-muted-foreground">
