@@ -4292,6 +4292,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       
       // Check for empty or corrupted files
       if (file.size === 0) {
+        console.error('🔍 File is empty - this should not happen for existing documents');
         toast({
           title: "File is empty",
           description: "The linked file appears to be empty or corrupted. Please re-upload the document.",
