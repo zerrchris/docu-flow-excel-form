@@ -1210,7 +1210,8 @@ Image: [base64 image data]`;
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
+        console.error('Document analysis error:', errorData);
+        throw new Error(`OpenAI API error: ${errorData.error || errorData.details || 'Unknown error'}`);
       }
 
       const result = await response.json();
