@@ -568,6 +568,12 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     window.addEventListener('saveRunsheet', handleSaveEvent);
     window.addEventListener('forceSaveRunsheet', handleSaveEvent);
     
+    // Handle runsheet name updates from DocumentProcessor
+    const handleUpdateRunsheetName = (event: CustomEvent) => {
+      console.log('🔧 EditableSpreadsheet: Received updateRunsheetName event:', event.detail);
+      setRunsheetName(event.detail.name);
+    };
+    
     // Handle adding more rows when documents are added beyond current row count
     const handleAddMoreRowsForDocument = (event: CustomEvent) => {
       const { requiredRowIndex } = event.detail;
@@ -580,11 +586,13 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       addMoreRows(rowsToAdd);
     };
     
+    window.addEventListener('updateRunsheetName', handleUpdateRunsheetName as EventListener);
     window.addEventListener('addMoreRowsForDocument', handleAddMoreRowsForDocument as EventListener);
     return () => {
       window.removeEventListener('saveRunsheetBeforeUpload', handleSaveRequest as EventListener);
       window.removeEventListener('createNewRunsheetFromDashboard', handleDashboardNewRunsheet as EventListener);
       window.removeEventListener('startNewRunsheet', handleStartNewRunsheet as EventListener);
+      window.removeEventListener('updateRunsheetName', handleUpdateRunsheetName as EventListener);
       window.removeEventListener('addMoreRowsForDocument', handleAddMoreRowsForDocument as EventListener);
       window.removeEventListener('saveRunsheet', handleSaveEvent);
       window.removeEventListener('forceSaveRunsheet', handleSaveEvent);

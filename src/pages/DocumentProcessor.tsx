@@ -2786,6 +2786,29 @@ Image: [base64 image data]`;
               variant="default" 
               onClick={async () => {
                 try {
+                  // Check if runsheet has a default name that needs to be changed
+                  const forbiddenNames = ['Untitled Runsheet', 'untitled runsheet', 'Untitled', 'untitled'];
+                  const currentName = activeRunsheet?.name || '';
+                  
+                  if (forbiddenNames.includes(currentName.trim())) {
+                    // Prompt user to name the runsheet first
+                    const newName = prompt('Please enter a name for your runsheet before saving:', currentName);
+                    if (!newName || newName.trim() === '' || forbiddenNames.includes(newName.trim())) {
+                      console.log('❌ Save cancelled - no valid name provided');
+                      setShowNavigationDialog(false);
+                      setPendingNavigation(null);
+                      return;
+                    }
+                    
+                    // Update the runsheet name first
+                    window.dispatchEvent(new CustomEvent('updateRunsheetName', { 
+                      detail: { name: newName.trim() } 
+                    }));
+                    
+                    // Wait a moment for the name update to propagate
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                  }
+                  
                   // Show loading state
                   toast({
                     title: "Saving runsheet...",
