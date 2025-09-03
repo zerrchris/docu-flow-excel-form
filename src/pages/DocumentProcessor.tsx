@@ -1207,37 +1207,26 @@ Image: [base64 image data]`;
         }
       }
 
-      // Call company's OpenAI Edge Function for document analysis
-      const response = await fetch('https://xnpmrafjjqsissbtempj.supabase.co/functions/v1/analyze-document', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      // Call company's OpenAI Edge Function for document analysis using Supabase client
+      const { data: analysisResult, error: edgeFunctionError } = await supabase.functions.invoke('analyze-document', {
+        body: {
           prompt: extractionPrompt,
           imageData: `data:${mimeType};base64,${fileBase64}`,
           systemMessage: systemMessage
-        }),
-        signal: abortController.signal // Add abort signal to the fetch request
+        }
       });
 
-      if (!response.ok) {
-        console.error('Response not OK:', response.status, response.statusText);
-        let errorData;
-        try {
-          errorData = await response.json();
-          console.error('Error response data:', errorData);
-        } catch (parseError) {
-          console.error('Failed to parse error response:', parseError);
-          const errorText = await response.text();
-          console.error('Raw error response:', errorText);
-          throw new Error(`OpenAI API error: ${response.status} ${response.statusText} - ${errorText}`);
-        }
-        throw new Error(`OpenAI API error: ${errorData.error || errorData.details || errorData.message || 'Unknown error'}`);
+      if (edgeFunctionError) {
+        console.error('Edge function error:', edgeFunctionError);
+        throw new Error(`OpenAI API error: ${edgeFunctionError.message || 'Unknown error'}`);
       }
 
-      const result = await response.json();
-      const extractedText = result.generatedText;
+      if (!analysisResult) {
+        console.error('No result from edge function');
+        throw new Error('OpenAI API error: No response from analysis service');
+      }
+
+      const extractedText = analysisResult.generatedText;
 
       if (!extractedText) {
         throw new Error('No response from OpenAI API');

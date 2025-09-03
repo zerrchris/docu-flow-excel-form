@@ -9,6 +9,9 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  console.log('analyze-document function called with method:', req.method);
+  console.log('Request headers:', JSON.stringify(Object.fromEntries(req.headers.entries())));
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
