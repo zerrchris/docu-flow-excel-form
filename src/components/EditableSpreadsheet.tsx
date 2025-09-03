@@ -5290,7 +5290,7 @@ ${extractionFields}`
                           setRunsheetName('Untitled Runsheet');
                           
                           // Set this as the active runsheet for document processing
-                          setActiveRunsheet({
+                          const tempRunsheet = {
                             id: tempId,
                             name: 'Untitled Runsheet',
                             data: Array.from({ length: 100 }, () => {
@@ -5300,7 +5300,10 @@ ${extractionFields}`
                             }),
                             columns: DEFAULT_COLUMNS,
                             columnInstructions: DEFAULT_EXTRACTION_INSTRUCTIONS
-                          });
+                          };
+                          
+                          console.log('🚀 Setting up new working runsheet:', tempRunsheet.id);
+                          setActiveRunsheet(tempRunsheet);
                           setData(Array.from({ length: 100 }, () => {
                             const row: Record<string, string> = {};
                             DEFAULT_COLUMNS.forEach(col => row[col] = '');

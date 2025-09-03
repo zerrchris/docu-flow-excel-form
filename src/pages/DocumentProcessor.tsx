@@ -47,23 +47,80 @@ const DocumentProcessor: React.FC = () => {
   // Hook to get active runsheet data  
   const { activeRunsheet, setActiveRunsheet, clearActiveRunsheet, setCurrentRunsheet, hasActiveRunsheet } = useActiveRunsheet();
   
+  // Navigation
+  const navigate = useNavigate();
+  
+  // Check if we have working data and redirect if not
+  useEffect(() => {
+    const checkWorkingRunsheet = () => {
+      console.log('🔍 DocumentProcessor: Checking for working runsheet on mount/update');
+      console.log('🔍 Active runsheet state:', {
+        hasActiveRunsheet,
+        activeRunsheetId: activeRunsheet?.id,
+        activeRunsheetName: activeRunsheet?.name
+      });
+      
+      // If no active runsheet found, redirect to dashboard immediately
+      if (!hasActiveRunsheet && !activeRunsheet?.id) {
+        console.log('⚠️ No active runsheet found, redirecting to dashboard');
+        toast({
+          title: "No Active Runsheet",
+          description: "Please start a new runsheet or open an existing one first.",
+          variant: "destructive",
+        });
+        navigate('/dashboard');
+        return;
+      }
+      
+      console.log('✅ Active runsheet confirmed, proceeding with document processor');
+    };
+    
+    // Small delay to allow state to settle
+    const timeoutId = setTimeout(checkWorkingRunsheet, 100);
+    return () => clearTimeout(timeoutId);
+  }, [hasActiveRunsheet, activeRunsheet, navigate]);
+  
   // Check if we have working data (either active runsheet or emergency draft)
   const hasWorkingRunsheet = () => {
-    if (hasActiveRunsheet) return true;
+    console.log('🔍 Checking for working runsheet:', {
+      hasActiveRunsheet,
+      activeRunsheet: activeRunsheet?.id,
+      activeRunsheetName: activeRunsheet?.name
+    });
+    
+    if (hasActiveRunsheet) {
+      console.log('✅ Active runsheet found via hook');
+      return true;
+    }
     
     // Check for emergency draft data (corrected key name)
     try {
       const emergencyDraft = localStorage.getItem('runsheet-emergency-draft');
       if (emergencyDraft) {
         const draftData = JSON.parse(emergencyDraft);
-        return draftData?.data?.length > 0 || draftData?.name;
+        const hasData = draftData?.data?.length > 0 || draftData?.name;
+        console.log('📄 Emergency draft check:', { hasData, draftName: draftData?.name });
+        return hasData;
       }
     } catch (error) {
       console.error('Error checking emergency draft:', error);
     }
     
+    console.log('❌ No working runsheet found');
     return false;
   };
+  
+  // Don't render the component if no active runsheet
+  if (!hasActiveRunsheet && !activeRunsheet?.id) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h2 className="text-lg font-semibold mb-2">Checking for active runsheet...</h2>
+          <p className="text-muted-foreground">Redirecting to dashboard...</p>
+        </div>
+      </div>
+    );
+  }
   
   // View state
   const [isDocumentMode, setIsDocumentMode] = useState(false);
@@ -102,7 +159,6 @@ const DocumentProcessor: React.FC = () => {
   const [showRunsheetUploadDialog, setShowRunsheetUploadDialog] = useState(false);
   
   // Note: Navigation blocking removed since runsheet auto-saves
-  const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
   
