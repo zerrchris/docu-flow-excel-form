@@ -2330,46 +2330,29 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     console.log('🔧 Debug: Data length:', runsheet.data?.length);
     console.log('🔧 Debug: First row sample:', runsheet.data?.[0]);
     
-    // CRITICAL FIX: If database has empty data but this is an existing runsheet, try to recover from localStorage
-    if ((!runsheet.data || runsheet.data.length === 0) && runsheet.id) {
-      console.log('🚨 CRITICAL: Database shows empty data for existing runsheet. Attempting recovery...');
-      
-      try {
-        // Try to recover from localStorage backup
-        const backupKey = `runsheet_backup_${runsheet.id}`;
-        const backup = localStorage.getItem(backupKey);
-        if (backup) {
-          const backupData = JSON.parse(backup);
-          if (backupData.data && backupData.data.length > 0) {
-            console.log('✅ RECOVERED: Found data in localStorage backup, restoring...');
-            runsheet.data = backupData.data;
-            
-            // Immediately save the recovered data back to database
-            console.log('💾 EMERGENCY SAVE: Restoring lost data to database...');
-            const { error } = await supabase.functions.invoke('save-runsheet', {
-              body: {
-                name: runsheet.name,
-                columns: runsheet.columns,
-                data: backupData.data,
-                column_instructions: runsheet.column_instructions,
-                user_id: user?.id,
-                updated_at: new Date().toISOString(),
-              }
-            });
-            
-            if (!error) {
-              console.log('✅ SUCCESS: Lost data has been restored to database');
-              toast({
-                title: "Data Recovered",
-                description: "Lost data was successfully recovered from local backup and restored to database.",
-                variant: "default"
-              });
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Failed to recover from backup:', error);
-      }
+    // TEMPORARILY DISABLED: Database recovery mechanism to diagnose issue
+    // Check if we need to look for actual data issues
+    console.log('🔍 DIAGNOSIS: Checking runsheet data integrity');
+    console.log('🔍 Runsheet ID:', runsheet.id);
+    console.log('🔍 Runsheet name:', runsheet.name);
+    console.log('🔍 Data length from DB:', runsheet.data?.length || 0);
+    console.log('🔍 Sample rows from DB:', runsheet.data?.slice(0, 3));
+    
+    // Check if this runsheet has any actual data (not just empty rows)
+    const hasRealData = runsheet.data && runsheet.data.length > 0 && 
+      runsheet.data.some((row: any) => 
+        Object.values(row).some(value => value && String(value).trim() !== '')
+      );
+    
+    console.log('🔍 Has real data:', hasRealData);
+    
+    if (!hasRealData && runsheet.id) {
+      console.log('⚠️ WARNING: This runsheet appears to have no actual data, only empty rows');
+      toast({
+        title: "Data Issue Detected",
+        description: `The runsheet "${runsheet.name}" appears to contain only empty rows. This may be due to a data sync issue.`,
+        variant: "destructive",
+      });
     }
     const dataWithMinRows = ensureMinimumRows(runsheet.data || [], runsheet.columns || []);
     // Only preserve current row count if we're loading a runsheet with actual data
@@ -2424,6 +2407,32 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   };
 
   // Load a specific runsheet by ID (for URL parameter functionality)
+  // Add a diagnostic function to check localStorage
+  const checkLocalStorageBackups = () => {
+    const backupKeys = Object.keys(localStorage).filter(key => key.startsWith('runsheet_backup_'));
+    console.log('📋 Found localStorage backup keys:', backupKeys);
+    
+    backupKeys.forEach(key => {
+      try {
+        const backup = localStorage.getItem(key);
+        if (backup) {
+          const backupData = JSON.parse(backup);
+          const hasData = backupData.data && backupData.data.length > 0 && 
+            backupData.data.some((row: any) => 
+              Object.values(row).some(value => value && String(value).trim() !== '')
+            );
+          console.log(`📋 Backup ${key}:`, {
+            name: backupData.name || 'Unknown',
+            hasRealData: hasData,
+            rowCount: backupData.data?.length || 0
+          });
+        }
+      } catch (error) {
+        console.error(`Error reading backup ${key}:`, error);
+      }
+    });
+  };
+
   const loadSpecificRunsheet = async (runsheetId: string, forceRefresh: boolean = false) => {
     // Wait for user authentication to be loaded
     let currentUser = user;
@@ -4938,6 +4947,16 @@ ${extractionFields}`
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Add 100 rows
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    checkLocalStorageBackups();
+                  }}
+                >
+                  <Bug className="h-4 w-4 mr-2" />
+                  Check Backups (Debug)
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
