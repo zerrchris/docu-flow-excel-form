@@ -16,12 +16,14 @@ import { ExtractionPreferencesService } from '@/services/extractionPreferences';
 import { useActiveRunsheet } from '@/hooks/useActiveRunsheet';
 import OpenRunsheetDialog from '@/components/OpenRunsheetDialog';
 import ColumnPreferencesDialog from '@/components/ColumnPreferencesDialog';
+import MultipleFileUpload from '@/components/MultipleFileUpload';
 
 const Dashboard: React.FC = () => {
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [showOpenDialog, setShowOpenDialog] = useState(false);
   const [showColumnPreferences, setShowColumnPreferences] = useState(false);
   const [showNameNewRunsheetDialog, setShowNameNewRunsheetDialog] = useState(false);
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [newRunsheetName, setNewRunsheetName] = useState('');
   const navigate = useNavigate();
   const { activeRunsheet } = useActiveRunsheet();
@@ -107,7 +109,7 @@ const Dashboard: React.FC = () => {
       title: "Upload Runsheet",
       description: "Upload files from your device",
       icon: Upload,
-      path: "/runsheet?action=upload"
+      action: "upload-dialog"
     },
     {
       title: "Google Drive",
@@ -241,6 +243,8 @@ const Dashboard: React.FC = () => {
                     setShowOpenDialog(true);
                   } else if (option.action === "column-preferences") {
                     setShowColumnPreferences(true);
+                  } else if (option.action === "upload-dialog") {
+                    setShowUploadDialog(true);
                   } else if (option.action === "new-runsheet") {
                     setShowNameNewRunsheetDialog(true);
                   } else if (option.path) {
@@ -266,6 +270,8 @@ const Dashboard: React.FC = () => {
                           setShowOpenDialog(true);
                         } else if (option.action === "column-preferences") {
                           setShowColumnPreferences(true);
+                        } else if (option.action === "upload-dialog") {
+                          setShowUploadDialog(true);
                         } else if (option.action === "new-runsheet") {
                           setShowNameNewRunsheetDialog(true);
                         } else if (option.path) {
@@ -345,6 +351,33 @@ const Dashboard: React.FC = () => {
               Create Runsheet
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Upload Dialog */}
+      <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Upload Runsheet Files</DialogTitle>
+            <DialogDescription>
+              Upload Excel, CSV, or other document files to create or update a runsheet.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <MultipleFileUpload 
+              onUploadComplete={(uploadedCount) => {
+                console.log('Files uploaded, count:', uploadedCount);
+                setShowUploadDialog(false);
+                toast({
+                  title: "Files uploaded successfully",
+                  description: `${uploadedCount} file(s) have been uploaded.`
+                });
+                // Navigate to runsheet page
+                navigate('/runsheet');
+              }}
+              onClose={() => setShowUploadDialog(false)}
+            />
+          </div>
         </DialogContent>
       </Dialog>
     </div>
