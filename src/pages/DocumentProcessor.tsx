@@ -400,6 +400,9 @@ const DocumentProcessor: React.FC = () => {
       // Only load runsheet data if we don't already have spreadsheet data (to prevent data loss)
       if (selectedRunsheet.data && Array.isArray(selectedRunsheet.data)) {
         console.log('📊 Loading uploaded runsheet data directly');
+        console.log('📊 Data being set:', selectedRunsheet.data);
+        console.log('📊 Data length:', selectedRunsheet.data.length);
+        console.log('📊 First few rows:', selectedRunsheet.data.slice(0, 3));
         setSpreadsheetData(selectedRunsheet.data);
         
         // For uploaded runsheets, disable auto-save to prevent conflicts
@@ -409,6 +412,8 @@ const DocumentProcessor: React.FC = () => {
         }
       } else if (spreadsheetData.length > 0) {
         console.log('⚠️ Skipping runsheet data load - preserving existing spreadsheet data to prevent loss');
+      } else {
+        console.log('⚠️ No data found in selectedRunsheet:', selectedRunsheet);
       }
       
       // Load runsheet columns if available - but be more careful about overriding user work

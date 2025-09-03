@@ -128,7 +128,10 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   
   const [columns, setColumns] = useState<string[]>(() => ensureDocumentColumns(initialColumns));
   const [data, setData] = useState<Record<string, string>[]>(() => {
-    console.log('🔍 EditableSpreadsheet initializing with initialData:', initialData?.length, 'rows');
+    console.log('🔍 EditableSpreadsheet initializing with initialData:');
+    console.log('🔍 initialData length:', initialData?.length);
+    console.log('🔍 initialData content:', initialData);
+    console.log('🔍 initialColumns:', initialColumns);
     
     // If we have meaningful initial data (uploaded data), use it directly
     if (initialData && initialData.length > 0) {
@@ -140,7 +143,10 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         initialColumns.forEach(col => row[col] = '');
         return row;
       });
-      return [...initialData, ...emptyRows];
+      const result = [...initialData, ...emptyRows];
+      console.log('✅ Final data array length:', result.length);
+      console.log('✅ First few rows of final data:', result.slice(0, 3));
+      return result;
     }
     
     // Only check for emergency draft if no initial data was provided
@@ -156,6 +162,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     }
     
     // Start with a reasonable number of rows, users can add more as needed
+    console.log('🔍 Creating empty rows as fallback');
     const minRows = 20;
     const emptyRows = Array.from({ length: minRows }, () => {
       const row: Record<string, string> = {};
@@ -344,7 +351,35 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       return Promise.resolve();
     }
     return autoForceSave();
-  }, [autoForceSave, currentRunsheetId]);
+  
+  // Handle changes to initialData prop (for uploaded runsheets)
+  useEffect(() => {
+    console.log('🔍 useEffect triggered for initialData change');
+    console.log('🔍 initialData length:', initialData?.length);
+    console.log('🔍 current data length:', data.length);
+    
+    if (initialData && initialData.length > 0) {
+      // Check if the current data is just empty rows
+      const hasRealData = data.some(row => Object.values(row).some(value => value.trim() !== ''));
+      
+      if (!hasRealData) {
+        console.log('✅ Updating data with initialData since current data is empty');
+        const minRows = 20;
+        const existingRows = initialData.length;
+        const emptyRows = Array.from({ length: Math.max(0, minRows - existingRows) }, () => {
+          const row: Record<string, string> = {};
+          initialColumns.forEach(col => row[col] = '');
+          return row;
+        });
+        const newData = [...initialData, ...emptyRows];
+        setData(newData);
+        console.log('✅ Data updated with', newData.length, 'total rows');
+      } else {
+        console.log('⚠️ Current data has content, not overriding with initialData');
+      }
+    }
+  }, [initialData, initialColumns]); // Only depend on initialData changes
+  }, [initialData, initialColumns]); // Only depend on initialData changes
 
   // Real-time sync disabled - using database-first approach for single user
   // No need for collaboration features since only one user per runsheet
