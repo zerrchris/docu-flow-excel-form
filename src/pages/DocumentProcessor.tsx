@@ -3162,20 +3162,16 @@ Image: [base64 image data]`;
                 const timestamp = new Date().toLocaleString();
                 const uniqueName = `${runsheetData.name} (Imported ${timestamp})`;
                 
-                navigate('/runsheet', { 
-                  state: { 
-                    runsheet: {
-                      id: `uploaded-${Date.now()}`, // Temporary ID for uploaded data
-                      name: uniqueName, // Use unique name to avoid conflicts
-                      columns: runsheetData.columns,
-                      data: runsheetData.rows,
-                      column_instructions: {}
-                    },
-                    clearActiveRunsheet: true, // Signal to clear active runsheet
-                    isFileUpload: true, // Additional flag to indicate this is from file upload
-                    preventAutoSave: true // Prevent auto-save conflicts
-                  } 
-                });
+                // Clear any existing runsheet data to ensure clean state
+                clearActiveRunsheet();
+                setSpreadsheetData([]);
+                setColumns([]);
+                setFormData({});
+                
+                // Set the uploaded data immediately
+                console.log('📥 Setting uploaded data immediately in DocumentProcessor');
+                setSpreadsheetData(runsheetData.rows || []);
+                setColumns(runsheetData.columns || []);
                 
                 toast({
                   title: "Runsheet loaded successfully",
