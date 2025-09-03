@@ -424,6 +424,12 @@ const DocumentProcessor: React.FC = () => {
             // Fix the mismatch: use the actual data keys as columns
             console.log('🔧 Fixing column mismatch by using data keys as columns');
             setColumns(firstRowKeys.filter(key => key.trim() !== ''));
+            
+            // Also set the data directly since the columns are correct now
+            setSpreadsheetData(selectedRunsheet.data);
+            
+            // Don't load runsheet columns later - we've already fixed them
+            return;
           }
         }
         
