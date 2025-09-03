@@ -45,7 +45,25 @@ const DEFAULT_EXTRACTION_INSTRUCTIONS: Record<string, string> = {
 
 const DocumentProcessor: React.FC = () => {
   // Hook to get active runsheet data  
-  const { activeRunsheet, setActiveRunsheet, clearActiveRunsheet, setCurrentRunsheet } = useActiveRunsheet();
+  const { activeRunsheet, setActiveRunsheet, clearActiveRunsheet, setCurrentRunsheet, hasActiveRunsheet } = useActiveRunsheet();
+  
+  // Check if we have working data (either active runsheet or emergency draft)
+  const hasWorkingRunsheet = () => {
+    if (hasActiveRunsheet) return true;
+    
+    // Check for emergency draft data
+    try {
+      const emergencyDraft = localStorage.getItem('emergencyDraft');
+      if (emergencyDraft) {
+        const draftData = JSON.parse(emergencyDraft);
+        return draftData?.data?.length > 0 || draftData?.name;
+      }
+    } catch (error) {
+      console.error('Error checking emergency draft:', error);
+    }
+    
+    return false;
+  };
   
   // View state
   const [isDocumentMode, setIsDocumentMode] = useState(false);
@@ -1554,9 +1572,9 @@ Image: [base64 image data]`;
   const addToSpreadsheet = async (dataToAdd?: Record<string, string>) => {
     console.log('📋 Starting addToSpreadsheet process');
     
-    // Check if we have an active runsheet - required for operation (same as brain button)
-    if (!activeRunsheet) {
-      console.log('❌ No active runsheet available');
+    // Check if we have an active runsheet or working data - required for operation
+    if (!hasWorkingRunsheet()) {
+      console.log('❌ No active runsheet or working data available');
       toast({
         title: "No Active Runsheet",
         description: "Please select a runsheet from your dashboard first, then return here to process documents.",
