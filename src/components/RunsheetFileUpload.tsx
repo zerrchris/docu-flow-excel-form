@@ -18,6 +18,7 @@ export const RunsheetFileUpload: React.FC<RunsheetFileUploadProps> = ({
   const [isDragOver, setIsDragOver] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [previewData, setPreviewData] = useState<any[][] | null>(null);
+  const [fullFileData, setFullFileData] = useState<any[][] | null>(null);
   const [selectedHeaderRow, setSelectedHeaderRow] = useState<number>(0);
   const [showPreview, setShowPreview] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -70,6 +71,9 @@ export const RunsheetFileUpload: React.FC<RunsheetFileUploadProps> = ({
         throw new Error('The file appears to be empty');
       }
 
+      // Store FULL file data for final processing
+      setFullFileData(jsonData as any[][]);
+      
       // Store preview data (first 10 rows max)
       const previewRows = jsonData.slice(0, 10) as any[][];
       setPreviewData(previewRows);
@@ -89,12 +93,12 @@ export const RunsheetFileUpload: React.FC<RunsheetFileUploadProps> = ({
   };
 
   const processFileWithSelectedHeaders = async () => {
-    if (!selectedFile || !previewData) return;
+    if (!selectedFile || !previewData || !fullFileData) return;
 
     setIsProcessing(true);
 
     try {
-      // Use the selected row as headers
+      // Use the selected row as headers from preview
       const headerRow = previewData[selectedHeaderRow];
       if (!headerRow || headerRow.length === 0) {
         throw new Error('The selected header row appears to be empty.');
@@ -111,8 +115,8 @@ export const RunsheetFileUpload: React.FC<RunsheetFileUploadProps> = ({
 
       console.log('📊 Using selected row as headers:', headers);
 
-      // Get data rows (skip all rows up to and including the header row)
-      const dataRows = previewData.slice(selectedHeaderRow + 1);
+      // Get data rows from FULL file data (skip all rows up to and including the header row)
+      const dataRows = fullFileData.slice(selectedHeaderRow + 1);
       
       // Convert rows to objects, filtering out completely empty rows
       const processedRows = dataRows
@@ -212,6 +216,7 @@ export const RunsheetFileUpload: React.FC<RunsheetFileUploadProps> = ({
     setSelectedFile(null);
     setShowPreview(false);
     setPreviewData(null);
+    setFullFileData(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
