@@ -153,7 +153,14 @@ export const RunsheetFileUpload: React.FC<RunsheetFileUploadProps> = ({
       console.log('📊 Processing complete:', {
         name: runsheetName,
         headers: validHeaders,
-        rowCount: processedRows.length
+        rowCount: processedRows.length,
+        firstRowSample: processedRows[0]
+      });
+
+      console.log('📊 About to call onFileSelected with:', {
+        name: runsheetName,
+        columns: validHeaders,
+        rows: processedRows
       });
 
       onFileSelected({

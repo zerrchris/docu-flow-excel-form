@@ -3043,7 +3043,10 @@ Image: [base64 image data]`;
           <div className="py-4">
             <RunsheetFileUpload 
               onFileSelected={async (runsheetData) => {
-                console.log('Runsheet file processed from DocumentProcessor:', runsheetData);
+                console.log('📥 Runsheet file processed from DocumentProcessor:', runsheetData);
+                console.log('📥 Columns received:', runsheetData.columns);
+                console.log('📥 Data sample:', runsheetData.rows?.slice(0, 2));
+                console.log('📥 First row keys:', runsheetData.rows?.[0] ? Object.keys(runsheetData.rows[0]) : 'No data');
                 setShowRunsheetUploadDialog(false);
                 
                 // Use the same logic as Dashboard upload
