@@ -60,15 +60,15 @@ const DocumentProcessor: React.FC = () => {
         activeRunsheetName: activeRunsheet?.name
       });
       
-      // If no active runsheet found, redirect to dashboard immediately
+      // If no active runsheet found, redirect to app immediately
       if (!hasActiveRunsheet && !activeRunsheet?.id) {
-        console.log('⚠️ No active runsheet found, redirecting to dashboard');
+        console.log('⚠️ No active runsheet found, redirecting to app');
         toast({
           title: "No Active Runsheet",
           description: "Please start a new runsheet or open an existing one first.",
           variant: "destructive",
         });
-        navigate('/dashboard');
+        navigate('/app');
         return;
       }
       
@@ -116,7 +116,7 @@ const DocumentProcessor: React.FC = () => {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <h2 className="text-lg font-semibold mb-2">Checking for active runsheet...</h2>
-          <p className="text-muted-foreground">Redirecting to dashboard...</p>
+          <p className="text-muted-foreground">Redirecting to app...</p>
         </div>
       </div>
     );
