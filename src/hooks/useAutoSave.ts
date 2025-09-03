@@ -134,15 +134,42 @@ export function useAutoSave({
         if (error) throw error;
         result = updateResult;
       } else {
-        // Create new runsheet
-        const { data: insertResult, error } = await supabase
-          .from('runsheets')
-          .insert(runsheetData)
-          .select('*')
-          .single();
+        // Create new runsheet - handle potential duplicate names
+        let attemptName = runsheetName.trim();
+        let attempt = 0;
+        let result;
+        
+        while (attempt < 5) { // Max 5 attempts to avoid infinite loop
+          try {
+            const { data: insertResult, error } = await supabase
+              .from('runsheets')
+              .insert({
+                ...runsheetData,
+                name: attemptName
+              })
+              .select('*')
+              .single();
 
-        if (error) throw error;
-        result = insertResult;
+            if (error) {
+              // If duplicate name error, try with a suffix
+              if (error.code === '23505' && error.message.includes('runsheets_user_id_name_key')) {
+                attempt++;
+                attemptName = `${runsheetName.trim()} (${attempt})`;
+                continue;
+              }
+              throw error;
+            }
+            
+            result = insertResult;
+            break;
+          } catch (err) {
+            if (attempt >= 4) throw err; // Re-throw on final attempt
+          }
+        }
+        
+        if (!result) {
+          throw new Error('Failed to create runsheet after multiple attempts');
+        }
       }
 
       // Update last saved state
