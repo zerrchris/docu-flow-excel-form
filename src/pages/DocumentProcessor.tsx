@@ -1660,6 +1660,7 @@ Image: [base64 image data]`;
         detail: {
           data: newData,
           rowIndex: targetRowIndex,
+          runsheetId: activeRunsheet?.id || 'working-runsheet',
           file: file || null,
           fileName: file?.name || null
         }

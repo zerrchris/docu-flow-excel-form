@@ -621,11 +621,17 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
           return;
         }
 
-        // Ensure we only process events for our current runsheet
-        if (eventRunsheetId && currentRunsheetId && eventRunsheetId !== currentRunsheetId) {
+        // For unsaved runsheets, be more lenient with ID matching
+        // Only skip if we have both IDs and they explicitly don't match
+        if (eventRunsheetId && currentRunsheetId && 
+            eventRunsheetId !== currentRunsheetId && 
+            !currentRunsheetId.startsWith('working-') &&
+            !eventRunsheetId.startsWith('working-')) {
           console.log('🔧 DEBUG: Event is for different runsheet, ignoring');
           return;
         }
+        
+        console.log('🔧 DEBUG: Proceeding with row addition for current working runsheet');
 
         setData(prevData => {
           console.log('🔧 DEBUG: ===== ADDING NEW ROW =====');
