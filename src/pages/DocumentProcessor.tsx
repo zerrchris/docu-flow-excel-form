@@ -2517,10 +2517,16 @@ Image: [base64 image data]`;
                     variant="default"
                     size="sm"
                     onClick={() => {
+                      console.log('🔍 Dashboard button clicked, hasUnsavedChanges:', hasUnsavedChanges);
+                      console.log('🔍 Current spreadsheet data length:', spreadsheetData.length);
+                      console.log('🔍 Current active runsheet:', activeRunsheet?.name);
+                      
                       if (hasUnsavedChanges) {
+                        console.log('🔍 Showing navigation dialog due to unsaved changes');
                         setPendingNavigation({ path: '/app' });
                         setShowNavigationDialog(true);
                       } else {
+                        console.log('🔍 No unsaved changes, navigating directly to dashboard');
                         navigate('/app');
                       }
                     }}
