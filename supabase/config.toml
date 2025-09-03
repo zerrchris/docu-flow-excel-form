@@ -31,7 +31,7 @@ verify_jwt = true
 [functions.admin-manage-subscription]
 verify_jwt = false
 [functions.analyze-document-advanced]
-verify_jwt = true
+verify_jwt = false
 [functions.analyze-document]
 verify_jwt = false
 [functions.analyze-lease-check]
