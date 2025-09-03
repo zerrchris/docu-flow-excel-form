@@ -2786,8 +2786,12 @@ Image: [base64 image data]`;
                     description: "Please wait while we save your changes.",
                   });
 
-                  // Force save and wait for completion
-                  await forceSave();
+                  // Dispatch the save event to EditableSpreadsheet and wait for completion
+                  const saveEvent = new CustomEvent('forceSaveRunsheet');
+                  window.dispatchEvent(saveEvent);
+                  
+                  // Wait a bit longer for the save to complete (since it's async)
+                  await new Promise(resolve => setTimeout(resolve, 2000));
                   
                   setShowNavigationDialog(false);
                   
