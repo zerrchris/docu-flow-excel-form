@@ -9,7 +9,26 @@ export interface ValidationResult {
 }
 
 /**
- * Check if a row is completely empty
+ * List of columns that should be ignored when checking if a row has data
+ * These are metadata/reference columns, not actual runsheet data
+ */
+const METADATA_COLUMNS = ['Document File Name'];
+
+/**
+ * Filter out metadata columns when checking row data
+ */
+const getDataColumns = (row: Record<string, string>): Record<string, string> => {
+  const filteredRow: Record<string, string> = {};
+  Object.entries(row).forEach(([key, value]) => {
+    if (!METADATA_COLUMNS.includes(key)) {
+      filteredRow[key] = value;
+    }
+  });
+  return filteredRow;
+};
+
+/**
+ * Check if a row is completely empty (ignoring metadata columns)
  */
 export const isRowEmpty = (row: Record<string, string>, hasLinkedDocument?: boolean): boolean => {
   // If there's a linked document, the row is not empty
@@ -17,7 +36,9 @@ export const isRowEmpty = (row: Record<string, string>, hasLinkedDocument?: bool
     return false;
   }
   
-  return Object.values(row).every(value => 
+  // Only check data columns, not metadata columns
+  const dataRow = getDataColumns(row);
+  return Object.values(dataRow).every(value => 
     !value || 
     value.toString().trim() === '' || 
     value.toString().trim().toLowerCase() === 'n/a'
@@ -25,7 +46,7 @@ export const isRowEmpty = (row: Record<string, string>, hasLinkedDocument?: bool
 };
 
 /**
- * Check if a row has any meaningful data
+ * Check if a row has any meaningful data (ignoring metadata columns)
  */
 export const hasRowData = (row: Record<string, string>, hasLinkedDocument?: boolean): boolean => {
   // If there's a linked document, the row has data
@@ -33,7 +54,9 @@ export const hasRowData = (row: Record<string, string>, hasLinkedDocument?: bool
     return true;
   }
   
-  return Object.values(row).some(value => 
+  // Only check data columns, not metadata columns
+  const dataRow = getDataColumns(row);
+  return Object.values(dataRow).some(value => 
     value && 
     value.toString().trim() !== '' && 
     value.toString().trim().toLowerCase() !== 'n/a'
@@ -111,10 +134,12 @@ export const validateRowForInsertion = (
 };
 
 /**
- * Get user-friendly description of what data exists in a row
+ * Get user-friendly description of what data exists in a row (ignoring metadata columns)
  */
 export const getRowDataSummary = (row: Record<string, string>): string => {
-  const nonEmptyFields = Object.entries(row)
+  // Only check data columns for the summary
+  const dataRow = getDataColumns(row);
+  const nonEmptyFields = Object.entries(dataRow)
     .filter(([_, value]) => value && value.toString().trim() !== '')
     .map(([key, _]) => key);
   
