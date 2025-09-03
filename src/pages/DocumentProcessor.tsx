@@ -258,8 +258,16 @@ const DocumentProcessor: React.FC = () => {
     const loadUserPreferences = async () => {
       // Don't load user preferences if we have a runsheet - runsheet columns take priority
       const selectedRunsheet = location.state?.runsheet;
+      const isUploadAction = searchParams.get('action') === 'upload';
+      
       if (selectedRunsheet && selectedRunsheet.columns) {
         console.log('Skipping user preferences load - using runsheet columns instead');
+        setIsLoadingPreferences(false);
+        return;
+      }
+      
+      if (isUploadAction) {
+        console.log('Skipping user preferences load - upload action detected');
         setIsLoadingPreferences(false);
         return;
       }
@@ -317,6 +325,15 @@ const DocumentProcessor: React.FC = () => {
         setIsLoadingPreferences(false);
       }
     };
+
+    // Check if default columns should be prevented (during uploads)
+    const preventDefaults = sessionStorage.getItem('prevent_default_columns');
+    if (preventDefaults === 'true') {
+      console.log('🚫 Preventing default column loading for upload');
+      sessionStorage.removeItem('prevent_default_columns');
+      setIsLoadingPreferences(false);
+      return;
+    }
 
     loadUserPreferences();
   }, []);
@@ -544,8 +561,13 @@ const DocumentProcessor: React.FC = () => {
       setSpreadsheetData([]);
       setFormData({});
       
-      // Prevent any automatic runsheet creation
+      // Prevent any automatic runsheet creation AND default column loading
       sessionStorage.setItem('prevent_default_runsheet_creation', 'true');
+      sessionStorage.setItem('prevent_default_columns', 'true');
+      
+      // Clear any columns to prevent conflicts with uploaded data
+      setColumns([]);
+      setColumnInstructions({});
       
       // Show the proper runsheet upload dialog (same as Dashboard)
       setShowRunsheetUploadDialog(true);
