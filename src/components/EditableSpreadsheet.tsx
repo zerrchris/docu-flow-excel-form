@@ -244,14 +244,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   const [showStorageDebug, setShowStorageDebug] = useState(false);
 
   // Resolve a reliable runsheet ID for document operations (inline viewer, linking)
-  const effectiveRunsheetId = currentRunsheetId || currentRunsheet?.id || (() => {
-    try {
-      const stored = localStorage.getItem('activeRunsheet');
-      return stored ? JSON.parse(stored).id : '';
-    } catch (e) {
-      return '';
-    }
-  })();
+  const effectiveRunsheetId = currentRunsheet?.id || '';
 
   // Helper function to update document map and notify parent
   const updateDocumentMap = (newMap: Map<number, DocumentRecord>) => {
@@ -284,14 +277,14 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   const [showInsertionPreview, setShowInsertionPreview] = useState(false);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Initialize auto-save hook
+  // Initialize auto-save hook - DISABLED temporarily to fix duplicate key errors
   const { save: autoSave, forceSave: autoForceSave, isSaving: autoSaving } = useAutoSave({
-    runsheetId: currentRunsheetId,
-    runsheetName: runsheetName === 'Untitled Runsheet' && currentRunsheet?.name ? currentRunsheet.name : runsheetName,
-    columns,
-    data,
-    columnInstructions,
-    userId: user?.id,
+    runsheetId: null, // DISABLED: currentRunsheetId,
+    runsheetName: 'DISABLED_AUTO_SAVE', // Prevent any auto-save attempts
+    columns: [],
+    data: [],
+    columnInstructions: {},
+    userId: null, // DISABLED: user?.id,
     debounceMs: 1000, // Save 1 second after last change
     onSaveStart: () => {
       setAutoSaveStatus('saving');
