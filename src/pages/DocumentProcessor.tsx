@@ -52,25 +52,47 @@ const DocumentProcessor: React.FC = () => {
   
   // Check if we have working data (either active runsheet or emergency draft)
   const hasWorkingRunsheet = () => {
-    console.log('🔍 Checking for working runsheet:', {
+    console.log('🔍 hasWorkingRunsheet check:', {
       hasActiveRunsheet,
-      activeRunsheet: activeRunsheet?.id,
-      activeRunsheetName: activeRunsheet?.name
+      activeRunsheetId: activeRunsheet?.id,
+      activeRunsheetName: activeRunsheet?.name,
+      activeRunsheetData: activeRunsheet?.data?.length,
+      spreadsheetDataLength: spreadsheetData?.length
     });
     
-    if (hasActiveRunsheet) {
+    // First check if we have an active runsheet
+    if (hasActiveRunsheet && activeRunsheet?.id) {
       console.log('✅ Active runsheet found via hook');
       return true;
     }
     
-    // Check for emergency draft data (corrected key name)
+    // Check if we have spreadsheet data loaded (this is the key check for unsaved runsheets)
+    if (spreadsheetData && spreadsheetData.length > 0) {
+      const hasAnyData = spreadsheetData.some(row => 
+        Object.values(row || {}).some(value => value && value.toString().trim() !== '')
+      );
+      if (hasAnyData || columns.length > 0) {
+        console.log('✅ Found working spreadsheet data, enabling document processor');
+        return true;
+      }
+    }
+    
+    // Check for emergency draft data
     try {
       const emergencyDraft = localStorage.getItem('runsheet-emergency-draft');
       if (emergencyDraft) {
         const draftData = JSON.parse(emergencyDraft);
         const hasData = draftData?.data?.length > 0 || draftData?.name;
-        console.log('📄 Emergency draft check:', { hasData, draftName: draftData?.name });
-        return hasData;
+        console.log('📄 Emergency draft details:', { 
+          hasData, 
+          draftName: draftData?.name,
+          dataLength: draftData?.data?.length 
+        });
+        
+        if (hasData) {
+          console.log('✅ Emergency draft has working data');
+          return true;
+        }
       }
     } catch (error) {
       console.error('Error checking emergency draft:', error);
