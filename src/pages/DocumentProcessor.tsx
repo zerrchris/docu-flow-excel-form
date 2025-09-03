@@ -3153,25 +3153,29 @@ Image: [base64 image data]`;
                 console.log('📥 Runsheet file processed from DocumentProcessor:', runsheetData);
                 console.log('📥 Columns received:', runsheetData.columns);
                 console.log('📥 Data sample:', runsheetData.rows?.slice(0, 2));
-                console.log('📥 First row keys:', runsheetData.rows?.[0] ? Object.keys(runsheetData.rows[0]) : 'No data');
                 console.log('📥 Total rows count:', runsheetData.rows?.length);
-                console.log('📥 All data keys in first row:', runsheetData.rows?.[0]);
                 setShowRunsheetUploadDialog(false);
                 
-                // Use the same logic as Dashboard upload
+                // Create a proper runsheet name with timestamp
                 const timestamp = new Date().toLocaleString();
                 const uniqueName = `${runsheetData.name} (Imported ${timestamp})`;
                 
-                // Clear any existing runsheet data to ensure clean state
-                clearActiveRunsheet();
-                setSpreadsheetData([]);
-                setColumns([]);
-                setFormData({});
-                
-                // Set the uploaded data immediately
-                console.log('📥 Setting uploaded data immediately in DocumentProcessor');
-                setSpreadsheetData(runsheetData.rows || []);
-                setColumns(runsheetData.columns || []);
+                // Navigate to clean runsheet page with the uploaded data
+                navigate('/runsheet', { 
+                  state: { 
+                    runsheet: {
+                      id: `uploaded-${Date.now()}`, // Temporary ID for uploaded data
+                      name: uniqueName,
+                      columns: runsheetData.columns,
+                      data: runsheetData.rows,
+                      column_instructions: {}
+                    },
+                    clearActiveRunsheet: true,
+                    isFileUpload: true,
+                    preventAutoSave: true
+                  },
+                  replace: true // Replace current URL to remove ?action=upload
+                });
                 
                 toast({
                   title: "Runsheet loaded successfully",
