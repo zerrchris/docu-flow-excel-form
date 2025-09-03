@@ -403,7 +403,29 @@ const DocumentProcessor: React.FC = () => {
         console.log('📊 Data being set:', selectedRunsheet.data);
         console.log('📊 Data length:', selectedRunsheet.data.length);
         console.log('📊 First few rows:', selectedRunsheet.data.slice(0, 3));
-        setSpreadsheetData(selectedRunsheet.data);
+        
+        // Convert the data to match the column structure if needed
+        const convertedData = selectedRunsheet.data.map((row: any) => {
+          // Create a new row object with the correct column keys
+          const newRow: Record<string, string> = {};
+          
+          // If columns are different from current ones, map the data correctly
+          if (selectedRunsheet.columns) {
+            selectedRunsheet.columns.forEach((column: string) => {
+              newRow[column] = row[column] || '';
+            });
+          } else {
+            // Fallback to copying all properties
+            Object.keys(row).forEach(key => {
+              newRow[key] = row[key] || '';
+            });
+          }
+          
+          return newRow;
+        });
+        
+        console.log('📊 Converted data sample:', convertedData.slice(0, 2));
+        setSpreadsheetData(convertedData);
         
         // For uploaded runsheets, disable auto-save to prevent conflicts
         if (preventAutoSave) {
