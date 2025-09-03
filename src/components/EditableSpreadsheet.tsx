@@ -128,12 +128,27 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   
   const [columns, setColumns] = useState<string[]>(() => ensureDocumentColumns(initialColumns));
   const [data, setData] = useState<Record<string, string>[]>(() => {
-    // First check for emergency draft in localStorage
+    console.log('🔍 EditableSpreadsheet initializing with initialData:', initialData?.length, 'rows');
+    
+    // If we have meaningful initial data (uploaded data), use it directly
+    if (initialData && initialData.length > 0) {
+      console.log('✅ Using provided initialData for spreadsheet');
+      const minRows = 20;
+      const existingRows = initialData.length;
+      const emptyRows = Array.from({ length: Math.max(0, minRows - existingRows) }, () => {
+        const row: Record<string, string> = {};
+        initialColumns.forEach(col => row[col] = '');
+        return row;
+      });
+      return [...initialData, ...emptyRows];
+    }
+    
+    // Only check for emergency draft if no initial data was provided
     try {
       const emergencyDraft = localStorage.getItem('runsheet-emergency-draft');
       if (emergencyDraft) {
         const draft = JSON.parse(emergencyDraft);
-        console.log('🔄 Restoring emergency draft from localStorage');
+        console.log('🔄 Restoring emergency draft from localStorage (no initialData)');
         return draft.data || [];
       }
     } catch (error) {
@@ -142,13 +157,12 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     
     // Start with a reasonable number of rows, users can add more as needed
     const minRows = 20;
-    const existingRows = initialData.length;
-    const emptyRows = Array.from({ length: Math.max(0, minRows - existingRows) }, () => {
+    const emptyRows = Array.from({ length: minRows }, () => {
       const row: Record<string, string> = {};
       initialColumns.forEach(col => row[col] = '');
       return row;
     });
-    return [...initialData, ...emptyRows];
+    return emptyRows;
   });
 
   // Helper function to ensure data has minimum number of rows
