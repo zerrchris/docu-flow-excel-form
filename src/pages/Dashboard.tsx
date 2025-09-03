@@ -387,23 +387,27 @@ const Dashboard: React.FC = () => {
                 }
                 
                 // Clear any existing active runsheet and load uploaded data
+                const timestamp = new Date().toLocaleString();
+                const uniqueName = `${runsheetData.name} (Imported ${timestamp})`;
+                
                 navigate('/runsheet', { 
                   state: { 
                     runsheet: {
                       id: `uploaded-${Date.now()}`, // Temporary ID for uploaded data
-                      name: runsheetData.name,
+                      name: uniqueName, // Use unique name to avoid conflicts
                       columns: runsheetData.columns,
                       data: runsheetData.rows,
                       column_instructions: {}
                     },
                     clearActiveRunsheet: true, // Signal to clear active runsheet
-                    isFileUpload: true // Additional flag to indicate this is from file upload
+                    isFileUpload: true, // Additional flag to indicate this is from file upload
+                    preventAutoSave: true // Prevent auto-save conflicts
                   } 
                 });
                 
                 toast({
                   title: "Runsheet loaded successfully",
-                  description: `Previous work saved. Loaded "${runsheetData.name}" with ${runsheetData.rows.length} rows and ${runsheetData.columns.length} columns.`
+                  description: `Previous work saved. Loaded "${uniqueName}" with ${runsheetData.rows.length} rows and ${runsheetData.columns.length} columns.`
                 });
               }}
               onCancel={() => setShowUploadDialog(false)}

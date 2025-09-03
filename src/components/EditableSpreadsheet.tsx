@@ -315,6 +315,23 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     }
   });
 
+  // Wrapper functions to prevent auto-save for uploaded runsheets
+  const safeAutoSave = useCallback(() => {
+    if (currentRunsheetId?.startsWith('uploaded-')) {
+      console.log('🚫 Auto-save disabled for uploaded runsheet');
+      return Promise.resolve();
+    }
+    return autoSave();
+  }, [autoSave, currentRunsheetId]);
+
+  const safeAutoForceSave = useCallback(() => {
+    if (currentRunsheetId?.startsWith('uploaded-')) {
+      console.log('🚫 Force auto-save disabled for uploaded runsheet');
+      return Promise.resolve();
+    }
+    return autoForceSave();
+  }, [autoForceSave, currentRunsheetId]);
+
   // Real-time sync disabled - using database-first approach for single user
   // No need for collaboration features since only one user per runsheet
 
@@ -342,7 +359,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         }
         
         // Use force save for document upload requests  
-        await autoForceSave();
+        await safeAutoForceSave();
         
         let runsheetIdToReturn = currentRunsheetId;
         
@@ -452,7 +469,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     // Handle Ctrl+S save event from DocumentProcessor
     const handleSaveEvent = async () => {
       if (user) {
-        await autoForceSave();
+        await safeAutoForceSave();
       }
     };
     
@@ -601,7 +618,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
           if (payload['Storage Path']) {
             console.log('🔧 AUTO_SAVE: Triggering immediate auto-save for batch processing');
             setTimeout(() => {
-              autoSave();
+              safeAutoSave();
             }, 200); // Short delay to allow state updates to complete
           }
           
@@ -1495,7 +1512,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       // Immediate auto-save for critical changes, delayed for regular edits
       // This ensures deletions and major changes are saved immediately
       const timeoutId = setTimeout(() => {
-        autoSave();
+        safeAutoSave();
       }, 2000); // Reduced from 30 seconds to 2 seconds for faster saves
       
       return () => clearTimeout(timeoutId);
@@ -1508,7 +1525,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     
     const interval = setInterval(() => {
       if (hasUnsavedChanges) {
-        autoSave();
+        safeAutoSave();
       }
     }, 30000); // Auto-save every 30 seconds if there are changes
 
@@ -1545,7 +1562,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         navigator.sendBeacon(saveUrl, payload);
         
         // Also try regular auto-save
-        autoForceSave();
+        safeAutoForceSave();
       }
     };
 
@@ -1562,7 +1579,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
           documentMap: Array.from(documentMap.entries()),
           timestamp: Date.now()
         }));
-        autoForceSave();
+        safeAutoForceSave();
       } else if (!document.hidden) {
         // When page becomes visible again, check for preserved state
         const preservedState = sessionStorage.getItem('preserveRunsheetState');

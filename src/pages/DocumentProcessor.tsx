@@ -362,11 +362,13 @@ const DocumentProcessor: React.FC = () => {
   useEffect(() => {
     const selectedRunsheet = location.state?.runsheet;
     const shouldClearActive = location.state?.clearActiveRunsheet;
+    const preventAutoSave = location.state?.preventAutoSave;
     
     console.log('🔄 DocumentProcessor: Navigation state effect triggered', {
       selectedRunsheet: selectedRunsheet?.id,
       selectedRunsheetName: selectedRunsheet?.name,
       shouldClearActive,
+      preventAutoSave,
       loadedRef: loadedRunsheetRef.current,
       hasSpreadsheetData: spreadsheetData.length > 0,
       activeRunsheetName: activeRunsheet?.name,
@@ -396,9 +398,15 @@ const DocumentProcessor: React.FC = () => {
       }
       
       // Only load runsheet data if we don't already have spreadsheet data (to prevent data loss)
-      if (selectedRunsheet.data && Array.isArray(selectedRunsheet.data) && spreadsheetData.length === 0) {
-        console.log('📊 Loading runsheet data (spreadsheet is empty)');
+      if (selectedRunsheet.data && Array.isArray(selectedRunsheet.data)) {
+        console.log('📊 Loading uploaded runsheet data directly');
         setSpreadsheetData(selectedRunsheet.data);
+        
+        // For uploaded runsheets, disable auto-save to prevent conflicts
+        if (preventAutoSave) {
+          console.log('🚫 Auto-save disabled for uploaded runsheet');
+          setHasUnsavedChanges(false); // Prevent save attempts
+        }
       } else if (spreadsheetData.length > 0) {
         console.log('⚠️ Skipping runsheet data load - preserving existing spreadsheet data to prevent loss');
       }
@@ -407,13 +415,18 @@ const DocumentProcessor: React.FC = () => {
       if (selectedRunsheet.columns && Array.isArray(selectedRunsheet.columns)) {
         console.log('📝 Loading runsheet columns (checking if safe to override):', selectedRunsheet.columns);
         
-        // Only override columns if the user hasn't made significant changes
-        const hasUserChanges = spreadsheetData.length > 0 || Object.keys(formData).length > 0;
-        if (!hasUserChanges) {
-          console.log('✅ Safe to load runsheet columns - no user changes detected');
+        // For uploaded runsheets, always load the columns
+        if (preventAutoSave || spreadsheetData.length === 0) {
+          console.log('✅ Loading uploaded runsheet columns');
           setColumns(selectedRunsheet.columns);
-          
-          // Update user preferences to match the runsheet columns
+        } else {
+          // Only override columns if the user hasn't made significant changes
+          const hasUserChanges = spreadsheetData.length > 0 || Object.keys(formData).length > 0;
+          if (!hasUserChanges) {
+            console.log('✅ Safe to load runsheet columns - no user changes detected');
+            setColumns(selectedRunsheet.columns);
+            
+            // Update user preferences to match the runsheet columns
           const updatePreferences = async () => {
             try {
               const { data: { user } } = await supabase.auth.getUser();
@@ -443,6 +456,7 @@ const DocumentProcessor: React.FC = () => {
         } else {
           console.log('⚠️ Skipping column override - preserving user changes');
         }
+      }
       }
       
       // Load column instructions if available and safe
