@@ -23,7 +23,7 @@ const Dashboard: React.FC = () => {
   const [showOpenDialog, setShowOpenDialog] = useState(false);
   const [showColumnPreferences, setShowColumnPreferences] = useState(false);
   const [showNameNewRunsheetDialog, setShowNameNewRunsheetDialog] = useState(false);
-  const [showUploadDialog, setShowUploadDialog] = useState(false);
+  
   const [newRunsheetName, setNewRunsheetName] = useState('');
   const navigate = useNavigate();
   const { activeRunsheet } = useActiveRunsheet();
@@ -109,7 +109,7 @@ const Dashboard: React.FC = () => {
       title: "Upload Runsheet",
       description: "Upload files from your device",
       icon: Upload,
-      action: "upload-dialog"
+      path: "/runsheet?action=upload"
     },
     {
       title: "Google Drive",
@@ -243,8 +243,6 @@ const Dashboard: React.FC = () => {
                     setShowOpenDialog(true);
                   } else if (option.action === "column-preferences") {
                     setShowColumnPreferences(true);
-                  } else if (option.action === "upload-dialog") {
-                    setShowUploadDialog(true);
                   } else if (option.action === "new-runsheet") {
                     setShowNameNewRunsheetDialog(true);
                   } else if (option.path) {
@@ -270,8 +268,6 @@ const Dashboard: React.FC = () => {
                           setShowOpenDialog(true);
                         } else if (option.action === "column-preferences") {
                           setShowColumnPreferences(true);
-                        } else if (option.action === "upload-dialog") {
-                          setShowUploadDialog(true);
                         } else if (option.action === "new-runsheet") {
                           setShowNameNewRunsheetDialog(true);
                         } else if (option.path) {
@@ -354,67 +350,6 @@ const Dashboard: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Upload Dialog */}
-      <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Upload Runsheet Files</DialogTitle>
-            <DialogDescription>
-              Upload Excel, CSV, or other document files to create or update a runsheet.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <RunsheetFileUpload 
-              onFileSelected={async (runsheetData) => {
-                console.log('Runsheet file processed:', runsheetData);
-                setShowUploadDialog(false);
-                
-                // First, trigger auto-save of any current runsheet data
-                try {
-                  // Dispatch event to trigger auto-save before switching
-                  const saveEvent = new CustomEvent('saveBeforeUpload', {
-                    detail: { waitForSave: true }
-                  });
-                  window.dispatchEvent(saveEvent);
-                  
-                  // Wait for auto-save to complete
-                  await new Promise(resolve => setTimeout(resolve, 1000));
-                  
-                  console.log('✅ Auto-save completed before upload');
-                } catch (error) {
-                  console.error('⚠️ Auto-save failed before upload:', error);
-                  // Continue anyway - don't block the upload
-                }
-                
-                // Clear any existing active runsheet and load uploaded data
-                const timestamp = new Date().toLocaleString();
-                const uniqueName = `${runsheetData.name} (Imported ${timestamp})`;
-                
-                navigate('/runsheet', { 
-                  state: { 
-                    runsheet: {
-                      id: `uploaded-${Date.now()}`, // Temporary ID for uploaded data
-                      name: uniqueName, // Use unique name to avoid conflicts
-                      columns: runsheetData.columns,
-                      data: runsheetData.rows,
-                      column_instructions: {}
-                    },
-                    clearActiveRunsheet: true, // Signal to clear active runsheet
-                    isFileUpload: true, // Additional flag to indicate this is from file upload
-                    preventAutoSave: true // Prevent auto-save conflicts
-                  } 
-                });
-                
-                toast({
-                  title: "Runsheet loaded successfully",
-                  description: `Previous work saved. Loaded "${uniqueName}" with ${runsheetData.rows.length} rows and ${runsheetData.columns.length} columns.`
-                });
-              }}
-              onCancel={() => setShowUploadDialog(false)}
-            />
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   </SubscriptionGuard>
   );
