@@ -169,6 +169,13 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       console.error('Error loading emergency draft:', error);
     }
     
+    // Prevent default rows creation if upload action is active
+    const preventDefault = sessionStorage.getItem('prevent_default_runsheet_creation');
+    if (preventDefault === 'true') {
+      console.log('🚫 Preventing default rows creation for upload');
+      return [];
+    }
+    
     // Start with a reasonable number of rows, users can add more as needed
     console.log('🔍 Creating empty rows as fallback');
     const minRows = 20;

@@ -3095,7 +3095,13 @@ Image: [base64 image data]`;
                   description: `Loaded "${uniqueName}" with ${runsheetData.rows.length} rows and ${runsheetData.columns.length} columns.`
                 });
               }}
-              onCancel={() => setShowRunsheetUploadDialog(false)}
+              onCancel={() => {
+                setShowRunsheetUploadDialog(false);
+                
+                // When upload is canceled, go back to dashboard instead of leaving broken state
+                console.log('Upload canceled, redirecting to dashboard');
+                navigate('/dashboard');
+              }}
             />
           </div>
         </DialogContent>
