@@ -74,15 +74,81 @@ export const RunsheetFileUpload: React.FC<RunsheetFileUploadProps> = ({
       let headerRowIndex = 0;
       let headers: string[] = [];
       
-      // Look for the first row that has substantial data (more than 2 non-empty cells)
-      for (let i = 0; i < Math.min(10, jsonData.length); i++) {
+      // Common runsheet column patterns to help identify the header row
+      const commonRunsheetColumns = [
+        'recording', 'instrument', 'date', 'record', 'grantor', 'grantee', 
+        'description', 'comment', 'book', 'page', 'legal', 'type', 'info'
+      ];
+      
+      // Look for the row that looks most like actual column headers
+      let bestHeaderScore = 0;
+      let bestHeaderIndex = 0;
+      
+      for (let i = 0; i < Math.min(15, jsonData.length); i++) {
         const row = jsonData[i] as any[];
+        if (!row) continue;
+        
         const nonEmptyCount = row.filter(cell => cell && cell.toString().trim() !== '').length;
         
-        if (nonEmptyCount >= 3) { // At least 3 non-empty cells to be considered a header
-          headers = row.map(cell => cell ? cell.toString().trim() : '');
-          headerRowIndex = i;
-          break;
+        // Must have at least 4 non-empty cells to be considered
+        if (nonEmptyCount >= 4) {
+          let score = 0;
+          
+          // Check how many cells look like column headers
+          row.forEach(cell => {
+            if (cell && typeof cell === 'string') {
+              const cellText = cell.toString().toLowerCase().trim();
+              
+              // Score based on length (good headers are usually 5-30 characters)
+              if (cellText.length >= 4 && cellText.length <= 30) {
+                score += 1;
+              }
+              
+              // Bonus points for containing common runsheet terms
+              commonRunsheetColumns.forEach(term => {
+                if (cellText.includes(term)) {
+                  score += 3;
+                }
+              });
+              
+              // Bonus for multiple words (typical header pattern)
+              if (cellText.includes(' ') || cellText.includes('_')) {
+                score += 1;
+              }
+              
+              // Penalty for very short single words or numbers only
+              if (cellText.length < 3 || /^\d+$/.test(cellText)) {
+                score -= 1;
+              }
+            }
+          });
+          
+          console.log(`📊 Row ${i + 1} header score: ${score}, content:`, row.slice(0, 5));
+          
+          if (score > bestHeaderScore) {
+            bestHeaderScore = score;
+            bestHeaderIndex = i;
+          }
+        }
+      }
+      
+      // Use the best scoring row as headers
+      if (bestHeaderScore > 0) {
+        headerRowIndex = bestHeaderIndex;
+        headers = (jsonData[headerRowIndex] as any[]).map(cell => 
+          cell ? cell.toString().trim() : ''
+        );
+      } else {
+        // Fallback: find first row with substantial data
+        for (let i = 0; i < Math.min(10, jsonData.length); i++) {
+          const row = jsonData[i] as any[];
+          const nonEmptyCount = row.filter(cell => cell && cell.toString().trim() !== '').length;
+          
+          if (nonEmptyCount >= 3) {
+            headers = row.map(cell => cell ? cell.toString().trim() : '');
+            headerRowIndex = i;
+            break;
+          }
         }
       }
 
