@@ -214,6 +214,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   const [isDragging, setIsDragging] = useState(false);
   const [copiedData, setCopiedData] = useState<string[][] | null>(null);
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
+  const [isLoadingColumnWidths, setIsLoadingColumnWidths] = useState(false);
   const [rowHeights, setRowHeights] = useState<Record<number, number>>({});
   const [resizing, setResizing] = useState<{column: string, startX: number, startWidth: number} | null>(null);
   const [resizingRow, setResizingRow] = useState<{rowIndex: number, startY: number, startHeight: number} | null>(null);
@@ -1110,6 +1111,27 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
 
     loadDocuments();
   }, [user, currentRunsheetId]); // Removed isSaving from dependency array
+
+  // Load column width preferences when runsheet changes
+  useEffect(() => {
+    const loadColumnWidthPreferences = async () => {
+      if (!user || !currentRunsheetId) return;
+      
+      setIsLoadingColumnWidths(true);
+      try {
+        console.log('Loading column width preferences for runsheet:', currentRunsheetId);
+        const preferences = await ColumnWidthPreferencesService.loadPreferences(currentRunsheetId);
+        console.log('✅ Loaded column width preferences:', preferences);
+        setColumnWidths(preferences);
+      } catch (error) {
+        console.error('Error loading column width preferences:', error);
+      } finally {
+        setIsLoadingColumnWidths(false);
+      }
+    };
+
+    loadColumnWidthPreferences();
+  }, [user, currentRunsheetId]);
 
   // Listen for document record creation events to refresh the document map
   useEffect(() => {
@@ -3292,7 +3314,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         ColumnWidthPreferencesService.saveColumnWidth(
           resizing.column,
           newWidth,
-          currentRunsheet?.id
+          currentRunsheetId
         );
       }
       
@@ -4148,8 +4170,8 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   const resetColumnWidths = useCallback(async () => {
     try {
       // Clear saved preferences
-      if (currentRunsheet?.id) {
-        await ColumnWidthPreferencesService.deleteRunsheetPreferences(currentRunsheet.id);
+      if (currentRunsheetId) {
+        await ColumnWidthPreferencesService.deleteRunsheetPreferences(currentRunsheetId);
       }
       
       // Reset local state
