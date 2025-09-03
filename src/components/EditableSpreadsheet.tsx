@@ -2220,10 +2220,25 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     setIsLoading(true);
     try {
       console.log('Fetching runsheets from database...');
+      
+      // Get fresh session to ensure we're authenticated
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error('Session error:', sessionError);
+        throw new Error('Authentication error: ' + sessionError.message);
+      }
+      
+      if (!session) {
+        throw new Error('No active session found');
+      }
+      
+      console.log('Session confirmed, user ID:', session.user.id);
+      
       const { data: runsheets, error } = await supabase
         .from('runsheets')
-        .select('*')
-        .eq('user_id', user.id)
+        .select('id, name, created_at, updated_at, columns, data, column_instructions')
+        .eq('user_id', session.user.id)
         .order('updated_at', { ascending: false });
 
       if (error) {
@@ -2238,7 +2253,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       console.error('Error in fetchSavedRunsheets:', error);
       toast({
         title: "Failed to load runsheets",
-        description: error.message,
+        description: error.message || 'An unexpected error occurred',
         variant: "destructive",
       });
     } finally {
