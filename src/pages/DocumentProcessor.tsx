@@ -2779,13 +2779,24 @@ Image: [base64 image data]`;
             <Button 
               variant="default" 
               onClick={async () => {
-                // Save the runsheet first, then navigate
-                const saveEvent = new CustomEvent('forceSaveRunsheet');
-                window.dispatchEvent(saveEvent);
-                
-                // Small delay to allow save to complete
-                setTimeout(() => {
+                try {
+                  // Show loading state
+                  toast({
+                    title: "Saving runsheet...",
+                    description: "Please wait while we save your changes.",
+                  });
+
+                  // Force save and wait for completion
+                  await forceSave();
+                  
                   setShowNavigationDialog(false);
+                  
+                  toast({
+                    title: "Runsheet saved",
+                    description: "Your changes have been saved successfully.",
+                  });
+
+                  // Now navigate
                   if (pendingNavigation) {
                     if (pendingNavigation.path === 'new-runsheet') {
                       startNewRunsheetSimple();
@@ -2796,7 +2807,15 @@ Image: [base64 image data]`;
                     }
                     setPendingNavigation(null);
                   }
-                }, 500);
+                } catch (error) {
+                  console.error('Failed to save runsheet:', error);
+                  toast({
+                    title: "Save failed",
+                    description: "Failed to save your changes. Please try again.",
+                    variant: "destructive"
+                  });
+                  // Keep dialog open so user can try again
+                }
               }}
               className="w-full sm:w-auto sm:min-w-[140px]"
             >
