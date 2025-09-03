@@ -3174,7 +3174,7 @@ Image: [base64 image data]`;
                 
                 // When upload is canceled, go back to dashboard instead of leaving broken state
                 console.log('Upload canceled, redirecting to dashboard');
-                navigate('/dashboard');
+                navigate('/app');
               }}
             />
           </div>
