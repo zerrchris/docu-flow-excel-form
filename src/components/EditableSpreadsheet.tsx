@@ -448,6 +448,15 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     
     // Handle new runsheet creation from Dashboard
     const handleDashboardNewRunsheet = (event: CustomEvent) => {
+      // Check if we're in upload mode - if so, ignore this event
+      const isUploadMode = window.location.search.includes('action=upload');
+      const preventCreation = sessionStorage.getItem('prevent_default_runsheet_creation');
+      
+      if (isUploadMode || preventCreation === 'true') {
+        console.log('🚫 Ignoring createNewRunsheetFromDashboard - upload mode active');
+        return;
+      }
+      
       const { name, columns: newColumns, instructions } = event.detail;
       
       // Create the new runsheet using the same logic as the + button
