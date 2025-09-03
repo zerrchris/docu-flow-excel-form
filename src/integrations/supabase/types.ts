@@ -41,6 +41,54 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_usage_analytics: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          estimated_cost_usd: number | null
+          function_name: string
+          id: string
+          input_tokens: number | null
+          model_used: string
+          output_tokens: number | null
+          request_payload: Json | null
+          response_payload: Json | null
+          success: boolean
+          total_tokens: number | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          estimated_cost_usd?: number | null
+          function_name: string
+          id?: string
+          input_tokens?: number | null
+          model_used: string
+          output_tokens?: number | null
+          request_payload?: Json | null
+          response_payload?: Json | null
+          success?: boolean
+          total_tokens?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          estimated_cost_usd?: number | null
+          function_name?: string
+          id?: string
+          input_tokens?: number | null
+          model_used?: string
+          output_tokens?: number | null
+          request_payload?: Json | null
+          response_payload?: Json | null
+          success?: boolean
+          total_tokens?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       documents: {
         Row: {
           content_type: string | null
@@ -396,7 +444,21 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      ai_usage_summary: {
+        Row: {
+          avg_cost_per_request: number | null
+          function_name: string | null
+          model_used: string | null
+          request_count: number | null
+          total_estimated_cost: number | null
+          total_input_tokens: number | null
+          total_output_tokens: number | null
+          total_tokens: number | null
+          usage_date: string | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       generate_document_filename: {
