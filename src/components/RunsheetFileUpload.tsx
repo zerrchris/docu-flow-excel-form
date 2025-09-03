@@ -54,46 +54,94 @@ export const RunsheetFileUpload: React.FC<RunsheetFileUploadProps> = ({
       const firstSheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[firstSheetName];
       
-      // Convert to JSON, treating first row as headers
-      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+      console.log('📊 Processing Excel file:', file.name);
+      console.log('📊 Worksheet:', firstSheetName);
+      
+      // Convert to JSON with more flexible parsing
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { 
+        header: 1,
+        defval: '', // Use empty string for empty cells
+        raw: false  // Convert everything to strings
+      });
+      
+      console.log('📊 Raw JSON data:', jsonData);
       
       if (jsonData.length === 0) {
         throw new Error('The file appears to be empty');
       }
 
-      // Extract headers (first row) and data rows
-      const headers = jsonData[0] as string[];
-      const rows = jsonData.slice(1) as string[][];
+      // Find the header row - it might not be the first row
+      let headerRowIndex = 0;
+      let headers: string[] = [];
+      
+      // Look for the first row that has substantial data (more than 2 non-empty cells)
+      for (let i = 0; i < Math.min(10, jsonData.length); i++) {
+        const row = jsonData[i] as any[];
+        const nonEmptyCount = row.filter(cell => cell && cell.toString().trim() !== '').length;
+        
+        if (nonEmptyCount >= 3) { // At least 3 non-empty cells to be considered a header
+          headers = row.map(cell => cell ? cell.toString().trim() : '');
+          headerRowIndex = i;
+          break;
+        }
+      }
 
       if (!headers || headers.length === 0) {
         throw new Error('No column headers found in the file');
       }
 
-      // Convert rows to objects
-      const dataRows = rows
-        .filter(row => row && row.some(cell => cell !== undefined && cell !== ''))
-        .map(row => {
+      console.log('📊 Found headers at row', headerRowIndex + 1, ':', headers);
+
+      // Get data rows (everything after the header row)
+      const dataRows = jsonData.slice(headerRowIndex + 1) as any[][];
+      
+      // Convert rows to objects, filtering out completely empty rows
+      const processedRows = dataRows
+        .filter(row => {
+          // Keep row if it has at least one non-empty cell
+          return row && row.some(cell => cell && cell.toString().trim() !== '');
+        })
+        .map((row, index) => {
           const rowObj: Record<string, string> = {};
-          headers.forEach((header, index) => {
+          headers.forEach((header, colIndex) => {
             if (header) {
-              rowObj[header] = row[index]?.toString() || '';
+              // Convert cell value to string, handling various data types
+              const cellValue = row[colIndex];
+              if (cellValue !== undefined && cellValue !== null) {
+                rowObj[header] = cellValue.toString().trim();
+              } else {
+                rowObj[header] = '';
+              }
             }
           });
           return rowObj;
         });
 
+      // Filter out headers that are completely empty
+      const validHeaders = headers.filter((header, index) => {
+        if (!header) return false;
+        // Keep header if at least one row has data in this column
+        return processedRows.some(row => row[header] && row[header].trim() !== '');
+      });
+
       // Create runsheet name from filename (remove extension)
       const runsheetName = file.name.replace(/\.(xlsx|xls|csv)$/i, '');
 
+      console.log('📊 Processing complete:', {
+        name: runsheetName,
+        headers: validHeaders,
+        rowCount: processedRows.length
+      });
+
       onFileSelected({
         name: runsheetName,
-        columns: headers.filter(h => h), // Remove empty headers
-        rows: dataRows
+        columns: validHeaders,
+        rows: processedRows
       });
 
       toast({
         title: "File processed successfully",
-        description: `Loaded ${dataRows.length} rows with ${headers.length} columns.`
+        description: `Loaded ${processedRows.length} rows with ${validHeaders.length} columns.`
       });
 
     } catch (error: any) {

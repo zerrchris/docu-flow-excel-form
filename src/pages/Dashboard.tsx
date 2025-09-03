@@ -377,8 +377,8 @@ const Dashboard: React.FC = () => {
                   });
                   window.dispatchEvent(saveEvent);
                   
-                  // Small delay to allow auto-save to complete
-                  await new Promise(resolve => setTimeout(resolve, 500));
+                  // Wait for auto-save to complete
+                  await new Promise(resolve => setTimeout(resolve, 1000));
                   
                   console.log('✅ Auto-save completed before upload');
                 } catch (error) {
@@ -396,13 +396,14 @@ const Dashboard: React.FC = () => {
                       data: runsheetData.rows,
                       column_instructions: {}
                     },
-                    clearActiveRunsheet: true // Signal to clear active runsheet
+                    clearActiveRunsheet: true, // Signal to clear active runsheet
+                    isFileUpload: true // Additional flag to indicate this is from file upload
                   } 
                 });
                 
                 toast({
                   title: "Runsheet loaded successfully",
-                  description: `Previous work saved. Loaded "${runsheetData.name}" with ${runsheetData.rows.length} rows.`
+                  description: `Previous work saved. Loaded "${runsheetData.name}" with ${runsheetData.rows.length} rows and ${runsheetData.columns.length} columns.`
                 });
               }}
               onCancel={() => setShowUploadDialog(false)}
