@@ -17,6 +17,9 @@ export const RunsheetFileUpload: React.FC<RunsheetFileUploadProps> = ({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [previewData, setPreviewData] = useState<any[][] | null>(null);
+  const [selectedHeaderRow, setSelectedHeaderRow] = useState<number>(0);
+  const [showPreview, setShowPreview] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const validateFile = (file: File): boolean => {
@@ -34,7 +37,7 @@ export const RunsheetFileUpload: React.FC<RunsheetFileUploadProps> = ({
     return validTypes.includes(file.type) || hasValidExtension;
   };
 
-  const processFile = async (file: File) => {
+  const parseFileForPreview = async (file: File) => {
     if (!validateFile(file)) {
       toast({
         title: "Invalid file type",
@@ -54,8 +57,7 @@ export const RunsheetFileUpload: React.FC<RunsheetFileUploadProps> = ({
       const firstSheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[firstSheetName];
       
-      console.log('📊 Processing Excel file:', file.name);
-      console.log('📊 Worksheet:', firstSheetName);
+      console.log('📊 Processing Excel file for preview:', file.name);
       
       // Convert to JSON with more flexible parsing
       const jsonData = XLSX.utils.sheet_to_json(worksheet, { 
@@ -64,31 +66,53 @@ export const RunsheetFileUpload: React.FC<RunsheetFileUploadProps> = ({
         raw: false  // Convert everything to strings
       });
       
-      console.log('📊 Raw JSON data:', jsonData);
-      
       if (jsonData.length === 0) {
         throw new Error('The file appears to be empty');
       }
 
-      // Use the first row as headers (standard approach)
-      const firstRow = jsonData[0] as any[];
-      if (!firstRow || firstRow.length === 0) {
-        throw new Error('The first row appears to be empty. Please ensure your column headers are in the first row.');
+      // Store preview data (first 10 rows max)
+      const previewRows = jsonData.slice(0, 10) as any[][];
+      setPreviewData(previewRows);
+      setShowPreview(true);
+      setSelectedHeaderRow(0); // Default to first row
+
+    } catch (error: any) {
+      console.error('Error processing file:', error);
+      toast({
+        title: "Error processing file",
+        description: error.message || "Failed to read the file. Please ensure it's a valid Excel or CSV file.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const processFileWithSelectedHeaders = async () => {
+    if (!selectedFile || !previewData) return;
+
+    setIsProcessing(true);
+
+    try {
+      // Use the selected row as headers
+      const headerRow = previewData[selectedHeaderRow];
+      if (!headerRow || headerRow.length === 0) {
+        throw new Error('The selected header row appears to be empty.');
       }
 
-      // Convert first row to headers
-      const headers = firstRow.map(cell => 
+      // Convert selected row to headers
+      const headers = headerRow.map(cell => 
         cell ? cell.toString().trim() : ''
       ).filter(header => header !== ''); // Remove empty headers
 
       if (headers.length === 0) {
-        throw new Error('No valid column headers found in the first row. Please ensure your spreadsheet has column headers in the first row.');
+        throw new Error('No valid column headers found in the selected row.');
       }
 
-      console.log('📊 Using first row as headers:', headers);
+      console.log('📊 Using selected row as headers:', headers);
 
-      // Get data rows (skip the header row)
-      const dataRows = jsonData.slice(1) as any[][];
+      // Get data rows (skip all rows up to and including the header row)
+      const dataRows = previewData.slice(selectedHeaderRow + 1);
       
       // Convert rows to objects, filtering out completely empty rows
       const processedRows = dataRows
@@ -120,7 +144,7 @@ export const RunsheetFileUpload: React.FC<RunsheetFileUploadProps> = ({
       });
 
       // Create runsheet name from filename (remove extension)
-      const runsheetName = file.name.replace(/\.(xlsx|xls|csv)$/i, '');
+      const runsheetName = selectedFile.name.replace(/\.(xlsx|xls|csv)$/i, '');
 
       console.log('📊 Processing complete:', {
         name: runsheetName,
@@ -139,11 +163,15 @@ export const RunsheetFileUpload: React.FC<RunsheetFileUploadProps> = ({
         description: `Loaded ${processedRows.length} rows with ${validHeaders.length} columns.`
       });
 
+      // Reset preview state
+      setShowPreview(false);
+      setPreviewData(null);
+
     } catch (error: any) {
       console.error('Error processing file:', error);
       toast({
         title: "Error processing file",
-        description: error.message || "Failed to read the file. Please ensure it's a valid Excel or CSV file.",
+        description: error.message || "Failed to process the file.",
         variant: "destructive"
       });
     } finally {
@@ -155,7 +183,7 @@ export const RunsheetFileUpload: React.FC<RunsheetFileUploadProps> = ({
     const file = e.target.files?.[0];
     if (file) {
       setSelectedFile(file);
-      processFile(file);
+      parseFileForPreview(file);
     }
   };
 
@@ -166,7 +194,7 @@ export const RunsheetFileUpload: React.FC<RunsheetFileUploadProps> = ({
     const file = e.dataTransfer.files[0];
     if (file) {
       setSelectedFile(file);
-      processFile(file);
+      parseFileForPreview(file);
     }
   };
 
@@ -182,6 +210,8 @@ export const RunsheetFileUpload: React.FC<RunsheetFileUploadProps> = ({
 
   const clearFile = () => {
     setSelectedFile(null);
+    setShowPreview(false);
+    setPreviewData(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -189,90 +219,164 @@ export const RunsheetFileUpload: React.FC<RunsheetFileUploadProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* File Drop Zone */}
-      <Card 
-        className={`border-2 border-dashed transition-colors cursor-pointer ${
-          isDragOver 
-            ? 'border-primary bg-primary/5' 
-            : 'border-muted-foreground/25 hover:border-primary/50'
-        }`}
-        onDrop={handleDrop}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onClick={() => fileInputRef.current?.click()}
-      >
-        <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-          <div className="p-3 rounded-full bg-primary/10 mb-4">
-            <FileSpreadsheet className="h-8 w-8 text-primary" />
-          </div>
-          <h3 className="text-lg font-medium mb-2">Upload Runsheet File</h3>
-          <p className="text-muted-foreground text-sm mb-2">
-            Drop your Excel or CSV file here, or click to browse
-          </p>
-          <div className="bg-amber-50 border border-amber-200 rounded-md p-3 mb-4">
-            <p className="text-amber-800 text-xs font-medium mb-1">📋 Important:</p>
-            <p className="text-amber-700 text-xs">
-              Make sure your column headers are in the first row of your spreadsheet
-            </p>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Supports: .xlsx, .xls, .csv files only
-          </p>
-          <Button className="mt-4" disabled={isProcessing}>
-            <Upload className="h-4 w-4 mr-2" />
-            {isProcessing ? 'Processing...' : 'Choose File'}
-          </Button>
-        </CardContent>
-      </Card>
+      {!showPreview ? (
+        <>
+          {/* File Drop Zone */}
+          <Card 
+            className={`border-2 border-dashed transition-colors cursor-pointer ${
+              isDragOver 
+                ? 'border-primary bg-primary/5' 
+                : 'border-muted-foreground/25 hover:border-primary/50'
+            }`}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+              <div className="p-3 rounded-full bg-primary/10 mb-4">
+                <FileSpreadsheet className="h-8 w-8 text-primary" />
+              </div>
+              <h3 className="text-lg font-medium mb-2">Upload Runsheet File</h3>
+              <p className="text-muted-foreground text-sm mb-4">
+                Drop your Excel or CSV file here, or click to browse
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Supports: .xlsx, .xls, .csv files only
+              </p>
+              <Button className="mt-4" disabled={isProcessing}>
+                <Upload className="h-4 w-4 mr-2" />
+                {isProcessing ? 'Processing...' : 'Choose File'}
+              </Button>
+            </CardContent>
+          </Card>
 
-      {/* Selected File Display */}
-      {selectedFile && (
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded bg-primary/10">
-                  <FileSpreadsheet className="h-4 w-4 text-primary" />
+          {/* Selected File Display */}
+          {selectedFile && (
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded bg-primary/10">
+                      <FileSpreadsheet className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">{selectedFile.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {(selectedFile.size / 1024).toFixed(1)} KB
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {isProcessing ? (
+                      <div className="flex items-center gap-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                        <span className="text-sm text-muted-foreground">Processing...</span>
+                      </div>
+                    ) : (
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        clearFile();
+                      }}
+                      disabled={isProcessing}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <p className="font-medium text-sm">{selectedFile.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {(selectedFile.size / 1024).toFixed(1)} KB
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={onCancel} disabled={isProcessing}>
+              Cancel
+            </Button>
+          </div>
+        </>
+      ) : (
+        <>
+          {/* File Preview and Header Selection */}
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-medium">Select Column Headers</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Choose which row contains your column headers
                   </p>
                 </div>
-              </div>
-              <div className="flex items-center gap-2">
-                {isProcessing ? (
-                  <div className="flex items-center gap-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                    <span className="text-sm text-muted-foreground">Processing...</span>
-                  </div>
-                ) : (
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                )}
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    clearFile();
-                  }}
-                  disabled={isProcessing}
+                  onClick={clearFile}
                 >
                   <X className="h-4 w-4" />
                 </Button>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
-      {/* Action Buttons */}
-      <div className="flex justify-end gap-2">
-        <Button variant="outline" onClick={onCancel} disabled={isProcessing}>
-          Cancel
-        </Button>
-      </div>
+              {/* Preview Table */}
+              <div className="border rounded-md overflow-hidden">
+                <div className="overflow-x-auto max-h-64">
+                  <table className="w-full text-sm">
+                    <tbody>
+                      {previewData?.map((row, rowIndex) => (
+                        <tr 
+                          key={rowIndex}
+                          className={`border-b cursor-pointer transition-colors ${
+                            selectedHeaderRow === rowIndex 
+                              ? 'bg-primary/10 border-primary' 
+                              : 'hover:bg-muted/50'
+                          }`}
+                          onClick={() => setSelectedHeaderRow(rowIndex)}
+                        >
+                          <td className="p-2 border-r bg-muted/50 font-mono text-xs text-center w-16">
+                            {rowIndex + 1}
+                            {selectedHeaderRow === rowIndex && (
+                              <div className="text-primary font-medium">Header</div>
+                            )}
+                          </td>
+                          {row.map((cell, cellIndex) => (
+                            <td key={cellIndex} className="p-2 border-r min-w-24 max-w-32 truncate">
+                              {cell || ''}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                <p className="text-blue-800 text-sm">
+                  <strong>Row {selectedHeaderRow + 1}</strong> is selected as column headers. 
+                  Click any row above to change your selection.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Action Buttons */}
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={clearFile}>
+              Back
+            </Button>
+            <Button 
+              onClick={processFileWithSelectedHeaders}
+              disabled={isProcessing}
+            >
+              {isProcessing ? 'Processing...' : 'Import Runsheet'}
+            </Button>
+          </div>
+        </>
+      )}
 
       {/* Hidden File Input */}
       <input
