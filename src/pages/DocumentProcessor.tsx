@@ -1678,36 +1678,33 @@ Image: [base64 image data]`;
     console.log('Filtered data to match current columns:', finalData);
     console.log('Current columns (unchanged):', columns);
     
-    // Update spreadsheet data directly and create document record
-    let newRowIndex;
-    let updatedSpreadsheetData;
-    setSpreadsheetData(prev => {
-      const newData = [...prev, finalData];
-      newRowIndex = newData.length - 1; // Store the actual row index
-      updatedSpreadsheetData = newData; // Store the updated data for saving
-      console.log('🔧 DEBUG: Updated spreadsheet data directly:', newData);
-      console.log('🔧 DEBUG: New row will be at index:', newRowIndex);
-      return newData;
-    });
+    // Use the backend populate-runsheet-data function to find the next empty row
+    console.log('🔧 DEBUG: Calling populate-runsheet-data function');
     
-    // Create document record for the new row and update document map
-    // This should happen regardless of whether we have a Storage Path or not
-    if (newRowIndex !== undefined) {
-      console.log('🔧 DEBUG: Creating document record for row:', newRowIndex);
-      
-      // If we have a file but no storage path, upload it now
-      if (file && !finalData['Storage Path']) {
-        console.log('🔧 DEBUG: No storage path found, uploading file now');
-        try {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({
+          title: "Authentication required",
+          description: "Please sign in to add data.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Prepare document info if we have a file
+      let documentInfo = null;
+      if (file) {
+        // If we don't have a storage path, upload file first
+        if (!finalData['Storage Path']) {
+          console.log('🔧 DEBUG: No storage path found, uploading file now');
           const { data: { user } } = await supabase.auth.getUser();
           if (user) {
-            // Generate a unique filename
             const timestamp = Date.now();
             const randomSuffix = Math.random().toString(36).substring(2, 8);
             const fileExtension = file.name.split('.').pop() || 'pdf';
             const uniqueFilename = `${user.id}/${timestamp}_${randomSuffix}.${fileExtension}`;
             
-            // Upload to storage
             const { data: uploadData, error: uploadError } = await supabase.storage
               .from('documents')
               .upload(uniqueFilename, file, {
@@ -1717,88 +1714,97 @@ Image: [base64 image data]`;
               
             if (uploadError) {
               console.error('Error uploading file:', uploadError);
+              toast({
+                title: "File upload failed",
+                description: uploadError.message,
+                variant: "destructive",
+              });
+              return;
             } else {
-              // Get the public URL
               const { data: urlData } = supabase.storage
                 .from('documents')
                 .getPublicUrl(uniqueFilename);
               
               finalData['Storage Path'] = urlData.publicUrl;
               console.log('🔧 DEBUG: File uploaded successfully, storage path:', finalData['Storage Path']);
-              
-              // Also update the spreadsheet data with the storage path
-              setSpreadsheetData(prev => {
-                const newData = [...prev];
-                if (newData[newRowIndex]) {
-                  newData[newRowIndex]['Storage Path'] = finalData['Storage Path'];
-                }
-                return newData;
-              });
             }
           }
-        } catch (error) {
-          console.error('Error uploading file:', error);
         }
+
+        documentInfo = {
+          originalFilename: file.name,
+          storedFilename: finalData['Storage Path']?.split('/').pop() || file.name,
+          filePath: finalData['Storage Path'] || '',
+          fileSize: file.size,
+          contentType: file.type || 'application/octet-stream'
+        };
       }
-      
-      // Create the document record and wait for it
-      await createDocumentRecord(finalData, newRowIndex, runsheetId);
-      
-      // Update document map immediately to show the document is linked
-      setDocumentMap(prev => {
-        const newMap = new Map(prev);
-        newMap.set(newRowIndex, {
-          storagePath: finalData['Storage Path'] || '',
-          fileName: finalData['Document File Name'] || file?.name || 'Unknown Document',
-          isPending: false,
-          timestamp: Date.now()
-        });
-        console.log('🔧 DEBUG: Updated document map with new document at row:', newRowIndex);
-        return newMap;
+
+      // Call the populate-runsheet-data function
+      const response = await fetch('/functions/v1/populate-runsheet-data', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          runsheetId: runsheetId,
+          extractedData: finalData,
+          documentInfo: documentInfo
+        }),
       });
-    }
-    
-    // Immediately save the updated spreadsheet data to the database using the captured data
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user && runsheetId && activeRunsheet && updatedSpreadsheetData) {
-        console.log('🔧 DEBUG: Saving updated spreadsheet data:', updatedSpreadsheetData);
-        
-        // Update the runsheet in the database
-        const { error: saveError } = await supabase
-          .from('runsheets')
-          .update({
-            data: updatedSpreadsheetData,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', runsheetId)
-          .eq('user_id', user.id);
-          
-        if (saveError) {
-          console.error('Error saving runsheet after document addition:', saveError);
-        } else {
-          console.log('🔧 Successfully saved runsheet with new document row');
-          
-          // Update the active runsheet state to match the database
-          if (activeRunsheet) {
-            setActiveRunsheet({
-              ...activeRunsheet,
-              data: updatedSpreadsheetData
-            });
-          }
-        }
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        console.error('Error from populate-runsheet-data:', result);
+        toast({
+          title: "Failed to add data",
+          description: result.error || "An unexpected error occurred",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const newRowIndex = result.rowIndex;
+      console.log('🔧 DEBUG: Data added to row:', newRowIndex, 'Result:', result);
+
+      // Refresh the spreadsheet data from the database to get the updated state
+      const { data: updatedRunsheet, error: fetchError } = await supabase
+        .from('runsheets')
+        .select('data, columns')
+        .eq('id', runsheetId)
+        .single();
+
+      if (fetchError) {
+        console.error('Error fetching updated runsheet:', fetchError);
       } else {
-        console.log('🔧 DEBUG: Missing data for save:', {
-          hasUser: !!user,
-          runsheetId,
-          hasActiveRunsheet: !!activeRunsheet,
-          hasUpdatedData: !!updatedSpreadsheetData
+        setSpreadsheetData(updatedRunsheet.data as Record<string, string>[]);
+        console.log('🔧 DEBUG: Refreshed spreadsheet data from database');
+      }
+
+      // Update the active runsheet state
+      if (updatedRunsheet && activeRunsheet) {
+        setActiveRunsheet({
+          ...activeRunsheet,
+          data: updatedRunsheet.data as Record<string, string>[]
         });
       }
+
+      toast({
+        title: "Data added successfully",
+        description: result.message,
+      });
+
     } catch (error) {
-      console.error('Error in immediate save after document addition:', error);
+      console.error('Error calling populate-runsheet-data:', error);
+      toast({
+        title: "Failed to add data",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      });
+      return;
     }
-    
     
     // Clear the form data, document, and mark as added
     const emptyFormData: Record<string, string> = {};
@@ -1813,13 +1819,6 @@ Image: [base64 image data]`;
     setPreviewUrl(null);
     setStorageUrl(null);
     console.log('🔧 DocumentProcessor: Cleared form data and document after adding to spreadsheet');
-    
-    // Don't navigate away - keep user in processor for next document
-    // if (runsheetId) {
-    //   setTimeout(() => {
-    //     navigate(`/runsheet?id=${runsheetId}`, { replace: true });
-    //   }, 1000); // Small delay to show toast
-    // }
   };
 
   // Continue adding to spreadsheet without validation (used after user confirms)
