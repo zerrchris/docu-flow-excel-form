@@ -869,12 +869,14 @@ const DocumentProcessor: React.FC = () => {
     setShowCombineConfirmation(false);
   };
 
-  // Function to go back to runsheet mode while preserving document
+  // Function to go back to runsheet mode and clear document
   const goBackToRunsheet = () => {
     setIsDocumentMode(false);
     // Collapse both document processor sections
     setIsDocumentFrameExpanded(false);
     setIsBatchProcessingExpanded(false);
+    // Clear the document from single document processing
+    resetDocument();
   };
 
   // Function to upload new document (resets everything)
