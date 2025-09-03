@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { FileText, Camera, FolderOpen, Upload, Users, Settings, Plus, Cloud, Columns, Search } from 'lucide-react';
+import { FileText, Camera, FolderOpen, Upload, Users, Settings, Plus, Cloud, Columns, Search, BarChart3 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
@@ -126,6 +126,12 @@ const Dashboard: React.FC = () => {
       description: "Capture documents on the go with your mobile device",
       icon: Camera,
       path: "/mobile-capture"
+    },
+    {
+      title: "AI Usage Analytics",
+      description: "Track your OpenAI API usage and costs",
+      icon: BarChart3,
+      path: "/analytics"
     },
     {
       title: "Column Preferences",

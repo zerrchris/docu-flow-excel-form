@@ -1,7 +1,10 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { trackAIUsage, extractTokensFromResponse } from '../_shared/ai-usage-tracker.ts';
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -34,6 +37,10 @@ serve(async (req) => {
 
   try {
     const { prompt, imageData, systemMessage = "You are a precise document analysis assistant. Extract information that is clearly visible and readable in the document. If information is not clearly present, use empty string ''. Return ONLY valid JSON with field names as keys and extracted text as values. No markdown, no explanations, no additional text - just clean JSON." } = await req.json();
+    
+    // Extract user_id from auth header for usage tracking
+    const authHeader = req.headers.get('authorization');
+    let user_id: string | undefined;
 
     if (!prompt || !imageData) {
       return new Response(
@@ -232,6 +239,18 @@ serve(async (req) => {
 
     console.log('Document analysis completed successfully');
 
+    // Track AI usage
+    const tokens = extractTokensFromResponse(data);
+    await trackAIUsage(supabaseUrl, supabaseServiceKey, {
+      user_id,
+      function_name: 'analyze-document',
+      model_used: 'gpt-4o-mini',
+      ...tokens,
+      request_payload: { prompt_length: prompt.length, has_image: !!imageData },
+      response_payload: { response_length: generatedText.length },
+      success: true
+    });
+
     return new Response(
       JSON.stringify({ generatedText, usage: data.usage }),
       {
@@ -240,6 +259,16 @@ serve(async (req) => {
     );
   } catch (error) {
     console.error('Error in analyze-document function:', error);
+    
+    // Track failed AI usage
+    await trackAIUsage(supabaseUrl, supabaseServiceKey, {
+      user_id,
+      function_name: 'analyze-document',
+      model_used: 'gpt-4o-mini',
+      success: false,
+      error_message: error.message
+    });
+    
     return new Response(
       JSON.stringify({ error: 'An unexpected error occurred', details: error.message }),
       {

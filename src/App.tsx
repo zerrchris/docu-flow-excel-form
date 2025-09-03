@@ -19,6 +19,7 @@ import { FileManager } from "./pages/FileManager";
 import NotFound from "./pages/NotFound";
 import GoogleAuthCallback from "./components/GoogleAuthCallback";
 import CapturePopupPage from "./pages/CapturePopup";
+import Analytics from "./pages/Analytics";
 import AuthStatus from "./pages/AuthStatus";
  
 const queryClient = new QueryClient();
@@ -45,6 +46,7 @@ const App = () => (
             <Route path="/file-manager" element={<FileManager />} />
             <Route path="/google-auth-callback" element={<GoogleAuthCallback />} />
             <Route path="/capture-popup" element={<CapturePopupPage />} />
+            <Route path="/analytics" element={<Analytics />} />
             <Route path="/auth-status" element={<AuthStatus />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
