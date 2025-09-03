@@ -369,14 +369,17 @@ const Dashboard: React.FC = () => {
                 console.log('Runsheet file processed:', runsheetData);
                 setShowUploadDialog(false);
                 
-                // Navigate to runsheet with the processed data
+                // Clear any existing active runsheet first
                 navigate('/runsheet', { 
                   state: { 
                     runsheet: {
+                      id: `uploaded-${Date.now()}`, // Temporary ID for uploaded data
                       name: runsheetData.name,
                       columns: runsheetData.columns,
-                      data: runsheetData.rows
-                    }
+                      data: runsheetData.rows,
+                      column_instructions: {}
+                    },
+                    clearActiveRunsheet: true // Signal to clear active runsheet
                   } 
                 });
                 

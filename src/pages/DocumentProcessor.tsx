@@ -361,29 +361,39 @@ const DocumentProcessor: React.FC = () => {
   // Handle selected runsheet from navigation state - with stability improvements
   useEffect(() => {
     const selectedRunsheet = location.state?.runsheet;
+    const shouldClearActive = location.state?.clearActiveRunsheet;
     
     console.log('🔄 DocumentProcessor: Navigation state effect triggered', {
       selectedRunsheet: selectedRunsheet?.id,
       selectedRunsheetName: selectedRunsheet?.name,
+      shouldClearActive,
       loadedRef: loadedRunsheetRef.current,
       hasSpreadsheetData: spreadsheetData.length > 0,
       activeRunsheetName: activeRunsheet?.name,
       locationState: location.state
     });
     
+    // If this is an uploaded runsheet, clear the active runsheet first
+    if (shouldClearActive) {
+      console.log('🧹 Clearing active runsheet for uploaded data');
+      clearActiveRunsheet();
+    }
+    
     // Use ref to prevent infinite loops - only load each runsheet once
     if (selectedRunsheet && loadedRunsheetRef.current !== selectedRunsheet.id) {
       console.log('📋 Loading selected runsheet:', selectedRunsheet);
       loadedRunsheetRef.current = selectedRunsheet.id;
       
-      // Set active runsheet immediately
-      setActiveRunsheet({
-        id: selectedRunsheet.id,
-        name: selectedRunsheet.name,
-        data: selectedRunsheet.data || [],
-        columns: selectedRunsheet.columns || [],
-        columnInstructions: selectedRunsheet.column_instructions || {}
-      });
+      // Set active runsheet immediately only if it has a real ID (not uploaded)
+      if (!selectedRunsheet.id?.startsWith('uploaded-')) {
+        setActiveRunsheet({
+          id: selectedRunsheet.id,
+          name: selectedRunsheet.name,
+          data: selectedRunsheet.data || [],
+          columns: selectedRunsheet.columns || [],
+          columnInstructions: selectedRunsheet.column_instructions || {}
+        });
+      }
       
       // Only load runsheet data if we don't already have spreadsheet data (to prevent data loss)
       if (selectedRunsheet.data && Array.isArray(selectedRunsheet.data) && spreadsheetData.length === 0) {
