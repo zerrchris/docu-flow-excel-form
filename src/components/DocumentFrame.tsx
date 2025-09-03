@@ -29,7 +29,6 @@ interface DocumentFrameProps {
   isAnalyzing: boolean;
   isExpanded?: boolean;
   onExpandedChange?: (expanded: boolean) => void;
-  disabled?: boolean;
 }
 
 const DocumentFrame: React.FC<DocumentFrameProps> = ({ 
@@ -47,8 +46,7 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
   onResetDocument,
   isAnalyzing,
   isExpanded: externalExpanded,
-  onExpandedChange: externalOnExpandedChange,
-  disabled = false
+  onExpandedChange: externalOnExpandedChange
 }) => {
   const [internalExpanded, setInternalExpanded] = useState<boolean>(() => {
     try {
@@ -121,7 +119,15 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
         'Storage Path': fileResult.path
       };
 
-      // Document File Name is handled separately as metadata, not as regular extracted data
+      // Only add Document File Name if the field exists in the current runsheet columns
+      if (fields.includes('Document File Name')) {
+        const userSpecifiedFilename = formData['Document File Name'];
+        const finalFilename = userSpecifiedFilename && userSpecifiedFilename.trim() 
+          ? userSpecifiedFilename.trim() 
+          : fileResult.fileName;
+        
+        dataWithFile['Document File Name'] = finalFilename;
+      }
       
       onAddToSpreadsheet(dataWithFile);
       
@@ -168,12 +174,10 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
           <Button 
             variant="ghost" 
             className="w-full justify-between p-4 h-auto text-left hover:bg-muted/50"
-            disabled={disabled}
           >
             <div className="flex flex-col items-start">
               <h3 className="text-lg font-semibold text-foreground">
                 Single Document Processing
-                {disabled && <span className="text-sm text-muted-foreground ml-2">(Start a new runsheet first)</span>}
               </h3>
               <p className="text-sm text-muted-foreground">
                 {file ? file.name : 'No document selected'}

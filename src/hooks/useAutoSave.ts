@@ -121,7 +121,7 @@ export function useAutoSave({
 
       let result;
       
-      if (runsheetId && !runsheetId.startsWith('temp-') && !runsheetId.startsWith('working-')) {
+      if (runsheetId && !runsheetId.startsWith('temp-')) {
         // Update existing runsheet
         const { data: updateResult, error } = await supabase
           .from('runsheets')
@@ -134,55 +134,21 @@ export function useAutoSave({
         if (error) throw error;
         result = updateResult;
       } else {
-        // Check if a runsheet with this name already exists for this user
-        const { data: existingRunsheet, error: checkError } = await supabase
+        // Create new runsheet
+        const { data: insertResult, error } = await supabase
           .from('runsheets')
-          .select('id, name')
-          .eq('user_id', userId)
-          .eq('name', runsheetName.trim())
+          .insert(runsheetData)
+          .select('*')
           .single();
 
-        if (checkError && checkError.code !== 'PGRST116') {
-          // If error is not "no rows returned", throw it
-          throw checkError;
-        }
-
-        if (existingRunsheet) {
-          // Update the existing runsheet instead of creating a new one
-          console.log('📝 Found existing runsheet with same name, updating instead of creating new');
-          const { data: updateResult, error } = await supabase
-            .from('runsheets')
-            .update(runsheetData)
-            .eq('id', existingRunsheet.id)
-            .eq('user_id', userId)
-            .select('*')
-            .single();
-
-          if (error) throw error;
-          result = updateResult;
-          
-          // Update the callback with the correct runsheet ID so the UI knows which runsheet this is
-          if (onSaveSuccess) {
-            onSaveSuccess({ ...result, wasExistingRunsheet: true });
-          }
-        } else {
-          // Create new runsheet
-          const { data: insertResult, error } = await supabase
-            .from('runsheets')
-            .insert(runsheetData)
-            .select('*')
-            .single();
-
-          if (error) throw error;
-          result = insertResult;
-          if (onSaveSuccess) {
-            onSaveSuccess(result);
-          }
-        }
+        if (error) throw error;
+        result = insertResult;
       }
 
       // Update last saved state
       lastSavedStateRef.current = currentStateHash;
+      
+      onSaveSuccess?.(result);
       
     } catch (error) {
       console.error('Auto-save error:', error);

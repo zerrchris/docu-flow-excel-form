@@ -45,62 +45,7 @@ const DEFAULT_EXTRACTION_INSTRUCTIONS: Record<string, string> = {
 
 const DocumentProcessor: React.FC = () => {
   // Hook to get active runsheet data  
-  const { activeRunsheet, setActiveRunsheet, clearActiveRunsheet, setCurrentRunsheet, hasActiveRunsheet } = useActiveRunsheet();
-  
-  // Navigation
-  const navigate = useNavigate();
-  
-  // Check if we have working data (either active runsheet or emergency draft)
-  const hasWorkingRunsheet = () => {
-    console.log('🔍 hasWorkingRunsheet check:', {
-      hasActiveRunsheet,
-      activeRunsheetId: activeRunsheet?.id,
-      activeRunsheetName: activeRunsheet?.name,
-      activeRunsheetData: activeRunsheet?.data?.length,
-      spreadsheetDataLength: spreadsheetData?.length
-    });
-    
-    // First check if we have an active runsheet
-    if (hasActiveRunsheet && activeRunsheet?.id) {
-      console.log('✅ Active runsheet found via hook');
-      return true;
-    }
-    
-    // Check if we have spreadsheet data loaded (this is the key check for unsaved runsheets)
-    if (spreadsheetData && spreadsheetData.length > 0) {
-      const hasAnyData = spreadsheetData.some(row => 
-        Object.values(row || {}).some(value => value && value.toString().trim() !== '')
-      );
-      if (hasAnyData || columns.length > 0) {
-        console.log('✅ Found working spreadsheet data, enabling document processor');
-        return true;
-      }
-    }
-    
-    // Check for emergency draft data
-    try {
-      const emergencyDraft = localStorage.getItem('runsheet-emergency-draft');
-      if (emergencyDraft) {
-        const draftData = JSON.parse(emergencyDraft);
-        const hasData = draftData?.data?.length > 0 || draftData?.name;
-        console.log('📄 Emergency draft details:', { 
-          hasData, 
-          draftName: draftData?.name,
-          dataLength: draftData?.data?.length 
-        });
-        
-        if (hasData) {
-          console.log('✅ Emergency draft has working data');
-          return true;
-        }
-      }
-    } catch (error) {
-      console.error('Error checking emergency draft:', error);
-    }
-    
-    console.log('❌ No working runsheet found');
-    return false;
-  };
+  const { activeRunsheet, setActiveRunsheet, clearActiveRunsheet, setCurrentRunsheet } = useActiveRunsheet();
   
   // View state
   const [isDocumentMode, setIsDocumentMode] = useState(false);
@@ -139,6 +84,7 @@ const DocumentProcessor: React.FC = () => {
   const [showRunsheetUploadDialog, setShowRunsheetUploadDialog] = useState(false);
   
   // Note: Navigation blocking removed since runsheet auto-saves
+  const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
   
@@ -1604,85 +1550,333 @@ Image: [base64 image data]`;
     }
   };
 
-  // Add current form data to spreadsheet - operates within active runsheet context
+  // Add current form data to spreadsheet
   const addToSpreadsheet = async (dataToAdd?: Record<string, string>) => {
-    console.log('📋 Starting addToSpreadsheet process');
+    console.log('🔧 DocumentProcessor: addToSpreadsheet called');
+    console.log('🔧 DocumentProcessor: dataToAdd:', dataToAdd);
+    console.log('🔧 DocumentProcessor: formData:', formData);
+    console.log('🔧 DocumentProcessor: activeRunsheet:', activeRunsheet);
+    console.log('🔧 DocumentProcessor: location.state:', location.state);
+    console.log('🔧 DocumentProcessor: spreadsheetData.length:', spreadsheetData.length);
+    console.log('🔧 DocumentProcessor: documentMap.size:', documentMap.size);
     
-    // Check if we have an active runsheet or working data - required for operation
-    if (!hasWorkingRunsheet()) {
-      console.log('❌ No active runsheet or working data available');
-      toast({
-        title: "No Active Runsheet",
-        description: "Please select a runsheet from your dashboard first, then return here to process documents.",
-        variant: "destructive",
-      });
-      
-      // Redirect to dashboard after a short delay
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 2000);
-      return;
-    }
+    // Use formData as fallback when dataToAdd is not provided
+    const targetData = dataToAdd || formData;
     
-    // Prevent addition if analysis is still running
-    if (isAnalyzing) {
-      toast({
-        title: "Analysis in progress",
-        description: "Please wait for document analysis to complete before adding to spreadsheet.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const newData = dataToAdd || formData;
+    // Check localStorage for active runsheet as fallback
+    let runsheetId = activeRunsheet?.id || location.state?.runsheet?.id || searchParams.get('id') || searchParams.get('runsheet');
     
-    // Validate that we have data to add
-    if (!newData || Object.keys(newData).length === 0 || Object.values(newData).every(value => !value || value.trim() === '')) {
-      toast({
-        title: "No data to add",
-        description: "Please analyze the document first or enter data manually.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      // Get current runsheet data (could be from activeRunsheet or spreadsheetData)
-      const currentData = activeRunsheet?.data || spreadsheetData || [];
-      
-      // Find the next empty row
-      let targetRowIndex = currentData.findIndex(row => isRowEmpty(row));
-      
-      if (targetRowIndex === -1) {
-        // No empty row found, add a new one
-        targetRowIndex = currentData.length;
-      }
-      
-      // Add data via custom event (same as brain button analyzer)
-      const addRowEvent = new CustomEvent('externalAddRow', {
-        detail: {
-          data: newData,
-          rowIndex: targetRowIndex,
-          runsheetId: activeRunsheet?.id || 'working-runsheet',
-          file: file || null,
-          fileName: file?.name || null
+    if (!runsheetId) {
+      try {
+        const storedRunsheet = localStorage.getItem('activeRunsheet');
+        if (storedRunsheet) {
+          const parsed = JSON.parse(storedRunsheet);
+          runsheetId = parsed.id;
+          setActiveRunsheet(parsed);
+          console.log('🔧 DocumentProcessor: Found runsheet in localStorage:', parsed);
         }
+      } catch (error) {
+        console.error('🔧 DocumentProcessor: Error parsing localStorage runsheet:', error);
+      }
+    }
+    
+    console.log('🔧 DocumentProcessor: Final runsheetId before processing:', runsheetId);
+    
+    if (!runsheetId || runsheetId.startsWith('temp-')) {
+      // We need a proper saved runsheet to add documents
+      console.log('🔧 ADD_TO_SPREADSHEET: Need to save runsheet first before adding documents');
+      
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          toast({
+            title: "Authentication required",
+            description: "Please sign in to save documents.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        // Check if we have an active runsheet with a name in memory (even if not saved)
+        // This happens when user creates named runsheet but hasn't saved it yet
+        let runsheetName;
+        if (activeRunsheet?.name && activeRunsheet.name !== 'Untitled Runsheet') {
+          runsheetName = activeRunsheet.name;
+          console.log('🔧 ADD_TO_SPREADSHEET: Using existing runsheet name from memory:', runsheetName);
+        } else {
+          // Fallback to auto-generated name
+          runsheetName = `Runsheet ${new Date().toLocaleDateString()}`;
+          console.log('🔧 ADD_TO_SPREADSHEET: Using auto-generated name:', runsheetName);
+        }
+        const initialData = [targetData];
+
+        const { data: newRunsheet, error } = await supabase
+          .from('runsheets')
+          .insert({
+            name: runsheetName,
+            user_id: user.id,
+            columns: columns,
+            data: initialData,
+            column_instructions: columnInstructions
+          })
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Error creating runsheet:', error);
+          toast({
+            title: "Failed to create runsheet",
+            description: error.message,
+            variant: "destructive",
+          });
+          return;
+        }
+
+        runsheetId = newRunsheet.id;
+        console.log('🔧 ADD_TO_SPREADSHEET: Created new runsheet with ID:', runsheetId);
+        
+        // Update the spreadsheet data and active runsheet
+        setSpreadsheetData(initialData);
+        
+        // Use the setCurrentRunsheet hook to properly track the new runsheet
+        setCurrentRunsheet(newRunsheet.id);
+        
+        setActiveRunsheet({
+          id: newRunsheet.id,
+          name: newRunsheet.name,
+          data: initialData,
+          columns: columns,
+          columnInstructions: columnInstructions
+        });
+
+        toast({
+          title: "Document added to new runsheet",
+          description: `Created "${runsheetName}" and added your document.`,
+        });
+        
+        // Navigate to the runsheet without the action parameter
+        navigate(`/runsheet?id=${runsheetId}`, { replace: true });
+        return; // Exit early since we've already added the data
+        
+      } catch (error) {
+        console.error('Error creating runsheet:', error);
+        toast({
+          title: "Failed to create runsheet",
+          description: "Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+    
+    
+    // No longer auto-generate smart filenames - use original filename by default
+    if (!targetData['Document File Name'] || targetData['Document File Name'].trim() === '') {
+      // Use original filename if available, otherwise use a simple fallback
+      const originalFilename = file?.name || `document_${Date.now()}.pdf`;
+      targetData['Document File Name'] = originalFilename;
+      console.log('📄 FILENAME: Using original filename:', originalFilename);
+    } else {
+      console.log('📄 FILENAME: Document File Name already set:', targetData['Document File Name']);
+    }
+    
+    // Check if there's a file uploaded or meaningful data to add
+    const hasFile = !!file;
+    // Check if there's meaningful extracted data (excluding auto-generated fields)
+    const autoGeneratedFields = ['Document File Name', 'Storage Path'];
+    const hasFormData = Object.entries(targetData).some(([key, value]) => 
+      !autoGeneratedFields.includes(key) && value && value.trim() !== ''
+    );
+    
+    console.log('🔧 ADD_TO_SPREADSHEET: Validation check:', {
+      hasFile,
+      hasFormData,
+      targetData,
+      formDataKeys: Object.keys(targetData),
+      formDataValues: Object.values(targetData)
+    });
+    
+    if (!hasFile && !hasFormData) {
+      // No file and no data - show the missing data dialog
+      setMissingDataDialog(true);
+      return;
+    }
+    
+    if (hasFile && !hasFormData) {
+      // Has file but no extracted data - ask if they want to proceed
+      setConfirmAddFileDialog(true);
+      return;
+    }
+
+    // For batch processing, we need to ensure all analyzed data columns are included
+    // Check if we have data for columns that aren't in our current column set
+    const newColumnsFromData = Object.keys(targetData).filter(key => 
+      !columns.includes(key) && 
+      key !== 'Storage Path' && 
+      !key.startsWith('__') && // Filter out debug fields like __operationId
+      targetData[key] && 
+      targetData[key].trim() !== ''
+    );
+    
+    // If we have new columns from analyzed data, add them to our columns
+    if (newColumnsFromData.length > 0) {
+      console.log('🔧 Adding new columns from analyzed data:', newColumnsFromData);
+      setColumns(prev => [...prev, ...newColumnsFromData]);
+    }
+    
+    // Include all data from targetData, including new columns
+    const filteredData: Record<string, string> = {};
+    
+    // Include existing columns
+    columns.forEach(column => {
+      filteredData[column] = targetData[column] || '';
+    });
+    
+    // Include new columns from analyzed data
+    newColumnsFromData.forEach(column => {
+      filteredData[column] = targetData[column] || '';
+    });
+    
+    // Always preserve Storage Path if it exists, even if not in current columns
+    // This is needed for document record creation
+    if (targetData['Storage Path']) {
+      filteredData['Storage Path'] = targetData['Storage Path'];
+    }
+    
+    // Use filtered data instead of allowing new columns to persist
+    const finalData = filteredData;
+    
+    console.log('🔧 DEBUG: finalData before spreadsheet addition:', finalData);
+    console.log('🔧 DEBUG: Current spreadsheetData before update:', spreadsheetData);
+    console.log('🔧 DEBUG: documentMap before update:', documentMap);
+    
+    console.log('Original analyzed data:', targetData);
+    console.log('Filtered data to match current columns:', finalData);
+    console.log('Current columns (unchanged):', columns);
+    
+    // Use the backend populate-runsheet-data function to find the next empty row
+    console.log('🔧 DEBUG: Calling populate-runsheet-data function');
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({
+          title: "Authentication required",
+          description: "Please sign in to add data.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Prepare document info if we have a file
+      let documentInfo = null;
+      if (file) {
+        // If we don't have a storage path, upload file first
+        if (!finalData['Storage Path']) {
+          console.log('🔧 DEBUG: No storage path found, uploading file now');
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            const timestamp = Date.now();
+            const randomSuffix = Math.random().toString(36).substring(2, 8);
+            const fileExtension = file.name.split('.').pop() || 'pdf';
+            const uniqueFilename = `${user.id}/${timestamp}_${randomSuffix}.${fileExtension}`;
+            
+            const { data: uploadData, error: uploadError } = await supabase.storage
+              .from('documents')
+              .upload(uniqueFilename, file, {
+                cacheControl: '3600',
+                upsert: false
+              });
+              
+            if (uploadError) {
+              console.error('Error uploading file:', uploadError);
+              toast({
+                title: "File upload failed",
+                description: uploadError.message,
+                variant: "destructive",
+              });
+              return;
+            } else {
+              const { data: urlData } = supabase.storage
+                .from('documents')
+                .getPublicUrl(uniqueFilename);
+              
+              finalData['Storage Path'] = urlData.publicUrl;
+              console.log('🔧 DEBUG: File uploaded successfully, storage path:', finalData['Storage Path']);
+            }
+          }
+        }
+
+        documentInfo = {
+          originalFilename: file.name,
+          storedFilename: finalData['Storage Path']?.split('/').pop() || file.name,
+          filePath: finalData['Storage Path'] || '',
+          fileSize: file.size,
+          contentType: file.type || 'application/octet-stream'
+        };
+      }
+
+      // Call the populate-runsheet-data function
+      const response = await fetch('/functions/v1/populate-runsheet-data', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          runsheetId: runsheetId,
+          extractedData: finalData,
+          documentInfo: documentInfo
+        }),
       });
-      
-      window.dispatchEvent(addRowEvent);
-      
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        console.error('Error from populate-runsheet-data:', result);
+        toast({
+          title: "Failed to add data",
+          description: result.error || "An unexpected error occurred",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const newRowIndex = result.rowIndex;
+      console.log('🔧 DEBUG: Data added to row:', newRowIndex, 'Result:', result);
+
+      // Refresh the spreadsheet data from the database to get the updated state
+      const { data: updatedRunsheet, error: fetchError } = await supabase
+        .from('runsheets')
+        .select('data, columns')
+        .eq('id', runsheetId)
+        .single();
+
+      if (fetchError) {
+        console.error('Error fetching updated runsheet:', fetchError);
+      } else {
+        setSpreadsheetData(updatedRunsheet.data as Record<string, string>[]);
+        console.log('🔧 DEBUG: Refreshed spreadsheet data from database');
+      }
+
+      // Update the active runsheet state
+      if (updatedRunsheet && activeRunsheet) {
+        setActiveRunsheet({
+          ...activeRunsheet,
+          data: updatedRunsheet.data as Record<string, string>[]
+        });
+      }
+
       toast({
         title: "Data added successfully",
-        description: `Row ${targetRowIndex + 1} has been added to your runsheet.`,
+        description: result.message,
       });
-      
-      console.log('✅ Data added to runsheet at row', targetRowIndex + 1);
-      
+
     } catch (error) {
-      console.error('❌ Error adding data to runsheet:', error);
+      console.error('Error calling populate-runsheet-data:', error);
       toast({
         title: "Failed to add data",
-        description: "Please try again or check your connection.",
+        description: "An unexpected error occurred",
         variant: "destructive",
       });
       return;
@@ -2377,18 +2571,16 @@ Image: [base64 image data]`;
               isAnalyzing={isAnalyzing}
               isExpanded={isDocumentFrameExpanded}
               onExpandedChange={setIsDocumentFrameExpanded}
-              disabled={!hasWorkingRunsheet()}
             />
             
-              <BatchProcessing
-                fields={columns}
-                onAddToSpreadsheet={addToSpreadsheet}
-                onAnalyze={analyzeDocument}
-                isAnalyzing={isAnalyzing}
-                isExpanded={isBatchProcessingExpanded}
-                onExpandedChange={setIsBatchProcessingExpanded}
-                hasActiveRunsheet={hasWorkingRunsheet()}
-              />
+            <BatchProcessing 
+              fields={columns}
+              onAddToSpreadsheet={addToSpreadsheet}
+              onAnalyze={analyzeDocument}
+              isAnalyzing={isAnalyzing}
+              isExpanded={isBatchProcessingExpanded}
+              onExpandedChange={setIsBatchProcessingExpanded}
+            />
             
             <div className="mt-6">
             <EditableSpreadsheet
