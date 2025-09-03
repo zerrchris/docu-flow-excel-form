@@ -293,7 +293,11 @@ const Dashboard: React.FC = () => {
       {/* Open Runsheet Dialog */}
       <OpenRunsheetDialog 
         open={showOpenDialog} 
-        onOpenChange={setShowOpenDialog} 
+        onOpenChange={setShowOpenDialog}
+        onCreateNew={() => {
+          setShowOpenDialog(false);
+          setShowNameNewRunsheetDialog(true);
+        }}
       />
       
       {/* Column Preferences Dialog */}

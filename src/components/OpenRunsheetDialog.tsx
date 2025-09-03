@@ -19,9 +19,10 @@ interface Runsheet {
 interface OpenRunsheetDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onCreateNew?: () => void;
 }
 
-const OpenRunsheetDialog: React.FC<OpenRunsheetDialogProps> = ({ open, onOpenChange }) => {
+const OpenRunsheetDialog: React.FC<OpenRunsheetDialogProps> = ({ open, onOpenChange, onCreateNew }) => {
   const [runsheets, setRunsheets] = useState<Runsheet[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -163,7 +164,11 @@ const OpenRunsheetDialog: React.FC<OpenRunsheetDialogProps> = ({ open, onOpenCha
             Cancel
           </Button>
           <Button onClick={() => {
-            navigate('/runsheet');
+            if (onCreateNew) {
+              onCreateNew();
+            } else {
+              navigate('/runsheet');
+            }
             onOpenChange(false);
           }}>
             Create New Instead
