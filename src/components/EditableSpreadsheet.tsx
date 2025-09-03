@@ -9,8 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Plus, Trash2, Check, X, ArrowUp, ArrowDown, Save, FolderOpen, Download, Upload, AlignLeft, AlignCenter, AlignRight, Cloud, ChevronDown, FileText, Archive, ExternalLink, AlertTriangle, FileStack, Settings, Eye, EyeOff, Sparkles, Bug } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { Plus, Trash2, Check, X, ArrowUp, ArrowDown, Save, FolderOpen, Download, Upload, AlignLeft, AlignCenter, AlignRight, Cloud, ChevronDown, FileText, Archive, ExternalLink, AlertTriangle, FileStack, Settings, Eye, EyeOff, Sparkles, Bug, AlertCircle } from 'lucide-react';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -4936,6 +4936,11 @@ ${extractionFields}`
                   <AlertCircle className="h-4 w-4 mr-2" />
                   🔍 Check Backups (Debug)
                 </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={(e) => {
+                    console.log('🔧 DEBUG: Add 10 rows clicked');
+                    e.preventDefault();
+                    e.stopPropagation();
                     addMoreRows(10);
                   }}
                 >
