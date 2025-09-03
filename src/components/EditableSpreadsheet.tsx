@@ -5259,23 +5259,71 @@ ${extractionFields}`
                      </div>
                    </Button>
                     
-                     <Button
-                       onClick={() => {
-                         setShowNewRunsheetDialog(false);
-                         setNewRunsheetName('');
-                         setShowNameNewRunsheetDialog(true);
-                       }}
-                       className="h-16 flex flex-col gap-2 text-left"
-                       variant="default"
-                     >
-                       <div className="flex items-center gap-3 w-full">
-                         <Plus className="h-6 w-6" />
-                         <div className="flex flex-col text-left">
-                           <span className="font-semibold">Start New Runsheet</span>
-                           <span className="text-sm text-muted-foreground">Begin with a fresh, empty runsheet</span>
-                         </div>
-                       </div>
-                     </Button>
+                      <Button
+                        onClick={() => {
+                          // Create untitled runsheet immediately - no naming required
+                          setShowNewRunsheetDialog(false);
+                          
+                          // Define default columns and instructions for new runsheet
+                          const DEFAULT_COLUMNS = ['Inst Number', 'Book/Page', 'Inst Type', 'Recording Date', 'Document Date', 'Grantor', 'Grantee', 'Legal Description', 'Notes'];
+                          const DEFAULT_EXTRACTION_INSTRUCTIONS: Record<string, string> = {
+                            'Inst Number': 'Extract the instrument number or recording number as it appears on the document',
+                            'Book/Page': 'Extract the book and page reference (format: Book XXX, Page XXX or XXX/XXX)',
+                            'Inst Type': 'Extract the document type (e.g., Deed, Mortgage, Lien, Assignment, etc.)',
+                            'Recording Date': 'Extract the official recording date in MM/DD/YYYY format',
+                            'Document Date': 'Extract the date the document was signed or executed in MM/DD/YYYY format',
+                            'Grantor': 'Extract the full name(s) of the grantor(s) - the party transferring or granting rights',
+                            'Grantee': 'Extract the full name(s) of the grantee(s) - the party receiving rights',
+                            'Legal Description': 'Extract the complete legal property description including lot, block, subdivision, and any metes and bounds',
+                            'Notes': 'Extract any special conditions, considerations, or additional relevant information'
+                          };
+                          
+                          // Clear active runsheet and current state
+                          clearActiveRunsheet();
+                          setCurrentRunsheetId(null);
+                          updateDocumentMap(new Map());
+                          
+                          // Set up new untitled runsheet
+                          setRunsheetName('Untitled Runsheet');
+                          setData(Array.from({ length: 100 }, () => {
+                            const row: Record<string, string> = {};
+                            DEFAULT_COLUMNS.forEach(col => row[col] = '');
+                            return row;
+                          }));
+                          setColumns(DEFAULT_COLUMNS);
+                          setColumnInstructions(DEFAULT_EXTRACTION_INSTRUCTIONS);
+                          setSelectedCell(null);
+                          setEditingCell(null);
+                          setCellValue('');
+                          setSelectedRange(null);
+                          setHasUnsavedChanges(false);
+                          setLastSavedState('');
+                          setLastSaveTime(null);
+                          
+                          // Update parent components
+                          onDataChange?.(Array.from({ length: 100 }, () => {
+                            const row: Record<string, string> = {};
+                            DEFAULT_COLUMNS.forEach(col => row[col] = '');
+                            return row;
+                          }));
+                          onColumnChange(DEFAULT_COLUMNS);
+                          
+                          toast({
+                            title: "New runsheet ready",
+                            description: "You can start adding data immediately. Name it later when you save.",
+                          });
+                        }}
+                        className="h-16 flex flex-col gap-2 text-left"
+                        variant="default"
+                      >
+                        <div className="flex items-center gap-3 w-full">
+                          <Plus className="h-6 w-6" />
+                          <div className="flex flex-col text-left">
+                            <span className="font-semibold">Start Working</span>
+                            <span className="text-sm text-muted-foreground">Begin with an untitled runsheet (name it later)</span>
+                          </div>
+                        </div>
+                      </Button>
                  </div>
                </DialogContent>
               </Dialog>
