@@ -21,6 +21,7 @@ import { AdminSettingsService } from '@/services/adminSettings';
 import { useActiveRunsheet } from '@/hooks/useActiveRunsheet';
 import { useAutoSave } from '@/hooks/useAutoSave';
 import { DataRecoveryDialog } from '@/components/DataRecoveryDialog';
+import { RunsheetFileUpload } from '@/components/RunsheetFileUpload';
 import { supabase } from '@/integrations/supabase/client';
 import { isRowEmpty } from '@/utils/rowValidation';
 
@@ -80,6 +81,7 @@ const DocumentProcessor: React.FC = () => {
   const [showDataRecovery, setShowDataRecovery] = useState(false);
   const [recoveryData, setRecoveryData] = useState<any>(null);
   const [showStorageDebug, setShowStorageDebug] = useState(false);
+  const [showRunsheetUploadDialog, setShowRunsheetUploadDialog] = useState(false);
   
   // Note: Navigation blocking removed since runsheet auto-saves
   const navigate = useNavigate();
@@ -529,47 +531,15 @@ const DocumentProcessor: React.FC = () => {
     
     // Prioritize actions over loading active runsheet
     if (action === 'upload') {
-      console.log('Upload action detected, triggering runsheet file dialog...');
+      console.log('Upload action detected, showing runsheet upload dialog...');
       
       // Clear any active runsheet display to show upload interface
       clearActiveRunsheet();
       setSpreadsheetData([]);
       setFormData({});
       
-      // Small delay to ensure state is cleared before showing file dialog
-      setTimeout(() => {
-        // Use the hidden file input that's already in the DOM
-        const existingInput = document.getElementById('dashboard-upload-input') as HTMLInputElement;
-        
-        if (existingInput) {
-          console.log('🔧 Using existing hidden file input');
-          existingInput.click();
-        } else {
-          console.log('🔧 Creating new file input programmatically');
-          // Create a file input programmatically as fallback
-          const fileInput = document.createElement('input');
-          fileInput.type = 'file';
-          fileInput.accept = '.xlsx,.xls,.csv';
-          fileInput.multiple = false;
-          fileInput.style.display = 'none';
-          
-          // Use a simple event handler that calls our function
-          fileInput.onchange = (e) => {
-            console.log('🔧 Programmatic file input change event triggered');
-            handleDashboardFileSelect(e as any);
-          };
-          
-          document.body.appendChild(fileInput);
-          fileInput.click();
-          
-          // Clean up after a delay
-          setTimeout(() => {
-            if (document.body.contains(fileInput)) {
-              document.body.removeChild(fileInput);
-            }
-          }, 1000);
-        }
-      }, 100);
+      // Show the proper runsheet upload dialog (same as Dashboard)
+      setShowRunsheetUploadDialog(true);
       
       return; // Don't process other actions if upload is happening
     } else if (action === 'google-drive') {
@@ -605,52 +575,7 @@ const DocumentProcessor: React.FC = () => {
     }
   }, [searchParams, loadedRunsheetRef]);
 
-  // Handle file selection from dashboard upload
-  const handleDashboardFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log('🔧 handleDashboardFileSelect called!');
-    console.log('🔧 Event target:', e.target);
-    console.log('🔧 Files:', e.target.files);
-    
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      // For runsheet uploads, we only handle single files
-      const selectedFile = files[0];
-      console.log('🔧 DocumentProcessor: File selected:', selectedFile.name, 'Type:', selectedFile.type);
-      
-      // Check if it's a valid runsheet file type
-      const validExtensions = ['.xlsx', '.xls', '.csv'];
-      const fileExtension = selectedFile.name.toLowerCase().substr(selectedFile.name.lastIndexOf('.'));
-      console.log('🔧 File extension:', fileExtension);
-      
-      if (!validExtensions.includes(fileExtension)) {
-        console.log('🔧 Invalid file type detected');
-        toast({
-          title: "Invalid file type",
-          description: "Please select an Excel (.xlsx, .xls) or CSV (.csv) file for runsheet upload.",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      // Trigger the spreadsheet import functionality directly
-      // Create a custom event that the EditableSpreadsheet component can listen to
-      console.log('🔧 DocumentProcessor: Dispatching importRunsheetFile event with file:', selectedFile.name);
-      const importEvent = new CustomEvent('importRunsheetFile', {
-        detail: { file: selectedFile }
-      });
-      window.dispatchEvent(importEvent);
-      console.log('🔧 DocumentProcessor: importRunsheetFile event dispatched successfully');
-      
-      toast({
-        title: "Importing runsheet",
-        description: `Processing ${selectedFile.name}...`,
-      });
-    } else {
-      console.log('🔧 No files selected or files array is empty');
-    }
-    // Reset the input so the same file can be selected again
-    e.target.value = '';
-  };
+  // File handling now done through RunsheetFileUpload component
   
   // Auto-save preferences when columns or instructions change
   useEffect(() => {
@@ -2916,15 +2841,6 @@ Image: [base64 image data]`;
         </DialogContent>
       </Dialog>
 
-      {/* Hidden file input for dashboard upload action */}
-      <input
-        id="dashboard-upload-input"
-        type="file"
-        className="sr-only"
-        accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv"
-        onChange={handleDashboardFileSelect}
-        multiple={false}
-      />
 
       {/* Multiple File Upload Dialog */}
       <Dialog open={showMultipleFileUpload} onOpenChange={setShowMultipleFileUpload}>
@@ -3105,6 +3021,51 @@ Image: [base64 image data]`;
           }}
         />
       )}
+
+      {/* Runsheet File Upload Dialog */}
+      <Dialog open={showRunsheetUploadDialog} onOpenChange={setShowRunsheetUploadDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Upload Runsheet Files</DialogTitle>
+            <DialogDescription>
+              Upload Excel, CSV, or other document files to create or update a runsheet.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <RunsheetFileUpload 
+              onFileSelected={async (runsheetData) => {
+                console.log('Runsheet file processed from DocumentProcessor:', runsheetData);
+                setShowRunsheetUploadDialog(false);
+                
+                // Use the same logic as Dashboard upload
+                const timestamp = new Date().toLocaleString();
+                const uniqueName = `${runsheetData.name} (Imported ${timestamp})`;
+                
+                navigate('/runsheet', { 
+                  state: { 
+                    runsheet: {
+                      id: `uploaded-${Date.now()}`, // Temporary ID for uploaded data
+                      name: uniqueName, // Use unique name to avoid conflicts
+                      columns: runsheetData.columns,
+                      data: runsheetData.rows,
+                      column_instructions: {}
+                    },
+                    clearActiveRunsheet: true, // Signal to clear active runsheet
+                    isFileUpload: true, // Additional flag to indicate this is from file upload
+                    preventAutoSave: true // Prevent auto-save conflicts
+                  } 
+                });
+                
+                toast({
+                  title: "Runsheet loaded successfully",
+                  description: `Loaded "${uniqueName}" with ${runsheetData.rows.length} rows and ${runsheetData.columns.length} columns.`
+                });
+              }}
+              onCancel={() => setShowRunsheetUploadDialog(false)}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Storage Debug Dialog */}
       <StorageDebugDialog

@@ -90,9 +90,10 @@ export const RunsheetFileUpload: React.FC<RunsheetFileUploadProps> = ({
         
         const nonEmptyCount = row.filter(cell => cell && cell.toString().trim() !== '').length;
         
-        // Must have at least 4 non-empty cells to be considered
-        if (nonEmptyCount >= 4) {
+        // Must have at least 3 non-empty cells to be considered
+        if (nonEmptyCount >= 3) {
           let score = 0;
+          let headerLikeCount = 0;
           
           // Check how many cells look like column headers
           row.forEach(cell => {
@@ -101,27 +102,51 @@ export const RunsheetFileUpload: React.FC<RunsheetFileUploadProps> = ({
               
               // Score based on length (good headers are usually 5-30 characters)
               if (cellText.length >= 4 && cellText.length <= 30) {
-                score += 1;
+                score += 2;
+                headerLikeCount++;
               }
               
-              // Bonus points for containing common runsheet terms
+              // Big bonus points for containing common runsheet terms
               commonRunsheetColumns.forEach(term => {
                 if (cellText.includes(term)) {
-                  score += 3;
+                  score += 5; // Increased bonus for runsheet terms
+                  headerLikeCount++;
                 }
               });
               
               // Bonus for multiple words (typical header pattern)
-              if (cellText.includes(' ') || cellText.includes('_')) {
-                score += 1;
+              if (cellText.includes(' ') || cellText.includes('_') || cellText.includes('-')) {
+                score += 2;
+                headerLikeCount++;
               }
               
-              // Penalty for very short single words or numbers only
-              if (cellText.length < 3 || /^\d+$/.test(cellText)) {
-                score -= 1;
+              // Check for typical header words
+              const headerWords = ['name', 'date', 'type', 'number', 'info', 'description', 'comment', 'id', 'ref'];
+              headerWords.forEach(word => {
+                if (cellText.includes(word)) {
+                  score += 3;
+                  headerLikeCount++;
+                }
+              });
+              
+              // Penalty for very short single words, numbers only, or data-like patterns
+              if (cellText.length < 3 || /^\d+$/.test(cellText) || /^\d+[-\/]\d+/.test(cellText)) {
+                score -= 2; // Increased penalty for data-like content
+              }
+              
+              // Penalty for content that looks like data values
+              if (/^\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4}$/.test(cellText) || // dates
+                  /^[A-Z]{2,4}$/.test(cellText) || // acronyms that might be data
+                  cellText.includes('$') || cellText.includes('%')) { // currency/percentages
+                score -= 3;
               }
             }
           });
+          
+          // Boost score if most cells look like headers
+          if (headerLikeCount >= Math.floor(nonEmptyCount * 0.6)) {
+            score += 5; // Bonus if majority of cells look like headers
+          }
           
           console.log(`📊 Row ${i + 1} header score: ${score}, content:`, row.slice(0, 5));
           
