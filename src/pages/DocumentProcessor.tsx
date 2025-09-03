@@ -811,6 +811,41 @@ const DocumentProcessor: React.FC = () => {
     };
   }, [activeRunsheet?.id]);
 
+  // Handle save-before-upload event
+  useEffect(() => {
+    const handleSaveBeforeUpload = async (event: CustomEvent) => {
+      console.log('💾 Save before upload triggered');
+      
+      // Only save if there are unsaved changes and an active runsheet
+      if (hasUnsavedChanges && activeRunsheet?.id && !activeRunsheet.id.startsWith('temp-')) {
+        console.log('💾 Saving current runsheet before upload...');
+        try {
+          // Trigger the save
+          const saveEvent = new CustomEvent('forceSaveRunsheet');
+          window.dispatchEvent(saveEvent);
+          
+          // Mark as saved to prevent conflicts
+          setHasUnsavedChanges(false);
+          
+          toast({
+            title: "Current work saved",
+            description: "Your previous runsheet has been saved before loading the new one.",
+          });
+        } catch (error) {
+          console.error('💾 Error saving before upload:', error);
+        }
+      } else {
+        console.log('💾 No unsaved changes or valid runsheet to save');
+      }
+    };
+
+    window.addEventListener('saveBeforeUpload', handleSaveBeforeUpload as EventListener);
+    
+    return () => {
+      window.removeEventListener('saveBeforeUpload', handleSaveBeforeUpload as EventListener);
+    };
+  }, [hasUnsavedChanges, activeRunsheet?.id]);
+
   // Handle navigation - no longer blocked since runsheet auto-saves
   const handleNavigation = useCallback((path: string) => {
     navigate(path);

@@ -365,11 +365,28 @@ const Dashboard: React.FC = () => {
           </DialogHeader>
           <div className="py-4">
             <RunsheetFileUpload 
-              onFileSelected={(runsheetData) => {
+              onFileSelected={async (runsheetData) => {
                 console.log('Runsheet file processed:', runsheetData);
                 setShowUploadDialog(false);
                 
-                // Clear any existing active runsheet first
+                // First, trigger auto-save of any current runsheet data
+                try {
+                  // Dispatch event to trigger auto-save before switching
+                  const saveEvent = new CustomEvent('saveBeforeUpload', {
+                    detail: { waitForSave: true }
+                  });
+                  window.dispatchEvent(saveEvent);
+                  
+                  // Small delay to allow auto-save to complete
+                  await new Promise(resolve => setTimeout(resolve, 500));
+                  
+                  console.log('✅ Auto-save completed before upload');
+                } catch (error) {
+                  console.error('⚠️ Auto-save failed before upload:', error);
+                  // Continue anyway - don't block the upload
+                }
+                
+                // Clear any existing active runsheet and load uploaded data
                 navigate('/runsheet', { 
                   state: { 
                     runsheet: {
@@ -385,7 +402,7 @@ const Dashboard: React.FC = () => {
                 
                 toast({
                   title: "Runsheet loaded successfully",
-                  description: `Loaded "${runsheetData.name}" with ${runsheetData.rows.length} rows.`
+                  description: `Previous work saved. Loaded "${runsheetData.name}" with ${runsheetData.rows.length} rows.`
                 });
               }}
               onCancel={() => setShowUploadDialog(false)}
