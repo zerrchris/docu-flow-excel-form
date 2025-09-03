@@ -21,6 +21,7 @@ import GoogleAuthCallback from "./components/GoogleAuthCallback";
 import CapturePopupPage from "./pages/CapturePopup";
 import Analytics from "./pages/Analytics";
 import AuthStatus from "./pages/AuthStatus";
+import CodeExport from "./pages/CodeExport";
  
 const queryClient = new QueryClient();
  
@@ -48,6 +49,7 @@ const App = () => (
             <Route path="/capture-popup" element={<CapturePopupPage />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/auth-status" element={<AuthStatus />} />
+            <Route path="/code-export" element={<CodeExport />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
