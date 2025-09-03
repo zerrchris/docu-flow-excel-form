@@ -277,15 +277,15 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   const [showInsertionPreview, setShowInsertionPreview] = useState(false);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Initialize auto-save hook - DISABLED temporarily to fix duplicate key errors
+  // Initialize auto-save hook - RE-ENABLED with safeguards
   const { save: autoSave, forceSave: autoForceSave, isSaving: autoSaving } = useAutoSave({
-    runsheetId: null, // DISABLED: currentRunsheetId,
-    runsheetName: 'DISABLED_AUTO_SAVE', // Prevent any auto-save attempts
-    columns: [],
-    data: [],
-    columnInstructions: {},
-    userId: null, // DISABLED: user?.id,
-    debounceMs: 1000, // Save 1 second after last change
+    runsheetId: currentRunsheet?.id || null,
+    runsheetName: runsheetName && runsheetName !== 'Untitled Runsheet' ? runsheetName : (currentRunsheet?.name || 'Untitled Runsheet'),
+    columns,
+    data,
+    columnInstructions,
+    userId: user?.id,
+    debounceMs: 3000, // Increased to 3 seconds to prevent conflicts
     onSaveStart: () => {
       setAutoSaveStatus('saving');
       setAutoSaveError('');
@@ -4889,7 +4889,6 @@ ${extractionFields}`
                   variant="outline"
                   size="sm"
                   className="gap-2"
-                  onClick={() => setShowAddRowsDialog(true)}
                 >
                   <Plus className="h-4 w-4" />
                   Add Rows
@@ -4902,6 +4901,41 @@ ${extractionFields}`
                     console.log('🔧 DEBUG: Add 10 rows clicked');
                     e.preventDefault();
                     e.stopPropagation();
+                    setShowAddRowsDialog(true);
+                  }}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Rows
+                </DropdownMenuItem>
+                
+                <DropdownMenuSeparator />
+                
+                <DropdownMenuItem 
+                  onClick={() => {
+                    console.log('=== LOCALSTORAGE DEBUG ===');
+                    const keys = Object.keys(localStorage);
+                    const runsheetKeys = keys.filter(k => k.includes('runsheet') || k.includes('backup'));
+                    console.log('All localStorage keys:', keys);
+                    console.log('Runsheet-related keys:', runsheetKeys);
+                    
+                    runsheetKeys.forEach(key => {
+                      try {
+                        const value = localStorage.getItem(key);
+                        console.log(`${key}:`, value ? JSON.parse(value) : 'null');
+                      } catch (e) {
+                        console.log(`${key}:`, localStorage.getItem(key));
+                      }
+                    });
+                    
+                    toast({
+                      title: "Debug info in console",
+                      description: "Check browser console for localStorage data",
+                    });
+                  }}
+                >
+                  <AlertCircle className="h-4 w-4 mr-2" />
+                  🔍 Check Backups (Debug)
+                </DropdownMenuItem>
                     addMoreRows(10);
                   }}
                 >
