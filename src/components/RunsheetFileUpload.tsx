@@ -70,121 +70,25 @@ export const RunsheetFileUpload: React.FC<RunsheetFileUploadProps> = ({
         throw new Error('The file appears to be empty');
       }
 
-      // Find the header row - it might not be the first row
-      let headerRowIndex = 0;
-      let headers: string[] = [];
-      
-      // Common runsheet column patterns to help identify the header row
-      const commonRunsheetColumns = [
-        'recording', 'instrument', 'date', 'record', 'grantor', 'grantee', 
-        'description', 'comment', 'book', 'page', 'legal', 'type', 'info'
-      ];
-      
-      // Look for the row that looks most like actual column headers
-      let bestHeaderScore = 0;
-      let bestHeaderIndex = 0;
-      
-      for (let i = 0; i < Math.min(15, jsonData.length); i++) {
-        const row = jsonData[i] as any[];
-        if (!row) continue;
-        
-        const nonEmptyCount = row.filter(cell => cell && cell.toString().trim() !== '').length;
-        
-        // Must have at least 3 non-empty cells to be considered
-        if (nonEmptyCount >= 3) {
-          let score = 0;
-          let headerLikeCount = 0;
-          
-          // Check how many cells look like column headers
-          row.forEach(cell => {
-            if (cell && typeof cell === 'string') {
-              const cellText = cell.toString().toLowerCase().trim();
-              
-              // Score based on length (good headers are usually 5-30 characters)
-              if (cellText.length >= 4 && cellText.length <= 30) {
-                score += 2;
-                headerLikeCount++;
-              }
-              
-              // Big bonus points for containing common runsheet terms
-              commonRunsheetColumns.forEach(term => {
-                if (cellText.includes(term)) {
-                  score += 5; // Increased bonus for runsheet terms
-                  headerLikeCount++;
-                }
-              });
-              
-              // Bonus for multiple words (typical header pattern)
-              if (cellText.includes(' ') || cellText.includes('_') || cellText.includes('-')) {
-                score += 2;
-                headerLikeCount++;
-              }
-              
-              // Check for typical header words
-              const headerWords = ['name', 'date', 'type', 'number', 'info', 'description', 'comment', 'id', 'ref'];
-              headerWords.forEach(word => {
-                if (cellText.includes(word)) {
-                  score += 3;
-                  headerLikeCount++;
-                }
-              });
-              
-              // Penalty for very short single words, numbers only, or data-like patterns
-              if (cellText.length < 3 || /^\d+$/.test(cellText) || /^\d+[-\/]\d+/.test(cellText)) {
-                score -= 2; // Increased penalty for data-like content
-              }
-              
-              // Penalty for content that looks like data values
-              if (/^\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4}$/.test(cellText) || // dates
-                  /^[A-Z]{2,4}$/.test(cellText) || // acronyms that might be data
-                  cellText.includes('$') || cellText.includes('%')) { // currency/percentages
-                score -= 3;
-              }
-            }
-          });
-          
-          // Boost score if most cells look like headers
-          if (headerLikeCount >= Math.floor(nonEmptyCount * 0.6)) {
-            score += 5; // Bonus if majority of cells look like headers
-          }
-          
-          console.log(`📊 Row ${i + 1} header score: ${score}, content:`, row.slice(0, 5));
-          
-          if (score > bestHeaderScore) {
-            bestHeaderScore = score;
-            bestHeaderIndex = i;
-          }
-        }
-      }
-      
-      // Use the best scoring row as headers
-      if (bestHeaderScore > 0) {
-        headerRowIndex = bestHeaderIndex;
-        headers = (jsonData[headerRowIndex] as any[]).map(cell => 
-          cell ? cell.toString().trim() : ''
-        );
-      } else {
-        // Fallback: find first row with substantial data
-        for (let i = 0; i < Math.min(10, jsonData.length); i++) {
-          const row = jsonData[i] as any[];
-          const nonEmptyCount = row.filter(cell => cell && cell.toString().trim() !== '').length;
-          
-          if (nonEmptyCount >= 3) {
-            headers = row.map(cell => cell ? cell.toString().trim() : '');
-            headerRowIndex = i;
-            break;
-          }
-        }
+      // Use the first row as headers (standard approach)
+      const firstRow = jsonData[0] as any[];
+      if (!firstRow || firstRow.length === 0) {
+        throw new Error('The first row appears to be empty. Please ensure your column headers are in the first row.');
       }
 
-      if (!headers || headers.length === 0) {
-        throw new Error('No column headers found in the file');
+      // Convert first row to headers
+      const headers = firstRow.map(cell => 
+        cell ? cell.toString().trim() : ''
+      ).filter(header => header !== ''); // Remove empty headers
+
+      if (headers.length === 0) {
+        throw new Error('No valid column headers found in the first row. Please ensure your spreadsheet has column headers in the first row.');
       }
 
-      console.log('📊 Found headers at row', headerRowIndex + 1, ':', headers);
+      console.log('📊 Using first row as headers:', headers);
 
-      // Get data rows (everything after the header row)
-      const dataRows = jsonData.slice(headerRowIndex + 1) as any[][];
+      // Get data rows (skip the header row)
+      const dataRows = jsonData.slice(1) as any[][];
       
       // Convert rows to objects, filtering out completely empty rows
       const processedRows = dataRows
@@ -302,9 +206,15 @@ export const RunsheetFileUpload: React.FC<RunsheetFileUploadProps> = ({
             <FileSpreadsheet className="h-8 w-8 text-primary" />
           </div>
           <h3 className="text-lg font-medium mb-2">Upload Runsheet File</h3>
-          <p className="text-muted-foreground text-sm mb-4">
+          <p className="text-muted-foreground text-sm mb-2">
             Drop your Excel or CSV file here, or click to browse
           </p>
+          <div className="bg-amber-50 border border-amber-200 rounded-md p-3 mb-4">
+            <p className="text-amber-800 text-xs font-medium mb-1">📋 Important:</p>
+            <p className="text-amber-700 text-xs">
+              Make sure your column headers are in the first row of your spreadsheet
+            </p>
+          </div>
           <p className="text-xs text-muted-foreground">
             Supports: .xlsx, .xls, .csv files only
           </p>
