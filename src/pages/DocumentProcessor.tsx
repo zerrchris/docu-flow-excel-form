@@ -3141,6 +3141,8 @@ Image: [base64 image data]`;
                 console.log('📥 Columns received:', runsheetData.columns);
                 console.log('📥 Data sample:', runsheetData.rows?.slice(0, 2));
                 console.log('📥 First row keys:', runsheetData.rows?.[0] ? Object.keys(runsheetData.rows[0]) : 'No data');
+                console.log('📥 Total rows count:', runsheetData.rows?.length);
+                console.log('📥 All data keys in first row:', runsheetData.rows?.[0]);
                 setShowRunsheetUploadDialog(false);
                 
                 // Use the same logic as Dashboard upload
@@ -3172,7 +3174,7 @@ Image: [base64 image data]`;
                 
                 // When upload is canceled, go back to dashboard instead of leaving broken state
                 console.log('Upload canceled, redirecting to dashboard');
-                navigate('/dashboard');
+                navigate('/app');
               }}
             />
           </div>
