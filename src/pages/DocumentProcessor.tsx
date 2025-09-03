@@ -50,36 +50,6 @@ const DocumentProcessor: React.FC = () => {
   // Navigation
   const navigate = useNavigate();
   
-  // Check if we have working data and redirect if not
-  useEffect(() => {
-    const checkWorkingRunsheet = () => {
-      console.log('🔍 DocumentProcessor: Checking for working runsheet on mount/update');
-      console.log('🔍 Active runsheet state:', {
-        hasActiveRunsheet,
-        activeRunsheetId: activeRunsheet?.id,
-        activeRunsheetName: activeRunsheet?.name
-      });
-      
-      // If no active runsheet found, redirect to app immediately
-      if (!hasActiveRunsheet && !activeRunsheet?.id) {
-        console.log('⚠️ No active runsheet found, redirecting to app');
-        toast({
-          title: "No Active Runsheet",
-          description: "Please start a new runsheet or open an existing one first.",
-          variant: "destructive",
-        });
-        navigate('/app');
-        return;
-      }
-      
-      console.log('✅ Active runsheet confirmed, proceeding with document processor');
-    };
-    
-    // Small delay to allow state to settle
-    const timeoutId = setTimeout(checkWorkingRunsheet, 100);
-    return () => clearTimeout(timeoutId);
-  }, [hasActiveRunsheet, activeRunsheet, navigate]);
-  
   // Check if we have working data (either active runsheet or emergency draft)
   const hasWorkingRunsheet = () => {
     console.log('🔍 Checking for working runsheet:', {
@@ -109,18 +79,6 @@ const DocumentProcessor: React.FC = () => {
     console.log('❌ No working runsheet found');
     return false;
   };
-  
-  // Don't render the component if no active runsheet
-  if (!hasActiveRunsheet && !activeRunsheet?.id) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <h2 className="text-lg font-semibold mb-2">Checking for active runsheet...</h2>
-          <p className="text-muted-foreground">Redirecting to app...</p>
-        </div>
-      </div>
-    );
-  }
   
   // View state
   const [isDocumentMode, setIsDocumentMode] = useState(false);
@@ -2393,6 +2351,7 @@ Image: [base64 image data]`;
               isAnalyzing={isAnalyzing}
               isExpanded={isDocumentFrameExpanded}
               onExpandedChange={setIsDocumentFrameExpanded}
+              disabled={!hasActiveRunsheet}
             />
             
               <BatchProcessing

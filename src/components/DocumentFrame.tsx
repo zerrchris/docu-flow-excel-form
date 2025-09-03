@@ -29,6 +29,7 @@ interface DocumentFrameProps {
   isAnalyzing: boolean;
   isExpanded?: boolean;
   onExpandedChange?: (expanded: boolean) => void;
+  disabled?: boolean;
 }
 
 const DocumentFrame: React.FC<DocumentFrameProps> = ({ 
@@ -46,7 +47,8 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
   onResetDocument,
   isAnalyzing,
   isExpanded: externalExpanded,
-  onExpandedChange: externalOnExpandedChange
+  onExpandedChange: externalOnExpandedChange,
+  disabled = false
 }) => {
   const [internalExpanded, setInternalExpanded] = useState<boolean>(() => {
     try {
@@ -174,10 +176,12 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
           <Button 
             variant="ghost" 
             className="w-full justify-between p-4 h-auto text-left hover:bg-muted/50"
+            disabled={disabled}
           >
             <div className="flex flex-col items-start">
               <h3 className="text-lg font-semibold text-foreground">
                 Single Document Processing
+                {disabled && <span className="text-sm text-muted-foreground ml-2">(Requires active runsheet)</span>}
               </h3>
               <p className="text-sm text-muted-foreground">
                 {file ? file.name : 'No document selected'}
