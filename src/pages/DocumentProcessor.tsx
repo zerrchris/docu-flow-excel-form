@@ -208,6 +208,17 @@ const DocumentProcessor: React.FC = () => {
       });
     };
   }, []);
+
+  // Cleanup file state when component unmounts or user navigates away
+  useEffect(() => {
+    return () => {
+      // Clean up any preview URLs to avoid memory leaks
+      if (previewUrl) {
+        console.log('🧹 Cleaning up preview URL on unmount');
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
   
   // Warn about potential data loss
   useEffect(() => {
@@ -1209,9 +1220,18 @@ Image: [base64 image data]`;
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Document analysis error:', errorData);
-        throw new Error(`OpenAI API error: ${errorData.error || errorData.details || 'Unknown error'}`);
+        console.error('Response not OK:', response.status, response.statusText);
+        let errorData;
+        try {
+          errorData = await response.json();
+          console.error('Error response data:', errorData);
+        } catch (parseError) {
+          console.error('Failed to parse error response:', parseError);
+          const errorText = await response.text();
+          console.error('Raw error response:', errorText);
+          throw new Error(`OpenAI API error: ${response.status} ${response.statusText} - ${errorText}`);
+        }
+        throw new Error(`OpenAI API error: ${errorData.error || errorData.details || errorData.message || 'Unknown error'}`);
       }
 
       const result = await response.json();
