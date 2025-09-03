@@ -542,7 +542,26 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     // Handle Ctrl+S save event from DocumentProcessor
     const handleSaveEvent = async () => {
       if (user) {
-        await safeAutoForceSave();
+        try {
+          await safeAutoForceSave();
+          // Send success response back to DocumentProcessor
+          const responseEvent = new CustomEvent('runsheetSaveComplete', {
+            detail: { success: true }
+          });
+          window.dispatchEvent(responseEvent);
+        } catch (error) {
+          // Send error response back to DocumentProcessor
+          const responseEvent = new CustomEvent('runsheetSaveComplete', {
+            detail: { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+          });
+          window.dispatchEvent(responseEvent);
+        }
+      } else {
+        // Send error response if no user
+        const responseEvent = new CustomEvent('runsheetSaveComplete', {
+          detail: { success: false, error: 'User not authenticated' }
+        });
+        window.dispatchEvent(responseEvent);
       }
     };
     

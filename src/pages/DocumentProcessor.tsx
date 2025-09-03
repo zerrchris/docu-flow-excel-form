@@ -2786,12 +2786,32 @@ Image: [base64 image data]`;
                     description: "Please wait while we save your changes.",
                   });
 
-                  // Dispatch the save event to EditableSpreadsheet and wait for completion
+                  // Set up a promise to wait for the save completion response
+                  const savePromise = new Promise<void>((resolve, reject) => {
+                    const handleSaveResponse = (event: CustomEvent) => {
+                      window.removeEventListener('runsheetSaveComplete', handleSaveResponse as EventListener);
+                      if (event.detail.success) {
+                        resolve();
+                      } else {
+                        reject(new Error(event.detail.error || 'Save failed'));
+                      }
+                    };
+                    
+                    window.addEventListener('runsheetSaveComplete', handleSaveResponse as EventListener);
+                    
+                    // Set a timeout in case the response never comes
+                    setTimeout(() => {
+                      window.removeEventListener('runsheetSaveComplete', handleSaveResponse as EventListener);
+                      reject(new Error('Save operation timed out'));
+                    }, 10000); // 10 second timeout
+                  });
+
+                  // Dispatch the save event to EditableSpreadsheet
                   const saveEvent = new CustomEvent('forceSaveRunsheet');
                   window.dispatchEvent(saveEvent);
                   
-                  // Wait a bit longer for the save to complete (since it's async)
-                  await new Promise(resolve => setTimeout(resolve, 2000));
+                  // Wait for the save to complete
+                  await savePromise;
                   
                   setShowNavigationDialog(false);
                   
@@ -2815,7 +2835,7 @@ Image: [base64 image data]`;
                   console.error('Failed to save runsheet:', error);
                   toast({
                     title: "Save failed",
-                    description: "Failed to save your changes. Please try again.",
+                    description: error instanceof Error ? error.message : "Failed to save your changes. Please try again.",
                     variant: "destructive"
                   });
                   // Keep dialog open so user can try again
