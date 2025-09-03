@@ -3024,7 +3024,7 @@ Image: [base64 image data]`;
 
       {/* Runsheet File Upload Dialog */}
       <Dialog open={showRunsheetUploadDialog} onOpenChange={setShowRunsheetUploadDialog}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Upload Runsheet Files</DialogTitle>
             <DialogDescription>
