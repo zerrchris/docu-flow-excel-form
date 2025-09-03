@@ -1647,12 +1647,15 @@ Image: [base64 image data]`;
     }
 
     try {
+      // Get current runsheet data (could be from activeRunsheet or spreadsheetData)
+      const currentData = activeRunsheet?.data || spreadsheetData || [];
+      
       // Find the next empty row
-      let targetRowIndex = activeRunsheet.data.findIndex(row => isRowEmpty(row));
+      let targetRowIndex = currentData.findIndex(row => isRowEmpty(row));
       
       if (targetRowIndex === -1) {
         // No empty row found, add a new one
-        targetRowIndex = activeRunsheet.data.length;
+        targetRowIndex = currentData.length;
       }
       
       // Add data via custom event (same as brain button analyzer)
