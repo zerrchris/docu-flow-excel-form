@@ -85,7 +85,7 @@ export function useAutoSave({
     }
   }, []);
 
-  // Simplified save function - database-first approach with duplicate prevention
+  // Simplified save function - database-first approach
   const performSave = useCallback(async (): Promise<void> => {
     if (!userId || !runsheetName.trim() || columns.length === 0) {
       return;
@@ -131,114 +131,18 @@ export function useAutoSave({
           .select('*')
           .single();
 
-        if (error) {
-          // If it's a duplicate key constraint, try to find the existing runsheet
-          if (error.code === '23505') {
-            console.log('🔄 Duplicate key constraint, trying to find existing runsheet with name:', runsheetName);
-            const { data: existingRunsheet } = await supabase
-              .from('runsheets')
-              .select('*')
-              .eq('user_id', userId)
-              .eq('name', runsheetName.trim())
-              .single();
-            
-            if (existingRunsheet) {
-              console.log('✅ Found existing runsheet, updating it instead');
-              const { data: retryUpdate, error: retryError } = await supabase
-                .from('runsheets')
-                .update({
-                  columns,
-                  data,
-                  column_instructions: columnInstructions,
-                  updated_at: new Date().toISOString(),
-                })
-                .eq('id', existingRunsheet.id)
-                .eq('user_id', userId)
-                .select('*')
-                .single();
-              
-              if (retryError) throw retryError;
-              result = retryUpdate;
-            } else {
-              throw error;
-            }
-          } else {
-            throw error;
-          }
-        } else {
-          result = updateResult;
-        }
+        if (error) throw error;
+        result = updateResult;
       } else {
-        // Check for existing runsheet with same name before creating
-        const { data: existingCheck } = await supabase
+        // Create new runsheet
+        const { data: insertResult, error } = await supabase
           .from('runsheets')
-          .select('id')
-          .eq('user_id', userId)
-          .eq('name', runsheetName.trim())
-          .maybeSingle();
-        
-        if (existingCheck) {
-          console.log('🔄 Found existing runsheet with same name, updating instead of creating');
-          const { data: updateResult, error } = await supabase
-            .from('runsheets')
-            .update({
-              columns,
-              data,
-              column_instructions: columnInstructions,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', existingCheck.id)
-            .eq('user_id', userId)
-            .select('*')
-            .single();
-          
-          if (error) throw error;
-          result = updateResult;
-        } else {
-          // Create new runsheet
-          const { data: insertResult, error } = await supabase
-            .from('runsheets')
-            .insert(runsheetData)
-            .select('*')
-            .single();
+          .insert(runsheetData)
+          .select('*')
+          .single();
 
-          if (error) {
-            // Handle duplicate key constraint on creation too
-            if (error.code === '23505') {
-              console.log('🔄 Duplicate key on insert, finding existing and updating');
-              const { data: existingRunsheet } = await supabase
-                .from('runsheets')
-                .select('*')
-                .eq('user_id', userId)
-                .eq('name', runsheetName.trim())
-                .single();
-              
-              if (existingRunsheet) {
-                const { data: retryUpdate, error: retryError } = await supabase
-                  .from('runsheets')
-                  .update({
-                    columns,
-                    data,
-                    column_instructions: columnInstructions,
-                    updated_at: new Date().toISOString(),
-                  })
-                  .eq('id', existingRunsheet.id)
-                  .eq('user_id', userId)
-                  .select('*')
-                  .single();
-                
-                if (retryError) throw retryError;
-                result = retryUpdate;
-              } else {
-                throw error;
-              }
-            } else {
-              throw error;
-            }
-          } else {
-            result = insertResult;
-          }
-        }
+        if (error) throw error;
+        result = insertResult;
       }
 
       // Update last saved state
@@ -251,14 +155,11 @@ export function useAutoSave({
       const errorMessage = error instanceof Error ? error.message : 'Failed to save runsheet';
       onSaveError?.(errorMessage);
       
-      // Only show toast for non-duplicate errors
-      if (!(error instanceof Error && error.message.includes('duplicate key'))) {
-        toast({
-          title: "Save failed",
-          description: errorMessage,
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Save failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
     } finally {
       isSavingRef.current = false;
     }
