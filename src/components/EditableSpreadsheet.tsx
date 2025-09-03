@@ -112,8 +112,12 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   const [runsheetName, setRunsheetName] = useState<string>(() => {
     // Prevent default runsheet creation if upload action is active
     const preventDefault = sessionStorage.getItem('prevent_default_runsheet_creation');
-    if (preventDefault === 'true') {
-      sessionStorage.removeItem('prevent_default_runsheet_creation');
+    const isUploadMode = window.location.search.includes('action=upload');
+    
+    if (preventDefault === 'true' || isUploadMode) {
+      if (preventDefault === 'true') {
+        sessionStorage.removeItem('prevent_default_runsheet_creation');
+      }
       return '';
     }
     return initialRunsheetName || 'Untitled Runsheet';
