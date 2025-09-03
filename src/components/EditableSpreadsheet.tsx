@@ -5278,13 +5278,29 @@ ${extractionFields}`
                             'Notes': 'Extract any special conditions, considerations, or additional relevant information'
                           };
                           
-                          // Clear active runsheet and current state
+                          // Generate a temporary ID for this working session
+                          const tempId = `working-${Date.now()}`;
+                          
+                          // Clear old state and set up new working runsheet
                           clearActiveRunsheet();
-                          setCurrentRunsheetId(null);
+                          setCurrentRunsheetId(tempId);
                           updateDocumentMap(new Map());
                           
                           // Set up new untitled runsheet
                           setRunsheetName('Untitled Runsheet');
+                          
+                          // Set this as the active runsheet for document processing
+                          setActiveRunsheet({
+                            id: tempId,
+                            name: 'Untitled Runsheet',
+                            data: Array.from({ length: 100 }, () => {
+                              const row: Record<string, string> = {};
+                              DEFAULT_COLUMNS.forEach(col => row[col] = '');
+                              return row;
+                            }),
+                            columns: DEFAULT_COLUMNS,
+                            columnInstructions: DEFAULT_EXTRACTION_INSTRUCTIONS
+                          });
                           setData(Array.from({ length: 100 }, () => {
                             const row: Record<string, string> = {};
                             DEFAULT_COLUMNS.forEach(col => row[col] = '');

@@ -51,9 +51,9 @@ const DocumentProcessor: React.FC = () => {
   const hasWorkingRunsheet = () => {
     if (hasActiveRunsheet) return true;
     
-    // Check for emergency draft data
+    // Check for emergency draft data (corrected key name)
     try {
-      const emergencyDraft = localStorage.getItem('emergencyDraft');
+      const emergencyDraft = localStorage.getItem('runsheet-emergency-draft');
       if (emergencyDraft) {
         const draftData = JSON.parse(emergencyDraft);
         return draftData?.data?.length > 0 || draftData?.name;
