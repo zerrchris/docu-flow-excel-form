@@ -19,6 +19,7 @@ interface BatchProcessingProps {
   isAnalyzing: boolean;
   isExpanded?: boolean;
   onExpandedChange?: (expanded: boolean) => void;
+  hasActiveRunsheet?: boolean;
 }
 
 const BatchProcessing: React.FC<BatchProcessingProps> = ({
@@ -27,7 +28,8 @@ const BatchProcessing: React.FC<BatchProcessingProps> = ({
   onAnalyze,
   isAnalyzing,
   isExpanded: externalExpanded,
-  onExpandedChange: externalOnExpandedChange
+  onExpandedChange: externalOnExpandedChange,
+  hasActiveRunsheet = false
 }) => {
   const [internalExpanded, setInternalExpanded] = useState(false);
 
@@ -438,24 +440,42 @@ const BatchProcessing: React.FC<BatchProcessingProps> = ({
                 <div className="text-center py-8 text-muted-foreground space-y-4">
                   <Files className="h-12 w-12 mx-auto mb-3 opacity-60" />
                   <div className="space-y-2">
-                    <p className="font-medium">No documents uploaded yet</p>
-                    <p className="text-sm">Get started by analyzing your mobile captured documents</p>
-                  </div>
-                  
-                  <div className="flex flex-col items-center gap-3 pt-2">
-                    <Button
-                      onClick={handleAnalyzeMobileDocs}
-                      className="gap-2"
-                      disabled={isLoadingMobileDocs}
-                    >
-                      <Smartphone className="h-4 w-4" />
-                      {isLoadingMobileDocs ? 'Loading...' : 'Analyze Mobile Documents'}
-                    </Button>
-                    
-                    <p className="text-xs text-muted-foreground">
-                      Or upload documents above to start batch processing
+                    <p className="font-medium">
+                      {hasActiveRunsheet ? 'No documents uploaded yet' : 'No active runsheet selected'}
+                    </p>
+                    <p className="text-sm">
+                      {hasActiveRunsheet 
+                        ? 'Get started by analyzing your mobile captured documents'
+                        : 'Please select a runsheet from your dashboard first to enable batch processing'
+                      }
                     </p>
                   </div>
+                  
+                  {hasActiveRunsheet ? (
+                    <div className="flex flex-col items-center gap-3 pt-2">
+                      <Button
+                        onClick={handleAnalyzeMobileDocs}
+                        className="gap-2"
+                        disabled={isLoadingMobileDocs}
+                      >
+                        <Smartphone className="h-4 w-4" />
+                        {isLoadingMobileDocs ? 'Loading...' : 'Analyze Mobile Documents'}
+                      </Button>
+                      
+                      <p className="text-xs text-muted-foreground">
+                        Or upload documents above to start batch processing
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="pt-2">
+                      <Button 
+                        onClick={() => window.location.href = '/dashboard'}
+                        variant="outline"
+                      >
+                        Go to Dashboard
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <>
