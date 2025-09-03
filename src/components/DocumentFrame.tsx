@@ -181,7 +181,7 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
             <div className="flex flex-col items-start">
               <h3 className="text-lg font-semibold text-foreground">
                 Single Document Processing
-                {disabled && <span className="text-sm text-muted-foreground ml-2">(Requires active runsheet)</span>}
+                {disabled && <span className="text-sm text-muted-foreground ml-2">(Start a new runsheet first)</span>}
               </h3>
               <p className="text-sm text-muted-foreground">
                 {file ? file.name : 'No document selected'}

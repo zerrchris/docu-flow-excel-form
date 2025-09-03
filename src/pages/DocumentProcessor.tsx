@@ -2351,7 +2351,7 @@ Image: [base64 image data]`;
               isAnalyzing={isAnalyzing}
               isExpanded={isDocumentFrameExpanded}
               onExpandedChange={setIsDocumentFrameExpanded}
-              disabled={!hasActiveRunsheet}
+              disabled={!hasWorkingRunsheet()}
             />
             
               <BatchProcessing
@@ -2361,7 +2361,7 @@ Image: [base64 image data]`;
                 isAnalyzing={isAnalyzing}
                 isExpanded={isBatchProcessingExpanded}
                 onExpandedChange={setIsBatchProcessingExpanded}
-                hasActiveRunsheet={!!activeRunsheet}
+                hasActiveRunsheet={hasWorkingRunsheet()}
               />
             
             <div className="mt-6">
