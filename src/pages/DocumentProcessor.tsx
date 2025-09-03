@@ -544,6 +544,9 @@ const DocumentProcessor: React.FC = () => {
       setSpreadsheetData([]);
       setFormData({});
       
+      // Prevent any automatic runsheet creation
+      sessionStorage.setItem('prevent_default_runsheet_creation', 'true');
+      
       // Show the proper runsheet upload dialog (same as Dashboard)
       setShowRunsheetUploadDialog(true);
       

@@ -109,7 +109,15 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   const [showOpenDialog, setShowOpenDialog] = useState(false);
   const [showUploadWarningDialog, setShowUploadWarningDialog] = useState(false);
   const [savedRunsheets, setSavedRunsheets] = useState<any[]>([]);
-  const [runsheetName, setRunsheetName] = useState<string>(initialRunsheetName || 'Untitled Runsheet');
+  const [runsheetName, setRunsheetName] = useState<string>(() => {
+    // Prevent default runsheet creation if upload action is active
+    const preventDefault = sessionStorage.getItem('prevent_default_runsheet_creation');
+    if (preventDefault === 'true') {
+      sessionStorage.removeItem('prevent_default_runsheet_creation');
+      return '';
+    }
+    return initialRunsheetName || 'Untitled Runsheet';
+  });
   const [editingRunsheetName, setEditingRunsheetName] = useState<boolean>(false);
   const [tempRunsheetName, setTempRunsheetName] = useState<string>('');
   const [lastSaveTime, setLastSaveTime] = useState<Date | null>(null);
