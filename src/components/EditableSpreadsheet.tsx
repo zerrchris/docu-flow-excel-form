@@ -758,20 +758,33 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
 
   // Sync data with initialData prop changes
   useEffect(() => {
-    // Don't override data if we have an emergency draft
-    const hasEmergencyDraft = (() => {
-      try {
-        const emergencyDraft = localStorage.getItem('runsheet-emergency-draft');
-        return !!emergencyDraft;
-      } catch {
-        return false;
-      }
-    })();
+    console.log('🔍 initialData sync effect triggered with:', {
+      initialDataLength: initialData?.length,
+      initialRunsheetId,
+      isUploadedRunsheet: initialRunsheetId?.startsWith('uploaded-')
+    });
+
+    // For uploaded runsheets, always sync the data (bypass emergency draft check)
+    const isUploadedRunsheet = initialRunsheetId?.startsWith('uploaded-');
     
-    // Skip if there's an emergency draft
-    if (hasEmergencyDraft) {
-      console.log('🔒 Preserving emergency draft - skipping initialData sync');
-      return;
+    if (!isUploadedRunsheet) {
+      // Don't override data if we have an emergency draft (for regular runsheets)
+      const hasEmergencyDraft = (() => {
+        try {
+          const emergencyDraft = localStorage.getItem('runsheet-emergency-draft');
+          return !!emergencyDraft;
+        } catch {
+          return false;
+        }
+      })();
+      
+      // Skip if there's an emergency draft for regular runsheets
+      if (hasEmergencyDraft) {
+        console.log('🔒 Preserving emergency draft - skipping initialData sync');
+        return;
+      }
+    } else {
+      console.log('✅ Uploaded runsheet detected - bypassing emergency draft check');
     }
     
     // Always ensure we have minimum rows
@@ -797,7 +810,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       }
       return prevData;
     });
-  }, [initialData, initialColumns]);
+  }, [initialData, initialColumns, initialRunsheetId]);
 
   // Sync currentRunsheetId with active runsheet on mount and when currentRunsheet changes
   useEffect(() => {
