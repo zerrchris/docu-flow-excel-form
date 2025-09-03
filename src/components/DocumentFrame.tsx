@@ -121,15 +121,7 @@ const DocumentFrame: React.FC<DocumentFrameProps> = ({
         'Storage Path': fileResult.path
       };
 
-      // Only add Document File Name if the field exists in the current runsheet columns
-      if (fields.includes('Document File Name')) {
-        const userSpecifiedFilename = formData['Document File Name'];
-        const finalFilename = userSpecifiedFilename && userSpecifiedFilename.trim() 
-          ? userSpecifiedFilename.trim() 
-          : fileResult.fileName;
-        
-        dataWithFile['Document File Name'] = finalFilename;
-      }
+      // Document File Name is handled separately as metadata, not as regular extracted data
       
       onAddToSpreadsheet(dataWithFile);
       
