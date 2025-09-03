@@ -45,7 +45,7 @@ const DEFAULT_EXTRACTION_INSTRUCTIONS: Record<string, string> = {
 
 const DocumentProcessor: React.FC = () => {
   // Hook to get active runsheet data  
-  const { activeRunsheet, setActiveRunsheet, clearActiveRunsheet } = useActiveRunsheet();
+  const { activeRunsheet, setActiveRunsheet, clearActiveRunsheet, setCurrentRunsheet } = useActiveRunsheet();
   
   // View state
   const [isDocumentMode, setIsDocumentMode] = useState(false);
@@ -1597,8 +1597,17 @@ Image: [base64 image data]`;
           return;
         }
 
-        // Create a new runsheet with current columns and the first row of data
-        const runsheetName = `Runsheet ${new Date().toLocaleDateString()}`;
+        // Check if we have an active runsheet with a name in memory (even if not saved)
+        // This happens when user creates named runsheet but hasn't saved it yet
+        let runsheetName;
+        if (activeRunsheet?.name && activeRunsheet.name !== 'Untitled Runsheet') {
+          runsheetName = activeRunsheet.name;
+          console.log('🔧 ADD_TO_SPREADSHEET: Using existing runsheet name from memory:', runsheetName);
+        } else {
+          // Fallback to auto-generated name
+          runsheetName = `Runsheet ${new Date().toLocaleDateString()}`;
+          console.log('🔧 ADD_TO_SPREADSHEET: Using auto-generated name:', runsheetName);
+        }
         const initialData = [targetData];
 
         const { data: newRunsheet, error } = await supabase
@@ -1628,6 +1637,10 @@ Image: [base64 image data]`;
         
         // Update the spreadsheet data and active runsheet
         setSpreadsheetData(initialData);
+        
+        // Use the setCurrentRunsheet hook to properly track the new runsheet
+        setCurrentRunsheet(newRunsheet.id);
+        
         setActiveRunsheet({
           id: newRunsheet.id,
           name: newRunsheet.name,
