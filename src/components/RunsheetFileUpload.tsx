@@ -326,29 +326,35 @@ export const RunsheetFileUpload: React.FC<RunsheetFileUploadProps> = ({
                 <div className="overflow-x-auto max-h-64">
                   <table className="w-full text-sm">
                     <tbody>
-                      {previewData?.map((row, rowIndex) => (
-                        <tr 
-                          key={rowIndex}
-                          className={`border-b cursor-pointer transition-colors ${
-                            selectedHeaderRow === rowIndex 
-                              ? 'bg-primary/10 border-primary' 
-                              : 'hover:bg-muted/50'
-                          }`}
-                          onClick={() => setSelectedHeaderRow(rowIndex)}
-                        >
-                          <td className="p-2 border-r bg-muted/50 font-mono text-xs text-center w-16">
-                            {rowIndex + 1}
-                            {selectedHeaderRow === rowIndex && (
-                              <div className="text-primary font-medium">Header</div>
-                            )}
-                          </td>
-                          {row.map((cell, cellIndex) => (
-                            <td key={cellIndex} className="p-2 border-r min-w-24 max-w-32 truncate">
-                              {cell || ''}
+                      {previewData?.map((row, rowIndex) => {
+                        // Only show columns that have data in at least one row
+                        const maxCols = Math.max(...previewData.map(r => r.filter(cell => cell && cell.toString().trim() !== '').length));
+                        const relevantCells = row.slice(0, Math.min(maxCols + 2, 12)); // Limit to max 12 columns for better display
+                        
+                        return (
+                          <tr 
+                            key={rowIndex}
+                            className={`border-b cursor-pointer transition-colors ${
+                              selectedHeaderRow === rowIndex 
+                                ? 'bg-primary/10 border-primary' 
+                                : 'hover:bg-muted/50'
+                            }`}
+                            onClick={() => setSelectedHeaderRow(rowIndex)}
+                          >
+                            <td className="p-2 border-r bg-muted/50 font-mono text-xs text-center w-16 sticky left-0">
+                              {rowIndex + 1}
+                              {selectedHeaderRow === rowIndex && (
+                                <div className="text-primary font-medium">Header</div>
+                              )}
                             </td>
-                          ))}
-                        </tr>
-                      ))}
+                            {relevantCells.map((cell, cellIndex) => (
+                              <td key={cellIndex} className="p-2 border-r min-w-24 max-w-32 truncate">
+                                {cell || ''}
+                              </td>
+                            ))}
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
