@@ -16,7 +16,7 @@ import { ExtractionPreferencesService } from '@/services/extractionPreferences';
 import { useActiveRunsheet } from '@/hooks/useActiveRunsheet';
 import OpenRunsheetDialog from '@/components/OpenRunsheetDialog';
 import ColumnPreferencesDialog from '@/components/ColumnPreferencesDialog';
-import MultipleFileUpload from '@/components/MultipleFileUpload';
+import { RunsheetFileUpload } from '@/components/RunsheetFileUpload';
 
 const Dashboard: React.FC = () => {
   const [user, setUser] = useState<SupabaseUser | null>(null);
@@ -364,18 +364,28 @@ const Dashboard: React.FC = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <MultipleFileUpload 
-              onUploadComplete={(uploadedCount) => {
-                console.log('Files uploaded, count:', uploadedCount);
+            <RunsheetFileUpload 
+              onFileSelected={(runsheetData) => {
+                console.log('Runsheet file processed:', runsheetData);
                 setShowUploadDialog(false);
-                toast({
-                  title: "Files uploaded successfully",
-                  description: `${uploadedCount} file(s) have been uploaded.`
+                
+                // Navigate to runsheet with the processed data
+                navigate('/runsheet', { 
+                  state: { 
+                    runsheet: {
+                      name: runsheetData.name,
+                      columns: runsheetData.columns,
+                      data: runsheetData.rows
+                    }
+                  } 
                 });
-                // Navigate to runsheet page
-                navigate('/runsheet');
+                
+                toast({
+                  title: "Runsheet loaded successfully",
+                  description: `Loaded "${runsheetData.name}" with ${runsheetData.rows.length} rows.`
+                });
               }}
-              onClose={() => setShowUploadDialog(false)}
+              onCancel={() => setShowUploadDialog(false)}
             />
           </div>
         </DialogContent>
