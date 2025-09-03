@@ -1564,7 +1564,7 @@ Image: [base64 image data]`;
     const targetData = dataToAdd || formData;
     
     // Check localStorage for active runsheet as fallback
-    let runsheetId = activeRunsheet?.id || location.state?.runsheet?.id;
+    let runsheetId = activeRunsheet?.id || location.state?.runsheet?.id || searchParams.get('id') || searchParams.get('runsheet');
     
     if (!runsheetId) {
       try {
