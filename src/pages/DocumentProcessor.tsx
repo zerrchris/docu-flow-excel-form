@@ -403,6 +403,27 @@ const DocumentProcessor: React.FC = () => {
         console.log('📊 Data being set:', selectedRunsheet.data);
         console.log('📊 Data length:', selectedRunsheet.data.length);
         console.log('📊 First few rows:', selectedRunsheet.data.slice(0, 3));
+        console.log('📊 Selected runsheet columns:', selectedRunsheet.columns);
+        
+        // Key insight: Check if there's a mismatch between data keys and columns
+        if (selectedRunsheet.data.length > 0) {
+          const firstRowKeys = Object.keys(selectedRunsheet.data[0]);
+          console.log('📊 Data row keys:', firstRowKeys);
+          console.log('📊 Column names:', selectedRunsheet.columns);
+          
+          const columnsMatch = selectedRunsheet.columns?.every(col => firstRowKeys.includes(col));
+          console.log('📊 Columns match data keys:', columnsMatch);
+          
+          if (!columnsMatch) {
+            console.log('⚠️ COLUMN MISMATCH DETECTED! Data will not display correctly.');
+            console.log('⚠️ Expected columns:', selectedRunsheet.columns);
+            console.log('⚠️ Actual data keys:', firstRowKeys);
+            
+            // Fix the mismatch: use the actual data keys as columns
+            console.log('🔧 Fixing column mismatch by using data keys as columns');
+            setColumns(firstRowKeys.filter(key => key.trim() !== ''));
+          }
+        }
         
         // Convert the data to match the column structure if needed
         const convertedData = selectedRunsheet.data.map((row: any) => {
