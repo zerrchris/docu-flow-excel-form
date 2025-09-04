@@ -254,6 +254,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   const [selectedRange, setSelectedRange] = useState<{start: {rowIndex: number, columnIndex: number}, end: {rowIndex: number, columnIndex: number}} | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [copiedData, setCopiedData] = useState<string[][] | null>(null);
+  const [cutData, setCutData] = useState<{range?: {start: {rowIndex: number, columnIndex: number}, end: {rowIndex: number, columnIndex: number}}, cell?: {rowIndex: number, column: string}} | null>(null);
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
   const [isLoadingColumnWidths, setIsLoadingColumnWidths] = useState(false);
   const [rowHeights, setRowHeights] = useState<Record<number, number>>({});
@@ -4386,11 +4387,16 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     if (!selectedCell) return;
     
     let dataToPaste: string[][] = [];
+    let isCutOperation = false;
     
-    // Try to get data from internal copy first, then from clipboard
-    if (copiedData) {
+    // Check if this is a cut operation
+    if (cutData && copiedData) {
+      dataToPaste = copiedData;
+      isCutOperation = true;
+    } else if (copiedData) {
       dataToPaste = copiedData;
     } else {
+      // Try to get data from clipboard
       try {
         const clipboardText = await navigator.clipboard.readText();
         if (clipboardText) {
@@ -4409,6 +4415,38 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     
     const newData = [...data];
     
+    // If this is a cut operation, clear the original cells first
+    if (isCutOperation && cutData) {
+      if (cutData.range) {
+        const { start, end } = cutData.range;
+        const minRow = Math.min(start.rowIndex, end.rowIndex);
+        const maxRow = Math.max(start.rowIndex, end.rowIndex);
+        const minCol = Math.min(start.columnIndex, end.columnIndex);
+        const maxCol = Math.max(start.columnIndex, end.columnIndex);
+        
+        for (let row = minRow; row <= maxRow; row++) {
+          for (let col = minCol; col <= maxCol; col++) {
+            const column = columns[col];
+            if (column && newData[row]) {
+              newData[row] = {
+                ...newData[row],
+                [column]: ''
+              };
+            }
+          }
+        }
+      } else if (cutData.cell) {
+        const { rowIndex, column } = cutData.cell;
+        if (newData[rowIndex]) {
+          newData[rowIndex] = {
+            ...newData[rowIndex],
+            [column]: ''
+          };
+        }
+      }
+    }
+    
+    // Paste the data to the new location
     for (let row = 0; row < dataToPaste.length; row++) {
       const targetRowIndex = startRow + row;
       if (targetRowIndex >= newData.length) break;
@@ -4428,11 +4466,117 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     setData(newData);
     onDataChange?.(newData);
     
+    // Clear cut data after successful paste
+    if (isCutOperation) {
+      setCutData(null);
+      setCopiedData(null);
+    }
+    
     toast({
-      title: "Pasted",
-      description: `${dataToPaste.length} rows × ${dataToPaste[0]?.length || 0} columns pasted`,
+      title: isCutOperation ? "Moved" : "Pasted",
+      description: `${dataToPaste.length} rows × ${dataToPaste[0]?.length || 0} columns ${isCutOperation ? 'moved' : 'pasted'}`,
     });
-  }, [copiedData, selectedCell, columns, data, onDataChange, toast]);
+  }, [copiedData, cutData, selectedCell, columns, data, onDataChange, toast]);
+
+  // Cut functionality (Excel-like)
+  const cutSelection = useCallback(() => {
+    // First copy the selection
+    copySelection();
+    
+    // Then mark for cutting and clear the visual content
+    if (selectedRange) {
+      setCutData({ range: selectedRange });
+      // Clear the cut cells visually but don't delete data until paste
+      const { start, end } = selectedRange;
+      const minRow = Math.min(start.rowIndex, end.rowIndex);
+      const maxRow = Math.max(start.rowIndex, end.rowIndex);
+      const minCol = Math.min(start.columnIndex, end.columnIndex);
+      const maxCol = Math.max(start.columnIndex, end.columnIndex);
+      
+      toast({
+        title: "Cut",
+        description: `${maxRow - minRow + 1} rows × ${maxCol - minCol + 1} columns cut. Paste to move them.`,
+      });
+    } else if (selectedCell) {
+      setCutData({ cell: selectedCell });
+      toast({
+        title: "Cut", 
+        description: "Cell cut. Paste to move it.",
+      });
+    }
+  }, [copySelection, selectedRange, selectedCell, toast]);
+
+  // Delete selected cells (Delete key functionality)
+  const deleteSelectedCells = useCallback(() => {
+    if (selectedRange) {
+      const { start, end } = selectedRange;
+      const minRow = Math.min(start.rowIndex, end.rowIndex);
+      const maxRow = Math.max(start.rowIndex, end.rowIndex);
+      const minCol = Math.min(start.columnIndex, end.columnIndex);
+      const maxCol = Math.max(start.columnIndex, end.columnIndex);
+      
+      const newData = [...data];
+      for (let row = minRow; row <= maxRow; row++) {
+        for (let col = minCol; col <= maxCol; col++) {
+          const column = columns[col];
+          if (column && newData[row]) {
+            newData[row] = {
+              ...newData[row],
+              [column]: ''
+            };
+          }
+        }
+      }
+      
+      setData(newData);
+      onDataChange?.(newData);
+      
+      toast({
+        title: "Deleted",
+        description: `${maxRow - minRow + 1} rows × ${maxCol - minCol + 1} columns cleared`,
+      });
+    } else if (selectedCell) {
+      const { rowIndex, column } = selectedCell;
+      const newData = [...data];
+      if (newData[rowIndex]) {
+        newData[rowIndex] = {
+          ...newData[rowIndex],
+          [column]: ''
+        };
+      }
+      
+      setData(newData);
+      onDataChange?.(newData);
+      
+      toast({
+        title: "Deleted",
+        description: "Cell content cleared",
+      });
+    }
+  }, [selectedRange, selectedCell, data, columns, onDataChange, toast]);
+
+  // Check if a cell is in the cut selection
+  const isCellCut = useCallback((rowIndex: number, column: string) => {
+    if (!cutData) return false;
+    
+    if (cutData.cell) {
+      return cutData.cell.rowIndex === rowIndex && cutData.cell.column === column;
+    }
+    
+    if (cutData.range) {
+      const { start, end } = cutData.range;
+      const minRow = Math.min(start.rowIndex, end.rowIndex);
+      const maxRow = Math.max(start.rowIndex, end.rowIndex);
+      const minCol = Math.min(start.columnIndex, end.columnIndex);
+      const maxCol = Math.max(start.columnIndex, end.columnIndex);
+      const columnIndex = columns.indexOf(column);
+      
+      return rowIndex >= minRow && rowIndex <= maxRow && 
+             columnIndex >= minCol && columnIndex <= maxCol;
+    }
+    
+    return false;
+  }, [cutData, columns]);
 
   // Check if a cell is in the selected range
   const isCellInRange = useCallback((rowIndex: number, columnIndex: number) => {
@@ -4465,14 +4609,20 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
         copySelection();
         e.preventDefault();
+      } else if ((e.ctrlKey || e.metaKey) && e.key === 'x') {
+        cutSelection();
+        e.preventDefault();
       } else if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
         pasteSelection();
+        e.preventDefault();
+      } else if (e.key === 'Delete' && (selectedCell || selectedRange)) {
+        deleteSelectedCells();
         e.preventDefault();
       }
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [copySelection, pasteSelection]);
+  }, [copySelection, pasteSelection, cutSelection, deleteSelectedCells]);
   
   // Function to update document row_index in database
   const updateDocumentRowIndexes = useCallback(async (newDocumentMap: Map<number, DocumentRecord>) => {
@@ -5163,7 +5313,7 @@ ${extractionFields}`
                 
                 {/* Keyboard shortcuts hint */}
                 <div className="flex items-center gap-1 ml-2 px-2 py-1 bg-muted/50 rounded text-xs text-muted-foreground">
-                  <span>Ctrl+C to copy • Ctrl+V to paste • Arrows to navigate</span>
+                  <span>Ctrl+C copy • Ctrl+X cut • Ctrl+V paste • Del clear • Arrows navigate</span>
                 </div>
               </div>
             )}
@@ -6020,21 +6170,23 @@ ${extractionFields}`
                                   }}
                               />
                          ) : (
-                             <div
-                               data-cell={`${rowIndex}-${column}`}
-                                className={`w-full h-full min-h-[2rem] py-2 px-3 flex items-start transition-all duration-200 whitespace-pre-wrap select-none rounded-sm
-                                  ${isSelected 
-                                    ? 'bg-primary/25 border-2 border-primary ring-2 ring-primary/20 shadow-sm' 
-                                    : isInRange
-                                    ? 'bg-primary/15 border-2 border-primary/50'
-                                    : lastEditedCell?.rowIndex === rowIndex && lastEditedCell?.column === column
-                                    ? 'bg-green-100 dark:bg-green-900/30 border-2 border-green-400 dark:border-green-600'
-                                    : 'hover:bg-muted/60 border-2 border-transparent hover:shadow-sm'
-                                  }
-                                  ${columnAlignments[column] === 'center' ? 'text-center justify-center' : 
-                                    columnAlignments[column] === 'right' ? 'text-right justify-end' : 'text-left justify-start'}
-                                  ${cellValidationErrors[`${rowIndex}-${column}`] ? 'border-red-400 bg-red-50 dark:bg-red-900/20' : ''}
-                                `}
+                              <div
+                                data-cell={`${rowIndex}-${column}`}
+                                 className={`w-full h-full min-h-[2rem] py-2 px-3 flex items-start transition-all duration-200 whitespace-pre-wrap select-none rounded-sm
+                                   ${isSelected 
+                                     ? 'bg-primary/25 border-2 border-primary ring-2 ring-primary/20 shadow-sm' 
+                                     : isInRange
+                                     ? 'bg-primary/15 border-2 border-primary/50'
+                                     : isCellCut(rowIndex, column)
+                                     ? 'bg-orange-100 dark:bg-orange-900/30 border-2 border-orange-400 dark:border-orange-600 opacity-60 border-dashed'
+                                     : lastEditedCell?.rowIndex === rowIndex && lastEditedCell?.column === column
+                                     ? 'bg-green-100 dark:bg-green-900/30 border-2 border-green-400 dark:border-green-600'
+                                     : 'hover:bg-muted/60 border-2 border-transparent hover:shadow-sm'
+                                   }
+                                   ${columnAlignments[column] === 'center' ? 'text-center justify-center' : 
+                                     columnAlignments[column] === 'right' ? 'text-right justify-end' : 'text-left justify-start'}
+                                   ${cellValidationErrors[`${rowIndex}-${column}`] ? 'border-red-400 bg-red-50 dark:bg-red-900/20' : ''}
+                                 `}
                                  onMouseDown={(e) => handleCellMouseDown(e, rowIndex, column)}
                                  onMouseEnter={() => handleMouseEnter(rowIndex, column)}
                                  onMouseUp={handleMouseUp}
