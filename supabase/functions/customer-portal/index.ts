@@ -86,6 +86,12 @@ serve(async (req) => {
     } catch (stripeError) {
       console.log("[CUSTOMER-PORTAL] Stripe portal creation failed:", stripeError);
       console.log("[CUSTOMER-PORTAL] Stripe error details:", JSON.stringify(stripeError, null, 2));
+      
+      // Check if this is the configuration error
+      if (stripeError.message && stripeError.message.includes("No configuration provided")) {
+        throw new Error("Stripe Customer Portal is not properly configured. Please visit https://dashboard.stripe.com/test/settings/billing/portal and save your configuration settings.");
+      }
+      
       throw new Error(`Stripe portal creation failed: ${stripeError.message}`);
     }
 
