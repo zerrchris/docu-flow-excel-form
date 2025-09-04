@@ -23,21 +23,22 @@ serve(async (req) => {
     }
     console.log("[CUSTOMER-PORTAL] Stripe key verified");
 
-    // Initialize Supabase client with the service role key
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      { auth: { persistSession: false } }
-    );
-
+    // Get user from JWT (automatically verified by Supabase when verify_jwt = true)
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       console.log("[CUSTOMER-PORTAL] ERROR: No authorization header provided");
       throw new Error("No authorization header provided");
     }
-    console.log("[CUSTOMER-PORTAL] Authorization header found");
 
     const token = authHeader.replace("Bearer ", "");
+    console.log("[CUSTOMER-PORTAL] Token found, creating Supabase client");
+
+    // Use anon key for auth verification
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+    );
+
     const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
     if (userError) {
       console.log("[CUSTOMER-PORTAL] ERROR: Authentication error:", userError.message);
@@ -52,14 +53,12 @@ serve(async (req) => {
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
     
-    // First try to find customer by email
     console.log("[CUSTOMER-PORTAL] Looking up customer by email:", user.email);
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
     let customerId;
     
     if (customers.data.length === 0) {
       console.log("[CUSTOMER-PORTAL] No customer found, creating new customer");
-      // Create a new customer if none exists
       const customer = await stripe.customers.create({
         email: user.email,
         metadata: { user_id: user.id }
@@ -78,7 +77,7 @@ serve(async (req) => {
       customer: customerId,
       return_url: `${origin}/`,
     });
-    console.log("[CUSTOMER-PORTAL] Customer portal session created:", portalSession.id);
+    console.log("[CUSTOMER-PORTAL] Success! Portal session created:", portalSession.id);
 
     return new Response(JSON.stringify({ url: portalSession.url }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -87,6 +86,7 @@ serve(async (req) => {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.log("[CUSTOMER-PORTAL] ERROR:", errorMessage);
+    console.log("[CUSTOMER-PORTAL] Full error:", error);
     return new Response(JSON.stringify({ error: errorMessage }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
