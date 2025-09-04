@@ -4127,8 +4127,17 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         saveEdit();
         
         // Move to the next row in the same column (Excel-like behavior)
-        const nextRowIndex = currentRowIndex + 1;
-        if (nextRowIndex < data.length) {
+        let nextRowIndex = currentRowIndex + 1;
+        if (nextRowIndex >= data.length) {
+          // If at the end, add a new row
+          setData(prev => {
+            const newRow: Record<string, string> = {};
+            columns.forEach(col => newRow[col] = '');
+            return [...prev, newRow];
+          });
+        }
+        
+        if (nextRowIndex < data.length || nextRowIndex === data.length) {
           setTimeout(() => {
             selectCell(nextRowIndex, currentColumn, false);
           }, 0);
@@ -5584,7 +5593,6 @@ ${extractionFields}`
             isScrolling ? 'scroll-smooth' : ''
           }`}
           style={{ 
-            width: `${getTotalTableWidth()}px`, 
             maxWidth: '100%',
             scrollBehavior: 'smooth',
             overflow: 'auto',
