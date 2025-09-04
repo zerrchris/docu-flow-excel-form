@@ -801,7 +801,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                             e.stopPropagation();
                             handleReExtractField(column);
                           }}
-                          className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-purple-100 dark:hover:bg-purple-900/20 text-purple-600 dark:text-purple-400 flex-shrink-0"
+                          className="h-6 w-6 p-0 hover:bg-purple-100 dark:hover:bg-purple-900/20 text-purple-600 dark:text-purple-400 flex-shrink-0"
                           title={`Re-extract "${column}" field with AI feedback`}
                         >
                           <Sparkles className="h-3 w-3" />
