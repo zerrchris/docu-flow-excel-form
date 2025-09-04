@@ -119,15 +119,41 @@ export function useAutoSave({
         if (error) throw error;
         result = updateResult;
       } else {
-        // Create new runsheet
-        const { data: insertResult, error } = await supabase
+        // Check if a runsheet with this name already exists for this user
+        const { data: existingRunsheet, error: checkError } = await supabase
           .from('runsheets')
-          .insert(runsheetData)
-          .select('*')
-          .single();
+          .select('id')
+          .eq('user_id', userId)
+          .eq('name', runsheetName.trim())
+          .maybeSingle();
 
-        if (error) throw error;
-        result = insertResult;
+        if (checkError && checkError.code !== 'PGRST116') {
+          throw checkError;
+        }
+
+        if (existingRunsheet) {
+          // Update the existing runsheet instead of creating a new one
+          const { data: updateResult, error } = await supabase
+            .from('runsheets')
+            .update(runsheetData)
+            .eq('id', existingRunsheet.id)
+            .eq('user_id', userId)
+            .select('*')
+            .single();
+
+          if (error) throw error;
+          result = updateResult;
+        } else {
+          // Create new runsheet
+          const { data: insertResult, error } = await supabase
+            .from('runsheets')
+            .insert(runsheetData)
+            .select('*')
+            .single();
+
+          if (error) throw error;
+          result = insertResult;
+        }
       }
 
       // Update last saved state
