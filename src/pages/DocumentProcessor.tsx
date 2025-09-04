@@ -4,13 +4,11 @@ import { toast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Upload, FolderOpen, Plus, AlertTriangle, Smartphone, Files, Home, FileStack, RefreshCw, Bug } from 'lucide-react';
-import DocumentFrame from '@/components/DocumentFrame';
-import DocumentViewer from '@/components/DocumentViewer';
 import DataForm from '@/components/DataForm';
 import RealtimeVoiceInput from '@/components/RealtimeVoiceInput';
 import EditableSpreadsheet from '@/components/EditableSpreadsheet';
 import AuthButton from '@/components/AuthButton';
-import BatchProcessing from '@/components/BatchProcessing';
+
 import DocumentUpload from '@/components/DocumentUpload';
 import MultipleFileUpload from '@/components/MultipleFileUpload';
 import { StorageDebugDialog } from '@/components/StorageDebugDialog';
@@ -49,8 +47,6 @@ const DocumentProcessor: React.FC = () => {
   
   // View state
   const [isDocumentMode, setIsDocumentMode] = useState(false);
-  const [isDocumentFrameExpanded, setIsDocumentFrameExpanded] = useState(false);
-  const [isBatchProcessingExpanded, setIsBatchProcessingExpanded] = useState(false);
   
   // Document state
   const [file, setFile] = useState<File | null>(null);
@@ -979,9 +975,6 @@ const DocumentProcessor: React.FC = () => {
   // Function to go back to runsheet mode and clear document
   const goBackToRunsheet = () => {
     setIsDocumentMode(false);
-    // Collapse both document processor sections
-    setIsDocumentFrameExpanded(false);
-    setIsBatchProcessingExpanded(false);
     // Clear the document from single document processing
     resetDocument();
   };
@@ -2478,7 +2471,9 @@ Image: [base64 image data]`;
             {/* Right Panel - Document Viewer */}
             <div className="flex-1 flex flex-col overflow-hidden">
               {file ? (
-                <DocumentViewer file={file} previewUrl={previewUrl} />
+                <div className="h-full flex items-center justify-center">
+                  <p className="text-muted-foreground">Document loaded: {file.name}</p>
+                </div>
               ) : (
                 <div className="h-full flex items-center justify-center">
                   <p className="text-muted-foreground">No document loaded</p>
@@ -2533,33 +2528,6 @@ Image: [base64 image data]`;
           </header>
           
           <div className="w-full px-4 py-6">
-            <DocumentFrame 
-              file={file}
-              previewUrl={previewUrl}
-              fields={columns}
-              formData={formData}
-              columnInstructions={columnInstructions}
-              onChange={handleFieldChange}
-              onAnalyze={analyzeDocument}
-              onCancelAnalysis={cancelAnalysis}
-              onAddToSpreadsheet={addToSpreadsheet}
-              onFileSelect={handleFileSelect}
-              onMultipleFilesSelect={handleMultipleFilesSelect}
-              onResetDocument={uploadNewDocument}
-              isAnalyzing={isAnalyzing}
-              isExpanded={isDocumentFrameExpanded}
-              onExpandedChange={setIsDocumentFrameExpanded}
-            />
-            
-            <BatchProcessing 
-              fields={columns}
-              onAddToSpreadsheet={addToSpreadsheet}
-              onAnalyze={analyzeDocument}
-              isAnalyzing={isAnalyzing}
-              isExpanded={isBatchProcessingExpanded}
-              onExpandedChange={setIsBatchProcessingExpanded}
-            />
-            
             <div className="mt-6">
             <EditableSpreadsheet
               initialColumns={location.state?.runsheet?.columns || activeRunsheet?.columns || columns}
