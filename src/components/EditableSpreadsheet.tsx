@@ -54,6 +54,7 @@ import ViewportPortal from './ViewportPortal';
 import { AutoSaveIndicator } from './AutoSaveIndicator';
 import { useAutoSave } from '@/hooks/useAutoSave';
 import { StorageDebugDialog } from './StorageDebugDialog';
+import ReExtractDialog from './ReExtractDialog';
 
 import type { User } from '@supabase/supabase-js';
 import { 
@@ -294,8 +295,22 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   };
   const [showNamingSettings, setShowNamingSettings] = useState(false);
   const [inlineViewerRow, setInlineViewerRow] = useState<number | null>(null);
-  const [fullScreenWorkspace, setFullScreenWorkspace] = useState<{ runsheetId: string; rowIndex: number } | null>(null);
-  const [showDocumentFileNameColumn, setShowDocumentFileNameColumn] = useState(true);
+   const [fullScreenWorkspace, setFullScreenWorkspace] = useState<{ runsheetId: string; rowIndex: number } | null>(null);
+   const [showDocumentFileNameColumn, setShowDocumentFileNameColumn] = useState(true);
+   
+   // Re-extract dialog state
+   const [reExtractDialog, setReExtractDialog] = useState<{
+     isOpen: boolean;
+     fieldName: string;
+     currentValue: string;
+     rowIndex: number;
+   }>({
+     isOpen: false,
+     fieldName: '',
+     currentValue: '',
+     rowIndex: -1
+   });
+   const [isReExtracting, setIsReExtracting] = useState(false);
   
   // Auto-save state
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -4529,6 +4544,95 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     setRowsToAdd(1);
   };
 
+  // Re-extract functionality for individual fields
+  const handleReExtractField = (rowIndex: number, fieldName: string) => {
+    const document = documentMap.get(rowIndex);
+    if (!document) {
+      toast({
+        title: "No document linked",
+        description: "Please link a document to this row before re-extracting fields.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const currentValue = data[rowIndex][fieldName] || '';
+    setReExtractDialog({
+      isOpen: true,
+      fieldName,
+      currentValue,
+      rowIndex
+    });
+  };
+
+  const handleReExtractWithNotes = async (notes: string) => {
+    setIsReExtracting(true);
+    
+    try {
+      const document = documentMap.get(reExtractDialog.rowIndex);
+      if (!document) {
+        throw new Error('Document not found for this row');
+      }
+
+      console.log('🔧 EditableSpreadsheet: Starting re-extraction for field:', reExtractDialog.fieldName);
+      console.log('🔧 EditableSpreadsheet: Document path:', document.file_path);
+      console.log('🔧 EditableSpreadsheet: User notes:', notes);
+
+      // Get the document URL
+      const fileUrl = DocumentService.getDocumentUrl(document.file_path);
+
+      const response = await supabase.functions.invoke('re-extract-field', {
+        body: {
+          fileUrl,
+          fileName: document.original_filename,
+          fieldName: reExtractDialog.fieldName,
+          fieldInstructions: columnInstructions[reExtractDialog.fieldName] || `Extract the ${reExtractDialog.fieldName} field accurately`,
+          userNotes: notes,
+          currentValue: reExtractDialog.currentValue
+        }
+      });
+
+      console.log('🔧 EditableSpreadsheet: Edge function response:', response);
+
+      if (response.error) {
+        throw new Error(response.error.message || 'Re-extraction failed');
+      }
+
+      if (!response.data?.success) {
+        throw new Error(response.data?.error || 'Re-extraction failed');
+      }
+
+      const { extractedValue } = response.data;
+      console.log('🔧 EditableSpreadsheet: Extracted value:', extractedValue);
+      
+      // Update the specific field with the re-extracted value
+      const newData = [...data];
+      newData[reExtractDialog.rowIndex] = {
+        ...newData[reExtractDialog.rowIndex],
+        [reExtractDialog.fieldName]: extractedValue
+      };
+      setData(newData);
+      onDataChange?.(newData);
+      
+      toast({
+        title: "Field re-extracted",
+        description: `Successfully re-extracted "${reExtractDialog.fieldName}" with your feedback.`,
+      });
+
+      // Close the dialog
+      setReExtractDialog(prev => ({ ...prev, isOpen: false }));
+
+    } catch (error) {
+      console.error('🔧 EditableSpreadsheet: Error re-extracting field:', error);
+      toast({
+        title: "Re-extraction failed",
+        description: error instanceof Error ? error.message : 'Unknown error occurred',
+        variant: "destructive",
+      });
+    } finally {
+      setIsReExtracting(false);
+    }
+  };
 
   const analyzeDocumentAndPopulateRow = async (file: File, targetRowIndex: number, forceOverwrite: boolean = false) => {
     try {
@@ -5856,29 +5960,45 @@ ${extractionFields}`
                                   }}
                               />
                          ) : (
-                            <div
-                              data-cell={`${rowIndex}-${column}`}
-                               className={`w-full h-full min-h-[2rem] py-2 px-3 flex items-start transition-all duration-200 whitespace-pre-wrap select-none rounded-sm
-                                 ${isSelected 
-                                   ? 'bg-primary/25 border-2 border-primary ring-2 ring-primary/20 shadow-sm' 
-                                   : isInRange
-                                   ? 'bg-primary/15 border-2 border-primary/50'
-                                   : lastEditedCell?.rowIndex === rowIndex && lastEditedCell?.column === column
-                                   ? 'bg-green-100 dark:bg-green-900/30 border-2 border-green-400 dark:border-green-600'
-                                   : 'hover:bg-muted/60 border-2 border-transparent hover:shadow-sm'
-                                 }
-                                 ${columnAlignments[column] === 'center' ? 'text-center justify-center' : 
-                                   columnAlignments[column] === 'right' ? 'text-right justify-end' : 'text-left justify-start'}
-                                 ${cellValidationErrors[`${rowIndex}-${column}`] ? 'border-red-400 bg-red-50 dark:bg-red-900/20' : ''}
-                               `}
-                                onMouseDown={(e) => handleCellMouseDown(e, rowIndex, column)}
-                                onMouseEnter={() => handleMouseEnter(rowIndex, column)}
-                                onMouseUp={handleMouseUp}
-                                onKeyDown={(e) => handleKeyDown(e, rowIndex, column)}
-                                title={cellValidationErrors[`${rowIndex}-${column}`] || undefined}
-                              >
-                               {row[column] || ''}
-                             </div>
+                             <div
+                               data-cell={`${rowIndex}-${column}`}
+                                className={`w-full h-full min-h-[2rem] py-2 px-3 flex items-start transition-all duration-200 whitespace-pre-wrap select-none rounded-sm group/cell relative
+                                  ${isSelected 
+                                    ? 'bg-primary/25 border-2 border-primary ring-2 ring-primary/20 shadow-sm' 
+                                    : isInRange
+                                    ? 'bg-primary/15 border-2 border-primary/50'
+                                    : lastEditedCell?.rowIndex === rowIndex && lastEditedCell?.column === column
+                                    ? 'bg-green-100 dark:bg-green-900/30 border-2 border-green-400 dark:border-green-600'
+                                    : 'hover:bg-muted/60 border-2 border-transparent hover:shadow-sm'
+                                  }
+                                  ${columnAlignments[column] === 'center' ? 'text-center justify-center' : 
+                                    columnAlignments[column] === 'right' ? 'text-right justify-end' : 'text-left justify-start'}
+                                  ${cellValidationErrors[`${rowIndex}-${column}`] ? 'border-red-400 bg-red-50 dark:bg-red-900/20' : ''}
+                                `}
+                                 onMouseDown={(e) => handleCellMouseDown(e, rowIndex, column)}
+                                 onMouseEnter={() => handleMouseEnter(rowIndex, column)}
+                                 onMouseUp={handleMouseUp}
+                                 onKeyDown={(e) => handleKeyDown(e, rowIndex, column)}
+                                 title={cellValidationErrors[`${rowIndex}-${column}`] || undefined}
+                               >
+                                <span className="flex-1">{row[column] || ''}</span>
+                                
+                                {/* Re-extract button - only show if cell has data and row has a linked document */}
+                                {row[column] && row[column].trim() !== '' && documentMap.has(rowIndex) && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleReExtractField(rowIndex, column);
+                                    }}
+                                    className="h-5 w-5 p-0 ml-1 opacity-0 group-hover/cell:opacity-100 transition-opacity hover:bg-purple-100 dark:hover:bg-purple-900/20 text-purple-600 dark:text-purple-400 flex-shrink-0"
+                                    title={`Re-extract "${column}" field with AI feedback`}
+                                  >
+                                    <Sparkles className="h-3 w-3" />
+                                  </Button>
+                                )}
+                              </div>
                          )}
                          </td>
                      );
@@ -6595,6 +6715,16 @@ ${extractionFields}`
           open={showStorageDebug}
           onOpenChange={setShowStorageDebug}
           runsheetId={effectiveRunsheetId}
+        />
+
+        {/* Re-extract Dialog */}
+        <ReExtractDialog
+          isOpen={reExtractDialog.isOpen}
+          onClose={() => setReExtractDialog(prev => ({ ...prev, isOpen: false }))}
+          fieldName={reExtractDialog.fieldName}
+          currentValue={reExtractDialog.currentValue}
+          onReExtract={handleReExtractWithNotes}
+          isLoading={isReExtracting}
         />
       </div>
     );
