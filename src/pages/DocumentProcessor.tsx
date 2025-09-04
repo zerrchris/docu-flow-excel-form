@@ -2598,10 +2598,16 @@ Image: [base64 image data]`;
                      console.log('🔧 DEBUG: Defaults to use:', defaults);
                      console.log('🔧 DEBUG: Missing columns:', missingColumns);
                      console.log('🔧 DEBUG: Current columns:', columns);
+                     // Use current columns instead of stale missingColumns
+                     const currentMissingColumns = columns.filter(column => 
+                       column !== 'Document File Name' && 
+                       (!columnInstructions[column] || columnInstructions[column].trim() === '')
+                     );
+                     console.log('🔧 DEBUG: Current missing columns:', currentMissingColumns);
                      let applied = 0;
                      setColumnInstructions(prev => {
                        const next = { ...prev } as Record<string, string>;
-                       missingColumns.forEach(col => {
+                       currentMissingColumns.forEach(col => {
                          console.log(`🔧 DEBUG: Processing column "${col}"`);
                          // Try user preferences first, then defaults, then generate generic instruction
                          let suggestion = defaults[col] || DEFAULT_EXTRACTION_INSTRUCTIONS[col];
@@ -2644,7 +2650,13 @@ Image: [base64 image data]`;
             </div>
             
             <div className="space-y-3">
-              {missingColumns.map((column) => (
+              {(() => {
+                // Recalculate missing columns in real-time to include newly added columns
+                const currentMissingColumns = columns.filter(column => 
+                  column !== 'Document File Name' && 
+                  (!columnInstructions[column] || columnInstructions[column].trim() === '')
+                );
+                return currentMissingColumns.map((column) => (
                 <div key={column} className="space-y-2">
                   <label className="text-sm font-medium text-foreground">{column}</label>
                   <textarea
@@ -2659,7 +2671,8 @@ Image: [base64 image data]`;
                     }}
                   />
                 </div>
-              ))}
+              ));
+              })()}
             </div>
             
             <div className="text-xs text-muted-foreground bg-muted p-3 rounded-md">
@@ -2671,9 +2684,13 @@ Image: [base64 image data]`;
               Skip for now
             </Button>
             <Button 
-              onClick={async () => {
-                // Save all the configured instructions
-                const hasValidInstructions = missingColumns.every(col => 
+             onClick={async () => {
+                // Use current columns to check validation, not stale missingColumns
+                const currentMissingColumns = columns.filter(column => 
+                  column !== 'Document File Name' && 
+                  (!columnInstructions[column] || columnInstructions[column].trim() === '')
+                );
+                const hasValidInstructions = currentMissingColumns.every(col => 
                   columnInstructions[col]?.trim()
                 );
                 
