@@ -424,6 +424,9 @@ export const AIUsageAnalytics: React.FC = () => {
                           context: error.context,
                           details: error.details
                         });
+                        if (error.message?.includes('configuration')) {
+                          alert('Stripe Customer Portal not configured. Please go to Stripe Dashboard > Settings > Billing > Customer Portal and click "Save changes"');
+                        }
                         throw error;
                       }
                       
