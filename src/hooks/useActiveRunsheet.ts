@@ -144,12 +144,15 @@ export const useActiveRunsheet = () => {
   };
 
   const refreshActiveRunsheet = async () => {
-    if (currentRunsheetId) {
-      // Force reload by temporarily clearing and resetting
-      const id = currentRunsheetId;
-      setCurrentRunsheetIdState(null);
-      setTimeout(() => setCurrentRunsheetIdState(id), 0);
-    }
+    console.log('🚫 refreshActiveRunsheet called but disabled to prevent unwanted refreshes');
+    // DISABLED: This was causing data corruption by refreshing when not needed
+    // The database already auto-syncs, no need to force refresh the component
+    // if (currentRunsheetId) {
+    //   // Force reload by temporarily clearing and resetting
+    //   const id = currentRunsheetId;
+    //   setCurrentRunsheetIdState(null);
+    //   setTimeout(() => setCurrentRunsheetIdState(id), 0);
+    // }
   };
 
   return {

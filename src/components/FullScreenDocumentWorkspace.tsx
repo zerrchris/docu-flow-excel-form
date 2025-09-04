@@ -59,7 +59,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
   const tableRef = useRef<HTMLDivElement>(null);
   
   // Get runsheet management hook for auto-saving changes
-  const { updateRunsheet, activeRunsheet, setCurrentRunsheet } = useActiveRunsheet();
+  const { activeRunsheet, setCurrentRunsheet } = useActiveRunsheet();
   const { toast } = useToast();
   
   // Lock page scroll while workspace is open (robust, preserves position)

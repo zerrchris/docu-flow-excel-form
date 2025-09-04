@@ -370,7 +370,8 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       return Promise.resolve();
     }
     return autoForceSave();
-  
+  }, [autoForceSave, currentRunsheetId]);
+
   // Handle changes to initialData prop (for uploaded runsheets)
   useEffect(() => {
     console.log('🔍 useEffect triggered for initialData change');
@@ -397,7 +398,6 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         console.log('⚠️ Current data has content, not overriding with initialData');
       }
     }
-  }, [initialData, initialColumns]); // Only depend on initialData changes
   }, [initialData, initialColumns]); // Only depend on initialData changes
 
   // Real-time sync disabled - using database-first approach for single user
