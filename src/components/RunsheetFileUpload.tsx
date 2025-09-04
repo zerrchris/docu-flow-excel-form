@@ -3,11 +3,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Upload, FileSpreadsheet, X, CheckCircle, AlertCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 import * as XLSX from 'xlsx';
 
 interface RunsheetFileUploadProps {
-  onFileSelected: (runsheet: { id: string; name: string; columns: string[]; data: Record<string, string>[] }) => void;
+  onFileSelected: (data: { name: string; columns: string[]; rows: Record<string, string>[] }) => void;
   onCancel: () => void;
 }
 
@@ -158,51 +157,26 @@ export const RunsheetFileUpload: React.FC<RunsheetFileUploadProps> = ({
         firstRowSample: processedRows[0]
       });
 
-      // Create the runsheet in the database immediately
-      console.log('📊 Creating runsheet in database...');
-      
-      try {
-        const { data: runsheetData, error } = await supabase.functions.invoke('create-runsheet-from-upload', {
-          body: {
-            name: runsheetName,
-            columns: validHeaders,
-            data: processedRows,
-            column_instructions: {}
-          }
-        });
+      console.log('📊 About to call onFileSelected with:', {
+        name: runsheetName,
+        columns: validHeaders,
+        rows: processedRows
+      });
 
-        if (error) {
-          throw error;
-        }
+      onFileSelected({
+        name: runsheetName,
+        columns: validHeaders,
+        rows: processedRows
+      });
 
-        if (!runsheetData.success || !runsheetData.runsheet) {
-          throw new Error('Failed to create runsheet in database');
-        }
+      toast({
+        title: "File processed successfully",
+        description: `Loaded ${processedRows.length} rows with ${validHeaders.length} columns.`
+      });
 
-        console.log('📊 Successfully created runsheet:', runsheetData.runsheet);
-
-        // Pass the real runsheet data (with database ID) to parent
-        onFileSelected(runsheetData.runsheet);
-
-        toast({
-          title: "Runsheet created successfully",
-          description: `Created "${runsheetData.runsheet.name}" with ${processedRows.length} rows and ${validHeaders.length} columns.`
-        });
-
-        // Reset preview state
-        setShowPreview(false);
-        setPreviewData(null);
-
-      } catch (error: any) {
-        console.error('Failed to create runsheet:', error);
-        toast({
-          title: "Failed to create runsheet",
-          description: "Could not save the runsheet to database. Please try again.",
-          variant: "destructive"
-        });
-        setIsProcessing(false);
-        return;
-      }
+      // Reset preview state
+      setShowPreview(false);
+      setPreviewData(null);
 
     } catch (error: any) {
       console.error('Error processing file:', error);

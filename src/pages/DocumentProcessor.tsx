@@ -61,15 +61,7 @@ const DocumentProcessor: React.FC = () => {
   const [isProcessingCombination, setIsProcessingCombination] = useState(false);
   
   // Form and analysis state
-  const [columns, setColumns] = useState<string[]>(() => {
-    // CRITICAL: Don't load default columns if upload action is active
-    const isUploadAction = new URLSearchParams(window.location.search).get('action') === 'upload';
-    if (isUploadAction) {
-      console.log('🚫 UPLOAD: Preventing default columns - upload action detected');
-      return [];
-    }
-    return DEFAULT_COLUMNS;
-  });
+  const [columns, setColumns] = useState<string[]>(DEFAULT_COLUMNS);
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [spreadsheetData, setSpreadsheetData] = useState<Record<string, string>[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -268,23 +260,14 @@ const DocumentProcessor: React.FC = () => {
       const selectedRunsheet = location.state?.runsheet;
       const isUploadAction = searchParams.get('action') === 'upload';
       
-      // CRITICAL: Check for uploaded runsheet data - never override uploaded columns
       if (selectedRunsheet && selectedRunsheet.columns) {
-        console.log('🚫 UPLOAD PROTECTION: Skipping user preferences load - using runsheet columns instead');
-        setIsLoadingPreferences(false);
-        return;
-      }
-      
-      // Check for uploaded columns in sessionStorage
-      const uploadedColumns = sessionStorage.getItem('uploaded_columns');
-      if (uploadedColumns) {
-        console.log('🚫 UPLOAD PROTECTION: Found uploaded columns in session, skipping preferences');
+        console.log('Skipping user preferences load - using runsheet columns instead');
         setIsLoadingPreferences(false);
         return;
       }
       
       if (isUploadAction) {
-        console.log('🚫 UPLOAD PROTECTION: Upload action detected, skipping preferences');
+        console.log('Skipping user preferences load - upload action detected');
         setIsLoadingPreferences(false);
         return;
       }
@@ -345,32 +328,9 @@ const DocumentProcessor: React.FC = () => {
 
     // Check if default columns should be prevented (during uploads)
     const preventDefaults = sessionStorage.getItem('prevent_default_columns');
-    const uploadedColumns = sessionStorage.getItem('uploaded_columns');
-    
-    if (preventDefaults === 'true' || uploadedColumns) {
+    if (preventDefaults === 'true') {
       console.log('🚫 Preventing default column loading for upload');
-      console.log('🚫 Current columns state:', columns);
-      
-      if (uploadedColumns) {
-        try {
-          const parsedColumns = JSON.parse(uploadedColumns);
-          console.log('🔥 LOADING UPLOADED COLUMNS FROM SESSION:', parsedColumns);
-          setColumns(parsedColumns);
-          sessionStorage.removeItem('uploaded_columns'); // Clean up
-        } catch (error) {
-          console.error('Failed to parse uploaded columns:', error);
-        }
-      }
-      
       sessionStorage.removeItem('prevent_default_columns');
-      setIsLoadingPreferences(false);
-      return;
-    }
-
-    // Don't load preferences if we have uploaded runsheet data
-    const selectedRunsheet = location.state?.runsheet;
-    if (selectedRunsheet && selectedRunsheet.columns && selectedRunsheet.columns.length > 0) {
-      console.log('🚫 Skipping default preferences - uploaded runsheet has columns');
       setIsLoadingPreferences(false);
       return;
     }
@@ -391,16 +351,6 @@ const DocumentProcessor: React.FC = () => {
         if (activeRunsheet.columnInstructions && Object.keys(activeRunsheet.columnInstructions).length > 0) {
           setColumnInstructions(activeRunsheet.columnInstructions);
         } else {
-          // CRITICAL: Check if we have uploaded columns - don't override them
-          const uploadedColumns = sessionStorage.getItem('uploaded_columns');
-          const selectedRunsheet = location.state?.runsheet;
-          
-          if (uploadedColumns || (selectedRunsheet && selectedRunsheet.columns)) {
-            console.log('🚫 UPLOAD PROTECTION: Not loading default preferences - uploaded data present');
-            setColumnInstructions({});
-            return;
-          }
-          
           try {
             // Load default extraction preferences if runsheet doesn't have instructions
             const defaultPrefs = await ExtractionPreferencesService.getDefaultPreferences();
@@ -433,17 +383,14 @@ const DocumentProcessor: React.FC = () => {
     const shouldClearActive = location.state?.clearActiveRunsheet;
     const preventAutoSave = location.state?.preventAutoSave;
     
-    
     console.log('🔄 DocumentProcessor: Navigation state effect triggered', {
       selectedRunsheet: selectedRunsheet?.id,
       selectedRunsheetName: selectedRunsheet?.name,
-      selectedRunsheetColumns: selectedRunsheet?.columns,
       shouldClearActive,
       preventAutoSave,
       loadedRef: loadedRunsheetRef.current,
       hasSpreadsheetData: spreadsheetData.length > 0,
       activeRunsheetName: activeRunsheet?.name,
-      currentColumns: columns,
       locationState: location.state
     });
     
@@ -477,25 +424,30 @@ const DocumentProcessor: React.FC = () => {
         console.log('📊 First few rows:', selectedRunsheet.data.slice(0, 3));
         console.log('📊 Selected runsheet columns:', selectedRunsheet.columns);
         
-        // For uploaded runsheets, always use the provided columns and data
-        if (selectedRunsheet.columns && selectedRunsheet.columns.length > 0) {
-          console.log('🔥 PROCESSING UPLOADED RUNSHEET');
-          console.log('🔥 Uploaded runsheet columns:', selectedRunsheet.columns);
-          console.log('🔥 Current columns before setting:', columns);
+        // Key insight: Check if there's a mismatch between data keys and columns
+        if (selectedRunsheet.data.length > 0) {
+          const firstRowKeys = Object.keys(selectedRunsheet.data[0]);
+          console.log('📊 Data row keys:', firstRowKeys);
+          console.log('📊 Column names:', selectedRunsheet.columns);
           
-          setColumns(selectedRunsheet.columns);
-          setSpreadsheetData(selectedRunsheet.data);
+          const columnsMatch = selectedRunsheet.columns?.every(col => firstRowKeys.includes(col));
+          console.log('📊 Columns match data keys:', columnsMatch);
           
-          console.log('🔥 Columns set to:', selectedRunsheet.columns);
-          console.log('🔥 Data length set to:', selectedRunsheet.data.length);
-          console.log('🔥 First data row:', selectedRunsheet.data[0]);
-          
-          // Prevent default columns from loading later
-          sessionStorage.setItem('prevent_default_columns', 'true');
-          sessionStorage.setItem('uploaded_columns', JSON.stringify(selectedRunsheet.columns));
-          
-          // For uploaded data, skip the rest of the processing since we have what we need
-          return;
+          if (!columnsMatch) {
+            console.log('⚠️ COLUMN MISMATCH DETECTED! Data will not display correctly.');
+            console.log('⚠️ Expected columns:', selectedRunsheet.columns);
+            console.log('⚠️ Actual data keys:', firstRowKeys);
+            
+            // Fix the mismatch: use the actual data keys as columns
+            console.log('🔧 Fixing column mismatch by using data keys as columns');
+            setColumns(firstRowKeys.filter(key => key.trim() !== ''));
+            
+            // Also set the data directly since the columns are correct now
+            setSpreadsheetData(selectedRunsheet.data);
+            
+            // Don't load runsheet columns later - we've already fixed them
+            return;
+          }
         }
         
         // Convert the data to match the column structure if needed
@@ -2314,15 +2266,6 @@ Image: [base64 image data]`;
     
     // Load user preferences for new runsheet
     try {
-      // CRITICAL: Check if we have uploaded columns - don't override them
-      const uploadedColumns = sessionStorage.getItem('uploaded_columns');
-      const selectedRunsheet = location.state?.runsheet;
-      
-      if (uploadedColumns || (selectedRunsheet && selectedRunsheet.columns)) {
-        console.log('🚫 UPLOAD PROTECTION: Not loading user preferences for new runsheet - uploaded data present');
-        return;
-      }
-      
       const { data: { user } } = await supabase.auth.getUser();
       let initialColumns = DEFAULT_COLUMNS;
       let initialInstructions = DEFAULT_EXTRACTION_INSTRUCTIONS;
@@ -2414,15 +2357,6 @@ Image: [base64 image data]`;
     
     // Load user preferences for new runsheet
     try {
-      // CRITICAL: Check if we have uploaded columns - don't override them
-      const uploadedColumns = sessionStorage.getItem('uploaded_columns');
-      const selectedRunsheet = location.state?.runsheet;
-      
-      if (uploadedColumns || (selectedRunsheet && selectedRunsheet.columns)) {
-        console.log('🚫 UPLOAD PROTECTION: Not loading preferences for new runsheet - uploaded data present');
-        return;
-      }
-      
       const { data: { user } } = await supabase.auth.getUser();
       
       if (user) {
@@ -2657,16 +2591,8 @@ Image: [base64 image data]`;
               onColumnInstructionsChange={setColumnInstructions}
               onUnsavedChanges={setHasUnsavedChanges}
               missingColumns={highlightMissingColumns ? missingColumns : []}
-              initialRunsheetName={(() => {
-                const uploadedName = location.state?.runsheet?.name;
-                console.log('🔥 SPREADSHEET: Setting initialRunsheetName to:', uploadedName);
-                return uploadedName;
-              })()}
-              initialRunsheetId={(() => {
-                const uploadedId = location.state?.runsheet?.id || location.state?.runsheetId || searchParams.get('id') || searchParams.get('runsheet');
-                console.log('🔥 SPREADSHEET: Setting initialRunsheetId to:', uploadedId);
-                return uploadedId;
-              })()}
+              initialRunsheetName={location.state?.runsheet?.name}
+              initialRunsheetId={location.state?.runsheetId || searchParams.get('id') || searchParams.get('runsheet')}
               onShowMultipleUpload={() => setShowMultipleFileUpload(true)}
               onDocumentMapChange={handleDocumentMapChange}
             />
@@ -3223,28 +3149,33 @@ Image: [base64 image data]`;
           </DialogHeader>
           <div className="py-4">
             <RunsheetFileUpload 
-              onFileSelected={async (runsheet) => {
-                console.log('🔥 UPLOAD: Runsheet created in database:', runsheet);
-                
+              onFileSelected={async (runsheetData) => {
+                console.log('📥 Runsheet file processed from DocumentProcessor:', runsheetData);
+                console.log('📥 Columns received:', runsheetData.columns);
+                console.log('📥 Data sample:', runsheetData.rows?.slice(0, 2));
+                console.log('📥 First row keys:', runsheetData.rows?.[0] ? Object.keys(runsheetData.rows[0]) : 'No data');
+                console.log('📥 Total rows count:', runsheetData.rows?.length);
+                console.log('📥 All data keys in first row:', runsheetData.rows?.[0]);
                 setShowRunsheetUploadDialog(false);
                 
-                // Clear any local storage that might interfere
-                try {
-                  localStorage.removeItem('runsheet-emergency-draft');
-                  localStorage.removeItem('runsheet-state-backup');
-                  localStorage.removeItem('preserved-spreadsheet-state');
-                  console.log('🔥 UPLOAD: Cleared all local storage interference');
-                } catch (error) {
-                  console.log('🔥 UPLOAD: Could not clear local storage:', error);
-                }
+                // Use the same logic as Dashboard upload
+                const timestamp = new Date().toLocaleString();
+                const uniqueName = `${runsheetData.name} (Imported ${timestamp})`;
                 
-                // Navigate to the real runsheet using its database ID
-                console.log('🔥 UPLOAD: Navigating to runsheet:', runsheet.id);
-                navigate(`/runsheet?id=${runsheet.id}`);
+                // Clear any existing runsheet data to ensure clean state
+                clearActiveRunsheet();
+                setSpreadsheetData([]);
+                setColumns([]);
+                setFormData({});
+                
+                // Set the uploaded data immediately
+                console.log('📥 Setting uploaded data immediately in DocumentProcessor');
+                setSpreadsheetData(runsheetData.rows || []);
+                setColumns(runsheetData.columns || []);
                 
                 toast({
-                  title: "Runsheet uploaded successfully",
-                  description: `"${runsheet.name}" is ready to use.`
+                  title: "Runsheet loaded successfully",
+                  description: `Loaded "${uniqueName}" with ${runsheetData.rows.length} rows and ${runsheetData.columns.length} columns.`
                 });
               }}
               onCancel={() => {
