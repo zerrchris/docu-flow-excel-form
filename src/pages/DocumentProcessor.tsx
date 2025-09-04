@@ -335,6 +335,17 @@ const DocumentProcessor: React.FC = () => {
       return;
     }
 
+    // If we have an active runsheet, use its columns instead of defaults
+    if (activeRunsheet?.columns && activeRunsheet.columns.length > 0) {
+      console.log('📋 Using columns from active runsheet:', activeRunsheet.columns);
+      setColumns(activeRunsheet.columns);
+      if (activeRunsheet.columnInstructions) {
+        setColumnInstructions(activeRunsheet.columnInstructions);
+      }
+      setIsLoadingPreferences(false);
+      return;
+    }
+
     loadUserPreferences();
   }, []);
 
@@ -1600,15 +1611,28 @@ Image: [base64 image data]`;
         // Check if we have an active runsheet with a name in memory (even if not saved)
         // This happens when user creates named runsheet but hasn't saved it yet
         let runsheetName;
-        if (activeRunsheet?.name && activeRunsheet.name !== 'Untitled Runsheet') {
+        const forbiddenNames = ['Untitled Runsheet', 'untitled runsheet', 'Untitled', 'untitled'];
+        
+        if (activeRunsheet?.name && !forbiddenNames.includes(activeRunsheet.name)) {
           runsheetName = activeRunsheet.name;
           console.log('🔧 ADD_TO_SPREADSHEET: Using existing runsheet name from memory:', runsheetName);
         } else {
-          // Fallback to auto-generated name
-          runsheetName = `Runsheet ${new Date().toLocaleDateString()}`;
+          // Fallback to auto-generated name with timestamp to make it unique
+          runsheetName = `Document Analysis ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })}`;
           console.log('🔧 ADD_TO_SPREADSHEET: Using auto-generated name:', runsheetName);
         }
         const initialData = [targetData];
+
+        // Validate runsheet name before creating
+        if (forbiddenNames.includes(runsheetName.trim())) {
+          console.error('🚫 Refusing to create runsheet with forbidden name:', runsheetName);
+          toast({
+            title: "Invalid runsheet name",
+            description: "Please set a proper name for your runsheet first.",
+            variant: "destructive",
+          });
+          return;
+        }
 
         const { data: newRunsheet, error } = await supabase
           .from('runsheets')
@@ -2640,27 +2664,33 @@ Image: [base64 image data]`;
                 size="sm"
                 onClick={async () => {
                   try {
-                    console.log('🔧 DEBUG: Auto-fill button clicked');
-                    const prefs = await ExtractionPreferencesService.getDefaultPreferences();
-                    console.log('🔧 DEBUG: Retrieved preferences:', prefs);
-                    const defaults = (prefs?.column_instructions as Record<string, string>) || DEFAULT_EXTRACTION_INSTRUCTIONS;
-                    console.log('🔧 DEBUG: Defaults to use:', defaults);
-                    console.log('🔧 DEBUG: Missing columns:', missingColumns);
-                    let applied = 0;
-                    setColumnInstructions(prev => {
-                      const next = { ...prev } as Record<string, string>;
-                      missingColumns.forEach(col => {
-                        console.log(`🔧 DEBUG: Processing column "${col}"`);
-                        const suggestion = defaults[col] || DEFAULT_EXTRACTION_INSTRUCTIONS[col];
-                        console.log(`🔧 DEBUG: Suggestion for "${col}":`, suggestion);
-                        if (suggestion && (!next[col] || next[col].trim() === '')) {
-                          next[col] = suggestion;
-                          applied++;
-                        }
-                      });
-                      console.log('🔧 DEBUG: Final instructions:', next);
-                      return next;
-                    });
+                     console.log('🔧 DEBUG: Auto-fill button clicked');
+                     const prefs = await ExtractionPreferencesService.getDefaultPreferences();
+                     console.log('🔧 DEBUG: Retrieved preferences:', prefs);
+                     const defaults = (prefs?.column_instructions as Record<string, string>) || DEFAULT_EXTRACTION_INSTRUCTIONS;
+                     console.log('🔧 DEBUG: Defaults to use:', defaults);
+                     console.log('🔧 DEBUG: Missing columns:', missingColumns);
+                     console.log('🔧 DEBUG: Current columns:', columns);
+                     let applied = 0;
+                     setColumnInstructions(prev => {
+                       const next = { ...prev } as Record<string, string>;
+                       missingColumns.forEach(col => {
+                         console.log(`🔧 DEBUG: Processing column "${col}"`);
+                         // Try user preferences first, then defaults, then generate generic instruction
+                         let suggestion = defaults[col] || DEFAULT_EXTRACTION_INSTRUCTIONS[col];
+                         if (!suggestion) {
+                           // Generate a generic instruction for unknown columns
+                           suggestion = `Extract the ${col.toLowerCase()} information as it appears in the document`;
+                         }
+                         console.log(`🔧 DEBUG: Suggestion for "${col}":`, suggestion);
+                         if (suggestion && (!next[col] || next[col].trim() === '')) {
+                           next[col] = suggestion;
+                           applied++;
+                         }
+                       });
+                       console.log('🔧 DEBUG: Final instructions:', next);
+                       return next;
+                     });
                     if (applied > 0) {
                       toast({
                         title: "Suggestions applied",
