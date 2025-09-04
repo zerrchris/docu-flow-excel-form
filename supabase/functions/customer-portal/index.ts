@@ -87,19 +87,8 @@ serve(async (req) => {
       console.log("[CUSTOMER-PORTAL] Stripe portal creation failed:", stripeError);
       console.log("[CUSTOMER-PORTAL] Stripe error details:", JSON.stringify(stripeError, null, 2));
       
-      // If portal configuration isn't working, provide alternative
-      const stripeErrorMessage = stripeError.message || '';
-      if (stripeErrorMessage.includes("configuration") || stripeErrorMessage.includes("portal")) {
-        console.log("[CUSTOMER-PORTAL] Portal not configured, returning Stripe dashboard URL");
-        return new Response(JSON.stringify({ 
-          url: `https://billing.stripe.com/p/login/test_00000000001?redirect=${encodeURIComponent(`${origin}/`)}`
-        }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 200,
-        });
-      }
-      
-      throw new Error(`Stripe portal creation failed: ${stripeError.message}`);
+      // Return a helpful error message instead of trying to redirect
+      throw new Error(`Customer Portal not configured. Please contact support or visit your Stripe dashboard at https://dashboard.stripe.com/test/settings/billing/portal to complete the setup.`);
     }
 
   } catch (error) {
