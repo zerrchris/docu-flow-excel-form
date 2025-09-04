@@ -89,6 +89,45 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_usage_logs: {
+        Row: {
+          cost: number
+          id: string
+          input_tokens: number
+          metadata: Json | null
+          model: string
+          output_tokens: number
+          provider: string
+          timestamp: string
+          total_tokens: number
+          user_id: string
+        }
+        Insert: {
+          cost?: number
+          id?: string
+          input_tokens?: number
+          metadata?: Json | null
+          model: string
+          output_tokens?: number
+          provider: string
+          timestamp?: string
+          total_tokens?: number
+          user_id: string
+        }
+        Update: {
+          cost?: number
+          id?: string
+          input_tokens?: number
+          metadata?: Json | null
+          model?: string
+          output_tokens?: number
+          provider?: string
+          timestamp?: string
+          total_tokens?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       document_ocr_data: {
         Row: {
           confidence_score: number | null
@@ -344,6 +383,36 @@ export type Database = {
           subscribed?: boolean
           subscription_end?: string | null
           subscription_tier?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_billing_summary: {
+        Row: {
+          billing_cycle_start: string
+          current_month_cost: number
+          id: string
+          last_billing_date: string | null
+          total_ai_cost: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          billing_cycle_start?: string
+          current_month_cost?: number
+          id?: string
+          last_billing_date?: string | null
+          total_ai_cost?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          billing_cycle_start?: string
+          current_month_cost?: number
+          id?: string
+          last_billing_date?: string | null
+          total_ai_cost?: number
           updated_at?: string
           user_id?: string
         }
