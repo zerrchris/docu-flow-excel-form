@@ -470,6 +470,9 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       
       const { name, columns: newColumns, instructions } = event.detail;
       console.log('🔧 EDITABLE_SPREADSHEET: Received event with name:', name);
+      console.log('🔧 EDITABLE_SPREADSHEET: Received columns:', newColumns);
+      console.log('🔧 EDITABLE_SPREADSHEET: Received instructions:', instructions);
+      console.log('🔧 EDITABLE_SPREADSHEET: Current columns before update:', columns);
       
       // Create the new runsheet using the same logic as the + button
       setRunsheetName(name);
@@ -479,19 +482,26 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         newColumns.forEach((col: string) => row[col] = '');
         return row;
       }));
+      console.log('🔧 EDITABLE_SPREADSHEET: Setting columns to:', newColumns);
       setColumns(newColumns);
       setColumnInstructions(instructions);
+      console.log('🔧 EDITABLE_SPREADSHEET: Columns set, current state should now be:', newColumns);
       setSelectedCell(null);
       setEditingCell(null);
       setCellValue('');
       setSelectedRange(null);
       setHasUnsavedChanges(false);
       setLastSavedState('');
-      onDataChange?.(Array.from({ length: 100 }, () => {
+      
+      // Create new data with the columns
+      const newData = Array.from({ length: 100 }, () => {
         const row: Record<string, string> = {};
         newColumns.forEach((col: string) => row[col] = '');
         return row;
-      }));
+      });
+      console.log('🔧 EDITABLE_SPREADSHEET: Setting data with new columns, data sample:', newData[0]);
+      setData(newData);
+      onDataChange?.(newData);
       onColumnChange(newColumns);
       
       toast({
