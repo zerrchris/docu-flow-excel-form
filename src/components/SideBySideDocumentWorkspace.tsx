@@ -8,7 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
-import { ArrowLeft, Sparkles, Volume2, RotateCcw, FileText, Wand2, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Sparkles, RotateCcw, FileText, Wand2, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -47,7 +47,7 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
   const { toast } = useToast();
   const [rowData, setRowData] = useState<Record<string, string>>(initialRowData);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
+  
   const [lastAnalyzedData, setLastAnalyzedData] = useState<Record<string, string>>({});
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showAnalyzeWarning, setShowAnalyzeWarning] = useState(false);
@@ -416,19 +416,6 @@ Return only the filename, nothing else.`,
     }
   };
 
-  const speakText = async (text: string) => {
-    if ('speechSynthesis' in window) {
-      try {
-        setIsSpeaking(true);
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.onend = () => setIsSpeaking(false);
-        speechSynthesis.speak(utterance);
-      } catch (error) {
-        console.error('Error with text-to-speech:', error);
-        setIsSpeaking(false);
-      }
-    }
-  };
 
   const getConfidenceBadge = (confidence?: number) => {
     if (confidence === undefined) return null;
@@ -552,18 +539,6 @@ Return only the filename, nothing else.`,
                             >
                               <Sparkles className="w-3 h-3" />
                             </Button>
-                          )}
-                           {value && (
-                             <Button
-                               variant="ghost"
-                               size="sm"
-                               onClick={() => speakText(value)}
-                               disabled={isSpeaking}
-                               className="h-6 w-6 p-0"
-                               title={`Read ${columnName} aloud`}
-                             >
-                               <Volume2 className="w-3 h-3" />
-                             </Button>
                            )}
                          </div>
                        </div>
