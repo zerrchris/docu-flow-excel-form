@@ -208,6 +208,9 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
         setLastAnalyzedData(extractedData);
         setHasUnsavedChanges(true);
         
+        // Update the parent component with the new data
+        onDataUpdate(rowIndex, updatedRowData);
+        
         toast({
           title: "Document analyzed",
           description: `Extracted data from ${documentRecord.stored_filename}`,
@@ -442,15 +445,15 @@ Return only the filename, nothing else.`,
                 <div className="flex items-center gap-2">
                   {/* Analyze Document */}
                   {documentRecord && (
-                    <Button
-                      onClick={handleAnalyzeDocument}
-                      disabled={isAnalyzing}
-                      className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white"
-                      size="sm"
-                    >
-                      <Sparkles className="w-4 h-4" />
-                      {isAnalyzing ? "Analyzing..." : "Analyze Document"}
-                    </Button>
+                     <Button
+                       onClick={handleAnalyzeDocument}
+                       disabled={isAnalyzing}
+                       className="flex items-center gap-2"
+                       size="sm"
+                     >
+                       <Sparkles className="w-4 h-4" />
+                       {isAnalyzing ? "Analyzing..." : "Analyze Document"}
+                     </Button>
                   )}
                    
                    {/* Voice Input */}
