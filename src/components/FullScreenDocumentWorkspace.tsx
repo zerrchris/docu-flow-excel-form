@@ -784,131 +784,129 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                   Back to Runsheet
                 </Button>
               </div>
-              <div className="flex-1 min-h-0 overflow-auto border-b border-border" ref={tableRef}>
-                <div className="min-w-max">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-muted/50">
-                        {editableFields.map((column) => (
-                          <TableHead 
-                            key={column}
-                            className="border-r border-border font-semibold text-foreground relative group"
-                            style={{ 
-                              width: `${getColumnWidth(column)}px`, 
-                              minWidth: `${getColumnWidth(column)}px`
+              <div className="flex-1 min-h-0 flex flex-col border-b border-border" ref={tableRef}>
+                <div className="min-w-max flex-1 flex flex-col">
+                  {/* Sticky Header */}
+                  <div className="sticky top-0 z-10 bg-muted/50 border-b border-border">
+                    <div className="flex">
+                      {editableFields.map((column) => (
+                        <div 
+                          key={column}
+                          className="border-r border-border font-semibold text-foreground relative group p-3 flex items-center justify-between"
+                          style={{ 
+                            width: `${getColumnWidth(column)}px`, 
+                            minWidth: `${getColumnWidth(column)}px`
+                          }}
+                        >
+                          <span>{column}</span>
+                          {/* Re-extract button in header */}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleReExtractField(column);
                             }}
+                            className="h-6 w-6 p-0 hover:bg-purple-100 dark:hover:bg-purple-900/20 text-purple-600 dark:text-purple-400 flex-shrink-0"
+                            title={`Re-extract "${column}" field with AI feedback`}
                           >
-                            <div className="flex items-center gap-2 justify-between">
-                              <span>{column}</span>
-                              {/* Re-extract button in header */}
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleReExtractField(column);
-                                }}
-                                className="h-6 w-6 p-0 hover:bg-purple-100 dark:hover:bg-purple-900/20 text-purple-600 dark:text-purple-400 flex-shrink-0"
-                                title={`Re-extract "${column}" field with AI feedback`}
-                              >
-                                <Sparkles className="h-3 w-3" />
-                              </Button>
-                            </div>
-                            
-                            {/* Column resize handle */}
-                            <div
-                              className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-primary/70 group-hover:bg-primary/40 transition-colors"
-                              onMouseDown={(e) => handleMouseDown(e, column)}
-                              style={{ right: '-4px' }}
-                            />
-                          </TableHead>
-                        ))}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      <TableRow className="hover:bg-muted/30">
-                        {editableFields.map((column) => {
-                          const isEditing = editingColumn === column;
-                          const isFocused = focusedColumn === column;
-                          const alignment = columnAlignments[column] || 'left';
+                            <Sparkles className="h-3 w-3" />
+                          </Button>
                           
-                          return (
-                            <TableCell 
-                              key={column}
-                              className="border-r border-border p-0 relative"
-                              style={{ 
-                                width: `${getColumnWidth(column)}px`, 
-                                minWidth: `${getColumnWidth(column)}px`
+                          {/* Column resize handle */}
+                          <div
+                            className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-primary/70 group-hover:bg-primary/40 transition-colors"
+                            onMouseDown={(e) => handleMouseDown(e, column)}
+                            style={{ right: '-4px' }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Fixed Height Row */}
+                  <div className="flex-1 min-h-0 flex hover:bg-muted/30">
+                    {editableFields.map((column) => {
+                      const isEditing = editingColumn === column;
+                      const isFocused = focusedColumn === column;
+                      const alignment = columnAlignments[column] || 'left';
+                      
+                      return (
+                        <div 
+                          key={column}
+                          className="border-r border-border relative flex"
+                          style={{ 
+                            width: `${getColumnWidth(column)}px`, 
+                            minWidth: `${getColumnWidth(column)}px`
+                          }}
+                        >
+                          {isEditing ? (
+                            <Textarea
+                              value={editingValue}
+                              onChange={(e) => setEditingValue(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                  e.preventDefault();
+                                  finishEditing();
+                                } else if (e.key === 'Escape') {
+                                  e.preventDefault();
+                                  cancelEditing();
+                                } else if (e.key === 'Tab') {
+                                  e.preventDefault();
+                                  finishEditing();
+                                  const currentIndex = editableFields.indexOf(column);
+                                  const nextIndex = e.shiftKey 
+                                    ? (currentIndex - 1 + editableFields.length) % editableFields.length
+                                    : (currentIndex + 1) % editableFields.length;
+                                  const nextColumn = editableFields[nextIndex];
+                                  setTimeout(() => startEditing(nextColumn), 0);
+                                }
                               }}
-                            >
-                              {isEditing ? (
-                                <Textarea
-                                  value={editingValue}
-                                  onChange={(e) => setEditingValue(e.target.value)}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter' && !e.shiftKey) {
-                                      e.preventDefault();
-                                      finishEditing();
-                                    } else if (e.key === 'Escape') {
-                                      e.preventDefault();
-                                      cancelEditing();
-                                    } else if (e.key === 'Tab') {
-                                      e.preventDefault();
-                                      finishEditing();
-                                      const currentIndex = editableFields.indexOf(column);
-                                      const nextIndex = e.shiftKey 
-                                        ? (currentIndex - 1 + editableFields.length) % editableFields.length
-                                        : (currentIndex + 1) % editableFields.length;
-                                      const nextColumn = editableFields[nextIndex];
-                                      setTimeout(() => startEditing(nextColumn), 0);
-                                    }
-                                  }}
-                                  onBlur={finishEditing}
-                                  className={`w-full border-2 border-primary rounded-none bg-background focus:ring-0 focus:outline-none resize-none p-2 ${
-                                    alignment === 'center' ? 'text-center' : 
-                                    alignment === 'right' ? 'text-right' : 'text-left'
-                                  }`}
-                                  style={{ 
-                                    minHeight: '60px',
-                                    width: '100%'
-                                  }}
-                                  autoFocus
-                                  rows={Math.max(3, Math.ceil(editingValue.length / 50))}
-                                />
-                               ) : (
-                                 <div
-                                   className={`min-h-[2rem] py-2 px-3 cursor-cell flex items-start transition-colors whitespace-pre-wrap focus:outline-none relative group
-                                     ${isFocused ? 'bg-primary/20 border-2 border-primary ring-2 ring-primary/20' : 'hover:bg-muted/50 border-2 border-transparent'}
-                                     ${alignment === 'center' ? 'text-center justify-center' : 
-                                       alignment === 'right' ? 'text-right justify-end' : 'text-left justify-start'}`}
-                                   onClick={() => handleCellClick(column)}
-                                   onDoubleClick={() => handleCellDoubleClick(column)}
-                                   onKeyDown={(e) => handleKeyDown(e, column)}
-                                   tabIndex={0}
-                                 >
-                                   <span className="flex-1">{localRowData[column] || ''}</span>
-                                   
-                                   {/* Re-extract button - show for all cells including empty ones */}
-                                   <Button
-                                     variant="ghost"
-                                     size="sm"
-                                     onClick={(e) => {
-                                       e.stopPropagation();
-                                       handleReExtractField(column);
-                                     }}
-                                     className="h-6 w-6 p-0 ml-2 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-purple-100 dark:hover:bg-purple-900/20 text-purple-600 dark:text-purple-400 flex-shrink-0"
-                                     title={`Re-extract "${column}" field with AI feedback`}
-                                   >
-                                     <Sparkles className="h-4 w-4" />
-                                   </Button>
-                                 </div>
-                               )}
-                            </TableCell>
-                          );
-                        })}
-                      </TableRow>
-                    </TableBody>
-                  </Table>
+                              onBlur={finishEditing}
+                              className={`w-full h-full border-2 border-primary rounded-none bg-background focus:ring-0 focus:outline-none resize-none p-2 ${
+                                alignment === 'center' ? 'text-center' : 
+                                alignment === 'right' ? 'text-right' : 'text-left'
+                              }`}
+                              autoFocus
+                            />
+                           ) : (
+                             <div
+                               className={`w-full flex-1 p-3 cursor-cell flex flex-col justify-start transition-colors focus:outline-none relative group
+                                 ${isFocused ? 'bg-primary/20 border-2 border-primary ring-2 ring-primary/20' : 'hover:bg-muted/50 border-2 border-transparent'}
+                                 ${alignment === 'center' ? 'text-center items-center' : 
+                                   alignment === 'right' ? 'text-right items-end' : 'text-left items-start'}`}
+                               onClick={() => handleCellClick(column)}
+                               onDoubleClick={() => handleCellDoubleClick(column)}
+                               onKeyDown={(e) => handleKeyDown(e, column)}
+                               tabIndex={0}
+                             >
+                               {/* Scrollable content area */}
+                               <div className={`flex-1 w-full overflow-auto whitespace-pre-wrap ${
+                                 alignment === 'center' ? 'text-center' : 
+                                 alignment === 'right' ? 'text-right' : 'text-left'
+                               }`}>
+                                 {localRowData[column] || ''}
+                               </div>
+                               
+                               {/* Re-extract button - show for all cells including empty ones */}
+                               <Button
+                                 variant="ghost"
+                                 size="sm"
+                                 onClick={(e) => {
+                                   e.stopPropagation();
+                                   handleReExtractField(column);
+                                 }}
+                                 className="h-6 w-6 p-0 mt-2 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-purple-100 dark:hover:bg-purple-900/20 text-purple-600 dark:text-purple-400 flex-shrink-0 self-end"
+                                 title={`Re-extract "${column}" field with AI feedback`}
+                               >
+                                 <Sparkles className="h-4 w-4" />
+                               </Button>
+                             </div>
+                           )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             </Card>
