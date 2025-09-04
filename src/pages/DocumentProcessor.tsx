@@ -1611,28 +1611,15 @@ Image: [base64 image data]`;
         // Check if we have an active runsheet with a name in memory (even if not saved)
         // This happens when user creates named runsheet but hasn't saved it yet
         let runsheetName;
-        const forbiddenNames = ['Untitled Runsheet', 'untitled runsheet', 'Untitled', 'untitled'];
-        
-        if (activeRunsheet?.name && !forbiddenNames.includes(activeRunsheet.name)) {
+        if (activeRunsheet?.name && activeRunsheet.name !== 'Untitled Runsheet') {
           runsheetName = activeRunsheet.name;
           console.log('🔧 ADD_TO_SPREADSHEET: Using existing runsheet name from memory:', runsheetName);
         } else {
-          // Fallback to auto-generated name with timestamp to make it unique
-          runsheetName = `Document Analysis ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })}`;
+          // Fallback to auto-generated name
+          runsheetName = `Document Analysis ${new Date().toLocaleDateString()}`;
           console.log('🔧 ADD_TO_SPREADSHEET: Using auto-generated name:', runsheetName);
         }
         const initialData = [targetData];
-
-        // Validate runsheet name before creating
-        if (forbiddenNames.includes(runsheetName.trim())) {
-          console.error('🚫 Refusing to create runsheet with forbidden name:', runsheetName);
-          toast({
-            title: "Invalid runsheet name",
-            description: "Please set a proper name for your runsheet first.",
-            variant: "destructive",
-          });
-          return;
-        }
 
         const { data: newRunsheet, error } = await supabase
           .from('runsheets')
@@ -3183,30 +3170,84 @@ Image: [base64 image data]`;
                 console.log('📥 Runsheet file processed from DocumentProcessor:', runsheetData);
                 console.log('📥 Columns received:', runsheetData.columns);
                 console.log('📥 Data sample:', runsheetData.rows?.slice(0, 2));
-                console.log('📥 First row keys:', runsheetData.rows?.[0] ? Object.keys(runsheetData.rows[0]) : 'No data');
                 console.log('📥 Total rows count:', runsheetData.rows?.length);
-                console.log('📥 All data keys in first row:', runsheetData.rows?.[0]);
-                setShowRunsheetUploadDialog(false);
                 
-                // Use the same logic as Dashboard upload
-                const timestamp = new Date().toLocaleString();
-                const uniqueName = `${runsheetData.name} (Imported ${timestamp})`;
-                
-                // Clear any existing runsheet data to ensure clean state
-                clearActiveRunsheet();
-                setSpreadsheetData([]);
-                setColumns([]);
-                setFormData({});
-                
-                // Set the uploaded data immediately
-                console.log('📥 Setting uploaded data immediately in DocumentProcessor');
-                setSpreadsheetData(runsheetData.rows || []);
-                setColumns(runsheetData.columns || []);
-                
-                toast({
-                  title: "Runsheet loaded successfully",
-                  description: `Loaded "${uniqueName}" with ${runsheetData.rows.length} rows and ${runsheetData.columns.length} columns.`
-                });
+                try {
+                  const { data: { user } } = await supabase.auth.getUser();
+                  if (!user) {
+                    toast({
+                      title: "Authentication required",
+                      description: "Please sign in to save runsheets.",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+
+                  // Use the original filename without timestamps - this is what the user expects
+                  const runsheetName = runsheetData.name;
+                  
+                  console.log('📥 Creating runsheet with name:', runsheetName);
+                  
+                  // Create the runsheet in Supabase with the uploaded data
+                  const { data: newRunsheet, error } = await supabase
+                    .from('runsheets')
+                    .insert({
+                      name: runsheetName,
+                      user_id: user.id,
+                      columns: runsheetData.columns,
+                      data: runsheetData.rows,
+                      column_instructions: {} // Start with empty instructions
+                    })
+                    .select()
+                    .single();
+
+                  if (error) {
+                    console.error('Error creating runsheet:', error);
+                    toast({
+                      title: "Failed to create runsheet",
+                      description: error.message,
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+
+                  console.log('📥 Successfully created runsheet:', newRunsheet);
+
+                  // Set this as the active runsheet
+                  setCurrentRunsheet(newRunsheet.id);
+                  setActiveRunsheet({
+                    id: newRunsheet.id,
+                    name: newRunsheet.name,
+                    data: runsheetData.rows,
+                    columns: runsheetData.columns,
+                    columnInstructions: {}
+                  });
+
+                  // Set the local state to match the uploaded data
+                  setSpreadsheetData(runsheetData.rows);
+                  setColumns(runsheetData.columns);
+                  setColumnInstructions({});
+                  setFormData({});
+
+                  // Close the upload dialog
+                  setShowRunsheetUploadDialog(false);
+
+                  toast({
+                    title: "Runsheet created successfully",
+                    description: `Created "${runsheetName}" with ${runsheetData.rows.length} rows and ${runsheetData.columns.length} columns.`
+                  });
+
+                  // Navigate to the runsheet page with the new runsheet ID
+                  navigate(`/runsheet?id=${newRunsheet.id}`, { replace: true });
+
+                } catch (error) {
+                  console.error('Error processing uploaded runsheet:', error);
+                  toast({
+                    title: "Failed to process upload",
+                    description: "Please try again.",
+                    variant: "destructive",
+                  });
+                }
               }}
               onCancel={() => {
                 setShowRunsheetUploadDialog(false);
