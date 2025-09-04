@@ -50,6 +50,7 @@ import DocumentNamingSettings from './DocumentNamingSettings';
 import InlineDocumentViewer from './InlineDocumentViewer';
 import ColumnPreferencesDialog from './ColumnPreferencesDialog';
 import FullScreenDocumentWorkspace from './FullScreenDocumentWorkspace';
+import SideBySideDocumentWorkspace from './SideBySideDocumentWorkspace';
 import ViewportPortal from './ViewportPortal';
 import { AutoSaveIndicator } from './AutoSaveIndicator';
 import { useAutoSave } from '@/hooks/useAutoSave';
@@ -295,6 +296,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   const [showNamingSettings, setShowNamingSettings] = useState(false);
   const [inlineViewerRow, setInlineViewerRow] = useState<number | null>(null);
    const [fullScreenWorkspace, setFullScreenWorkspace] = useState<{ runsheetId: string; rowIndex: number } | null>(null);
+   const [sideBySideWorkspace, setSideBySideWorkspace] = useState<{ runsheetId: string; rowIndex: number } | null>(null);
    const [showDocumentFileNameColumn, setShowDocumentFileNameColumn] = useState(true);
   
   // Auto-save state
@@ -6097,7 +6099,11 @@ ${extractionFields}`
                              console.log('🔧 EditableSpreadsheet: Opening full screen workspace for rowIndex:', rowIndex, '(display row:', rowIndex + 1, ')');
                              console.log('🔧 EditableSpreadsheet: Row data:', row);
                              console.log('🔧 EditableSpreadsheet: Document for this row:', documentMap.get(rowIndex));
-                             setFullScreenWorkspace({ runsheetId: currentRunsheetId || '', rowIndex });
+                              setFullScreenWorkspace({ runsheetId: currentRunsheetId || '', rowIndex });
+                             }}
+                            onOpenSideBySide={() => {
+                              console.log('🔧 EditableSpreadsheet: Opening side-by-side workspace for rowIndex:', rowIndex);
+                              setSideBySideWorkspace({ runsheetId: currentRunsheetId || '', rowIndex });
                             }}
                            isSpreadsheetUpload={true}
                            autoAnalyze={false}
@@ -6559,6 +6565,25 @@ ${extractionFields}`
               }}
             />
           </ViewportPortal>
+        )}
+
+        {sideBySideWorkspace && (
+          <SideBySideDocumentWorkspace
+            isOpen={!!sideBySideWorkspace}
+            onClose={() => setSideBySideWorkspace(null)}
+            runsheetId={sideBySideWorkspace.runsheetId}
+            rowIndex={sideBySideWorkspace.rowIndex}
+            rowData={data[sideBySideWorkspace.rowIndex] || {}}
+            columns={columns}
+            columnInstructions={columnInstructions}
+            documentRecord={documentMap.get(sideBySideWorkspace.rowIndex)}
+            onDataUpdate={(rowIndex, rowData) => {
+              const newData = [...data];
+              newData[rowIndex] = rowData;
+              setData(newData);
+              onDataChange?.(newData);
+            }}
+          />
         )}
 
         {/* Document Naming Settings Dialog */}

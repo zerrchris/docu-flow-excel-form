@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { Upload, File, ExternalLink, Trash2, Download, Edit2, Brain, Maximize2, Sparkles, Unlink, X } from 'lucide-react';
+import { Upload, File, ExternalLink, Trash2, Download, Edit2, Brain, Maximize2, Sparkles, Unlink, X, Columns } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { ScreenshotCapture } from './ScreenshotCapture';
@@ -18,6 +18,7 @@ interface DocumentLinkerProps {
   onDocumentRemoved: () => void;
   onAnalyzeDocument?: (file: File, filename: string) => void;
   onOpenWorkspace?: () => void;
+  onOpenSideBySide?: () => void;
   isSpreadsheetUpload?: boolean; // Flag to distinguish spreadsheet uploads from processor uploads
   autoAnalyze?: boolean; // Setting to control auto-analysis
   rowData?: Record<string, string>; // Current row data for smart filename generation
@@ -33,6 +34,7 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
   onDocumentRemoved,
   onAnalyzeDocument,
   onOpenWorkspace,
+  onOpenSideBySide,
   isSpreadsheetUpload = false,
   autoAnalyze = false,
   rowData
@@ -828,16 +830,16 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                         description: "There was an error analyzing the document.",
                         variant: "destructive",
                       });
-                    } finally {
-                      setIsAnalyzing(false);
-                    }
-                  }}
-                  className={`h-7 w-7 p-1 ${isAnalyzing ? 'text-blue-400' : 'text-blue-600 hover:text-blue-700'}`}
-                  title={isAnalyzing ? "AI is thinking..." : "Analyze document and extract data"}
-                >
-                  <Brain className={`w-3.5 h-3.5 ${isAnalyzing ? 'animate-pulse' : ''}`} />
-                </Button>
-              )}
+                      } finally {
+                        setIsAnalyzing(false);
+                      }
+                    }}
+                    className={`h-7 w-7 p-1 ${isAnalyzing ? 'text-blue-400' : 'text-blue-600 hover:text-blue-700'}`}
+                    title={isAnalyzing ? "AI is thinking..." : "Analyze document and extract data"}
+                  >
+                    <Brain className={`w-3.5 h-3.5 ${isAnalyzing ? 'animate-pulse' : ''}`} />
+                  </Button>
+                )}
                 {onOpenWorkspace && (
                   <Button
                     variant="ghost"
@@ -848,9 +850,24 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                       onOpenWorkspace();
                     }}
                     className="h-7 w-7 p-1"
-                    title="Open full-screen workspace"
+                    title="Open expanded workspace"
                   >
                     <Maximize2 className="w-3.5 h-3.5" />
+                  </Button>
+                 )}
+                {onOpenSideBySide && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    tabIndex={-1}
+                    onClick={(e) => {
+                      e.stopPropagation(); // Prevent cell edit mode
+                      onOpenSideBySide();
+                    }}
+                    className="h-7 w-7 p-1"
+                    title="Open side-by-side workspace"
+                  >
+                    <Columns className="w-3.5 h-3.5" />
                   </Button>
                 )}
                 {/* Smart Filename Generation Button - Only show if we have row data */}
