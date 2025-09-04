@@ -89,6 +89,42 @@ export type Database = {
         }
         Relationships: []
       }
+      document_ocr_data: {
+        Row: {
+          confidence_score: number | null
+          created_at: string
+          extracted_text: string | null
+          id: string
+          processing_method: string | null
+          row_index: number | null
+          runsheet_id: string | null
+          structured_data: Json | null
+          updated_at: string
+        }
+        Insert: {
+          confidence_score?: number | null
+          created_at?: string
+          extracted_text?: string | null
+          id?: string
+          processing_method?: string | null
+          row_index?: number | null
+          runsheet_id?: string | null
+          structured_data?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          confidence_score?: number | null
+          created_at?: string
+          extracted_text?: string | null
+          id?: string
+          processing_method?: string | null
+          row_index?: number | null
+          runsheet_id?: string | null
+          structured_data?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       documents: {
         Row: {
           content_type: string | null
