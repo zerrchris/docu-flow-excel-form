@@ -24,12 +24,27 @@ serve(async (req) => {
     }
     console.log("[CUSTOMER-PORTAL] Stripe key found");
 
-    // Get request body to see if user info is passed
-    const requestBody = await req.text();
-    console.log("[CUSTOMER-PORTAL] Request body:", requestBody);
+    // Initialize Supabase client
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+    );
 
-    // For now, use a hardcoded customer email (your email)
-    const customerEmail = "av8172@gmail.com";
+    // Get authenticated user
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      console.log("[CUSTOMER-PORTAL] ERROR: No authorization header");
+      throw new Error("No authorization header provided");
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
+    if (userError || !userData.user?.email) {
+      console.log("[CUSTOMER-PORTAL] ERROR: User authentication failed", userError);
+      throw new Error("User not authenticated or email not available");
+    }
+
+    const customerEmail = userData.user.email;
     console.log("[CUSTOMER-PORTAL] Using customer email:", customerEmail);
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
