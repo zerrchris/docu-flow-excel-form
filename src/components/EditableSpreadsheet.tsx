@@ -4335,6 +4335,23 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
 
   // Copy/Paste functionality
   const copySelection = useCallback(() => {
+    // Handle single cell copy if no range is selected
+    if (!selectedRange && selectedCell) {
+      const { rowIndex, column } = selectedCell;
+      const cellValue = data[rowIndex]?.[column] || '';
+      const copiedData = [[cellValue]];
+      
+      setCopiedData(copiedData);
+      navigator.clipboard.writeText(cellValue);
+      
+      toast({
+        title: "Copied",
+        description: `Cell value "${cellValue}" copied to clipboard`,
+      });
+      return;
+    }
+    
+    // Handle range copy
     if (!selectedRange) return;
     
     const { start, end } = selectedRange;
@@ -4363,7 +4380,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       title: "Copied",
       description: `${copiedData.length} rows × ${copiedData[0]?.length || 0} columns copied to clipboard`,
     });
-  }, [selectedRange, columns, data, toast]);
+  }, [selectedRange, selectedCell, columns, data, toast]);
 
   const pasteSelection = useCallback(async () => {
     if (!selectedCell) return;
@@ -5142,6 +5159,11 @@ ${extractionFields}`
                 {/* Row count indicator */}
                 <div className="flex items-center gap-1 ml-2 px-2 py-1 bg-muted rounded text-xs">
                   <span>{data.length} rows</span>
+                </div>
+                
+                {/* Keyboard shortcuts hint */}
+                <div className="flex items-center gap-1 ml-2 px-2 py-1 bg-muted/50 rounded text-xs text-muted-foreground">
+                  <span>Ctrl+C to copy • Ctrl+V to paste • Arrows to navigate</span>
                 </div>
               </div>
             )}
