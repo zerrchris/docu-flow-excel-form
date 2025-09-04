@@ -414,21 +414,55 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         // Store the pending upload request for after save completes
         setPendingUploadRequest(event.detail);
         
-        // Check if runsheet needs to be saved first
+        // Check if this is a new runsheet that needs to be saved first
         if (!currentRunsheetId) {
-          // This is a new, unsaved runsheet - prompt user to save first
-          const responseEvent = new CustomEvent('runsheetSaveResponse', {
-            detail: { 
-              success: false, 
-              error: 'Please save your runsheet before adding documents.' 
+          console.log('🔧 EditableSpreadsheet: New runsheet detected - auto-saving before upload');
+          
+          // Check if the runsheet has a valid name - if not, assign a default one
+          const nameToUse = runsheetName && runsheetName.trim() !== '' && runsheetName !== 'Untitled Runsheet' 
+            ? runsheetName 
+            : `New Runsheet ${new Date().toLocaleDateString()}`;
+          
+          if (nameToUse !== runsheetName) {
+            setRunsheetName(nameToUse);
+          }
+          
+          // Trigger a force save to create the runsheet in the database
+          try {
+            await safeAutoForceSave();
+            
+            // Wait a bit for the auto-save to update the currentRunsheetId
+            let attempts = 0;
+            const maxAttempts = 10;
+            while (!currentRunsheetId && attempts < maxAttempts) {
+              await new Promise(resolve => setTimeout(resolve, 200));
+              attempts++;
             }
-          });
-          window.dispatchEvent(responseEvent);
-          console.log('🔧 EditableSpreadsheet: Sent error response - runsheet needs to be saved first');
-          return;
+            
+            if (currentRunsheetId) {
+              console.log('🔧 EditableSpreadsheet: Successfully created runsheet with ID:', currentRunsheetId);
+              const responseEvent = new CustomEvent('runsheetSaveResponse', {
+                detail: { success: true, runsheetId: currentRunsheetId }
+              });
+              window.dispatchEvent(responseEvent);
+              return;
+            } else {
+              throw new Error('Failed to create runsheet - no ID generated after save');
+            }
+          } catch (saveError) {
+            console.error('🔧 EditableSpreadsheet: Failed to auto-save new runsheet:', saveError);
+            const responseEvent = new CustomEvent('runsheetSaveResponse', {
+              detail: { 
+                success: false, 
+                error: 'Failed to create runsheet. Please add some data and try again.' 
+              }
+            });
+            window.dispatchEvent(responseEvent);
+            return;
+          }
         }
         
-        // Use force save for document upload requests  
+        // Use force save for document upload requests on existing runsheets
         await safeAutoForceSave();
         
         let runsheetIdToReturn = currentRunsheetId;
