@@ -462,14 +462,9 @@ const DocumentProcessor: React.FC = () => {
                   }
                 });
                 
-                // Clean up any invalid columns from preferences first
-                await ExtractionPreferencesService.cleanupPreferences(selectedRunsheet.columns);
-                
-                await ExtractionPreferencesService.saveDefaultPreferences(
-                  selectedRunsheet.columns, 
-                  filteredInstructions
-                );
-                console.log('Updated user preferences to match runsheet columns');
+                // DON'T auto-save uploaded runsheet columns as user defaults
+                // This was causing uploaded columns to override user preferences
+                console.log('📋 Loaded runsheet columns without changing user defaults');
               }
             } catch (error) {
               console.error('Error updating user preferences:', error);
@@ -559,22 +554,23 @@ const DocumentProcessor: React.FC = () => {
 
   // File handling now done through RunsheetFileUpload component
   
-  // Auto-save preferences when columns or instructions change
-  useEffect(() => {
-    if (!isLoadingPreferences && columns.length > 0 && Object.keys(columnInstructions).length > 0) {
-      const savePreferences = async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          await ExtractionPreferencesService.saveDefaultPreferences(columns, columnInstructions);
-          console.log('Auto-saved user preferences');
-        }
-      };
-      
-      // Debounce the save to avoid too many API calls
-      const timeoutId = setTimeout(savePreferences, 1000);
-      return () => clearTimeout(timeoutId);
-    }
-  }, [columns, columnInstructions, isLoadingPreferences]);
+  // DISABLED: Auto-save preferences - this was causing uploaded columns to become defaults
+  // Only save preferences when user explicitly chooses to save them
+  // useEffect(() => {
+  //   if (!isLoadingPreferences && columns.length > 0 && Object.keys(columnInstructions).length > 0) {
+  //     const savePreferences = async () => {
+  //       const { data: { user } } = await supabase.auth.getUser();
+  //       if (user) {
+  //         await ExtractionPreferencesService.saveDefaultPreferences(columns, columnInstructions);
+  //         console.log('Auto-saved user preferences');
+  //       }
+  //     };
+  //     
+  //     // Debounce the save to avoid too many API calls
+  //     const timeoutId = setTimeout(savePreferences, 1000);
+  //     return () => clearTimeout(timeoutId);
+  //   }
+  // }, [columns, columnInstructions, isLoadingPreferences]);
 
   // Load user preferences on component mount
   
@@ -2708,8 +2704,9 @@ Image: [base64 image data]`;
                 );
                 
                 if (hasValidInstructions) {
-                  // Save as default preferences
-                  await ExtractionPreferencesService.saveDefaultPreferences(columns, columnInstructions);
+                  // DON'T automatically save as default preferences - let user choose
+                  // This prevents uploaded runsheet columns from becoming defaults
+                  console.log('Configuration completed - NOT auto-saving as defaults');
                   
                   // Immediately reload the preferences to ensure they're available for next document
                   try {
