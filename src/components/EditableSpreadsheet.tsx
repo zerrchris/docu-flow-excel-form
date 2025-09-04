@@ -528,6 +528,14 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       console.log('🔧 EDITABLE_SPREADSHEET: Received instructions:', instructions);
       console.log('🔧 EDITABLE_SPREADSHEET: Current columns before update:', columns);
       
+      // Clear any existing emergency draft when creating a new runsheet
+      try {
+        localStorage.removeItem('runsheet-emergency-draft');
+        console.log('🗑️ Cleared emergency draft for new runsheet creation');
+      } catch (error) {
+        console.error('Error clearing emergency draft:', error);
+      }
+      
       // Create the new runsheet using the same logic as the + button
       setRunsheetName(name);
       console.log('🔧 EDITABLE_SPREADSHEET: Set runsheet name to:', name);
@@ -1065,6 +1073,20 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
           const hasActiveRunsheet = !!currentRunsheet; // Check if there's already an active runsheet
           
           if (draftAge < 24 * 60 * 60 * 1000) {
+            // Check if this is a "New" button click or fresh runsheet creation
+            const isNewRunsheetCreation = runsheetName === 'Untitled Runsheet' && 
+                                        !hasCurrentRunsheet && 
+                                        !hasDocuments && 
+                                        !hasActiveRunsheet &&
+                                        window.location.pathname === '/runsheet';
+            
+            // Clear draft immediately for new runsheet creation
+            if (isNewRunsheetCreation) {
+              console.log('🗑️ Clearing emergency draft - new runsheet being created');
+              localStorage.removeItem('runsheet-emergency-draft');
+              return;
+            }
+            
             // Don't restore if we already have active work, documents, a named runsheet, OR an active runsheet
             if (hasCurrentRunsheet || isProcessingDocuments || hasActiveRunsheetName || hasActiveRunsheet) {
               console.log('🔒 Skipping draft restoration - active work detected', {
