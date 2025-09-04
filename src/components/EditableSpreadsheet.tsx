@@ -4595,21 +4595,26 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
 
   // Keyboard shortcuts for copy/paste
   useEffect(() => {
+    console.log('🔍 Setting up keyboard event listener');
+    
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.defaultPrevented) return;
-      const target = e.target as HTMLElement | null;
-      if (target && target.closest('input, textarea, select, [contenteditable="true"], [role="textbox"]')) {
-        return; // allow native copy/paste inside form fields
-      }
       
-      console.log('🔍 Key pressed:', {
+      console.log('🔍 Key event received:', {
         key: e.key,
         ctrlKey: e.ctrlKey,
         metaKey: e.metaKey,
+        target: e.target,
+        activeElement: document.activeElement,
         selectedCell,
-        selectedRange,
-        target: target?.tagName
+        selectedRange
       });
+      
+      const target = e.target as HTMLElement | null;
+      if (target && target.closest('input, textarea, select, [contenteditable="true"], [role="textbox"]')) {
+        console.log('🔍 Ignoring key event - inside form field');
+        return; // allow native copy/paste inside form fields
+      }
       
       if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
         console.log('🔍 Copy triggered');
@@ -4628,9 +4633,15 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         e.preventDefault();
       }
     };
+    
     document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [copySelection, pasteSelection, cutSelection, deleteSelectedCells]);
+    console.log('🔍 Keyboard event listener added to document');
+    
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      console.log('🔍 Keyboard event listener removed');
+    };
+  }, [copySelection, pasteSelection, cutSelection, deleteSelectedCells, selectedCell, selectedRange]);
   
   // Function to update document row_index in database
   const updateDocumentRowIndexes = useCallback(async (newDocumentMap: Map<number, DocumentRecord>) => {
