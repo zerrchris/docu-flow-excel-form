@@ -51,7 +51,7 @@ verify_jwt = false
 [functions.create-quick-runsheet]
 verify_jwt = true
 [functions.customer-portal]
-verify_jwt = true
+verify_jwt = false
 [functions.enhanced-document-analysis]
 verify_jwt = true
 [functions.extension-document-link]
