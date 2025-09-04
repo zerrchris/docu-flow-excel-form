@@ -89,9 +89,9 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
 
         setRowData(updatedRowData);
         setLastAnalyzedData(extractedData);
-        setHasUnsavedChanges(true);
+        setHasUnsavedChanges(false); // Analysis counts as saved since we're syncing immediately
         
-        // Update the parent component with the new data immediately
+        // Immediately sync changes back to parent component
         onDataUpdate(rowIndex, updatedRowData);
         
         toast({
@@ -142,7 +142,10 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
       if (data?.extractedValue) {
         const updatedRowData = { ...rowData, [fieldName]: data.extractedValue };
         setRowData(updatedRowData);
-        setHasUnsavedChanges(true);
+        setHasUnsavedChanges(false); // Re-extraction counts as saved since we're syncing immediately
+        
+        // Immediately sync changes back to parent component
+        onDataUpdate(rowIndex, updatedRowData);
         
         toast({
           title: "Field re-extracted",
@@ -231,6 +234,8 @@ Return only the filename, nothing else.`,
     const updatedRowData = { ...rowData, [fieldName]: value };
     setRowData(updatedRowData);
     setHasUnsavedChanges(true);
+    // Immediately sync changes back to parent component
+    onDataUpdate(rowIndex, updatedRowData);
   };
 
   const handleSaveAndReturn = async () => {
