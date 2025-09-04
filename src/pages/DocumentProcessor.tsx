@@ -2649,8 +2649,16 @@ Image: [base64 image data]`;
               onColumnInstructionsChange={setColumnInstructions}
               onUnsavedChanges={setHasUnsavedChanges}
               missingColumns={highlightMissingColumns ? missingColumns : []}
-              initialRunsheetName={location.state?.runsheet?.name}
-              initialRunsheetId={location.state?.runsheetId || searchParams.get('id') || searchParams.get('runsheet')}
+              initialRunsheetName={(() => {
+                const uploadedName = location.state?.runsheet?.name;
+                console.log('🔥 SPREADSHEET: Setting initialRunsheetName to:', uploadedName);
+                return uploadedName;
+              })()}
+              initialRunsheetId={(() => {
+                const uploadedId = location.state?.runsheet?.id || location.state?.runsheetId || searchParams.get('id') || searchParams.get('runsheet');
+                console.log('🔥 SPREADSHEET: Setting initialRunsheetId to:', uploadedId);
+                return uploadedId;
+              })()}
               onShowMultipleUpload={() => setShowMultipleFileUpload(true)}
               onDocumentMapChange={handleDocumentMapChange}
             />
@@ -3215,6 +3223,14 @@ Image: [base64 image data]`;
                 console.log('🔥 UPLOAD: Current page columns before navigation:', columns);
                 
                 setShowRunsheetUploadDialog(false);
+                
+                // CRITICAL: Clear any emergency drafts that might interfere
+                try {
+                  localStorage.removeItem('runsheet-emergency-draft');
+                  console.log('🔥 UPLOAD: Cleared emergency draft to prevent interference');
+                } catch (error) {
+                  console.log('🔥 UPLOAD: Could not clear emergency draft:', error);
+                }
                 
                 // IMMEDIATELY set the uploaded columns to prevent DEFAULT_COLUMNS from loading
                 console.log('🔥 UPLOAD: Setting columns immediately to prevent defaults');

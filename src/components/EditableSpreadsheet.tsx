@@ -120,6 +120,16 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       }
       return '';
     }
+    
+    // CRITICAL: For uploaded runsheets, preserve the name from navigation state
+    const uploadedName = initialRunsheetName;
+    console.log('🔥 SPREADSHEET INIT: initialRunsheetName:', uploadedName, 'isUploaded:', initialRunsheetId?.startsWith('uploaded-'));
+    
+    if (uploadedName && initialRunsheetId?.startsWith('uploaded-')) {
+      console.log('🔥 SPREADSHEET INIT: Using uploaded runsheet name:', uploadedName);
+      return uploadedName;
+    }
+    
     return initialRunsheetName || 'Untitled Runsheet';
   });
   const [editingRunsheetName, setEditingRunsheetName] = useState<boolean>(false);
