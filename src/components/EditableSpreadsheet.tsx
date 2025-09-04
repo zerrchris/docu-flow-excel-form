@@ -4601,13 +4601,26 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       if (target && target.closest('input, textarea, select, [contenteditable="true"], [role="textbox"]')) {
         return; // allow native copy/paste inside form fields
       }
+      
+      console.log('🔍 Key pressed:', {
+        key: e.key,
+        ctrlKey: e.ctrlKey,
+        metaKey: e.metaKey,
+        selectedCell,
+        selectedRange,
+        target: target?.tagName
+      });
+      
       if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+        console.log('🔍 Copy triggered');
         copySelection();
         e.preventDefault();
       } else if ((e.ctrlKey || e.metaKey) && e.key === 'x') {
+        console.log('🔍 Cut triggered');
         cutSelection();
         e.preventDefault();
       } else if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+        console.log('🔍 Paste triggered');
         pasteSelection();
         e.preventDefault();
       } else if (e.key === 'Delete' && (selectedCell || selectedRange)) {
