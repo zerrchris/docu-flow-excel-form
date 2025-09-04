@@ -198,30 +198,19 @@ export function useAutoSave({
     };
   }, []);
 
-  // Auto-save when data changes (simplified - no complex state checking)
+  // Direct database sync only - no emergency drafts
   useEffect(() => {
-    // CRITICAL: Skip auto-save completely for uploaded runsheets to prevent interference
-    if (runsheetName.includes('(Imported') || runsheetName.includes('uploaded-')) {
-      console.log('🚫 Auto-save disabled for uploaded runsheet:', runsheetName);
-      return;
+    if (userId && runsheetName.trim() && columns.length > 0) {
+      const hasAnyData = data.some(row => 
+        Object.values(row).some(value => value && value.trim() !== '')
+      );
+      
+      if (hasAnyData) {
+        // Only database save, no localStorage backup
+        save();
+      }
     }
-    
-    // CRITICAL: Only auto-save if we have a proper user-defined name
-    const forbiddenNames = ['Untitled Runsheet', 'untitled runsheet', 'Untitled', 'untitled'];
-    const hasValidName = runsheetName.trim() && !forbiddenNames.includes(runsheetName.trim());
-    
-    // CRITICAL: Don't auto-save if data is completely empty (prevents overwriting extracted data on load)
-    const hasAnyData = data.some(row => 
-      Object.values(row).some(value => value && value.trim() !== '')
-    );
-    
-    if (userId && hasValidName && columns.length > 0 && hasAnyData) {
-      // Save to localStorage immediately for backup
-      saveToLocalStorage();
-      // Debounced save to database
-      save();
-    }
-  }, [runsheetName, columns, data, columnInstructions, userId, save, saveToLocalStorage]);
+  }, [runsheetName, columns, data, columnInstructions, userId, save]);
 
   return {
     save,

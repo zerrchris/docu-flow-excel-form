@@ -171,23 +171,8 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       return result;
     }
     
-    // NEVER use emergency draft for uploaded runsheets - they should use database data
-    if (initialRunsheetId?.startsWith('uploaded-')) {
-      console.log('🚫 Skipping emergency draft for uploaded runsheet - using database data only');
-      return [];
-    }
-    
-    // Only check for emergency draft if no initial data was provided AND not uploaded
-    try {
-      const emergencyDraft = localStorage.getItem('runsheet-emergency-draft');
-      if (emergencyDraft) {
-        const draft = JSON.parse(emergencyDraft);
-        console.log('🔄 Restoring emergency draft from localStorage (no initialData)');
-        return draft.data || [];
-      }
-    } catch (error) {
-      console.error('Error loading emergency draft:', error);
-    }
+    // No emergency drafts - always use database data or empty state
+    return [];
     
     // Prevent default rows creation if upload action is active
     const preventDefault = sessionStorage.getItem('prevent_default_runsheet_creation');
