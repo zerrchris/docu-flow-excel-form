@@ -6150,19 +6150,23 @@ ${extractionFields}`
                                   }
                                 }}
                                 onBlur={() => {
-                                  // Save the cell value when clicking away from the cell
-                                  if (editingCell) {
-                                    setData(prev => {
-                                      const newData = [...prev];
-                                      newData[editingCell.rowIndex] = {
-                                        ...newData[editingCell.rowIndex],
-                                        [editingCell.column]: cellValue
-                                      };
-                                      return newData;
-                                    });
-                                    setEditingCell(null);
-                                    setCellValue('');
-                                  }
+                                  // Use setTimeout to ensure blur happens after any potential click events
+                                  setTimeout(() => {
+                                    // Only save if we're still in editing mode (not already cancelled)
+                                    if (editingCell) {
+                                      setData(prev => {
+                                        const newData = [...prev];
+                                        newData[editingCell.rowIndex] = {
+                                          ...newData[editingCell.rowIndex],
+                                          [editingCell.column]: cellValue
+                                        };
+                                        return newData;
+                                      });
+                                      onDataChange?.(data);
+                                      setEditingCell(null);
+                                      setCellValue('');
+                                    }
+                                  }, 10);
                                 }}
                                   className={`absolute inset-0 w-full h-full border-2 border-primary rounded-none bg-background focus:ring-0 focus:ring-offset-0 focus:outline-none resize-none ${
                                     columnAlignments[column] === 'center' ? 'text-center' : 
@@ -6267,7 +6271,15 @@ ${extractionFields}`
                                      // Move to actions column (no next cell for Document File Name)
                                    }
                                  }}
-                                onBlur={saveEdit}
+                                 onBlur={(e) => {
+                                   // Use setTimeout to ensure blur happens after any potential click events
+                                   setTimeout(() => {
+                                     // Only save if we're still in editing mode (not already cancelled)
+                                     if (editingCell && editingCell.rowIndex === rowIndex && editingCell.column === column) {
+                                       saveEdit();
+                                     }
+                                   }, 10);
+                                 }}
                                  className="w-full h-full resize-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent"
                                  style={{ 
                                    minHeight: '100%',
