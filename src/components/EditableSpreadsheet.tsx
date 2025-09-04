@@ -4593,7 +4593,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     return () => document.removeEventListener('mouseup', handleGlobalMouseUp);
   }, []);
 
-  // Keyboard shortcuts for copy/paste
+  // Keyboard shortcuts for copy/paste - stabilized to reduce re-renders
   useEffect(() => {
     console.log('🔍 Setting up keyboard event listener');
     
@@ -4604,10 +4604,8 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         key: e.key,
         ctrlKey: e.ctrlKey,
         metaKey: e.metaKey,
-        target: e.target,
-        activeElement: document.activeElement,
-        selectedCell,
-        selectedRange
+        target: (e.target as HTMLElement)?.tagName,
+        activeElement: document.activeElement?.tagName
       });
       
       const target = e.target as HTMLElement | null;
@@ -4641,7 +4639,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       document.removeEventListener('keydown', handleKeyDown);
       console.log('🔍 Keyboard event listener removed');
     };
-  }, [copySelection, pasteSelection, cutSelection, deleteSelectedCells, selectedCell, selectedRange]);
+  }, [copySelection, pasteSelection, cutSelection, deleteSelectedCells]);
   
   // Function to update document row_index in database
   const updateDocumentRowIndexes = useCallback(async (newDocumentMap: Map<number, DocumentRecord>) => {
