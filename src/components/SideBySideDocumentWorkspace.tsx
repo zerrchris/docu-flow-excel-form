@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import PDFViewer from './PDFViewer';
+import ReExtractDialog from './ReExtractDialog';
 import { DocumentService, type DocumentRecord } from '@/services/documentService';
 
 interface ExtractedField {
@@ -50,6 +51,18 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
   const [lastAnalyzedData, setLastAnalyzedData] = useState<Record<string, string>>({});
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showAnalyzeWarning, setShowAnalyzeWarning] = useState(false);
+  
+  // Re-extract dialog state
+  const [reExtractDialog, setReExtractDialog] = useState<{
+    isOpen: boolean;
+    fieldName: string;
+    currentValue: string;
+  }>({
+    isOpen: false,
+    fieldName: '',
+    currentValue: ''
+  });
+  const [isReExtracting, setIsReExtracting] = useState(false);
 
   // Update local row data when props change
   useEffect(() => {
@@ -218,6 +231,15 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
   };
 
   const handleReanalyzeField = async (fieldName: string) => {
+    const currentValue = rowData[fieldName] || '';
+    setReExtractDialog({
+      isOpen: true,
+      fieldName,
+      currentValue
+    });
+  };
+
+  const handleReExtractWithNotes = async (notes: string) => {
     if (!documentRecord) {
       toast({
         title: "Error",
@@ -226,45 +248,62 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
       });
       return;
     }
-
+    
     try {
-      setIsAnalyzing(true);
+      setIsReExtracting(true);
+      console.log('🔧 SideBySideWorkspace: Starting re-extraction for field:', reExtractDialog.fieldName);
+
+      const documentUrl = DocumentService.getDocumentUrl(documentRecord.file_path);
+      let imageData: string;
       
+      // Convert the document URL to base64 for analysis
+      const response = await fetch(documentUrl);
+      const blob = await response.blob();
+      const reader = new FileReader();
+      imageData = await new Promise((resolve) => {
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(blob);
+      });
+
       const { data, error } = await supabase.functions.invoke('re-extract-field', {
         body: {
-          fileUrl: DocumentService.getDocumentUrl(documentRecord.file_path),
+          imageData,
           fileName: documentRecord.stored_filename,
-          contentType: documentRecord.content_type || 'application/pdf',
-          fieldName,
-          fieldInstruction: columnInstructions[fieldName] || `Extract the ${fieldName} from this document`,
-          currentValue: rowData[fieldName] || ''
+          fieldName: reExtractDialog.fieldName,
+          fieldInstructions: columnInstructions[reExtractDialog.fieldName] || `Extract the ${reExtractDialog.fieldName} field accurately`,
+          userNotes: notes,
+          currentValue: reExtractDialog.currentValue
         }
       });
 
       if (error) throw error;
 
       if (data?.extractedValue) {
-        const updatedRowData = { ...rowData, [fieldName]: data.extractedValue };
+        // Update the specific field with the re-extracted value
+        const updatedRowData = { ...rowData, [reExtractDialog.fieldName]: data.extractedValue };
         setRowData(updatedRowData);
-        setHasUnsavedChanges(false); // Re-extraction counts as saved since we're syncing immediately
+        setHasUnsavedChanges(false);
         
         // Immediately sync changes back to parent component
         onDataUpdate(rowIndex, updatedRowData);
         
         toast({
           title: "Field re-extracted",
-          description: `Updated ${fieldName} with new analysis.`,
+          description: `Successfully re-extracted "${reExtractDialog.fieldName}" with your feedback.`,
         });
+
+        // Close the dialog
+        setReExtractDialog(prev => ({ ...prev, isOpen: false }));
       }
     } catch (error) {
       console.error('Error re-analyzing field:', error);
       toast({
         title: "Error",
-        description: `Failed to re-analyze ${fieldName}. Please try again.`,
+        description: `Failed to re-analyze ${reExtractDialog.fieldName}. Please try again.`,
         variant: "destructive",
       });
     } finally {
-      setIsAnalyzing(false);
+      setIsReExtracting(false);
     }
   };
 
@@ -628,6 +667,16 @@ Return only the filename, nothing else.`,
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Re-extract Dialog */}
+      <ReExtractDialog
+        isOpen={reExtractDialog.isOpen}
+        onClose={() => setReExtractDialog(prev => ({ ...prev, isOpen: false }))}
+        fieldName={reExtractDialog.fieldName}
+        currentValue={reExtractDialog.currentValue}
+        onReExtract={handleReExtractWithNotes}
+        isLoading={isReExtracting}
+      />
     </div>
   );
 };
