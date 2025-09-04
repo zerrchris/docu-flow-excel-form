@@ -3223,16 +3223,12 @@ Image: [base64 image data]`;
           </DialogHeader>
           <div className="py-4">
             <RunsheetFileUpload 
-              onFileSelected={async (runsheetData) => {
-                console.log('🔥 UPLOAD: Runsheet file processed from DocumentProcessor:', runsheetData);
-                console.log('🔥 UPLOAD: Columns received:', runsheetData.columns);
-                console.log('🔥 UPLOAD: Data sample:', runsheetData.rows?.slice(0, 2));
-                console.log('🔥 UPLOAD: Total rows count:', runsheetData.rows?.length);
-                console.log('🔥 UPLOAD: Current page columns before navigation:', columns);
+              onFileSelected={async (runsheet) => {
+                console.log('🔥 UPLOAD: Runsheet created in database:', runsheet);
                 
                 setShowRunsheetUploadDialog(false);
                 
-                // CRITICAL: Clear ALL local storage that might interfere with uploads
+                // Clear any local storage that might interfere
                 try {
                   localStorage.removeItem('runsheet-emergency-draft');
                   localStorage.removeItem('runsheet-state-backup');
@@ -3242,52 +3238,13 @@ Image: [base64 image data]`;
                   console.log('🔥 UPLOAD: Could not clear local storage:', error);
                 }
                 
-                // FORCE a clean state for the uploaded runsheet
-                const uploadCleanupEvent = new CustomEvent('uploadCleanup', {
-                  detail: { uploadedRunsheetId: `uploaded-${Date.now()}` }
-                });
-                window.dispatchEvent(uploadCleanupEvent);
-                
-                // IMMEDIATELY set the uploaded columns to prevent DEFAULT_COLUMNS from loading
-                console.log('🔥 UPLOAD: Setting columns immediately to prevent defaults');
-                setColumns(runsheetData.columns);
-                setSpreadsheetData(runsheetData.rows);
-                
-                // Prevent any default loading
-                sessionStorage.setItem('prevent_default_columns', 'true');
-                sessionStorage.setItem('uploaded_columns', JSON.stringify(runsheetData.columns));
-                
-                // Create a proper runsheet name with timestamp
-                const timestamp = new Date().toLocaleString();
-                const uniqueName = `${runsheetData.name} (Imported ${timestamp})`;
-                
-                console.log('🔥 UPLOAD: About to navigate with state:', {
-                  runsheetColumns: runsheetData.columns,
-                  dataLength: runsheetData.rows?.length,
-                  uniqueName
-                });
-                
-                // Navigate to clean runsheet page with the uploaded data
-                navigate('/runsheet', { 
-                  state: { 
-                    runsheet: {
-                      id: `uploaded-${Date.now()}`, // Temporary ID for uploaded data
-                      name: uniqueName,
-                      columns: runsheetData.columns,
-                      data: runsheetData.rows,
-                      column_instructions: {}
-                    },
-                    clearActiveRunsheet: true,
-                    isFileUpload: true,
-                    preventAutoSave: true,
-                    uploadedColumns: runsheetData.columns // Additional flag
-                  },
-                  replace: true // Replace current URL to remove ?action=upload
-                });
+                // Navigate to the real runsheet using its database ID
+                console.log('🔥 UPLOAD: Navigating to runsheet:', runsheet.id);
+                navigate(`/runsheet?id=${runsheet.id}`);
                 
                 toast({
-                  title: "Runsheet loaded successfully",
-                  description: `Loaded "${uniqueName}" with ${runsheetData.rows.length} rows and ${runsheetData.columns.length} columns.`
+                  title: "Runsheet uploaded successfully",
+                  description: `"${runsheet.name}" is ready to use.`
                 });
               }}
               onCancel={() => {

@@ -121,15 +121,6 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       return '';
     }
     
-    // CRITICAL: For uploaded runsheets, preserve the name from navigation state
-    const uploadedName = initialRunsheetName;
-    console.log('🔥 SPREADSHEET INIT: initialRunsheetName:', uploadedName, 'isUploaded:', initialRunsheetId?.startsWith('uploaded-'));
-    
-    if (uploadedName && initialRunsheetId?.startsWith('uploaded-')) {
-      console.log('🔥 SPREADSHEET INIT: Using uploaded runsheet name:', uploadedName);
-      return uploadedName;
-    }
-    
     return initialRunsheetName || 'Untitled Runsheet';
   });
   const [editingRunsheetName, setEditingRunsheetName] = useState<boolean>(false);
@@ -322,14 +313,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   // Initialize auto-save hook - RE-ENABLED with safeguards
   const { save: autoSave, forceSave: autoForceSave, isSaving: autoSaving } = useAutoSave({
     runsheetId: currentRunsheet?.id || null,
-    runsheetName: (() => {
-      // CRITICAL: For uploaded runsheets, use the actual name without fallbacks
-      if (initialRunsheetId?.startsWith('uploaded-') && initialRunsheetName) {
-        console.log('🔥 AUTO-SAVE: Using uploaded runsheet name:', initialRunsheetName);
-        return initialRunsheetName;
-      }
-      return runsheetName && runsheetName !== 'Untitled Runsheet' ? runsheetName : (currentRunsheet?.name || 'Untitled Runsheet');
-    })(),
+    runsheetName: runsheetName && runsheetName !== 'Untitled Runsheet' ? runsheetName : (currentRunsheet?.name || 'Untitled Runsheet'),
     columns,
     data,
     columnInstructions,
@@ -363,21 +347,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     }
   });
 
-  // Wrapper functions to prevent auto-save for uploaded runsheets
-  const safeAutoSave = useCallback(() => {
-    if (currentRunsheetId?.startsWith('uploaded-')) {
-      console.log('🚫 Auto-save disabled for uploaded runsheet');
-      return Promise.resolve();
-    }
-    return autoSave();
-  }, [autoSave, currentRunsheetId]);
-
-  const safeAutoForceSave = useCallback(() => {
-    if (currentRunsheetId?.startsWith('uploaded-')) {
-      console.log('🚫 Force auto-save disabled for uploaded runsheet');
-      return Promise.resolve();
-    }
-    return autoForceSave();
+  // Auto-save functions work normally now
   
   // Handle changes to initialData prop (for uploaded runsheets)
   useEffect(() => {
@@ -823,32 +793,27 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   useEffect(() => {
     console.log('🔍 initialData sync effect triggered with:', {
       initialDataLength: initialData?.length,
-      initialRunsheetId,
-      isUploadedRunsheet: initialRunsheetId?.startsWith('uploaded-')
+      initialRunsheetId
     });
 
-    // For uploaded runsheets, always sync the data (bypass emergency draft check)
-    const isUploadedRunsheet = initialRunsheetId?.startsWith('uploaded-');
+    // Standard data sync logic
     
-    if (!isUploadedRunsheet) {
+    // Standard emergency draft check logic
       // Don't override data if we have an emergency draft (for regular runsheets)
       const hasEmergencyDraft = (() => {
         try {
           const emergencyDraft = localStorage.getItem('runsheet-emergency-draft');
           return !!emergencyDraft;
         } catch {
-          return false;
-        }
-      })();
-      
-      // Skip if there's an emergency draft for regular runsheets
-      if (hasEmergencyDraft) {
-        console.log('🔒 Preserving emergency draft - skipping initialData sync');
-        return;
-      }
-    } else {
-      console.log('✅ Uploaded runsheet detected - bypassing emergency draft check');
+      return false;
     }
+  })();
+  
+  // Skip if there's an emergency draft for regular runsheets
+  if (hasEmergencyDraft) {
+    console.log('🔒 Preserving emergency draft - skipping initialData sync');
+    return;
+  }
     
     // Always ensure we have minimum rows
     const minRows = 20;
@@ -922,14 +887,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       const hasData = data.some(row => 
         Object.values(row).some(value => value && value.trim() !== '')
       );
-      
-      // CRITICAL: Skip emergency draft save for uploaded runsheets
-      if (runsheetName.includes('(Imported') || initialRunsheetId?.startsWith('uploaded-')) {
-        console.log('🚫 Emergency draft save disabled for uploaded runsheet:', runsheetName);
-        return;
-      }
-
-      if (hasData) {
+      if (hasData && runsheetName && runsheetName !== 'Untitled Runsheet') {
         try {
           const draft = {
             data,
@@ -990,14 +948,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     
     window.addEventListener('uploadCleanup', handleUploadCleanup as EventListener);
     
-    // SKIP emergency draft restoration completely for uploaded runsheets
-    if (initialRunsheetId?.startsWith('uploaded-')) {
-      console.log('🚫 Emergency draft restoration completely disabled for uploaded runsheet');
-      return () => {
-        window.removeEventListener('uploadCleanup', handleUploadCleanup as EventListener);
-      };
-    }
-    
+    // Standard emergency draft restoration
     const restoreEmergencyDraft = () => {
       console.log('🔄 Emergency draft restoration check starting', {
         hasEmergencyDraft: !!localStorage.getItem('runsheet-emergency-draft'),
@@ -1138,7 +1089,6 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       } catch (error) {
         console.error('Error restoring emergency draft:', error);
       }
-    };
 
     // Only restore on initial mount, not on every re-render
     restoreEmergencyDraft();
