@@ -105,93 +105,72 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
         columns.map(col => `${col}: Extract this field`).join('\n');
 
       const documentUrl = DocumentService.getDocumentUrl(documentRecord.file_path);
-      let imageData: string;
-      
-      // Check if it's a PDF
       const isPdf = documentRecord.content_type === 'application/pdf' || documentRecord.stored_filename.toLowerCase().endsWith('.pdf');
       
+      let analysisResult;
+      
       if (isPdf) {
-        console.log('🔧 PDF detected, converting to image for analysis');
+        console.log('🔧 PDF detected, using Claude for direct analysis');
         
-        // Call the PDF to image conversion function
-        try {
-          const { data: conversionData, error: conversionError } = await supabase.functions.invoke('convert-pdf-to-images', {
-            body: {
-              pdfData: await fetch(documentUrl).then(r => r.arrayBuffer()).then(ab => btoa(String.fromCharCode(...new Uint8Array(ab)))),
-              quality: 2,
-              format: 'png',
-              useOCR: true
-            }
-          });
-          
-          if (conversionError) throw conversionError;
-          
-          if (conversionData?.convertedImages?.[0]) {
-            imageData = `data:image/png;base64,${conversionData.convertedImages[0].data}`;
-            console.log('🔧 PDF converted to image successfully');
-          } else {
-            throw new Error('PDF conversion returned no images');
-          }
-        } catch (pdfError) {
-          console.error('🔧 PDF conversion failed:', pdfError);
-          toast({
-            title: "PDF Conversion Failed",
-            description: "Could not convert PDF to image for analysis. Please try with an image file.",
-            variant: "destructive"
-          });
-          return;
-        }
+        // Use Claude for PDF analysis
+        const { data, error } = await supabase.functions.invoke('analyze-document-claude', {
+          body: {
+            prompt: `Extract information from this document for the following fields and return as valid JSON:\n${extractionFields}\n\nReturn only a JSON object with field names as keys and extracted values as values. Do not include any markdown, explanations, or additional text.`,
+            fileUrl: documentUrl,
+            fileName: documentRecord.stored_filename,
+            contentType: documentRecord.content_type
+          },
+        });
+        
+        if (error) throw error;
+        analysisResult = data;
       } else {
-
-        console.log('🔧 Fetching document from storage URL for side-by-side analysis');
-        // Convert the document URL to base64 for analysis
+        console.log('🔧 Image detected, using OpenAI Vision for analysis');
+        
+        // For images, use the existing OpenAI approach
         const response = await fetch(documentUrl);
         const blob = await response.blob();
-        
-        // For images, convert to base64 data URL
         const reader = new FileReader();
-        imageData = await new Promise((resolve) => {
-          reader.onloadend = () => {
-            resolve(reader.result as string); // Keep full data URL format
-          };
+        const imageData = await new Promise<string>((resolve) => {
+          reader.onloadend = () => resolve(reader.result as string);
           reader.readAsDataURL(blob);
         });
+
+        const { data, error } = await supabase.functions.invoke('analyze-document', {
+          body: {
+            prompt: `Extract information from this document for the following fields and return as valid JSON:\n${extractionFields}\n\nReturn only a JSON object with field names as keys and extracted values as values. Do not include any markdown, explanations, or additional text.`,
+            imageData
+          },
+        });
+        
+        if (error) throw error;
+        analysisResult = data;
       }
 
-      // Call the same analyze-document function as expanded workspace
-      console.log('🚀 Starting document analysis (side-by-side)...');
-      const { data, error } = await supabase.functions.invoke('analyze-document', {
-        body: {
-          prompt: `Extract information from this document for the following fields and return as valid JSON:\n${extractionFields}\n\nReturn only a JSON object with field names as keys and extracted values as values. Do not include any markdown, explanations, or additional text.`,
-          imageData
-        },
-      });
+      console.log('📡 Analysis function response (side-by-side):', { data: analysisResult });
 
-      console.log('📡 Supabase function response (side-by-side):', { data, error });
-
-      if (error) {
-        console.error('❌ Analysis error (side-by-side):', error);
+      if (!analysisResult) {
         toast({
           title: "Analysis failed",
-          description: error.message || "Could not analyze the document",
+          description: "Could not analyze the document",
           variant: "destructive"
         });
         return;
       }
 
-      if (data?.generatedText) {
-        console.log('✅ Analysis successful (side-by-side), raw response:', data.generatedText);
+      if (analysisResult?.generatedText) {
+        console.log('✅ Analysis successful (side-by-side), raw response:', analysisResult.generatedText);
         
         // Parse the JSON response from AI (same as expanded workspace)
         let extractedData = {};
         try {
           // Try to parse as JSON first
-          extractedData = JSON.parse(data.generatedText);
+          extractedData = JSON.parse(analysisResult.generatedText);
           console.log('✅ Parsed extracted data (side-by-side):', extractedData);
         } catch (e) {
           console.warn('⚠️ Failed to parse as JSON, trying to extract JSON from text...');
           // Try to extract JSON from the text
-          const jsonMatch = data.generatedText.match(/\{[\s\S]*\}/);
+          const jsonMatch = analysisResult.generatedText.match(/\{[\s\S]*\}/);
           if (jsonMatch) {
             try {
               extractedData = JSON.parse(jsonMatch[0]);

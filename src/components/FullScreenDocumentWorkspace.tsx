@@ -414,165 +414,80 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
       const extractionFields = extractionPrefs?.columns?.map(col => `${col}: ${extractionPrefs.column_instructions?.[col] || 'Extract this field'}`).join('\n') || 
         editableFields.map(col => `${col}: Extract this field`).join('\n');
 
-      let imageData: string;
+      let analysisResult;
       
-      // Check if documentUrl is already a base64 data URL (from pending documents)
-      if (documentUrl.startsWith('data:')) {
-        console.log('🔧 Using base64 data from pending document');
-        imageData = documentUrl;
+      if (isPdf) {
+        console.log('🔧 PDF detected, using Claude for direct analysis');
         
-        // Check if it's PDF data (even if incorrectly labeled)
-        const base64Content = documentUrl.split(',')[1];
-        if (base64Content && base64Content.startsWith('JVBERi0')) {
-          console.log('🔧 PDF detected in base64 data, converting to image');
-          
-          try {
-            const { data: conversionData, error: conversionError } = await supabase.functions.invoke('convert-pdf-to-images', {
-              body: {
-                pdfData: base64Content,
-                quality: 2,
-                format: 'png',
-                useOCR: true
-              }
-            });
-            
-            if (conversionError) throw conversionError;
-            
-            if (conversionData?.convertedImages?.[0]) {
-              imageData = `data:image/png;base64,${conversionData.convertedImages[0].data}`;
-              console.log('🔧 PDF converted to image successfully');
-            } else {
-              throw new Error('PDF conversion returned no images');
-            }
-          } catch (pdfError) {
-            console.error('🔧 PDF conversion failed:', pdfError);
-            toast({
-              title: "PDF Conversion Failed",
-              description: "Could not convert PDF to image for analysis. Please try with an image file.",
-              variant: "destructive"
-            });
-            return;
-          }
-        }
+        // Use Claude for PDF analysis
+        const { data, error } = await supabase.functions.invoke('analyze-document-claude', {
+          body: {
+            prompt: `Extract information from this document for the following fields and return as valid JSON:\n${extractionFields}\n\nReturn only a JSON object with field names as keys and extracted values as values. Do not include any markdown, explanations, or additional text.`,
+            fileUrl: documentUrl,
+            fileName: documentName,
+            contentType: isPdf ? 'application/pdf' : undefined
+          },
+        });
         
-        // Check MIME type for PDFs
-        if (documentUrl.includes('data:application/pdf')) {
-          console.log('🔧 PDF detected by MIME type, converting to image');
-          
-          try {
-            const base64Data = documentUrl.split(',')[1];
-            const { data: conversionData, error: conversionError } = await supabase.functions.invoke('convert-pdf-to-images', {
-              body: {
-                pdfData: base64Data,
-                quality: 2,
-                format: 'png',
-                useOCR: true
-              }
-            });
-            
-            if (conversionError) throw conversionError;
-            
-            if (conversionData?.convertedImages?.[0]) {
-              imageData = `data:image/png;base64,${conversionData.convertedImages[0].data}`;
-              console.log('🔧 PDF converted to image successfully');
-            } else {
-              throw new Error('PDF conversion returned no images');
-            }
-          } catch (pdfError) {
-            console.error('🔧 PDF conversion failed:', pdfError);
-            toast({
-              title: "PDF Conversion Failed",
-              description: "Could not convert PDF to image for analysis. Please try with an image file.",
-              variant: "destructive"
-            });
-            return;
-          }
-        }
+        if (error) throw error;
+        analysisResult = data;
       } else {
-        console.log('🔧 Fetching document from storage URL');
-        // Convert the document URL to base64 for analysis
-        const response = await fetch(documentUrl);
-        const blob = await response.blob();
+        console.log('🔧 Image detected, using OpenAI Vision for analysis');
         
-        if (isPdf || blob.type === 'application/pdf') {
-          console.log('🔧 PDF detected, converting to image for analysis');
-          
-          try {
-            const arrayBuffer = await response.arrayBuffer();
-            const base64Data = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
-            
-            const { data: conversionData, error: conversionError } = await supabase.functions.invoke('convert-pdf-to-images', {
-              body: {
-                pdfData: base64Data,
-                quality: 2,
-                format: 'png',
-                useOCR: true
-              }
-            });
-            
-            if (conversionError) throw conversionError;
-            
-            if (conversionData?.convertedImages?.[0]) {
-              imageData = `data:image/png;base64,${conversionData.convertedImages[0].data}`;
-              console.log('🔧 PDF converted to image successfully');
-            } else {
-              throw new Error('PDF conversion returned no images');
-            }
-          } catch (pdfError) {
-            console.error('🔧 PDF conversion failed:', pdfError);
-            toast({
-              title: "PDF Conversion Failed",
-              description: "Could not convert PDF to image for analysis. Please try with an image file.",
-              variant: "destructive"
-            });
-            return;
-          }
+        // For images, use the existing OpenAI approach
+        let imageData: string;
+        
+        // Check if documentUrl is already a base64 data URL (from pending documents)
+        if (documentUrl.startsWith('data:')) {
+          console.log('🔧 Using base64 data from pending document');
+          imageData = documentUrl;
         } else {
-          // For images, convert to base64 data URL
+          console.log('🔧 Fetching document from storage URL for full screen analysis');
+          // Fetch document and convert to base64 for analysis
+          const response = await fetch(documentUrl);
+          const blob = await response.blob();
           const reader = new FileReader();
           imageData = await new Promise((resolve) => {
-            reader.onloadend = () => {
-              resolve(reader.result as string); // Keep full data URL format
-            };
+            reader.onloadend = () => resolve(reader.result as string);
             reader.readAsDataURL(blob);
           });
         }
+
+        const { data, error } = await supabase.functions.invoke('analyze-document', {
+          body: {
+            prompt: `Extract information from this document for the following fields and return as valid JSON:\n${extractionFields}\n\nReturn only a JSON object with field names as keys and extracted values as values. Do not include any markdown, explanations, or additional text.`,
+            imageData
+          },
+        });
+        
+        if (error) throw error;
+        analysisResult = data;
       }
 
-      // Call the analyze-document function
-      console.log('🚀 Starting document analysis...');
-      const { data, error } = await supabase.functions.invoke('analyze-document', {
-        body: {
-          prompt: `Extract information from this document for the following fields and return as valid JSON:\n${extractionFields}\n\nReturn only a JSON object with field names as keys and extracted values as values. Do not include any markdown, explanations, or additional text.`,
-          imageData
-        },
-      });
+      console.log('📡 Analysis function response:', { data: analysisResult });
 
-      console.log('📡 Supabase function response:', { data, error });
-
-      if (error) {
-        console.error('❌ Analysis error:', error);
+      if (!analysisResult) {
         toast({
           title: "Analysis failed",
-          description: error.message || "Could not analyze the document",
+          description: "Could not analyze the document",
           variant: "destructive"
         });
         return;
       }
 
-      if (data?.generatedText) {
-        console.log('✅ Analysis successful, raw response:', data.generatedText);
+      if (analysisResult?.generatedText) {
+        console.log('✅ Analysis successful, raw response:', analysisResult.generatedText);
         
         // Parse the JSON response from AI
         let extractedData = {};
         try {
           // Try to parse as JSON first
-          extractedData = JSON.parse(data.generatedText);
+          extractedData = JSON.parse(analysisResult.generatedText);
           console.log('✅ Parsed extracted data:', extractedData);
         } catch (e) {
           console.log('🔍 JSON parsing failed, trying to extract JSON from text...');
           // If JSON parsing fails, try to extract JSON from the text
-          const jsonMatch = data.generatedText.match(/\{[\s\S]*\}/);
+          const jsonMatch = analysisResult.generatedText.match(/\{[\s\S]*\}/);
           if (jsonMatch) {
             try {
               extractedData = JSON.parse(jsonMatch[0]);
@@ -580,11 +495,11 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
             } catch (parseError) {
               console.error('🔍 JSON parsing of matched content failed:', parseError);
               // If all parsing fails, show the raw response and continue with empty data
-              console.log('Raw response that failed to parse:', data.generatedText);
+              console.log('Raw response that failed to parse:', analysisResult.generatedText);
               extractedData = {};
             }
           } else {
-            console.error('🔍 Could not find JSON in response:', data.generatedText);
+            console.error('🔍 Could not find JSON in response:', analysisResult.generatedText);
             // Don't throw error, just use empty data
             extractedData = {};
           }
