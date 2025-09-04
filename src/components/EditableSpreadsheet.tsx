@@ -6152,19 +6152,9 @@ ${extractionFields}`
                                 onBlur={() => {
                                   // Use setTimeout to ensure blur happens after any potential click events
                                   setTimeout(() => {
-                                    // Only save if we're still in editing mode (not already cancelled)
+                                    // Cancel edit and revert to original value when clicking out
                                     if (editingCell) {
-                                      setData(prev => {
-                                        const newData = [...prev];
-                                        newData[editingCell.rowIndex] = {
-                                          ...newData[editingCell.rowIndex],
-                                          [editingCell.column]: cellValue
-                                        };
-                                        return newData;
-                                      });
-                                      onDataChange?.(data);
-                                      setEditingCell(null);
-                                      setCellValue('');
+                                      cancelEdit();
                                     }
                                   }, 10);
                                 }}
@@ -6274,9 +6264,9 @@ ${extractionFields}`
                                  onBlur={(e) => {
                                    // Use setTimeout to ensure blur happens after any potential click events
                                    setTimeout(() => {
-                                     // Only save if we're still in editing mode (not already cancelled)
+                                     // Only cancel if we're still in editing mode (revert to original value)
                                      if (editingCell && editingCell.rowIndex === rowIndex && editingCell.column === column) {
-                                       saveEdit();
+                                       cancelEdit();
                                      }
                                    }, 10);
                                  }}
