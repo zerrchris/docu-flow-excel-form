@@ -2269,8 +2269,8 @@ Image: [base64 image data]`;
     }
   };
 
-  // OLD: Keep the complex version as fallback (but don't use it)
-  const startNewRunsheet = async () => {
+  // OLD: Deprecated - DO NOT USE - causes data loss
+  const startNewRunsheet_DEPRECATED = async () => {
     // Clear the loaded runsheet ref to allow fresh loading
     loadedRunsheetRef.current = null;
     

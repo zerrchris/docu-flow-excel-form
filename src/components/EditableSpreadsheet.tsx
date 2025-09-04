@@ -500,9 +500,16 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
 
     window.addEventListener('createNewRunsheetFromDashboard', handleDashboardNewRunsheet as EventListener);
     
-    // Handle new runsheet start from DocumentProcessor
+    // Handle new runsheet start from DocumentProcessor - but ONLY for actual new runsheets
     const handleStartNewRunsheet = (event: CustomEvent) => {
       console.log('🧹 EditableSpreadsheet: Received startNewRunsheet event');
+      
+      // CRITICAL: Don't clear data if we have an active runsheet with actual data
+      if (currentRunsheetId && data && data.length > 0) {
+        console.log('🚫 Ignoring startNewRunsheet - we have active data that should not be cleared');
+        return;
+      }
+      
       const { clearDocuments, clearStorage, isNewRunsheet } = event.detail || {};
       
       if (clearDocuments) {
