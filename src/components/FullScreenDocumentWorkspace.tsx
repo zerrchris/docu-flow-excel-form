@@ -749,7 +749,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
 
           {/* Row data panel */}
           <ResizablePanel defaultSize={30} minSize={20}>
-            <Card className="h-full border-t-2 border-primary">
+            <Card className="h-full border-t-2 border-primary border-b">
               <div className="p-4 border-b bg-muted/20 flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <h4 className="font-semibold">Working Row {rowIndex + 1}</h4>
