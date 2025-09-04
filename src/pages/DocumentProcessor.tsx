@@ -407,83 +407,32 @@ const DocumentProcessor: React.FC = () => {
       console.log('📋 Loading selected runsheet:', selectedRunsheet);
       loadedRunsheetRef.current = selectedRunsheet.id;
       
-      // Set active runsheet immediately only if it has a real ID (not uploaded)
-      if (!selectedRunsheet.id?.startsWith('uploaded-')) {
-        setActiveRunsheet({
-          id: selectedRunsheet.id,
-          name: selectedRunsheet.name,
-          data: selectedRunsheet.data || [],
-          columns: selectedRunsheet.columns || [],
-          columnInstructions: selectedRunsheet.column_instructions || {}
-        });
+      // CRITICAL: Set both columns and data together atomically to prevent flash
+      console.log('📊 Setting runsheet columns:', selectedRunsheet.columns);
+      console.log('📊 Setting runsheet data:', selectedRunsheet.data?.length);
+      
+      // Set columns first
+      if (selectedRunsheet.columns && Array.isArray(selectedRunsheet.columns)) {
+        setColumns(selectedRunsheet.columns);
       }
       
-      // Only load runsheet data if we don't already have spreadsheet data (to prevent data loss)
-      if (selectedRunsheet.data && Array.isArray(selectedRunsheet.data)) {
-        console.log('📊 Loading uploaded runsheet data directly');
-        console.log('📊 Data being set:', selectedRunsheet.data);
-        console.log('📊 Data length:', selectedRunsheet.data.length);
-        console.log('📊 First few rows:', selectedRunsheet.data.slice(0, 3));
-        console.log('📊 Selected runsheet columns:', selectedRunsheet.columns);
-        
-        // Key insight: Check if there's a mismatch between data keys and columns
-        if (selectedRunsheet.data.length > 0) {
-          const firstRowKeys = Object.keys(selectedRunsheet.data[0]);
-          console.log('📊 Data row keys:', firstRowKeys);
-          console.log('📊 Column names:', selectedRunsheet.columns);
-          
-          const columnsMatch = selectedRunsheet.columns?.every(col => firstRowKeys.includes(col));
-          console.log('📊 Columns match data keys:', columnsMatch);
-          
-          if (!columnsMatch) {
-            console.log('⚠️ COLUMN MISMATCH DETECTED! Data will not display correctly.');
-            console.log('⚠️ Expected columns:', selectedRunsheet.columns);
-            console.log('⚠️ Actual data keys:', firstRowKeys);
-            
-            // Fix the mismatch: use the actual data keys as columns
-            console.log('🔧 Fixing column mismatch by using data keys as columns');
-            setColumns(firstRowKeys.filter(key => key.trim() !== ''));
-            
-            // Also set the data directly since the columns are correct now
-            setSpreadsheetData(selectedRunsheet.data);
-            
-            // Don't load runsheet columns later - we've already fixed them
-            return;
-          }
-        }
-        
-        // Convert the data to match the column structure if needed
-        const convertedData = selectedRunsheet.data.map((row: any) => {
-          // Create a new row object with the correct column keys
-          const newRow: Record<string, string> = {};
-          
-          // If columns are different from current ones, map the data correctly
-          if (selectedRunsheet.columns) {
-            selectedRunsheet.columns.forEach((column: string) => {
-              newRow[column] = row[column] || '';
-            });
-          } else {
-            // Fallback to copying all properties
-            Object.keys(row).forEach(key => {
-              newRow[key] = row[key] || '';
-            });
-          }
-          
-          return newRow;
-        });
-        
-        console.log('📊 Converted data sample:', convertedData.slice(0, 2));
-        setSpreadsheetData(convertedData);
+      // Set active runsheet immediately only if it has a real ID (not uploaded)
+      if (!selectedRunsheet.id?.startsWith('uploaded-')) {
+        setCurrentRunsheet(selectedRunsheet.id); // Use setCurrentRunsheet instead of setActiveRunsheet
+      }
+      
+      // Load data if available
+      if (selectedRunsheet.data && Array.isArray(selectedRunsheet.data) && selectedRunsheet.data.length > 0) {
+        console.log('📊 Loading runsheet data:', selectedRunsheet.data.length, 'rows');
+        setSpreadsheetData(selectedRunsheet.data);
         
         // For uploaded runsheets, disable auto-save to prevent conflicts
         if (preventAutoSave) {
           console.log('🚫 Auto-save disabled for uploaded runsheet');
           setHasUnsavedChanges(false); // Prevent save attempts
         }
-      } else if (spreadsheetData.length > 0) {
-        console.log('⚠️ Skipping runsheet data load - preserving existing spreadsheet data to prevent loss');
       } else {
-        console.log('⚠️ No data found in selectedRunsheet:', selectedRunsheet);
+        console.log('⚠️ No data found in selectedRunsheet or preserving existing data');
       }
       
       // Load runsheet columns if available - but be more careful about overriding user work
