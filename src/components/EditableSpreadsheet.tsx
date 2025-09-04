@@ -3562,6 +3562,11 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
           return; // don't steal typing from form fields
         }
         
+        // Allow copy/paste/cut shortcuts to pass through
+        if ((e.ctrlKey || e.metaKey) && ['c', 'v', 'x'].includes(e.key.toLowerCase())) {
+          return; // Let copy/paste handler deal with these
+        }
+        
         // Prevent arrow keys from scrolling the page when navigating cells
         if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
           e.preventDefault();
@@ -4593,86 +4598,45 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     return () => document.removeEventListener('mouseup', handleGlobalMouseUp);
   }, []);
 
-  // Keyboard shortcuts for copy/paste - comprehensive debugging
+  // Fixed copy/paste keyboard shortcuts
   useEffect(() => {
-    console.log('🔍 Setting up comprehensive keyboard debugging');
-    
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Log ALL key events to see what's happening
-      if ((e.ctrlKey || e.metaKey) || ['c', 'v', 'x'].includes(e.key.toLowerCase())) {
-        console.log('🔍 KEYBOARD EVENT DETECTED:', {
-          key: e.key,
-          code: e.code,
-          ctrlKey: e.ctrlKey,
-          metaKey: e.metaKey,
-          shiftKey: e.shiftKey,
-          altKey: e.altKey,
-          defaultPrevented: e.defaultPrevented,
-          target: (e.target as HTMLElement)?.tagName,
-          targetClass: (e.target as HTMLElement)?.className,
-          activeElement: document.activeElement?.tagName,
-          activeElementClass: document.activeElement?.className,
-          isTrusted: e.isTrusted,
-          timeStamp: e.timeStamp
-        });
-      }
-      
-      if (e.defaultPrevented) {
-        console.log('🔍 Event already prevented, returning');
-        return;
-      }
+      if (e.defaultPrevented) return;
       
       const target = e.target as HTMLElement | null;
-      const isInFormField = target && target.closest('input, textarea, select, [contenteditable="true"], [role="textbox"]');
+      // More specific form field detection - allow copy/paste in our table cells
+      const isInExternalFormField = target && target.closest('input:not([data-cell]), textarea:not([data-cell]), select, [contenteditable="true"]:not([data-cell])');
       
-      if (isInFormField) {
-        console.log('🔍 Ignoring - inside form field:', target?.tagName);
-        return;
+      if (isInExternalFormField) {
+        return; // Only block for external form fields, not our table cells
       }
       
-      if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
-        console.log('🔍 COPY TRIGGERED - calling copySelection()');
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
+        console.log('🔍 COPY TRIGGERED');
+        e.preventDefault();
         copySelection();
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
+        console.log('🔍 PASTE TRIGGERED');
         e.preventDefault();
-        console.log('🔍 Copy event prevented');
-      } else if ((e.ctrlKey || e.metaKey) && e.key === 'x') {
-        console.log('🔍 CUT TRIGGERED - calling cutSelection()');
-        cutSelection();
-        e.preventDefault();
-        console.log('🔍 Cut event prevented');
-      } else if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
-        console.log('🔍 PASTE TRIGGERED - calling pasteSelection()');
         pasteSelection();
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'x') {
+        console.log('🔍 CUT TRIGGERED');
         e.preventDefault();
-        console.log('🔍 Paste event prevented');
+        cutSelection();
       } else if (e.key === 'Delete' && (selectedCell || selectedRange)) {
-        console.log('🔍 DELETE TRIGGERED - calling deleteSelectedCells()');
-        deleteSelectedCells();
+        console.log('🔍 DELETE TRIGGERED');
         e.preventDefault();
-        console.log('🔍 Delete event prevented');
+        deleteSelectedCells();
       }
     };
     
-    // Also try capturing phase
-    const handleKeyDownCapture = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) || ['c', 'v', 'x'].includes(e.key.toLowerCase())) {
-        console.log('🔍 CAPTURE PHASE - Key event:', e.key, e.ctrlKey, e.metaKey);
-      }
-    };
-    
-    document.addEventListener('keydown', handleKeyDown, false); // Bubble phase
-    document.addEventListener('keydown', handleKeyDownCapture, true); // Capture phase
-    window.addEventListener('keydown', handleKeyDown, false); // Also try window
-    
-    console.log('🔍 Added keyboard listeners to document and window (both capture and bubble)');
+    // Only use document listener, not window (avoid duplicates)
+    document.addEventListener('keydown', handleKeyDown);
     
     return () => {
-      document.removeEventListener('keydown', handleKeyDown, false);
-      document.removeEventListener('keydown', handleKeyDownCapture, true);
-      window.removeEventListener('keydown', handleKeyDown, false);
-      console.log('🔍 Removed all keyboard listeners');
+      document.removeEventListener('keydown', handleKeyDown);
     };
-  }, []); // Empty dependencies - functions captured from closure
+  }, [copySelection, pasteSelection, cutSelection, deleteSelectedCells, selectedCell, selectedRange]);
   
   // Function to update document row_index in database
   const updateDocumentRowIndexes = useCallback(async (newDocumentMap: Map<number, DocumentRecord>) => {
