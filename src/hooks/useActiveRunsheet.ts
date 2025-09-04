@@ -115,6 +115,15 @@ export const useActiveRunsheet = () => {
           created_at: data.created_at,
           updated_at: data.updated_at
         });
+        
+        console.log('🔧 ACTIVE_RUNSHEET: Loaded runsheet data from DB:', {
+          id: data.id,
+          name: data.name,
+          columns: data.columns,
+          columnsLength: Array.isArray(data.columns) ? data.columns.length : 0,
+          dataLength: Array.isArray(data.data) ? data.data.length : 0,
+          columnInstructions: data.column_instructions
+        });
       } catch (error) {
         console.error('Error loading runsheet:', error);
         setActiveRunsheet(null);

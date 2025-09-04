@@ -1995,6 +1995,9 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     // Check if user actually entered any data
     const hasActualData = data.some(row => Object.values(row).some(val => val.trim() !== ''));
     console.log('🔧 SAVE_AND_CLOSE: Has actual data entered by user:', hasActualData);
+    console.log('🔧 SAVE_AND_CLOSE: Current columns state:', columns);
+    console.log('🔧 SAVE_AND_CLOSE: Columns length:', columns.length);
+    console.log('🔧 SAVE_AND_CLOSE: Column instructions:', columnInstructions);
     
     if (!user) {
       toast({
@@ -2015,6 +2018,10 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       if (currentRunsheetId) {
         // Update existing runsheet
         console.log('Updating existing runsheet with ID:', currentRunsheetId);
+        console.log('🔧 SAVE_AND_CLOSE: About to save - columns:', columns);
+        console.log('🔧 SAVE_AND_CLOSE: About to save - data length:', data.length);
+        console.log('🔧 SAVE_AND_CLOSE: About to save - column_instructions:', columnInstructions);
+        
         const { data: updateResult, error } = await supabase
           .from('runsheets')
           .update({
@@ -2029,7 +2036,11 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
           .select('id')
           .single();
         
-        if (error) throw error;
+        console.log('🔧 SAVE_AND_CLOSE: Update result:', updateResult);
+        if (error) {
+          console.error('🔧 SAVE_AND_CLOSE: Update error:', error);
+          throw error;
+        }
         savedRunsheet = updateResult;
       } else {
         // Check for name conflicts when creating new runsheet
