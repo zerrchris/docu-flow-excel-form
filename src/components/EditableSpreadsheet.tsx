@@ -469,9 +469,11 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       }
       
       const { name, columns: newColumns, instructions } = event.detail;
+      console.log('🔧 EDITABLE_SPREADSHEET: Received event with name:', name);
       
       // Create the new runsheet using the same logic as the + button
       setRunsheetName(name);
+      console.log('🔧 EDITABLE_SPREADSHEET: Set runsheet name to:', name);
       setData(Array.from({ length: 100 }, () => {
         const row: Record<string, string> = {};
         newColumns.forEach((col: string) => row[col] = '');

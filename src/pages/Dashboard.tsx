@@ -70,6 +70,7 @@ const Dashboard: React.FC = () => {
       
       // Small delay to ensure navigation completes, then trigger the same event as the + button
       setTimeout(() => {
+        console.log('🔧 DASHBOARD: Creating event with name:', finalName);
         // Dispatch the same event that the + button's "Start New Runsheet" option triggers
         const event = new CustomEvent('createNewRunsheetFromDashboard', {
           detail: {
@@ -78,6 +79,7 @@ const Dashboard: React.FC = () => {
             instructions: preferences?.column_instructions || {}
           }
         });
+        console.log('🔧 DASHBOARD: Event detail:', event.detail);
         window.dispatchEvent(event);
       }, 100);
       
