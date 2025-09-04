@@ -69,18 +69,26 @@ serve(async (req) => {
     // Create portal session
     const origin = req.headers.get("origin") || "https://9e913707-5b2b-41be-9c86-3541992b5349.sandbox.lovable.dev";
     console.log("[CUSTOMER-PORTAL] Creating portal session with return URL:", `${origin}/`);
+    console.log("[CUSTOMER-PORTAL] Customer ID:", customerId);
     
-    const portalSession = await stripe.billingPortal.sessions.create({
-      customer: customerId,
-      return_url: `${origin}/`,
-    });
-    console.log("[CUSTOMER-PORTAL] Success! Portal session created:", portalSession.id);
-    console.log("[CUSTOMER-PORTAL] Portal URL:", portalSession.url);
+    try {
+      const portalSession = await stripe.billingPortal.sessions.create({
+        customer: customerId,
+        return_url: `${origin}/`,
+      });
+      console.log("[CUSTOMER-PORTAL] Success! Portal session created:", portalSession.id);
+      console.log("[CUSTOMER-PORTAL] Portal URL:", portalSession.url);
+      
+      return new Response(JSON.stringify({ url: portalSession.url }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      });
+    } catch (stripeError) {
+      console.log("[CUSTOMER-PORTAL] Stripe portal creation failed:", stripeError);
+      console.log("[CUSTOMER-PORTAL] Stripe error details:", JSON.stringify(stripeError, null, 2));
+      throw new Error(`Stripe portal creation failed: ${stripeError.message}`);
+    }
 
-    return new Response(JSON.stringify({ url: portalSession.url }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 200,
-    });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.log("[CUSTOMER-PORTAL] ERROR:", errorMessage);
