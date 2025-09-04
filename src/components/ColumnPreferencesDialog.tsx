@@ -6,8 +6,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/components/ui/use-toast';
-import { X, Plus, GripVertical, Save, RotateCcw } from 'lucide-react';
+import { X, Plus, GripVertical, Save, RotateCcw, Sparkles, Wand2 } from 'lucide-react';
 import { ExtractionPreferencesService } from '@/services/extractionPreferences';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ColumnPreferencesDialogProps {
   open: boolean;
@@ -28,6 +29,8 @@ const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
   const [selectedColumn, setSelectedColumn] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+  const [isGeneratingAllAI, setIsGeneratingAllAI] = useState(false);
 
   // Load current preferences when dialog opens
   useEffect(() => {
@@ -227,6 +230,72 @@ const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
     });
   };
 
+  const generateAISuggestion = async (columnName: string) => {
+    setIsGeneratingAI(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('suggest-column-instructions', {
+        body: { 
+          columns: [columnName], 
+          mode: 'single',
+          columnName: columnName
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.suggestions && data.suggestions[columnName]) {
+        setColumnInstructions({
+          ...columnInstructions,
+          [columnName]: data.suggestions[columnName]
+        });
+        toast({
+          title: "AI suggestion generated",
+          description: `Generated detailed instruction for "${columnName}".`,
+        });
+      }
+    } catch (error) {
+      console.error('Error generating AI suggestion:', error);
+      toast({
+        title: "Error generating suggestion",
+        description: "Could not generate AI suggestion. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsGeneratingAI(false);
+    }
+  };
+
+  const generateAllAISuggestions = async () => {
+    setIsGeneratingAllAI(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('suggest-column-instructions', {
+        body: { 
+          columns: columns, 
+          mode: 'all'
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.suggestions) {
+        setColumnInstructions(data.suggestions);
+        toast({
+          title: "AI suggestions generated",
+          description: `Generated detailed instructions for all ${columns.length} columns.`,
+        });
+      }
+    } catch (error) {
+      console.error('Error generating AI suggestions:', error);
+      toast({
+        title: "Error generating suggestions",
+        description: "Could not generate AI suggestions. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsGeneratingAllAI(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -330,15 +399,39 @@ const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
                 </Button>
               </div>
             </div>
+
+            {/* AI Suggestions */}
+            <div className="pt-2 border-t">
+              <Button 
+                onClick={generateAllAISuggestions}
+                disabled={isGeneratingAllAI || columns.length === 0}
+                className="w-full"
+                variant="outline"
+              >
+                <Wand2 className="h-4 w-4 mr-2" />
+                {isGeneratingAllAI ? 'Generating...' : 'Let AI Suggest for All'}
+              </Button>
+            </div>
           </div>
 
           {/* Right Side: Column Instructions */}
           <div className="flex-1 space-y-4">
             {selectedColumn ? (
               <div>
-                <Label className="text-sm font-medium">
-                  Instructions for "{selectedColumn}"
-                </Label>
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium">
+                    Instructions for "{selectedColumn}"
+                  </Label>
+                  <Button
+                    onClick={() => generateAISuggestion(selectedColumn)}
+                    disabled={isGeneratingAI}
+                    size="sm"
+                    variant="outline"
+                  >
+                    <Sparkles className="h-3 w-3 mr-1" />
+                    {isGeneratingAI ? 'Generating...' : 'Use AI Suggestion'}
+                  </Button>
+                </div>
                 <Textarea
                   placeholder="Enter extraction instructions for this column..."
                   value={columnInstructions[selectedColumn] || ''}
