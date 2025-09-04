@@ -54,7 +54,6 @@ import ViewportPortal from './ViewportPortal';
 import { AutoSaveIndicator } from './AutoSaveIndicator';
 import { useAutoSave } from '@/hooks/useAutoSave';
 import { StorageDebugDialog } from './StorageDebugDialog';
-import ReExtractDialog from './ReExtractDialog';
 
 import type { User } from '@supabase/supabase-js';
 import { 
@@ -297,20 +296,6 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   const [inlineViewerRow, setInlineViewerRow] = useState<number | null>(null);
    const [fullScreenWorkspace, setFullScreenWorkspace] = useState<{ runsheetId: string; rowIndex: number } | null>(null);
    const [showDocumentFileNameColumn, setShowDocumentFileNameColumn] = useState(true);
-   
-   // Re-extract dialog state
-   const [reExtractDialog, setReExtractDialog] = useState<{
-     isOpen: boolean;
-     fieldName: string;
-     currentValue: string;
-     rowIndex: number;
-   }>({
-     isOpen: false,
-     fieldName: '',
-     currentValue: '',
-     rowIndex: -1
-   });
-   const [isReExtracting, setIsReExtracting] = useState(false);
   
   // Auto-save state
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -4544,96 +4529,6 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     setRowsToAdd(1);
   };
 
-  // Re-extract functionality for individual fields
-  const handleReExtractField = (rowIndex: number, fieldName: string) => {
-    const document = documentMap.get(rowIndex);
-    if (!document) {
-      toast({
-        title: "No document linked",
-        description: "Please link a document to this row before re-extracting fields.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const currentValue = data[rowIndex][fieldName] || '';
-    setReExtractDialog({
-      isOpen: true,
-      fieldName,
-      currentValue,
-      rowIndex
-    });
-  };
-
-  const handleReExtractWithNotes = async (notes: string) => {
-    setIsReExtracting(true);
-    
-    try {
-      const document = documentMap.get(reExtractDialog.rowIndex);
-      if (!document) {
-        throw new Error('Document not found for this row');
-      }
-
-      console.log('🔧 EditableSpreadsheet: Starting re-extraction for field:', reExtractDialog.fieldName);
-      console.log('🔧 EditableSpreadsheet: Document path:', document.file_path);
-      console.log('🔧 EditableSpreadsheet: User notes:', notes);
-
-      // Get the document URL
-      const fileUrl = DocumentService.getDocumentUrl(document.file_path);
-
-      const response = await supabase.functions.invoke('re-extract-field', {
-        body: {
-          fileUrl,
-          fileName: document.original_filename,
-          fieldName: reExtractDialog.fieldName,
-          fieldInstructions: columnInstructions[reExtractDialog.fieldName] || `Extract the ${reExtractDialog.fieldName} field accurately`,
-          userNotes: notes,
-          currentValue: reExtractDialog.currentValue
-        }
-      });
-
-      console.log('🔧 EditableSpreadsheet: Edge function response:', response);
-
-      if (response.error) {
-        throw new Error(response.error.message || 'Re-extraction failed');
-      }
-
-      if (!response.data?.success) {
-        throw new Error(response.data?.error || 'Re-extraction failed');
-      }
-
-      const { extractedValue } = response.data;
-      console.log('🔧 EditableSpreadsheet: Extracted value:', extractedValue);
-      
-      // Update the specific field with the re-extracted value
-      const newData = [...data];
-      newData[reExtractDialog.rowIndex] = {
-        ...newData[reExtractDialog.rowIndex],
-        [reExtractDialog.fieldName]: extractedValue
-      };
-      setData(newData);
-      onDataChange?.(newData);
-      
-      toast({
-        title: "Field re-extracted",
-        description: `Successfully re-extracted "${reExtractDialog.fieldName}" with your feedback.`,
-      });
-
-      // Close the dialog
-      setReExtractDialog(prev => ({ ...prev, isOpen: false }));
-
-    } catch (error) {
-      console.error('🔧 EditableSpreadsheet: Error re-extracting field:', error);
-      toast({
-        title: "Re-extraction failed",
-        description: error instanceof Error ? error.message : 'Unknown error occurred',
-        variant: "destructive",
-      });
-    } finally {
-      setIsReExtracting(false);
-    }
-  };
-
   const analyzeDocumentAndPopulateRow = async (file: File, targetRowIndex: number, forceOverwrite: boolean = false) => {
     try {
       console.log('🔍 Starting document analysis for:', file.name, 'type:', file.type, 'size:', file.size);
@@ -5731,34 +5626,7 @@ ${extractionFields}`
                                 }}
                               >
                                 <div className="flex flex-col items-center">
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-bold">{column}</span>
-                                     {/* Re-extract button for this column */}
-                                     <Button
-                                       variant="ghost"
-                                       size="sm"
-                                       onClick={(e) => {
-                                         e.stopPropagation();
-                                         // Find the first row with this column populated and a linked document
-                                         const firstRowWithData = data.findIndex((row, index) => 
-                                           row[column] && row[column].trim() !== '' && documentMap.has(index)
-                                         );
-                                         if (firstRowWithData !== -1) {
-                                           handleReExtractField(firstRowWithData, column);
-                                         } else {
-                                           toast({
-                                             title: "No data to re-extract",
-                                             description: `No rows found with data in "${column}" column that have linked documents.`,
-                                             variant: "destructive"
-                                           });
-                                         }
-                                       }}
-                                       className="h-6 w-6 p-1 hover:bg-purple-100 dark:hover:bg-purple-900/20 text-purple-600 dark:text-purple-400 border border-purple-200 bg-purple-50 dark:bg-purple-900/10"
-                                       title={`Re-extract "${column}" field for rows with documents`}
-                                     >
-                                       <Sparkles className="h-4 w-4" />
-                                     </Button>
-                                  </div>
+                                  <span className="font-bold">{column}</span>
                                   {localMissingColumns.includes(column) && (
                                     <span className="text-xs text-yellow-700 dark:text-yellow-300 mt-1 font-medium animate-pulse">
                                       Click to save
@@ -6726,16 +6594,6 @@ ${extractionFields}`
           open={showStorageDebug}
           onOpenChange={setShowStorageDebug}
           runsheetId={effectiveRunsheetId}
-        />
-
-        {/* Re-extract Dialog */}
-        <ReExtractDialog
-          isOpen={reExtractDialog.isOpen}
-          onClose={() => setReExtractDialog(prev => ({ ...prev, isOpen: false }))}
-          fieldName={reExtractDialog.fieldName}
-          currentValue={reExtractDialog.currentValue}
-          onReExtract={handleReExtractWithNotes}
-          isLoading={isReExtracting}
         />
       </div>
     );

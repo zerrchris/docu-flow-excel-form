@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
-import { X, ZoomIn, ZoomOut, RotateCcw, ExternalLink, ArrowLeft, Brain, AlertTriangle } from 'lucide-react';
+import { X, ZoomIn, ZoomOut, RotateCcw, ExternalLink, ArrowLeft, Brain, AlertTriangle, Sparkles } from 'lucide-react';
 import { DocumentService } from '@/services/documentService';
 import { ExtractionPreferencesService } from '@/services/extractionPreferences';
 import { ColumnWidthPreferencesService } from '@/services/columnWidthPreferences';
@@ -13,6 +13,7 @@ import PDFViewer from './PDFViewer';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import ReExtractDialog from './ReExtractDialog';
 
 interface FullScreenDocumentWorkspaceProps {
   runsheetId: string;
@@ -57,6 +58,18 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
   const [isDraggingImage, setIsDraggingImage] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const tableRef = useRef<HTMLDivElement>(null);
+  
+  // Re-extract dialog state
+  const [reExtractDialog, setReExtractDialog] = useState<{
+    isOpen: boolean;
+    fieldName: string;
+    currentValue: string;
+  }>({
+    isOpen: false,
+    fieldName: '',
+    currentValue: ''
+  });
+  const [isReExtracting, setIsReExtracting] = useState(false);
   
   // Get runsheet management hook for auto-saving changes
   const { activeRunsheet, setCurrentRunsheet } = useActiveRunsheet();
@@ -555,6 +568,100 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
     }
   };
 
+  // Re-extract functionality for individual fields
+  const handleReExtractField = (fieldName: string) => {
+    if (!documentUrl) {
+      toast({
+        title: "No document available",
+        description: "Please ensure a document is loaded before re-extracting fields.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const currentValue = localRowData[fieldName] || '';
+    setReExtractDialog({
+      isOpen: true,
+      fieldName,
+      currentValue
+    });
+  };
+
+  const handleReExtractWithNotes = async (notes: string) => {
+    setIsReExtracting(true);
+    
+    try {
+      console.log('🔧 FullScreenDocumentWorkspace: Starting re-extraction for field:', reExtractDialog.fieldName);
+
+      let imageData: string;
+      
+      // Handle different document URL formats
+      if (documentUrl.startsWith('data:')) {
+        console.log('🔧 Using base64 data from document URL');
+        imageData = documentUrl;
+      } else {
+        console.log('🔧 Fetching document from storage URL for re-extraction');
+        const response = await fetch(documentUrl);
+        const blob = await response.blob();
+        
+        const reader = new FileReader();
+        imageData = await new Promise((resolve) => {
+          reader.onloadend = () => {
+            resolve(reader.result as string);
+          };
+          reader.readAsDataURL(blob);
+        });
+      }
+
+      const response = await supabase.functions.invoke('re-extract-field', {
+        body: {
+          imageData,
+          fileName: documentName,
+          fieldName: reExtractDialog.fieldName,
+          fieldInstructions: `Extract the ${reExtractDialog.fieldName} field accurately`,
+          userNotes: notes,
+          currentValue: reExtractDialog.currentValue
+        }
+      });
+
+      console.log('🔧 FullScreenDocumentWorkspace: Edge function response:', response);
+
+      if (response.error) {
+        throw new Error(response.error.message || 'Re-extraction failed');
+      }
+
+      if (!response.data?.success) {
+        throw new Error(response.data?.error || 'Re-extraction failed');
+      }
+
+      const { extractedValue } = response.data;
+      console.log('🔧 FullScreenDocumentWorkspace: Extracted value:', extractedValue);
+      
+      // Update the specific field with the re-extracted value
+      const updatedData = { ...localRowData, [reExtractDialog.fieldName]: extractedValue };
+      setLocalRowData(updatedData);
+      onUpdateRow(rowIndex, updatedData);
+      
+      toast({
+        title: "Field re-extracted",
+        description: `Successfully re-extracted "${reExtractDialog.fieldName}" with your feedback.`,
+      });
+
+      // Close the dialog
+      setReExtractDialog(prev => ({ ...prev, isOpen: false }));
+
+    } catch (error) {
+      console.error('🔧 FullScreenDocumentWorkspace: Error re-extracting field:', error);
+      toast({
+        title: "Re-extraction failed",
+        description: error instanceof Error ? error.message : 'Unknown error occurred',
+        variant: "destructive",
+      });
+    } finally {
+      setIsReExtracting(false);
+    }
+  };
+
   return (
     <div
       className="fixed inset-0 z-50 bg-background flex flex-col overscroll-none touch-none"
@@ -745,20 +852,36 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                             autoFocus
                             rows={Math.max(3, Math.ceil(editingValue.length / 50))}
                           />
-                        ) : (
-                          <div
-                            className={`min-h-[2rem] py-2 px-3 cursor-cell flex items-start transition-colors whitespace-pre-wrap focus:outline-none
-                              ${isFocused ? 'bg-primary/20 border-2 border-primary ring-2 ring-primary/20' : 'hover:bg-muted/50 border-2 border-transparent'}
-                              ${alignment === 'center' ? 'text-center justify-center' : 
-                                alignment === 'right' ? 'text-right justify-end' : 'text-left justify-start'}`}
-                            onClick={() => handleCellClick(column)}
-                            onDoubleClick={() => handleCellDoubleClick(column)}
-                            onKeyDown={(e) => handleKeyDown(e, column)}
-                            tabIndex={0}
-                          >
-                            {localRowData[column] || ''}
-                          </div>
-                        )}
+                         ) : (
+                           <div
+                             className={`min-h-[2rem] py-2 px-3 cursor-cell flex items-start transition-colors whitespace-pre-wrap focus:outline-none relative group
+                               ${isFocused ? 'bg-primary/20 border-2 border-primary ring-2 ring-primary/20' : 'hover:bg-muted/50 border-2 border-transparent'}
+                               ${alignment === 'center' ? 'text-center justify-center' : 
+                                 alignment === 'right' ? 'text-right justify-end' : 'text-left justify-start'}`}
+                             onClick={() => handleCellClick(column)}
+                             onDoubleClick={() => handleCellDoubleClick(column)}
+                             onKeyDown={(e) => handleKeyDown(e, column)}
+                             tabIndex={0}
+                           >
+                             <span className="flex-1">{localRowData[column] || ''}</span>
+                             
+                             {/* Re-extract button - only show if cell has data */}
+                             {localRowData[column] && localRowData[column].trim() !== '' && (
+                               <Button
+                                 variant="ghost"
+                                 size="sm"
+                                 onClick={(e) => {
+                                   e.stopPropagation();
+                                   handleReExtractField(column);
+                                 }}
+                                 className="h-6 w-6 p-0 ml-2 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-purple-100 dark:hover:bg-purple-900/20 text-purple-600 dark:text-purple-400 flex-shrink-0"
+                                 title={`Re-extract "${column}" field with AI feedback`}
+                               >
+                                 <Sparkles className="h-4 w-4" />
+                               </Button>
+                             )}
+                           </div>
+                         )}
                       </TableCell>
                     );
                   })}
@@ -790,6 +913,16 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Re-extract Dialog */}
+      <ReExtractDialog
+        isOpen={reExtractDialog.isOpen}
+        onClose={() => setReExtractDialog(prev => ({ ...prev, isOpen: false }))}
+        fieldName={reExtractDialog.fieldName}
+        currentValue={reExtractDialog.currentValue}
+        onReExtract={handleReExtractWithNotes}
+        isLoading={isReExtracting}
+      />
     </div>
   );
 };
