@@ -6621,8 +6621,6 @@ ${extractionFields}`
 
         {sideBySideWorkspace && (
           <SideBySideDocumentWorkspace
-            isOpen={!!sideBySideWorkspace}
-            onClose={() => setSideBySideWorkspace(null)}
             runsheetId={sideBySideWorkspace.runsheetId}
             rowIndex={sideBySideWorkspace.rowIndex}
             rowData={data[sideBySideWorkspace.rowIndex] || {}}
@@ -6635,6 +6633,7 @@ ${extractionFields}`
               setData(newData);
               onDataChange?.(newData);
             }}
+            onClose={() => setSideBySideWorkspace(null)}
           />
         )}
 

@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -8,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Save, Sparkles, Mic, MicOff, Volume2 } from 'lucide-react';
+import { ArrowLeft, Sparkles, Mic, MicOff, Volume2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import PDFViewer from './PDFViewer';
@@ -22,8 +21,6 @@ interface ExtractedField {
 }
 
 interface SideBySideDocumentWorkspaceProps {
-  isOpen: boolean;
-  onClose: () => void;
   runsheetId: string;
   rowIndex: number;
   rowData: Record<string, string>;
@@ -31,18 +28,18 @@ interface SideBySideDocumentWorkspaceProps {
   columnInstructions: Record<string, string>;
   documentRecord?: DocumentRecord;
   onDataUpdate: (rowIndex: number, data: Record<string, string>) => void;
+  onClose: () => void;
 }
 
 const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = ({
-  isOpen,
-  onClose,
   runsheetId,
   rowIndex,
   rowData: initialRowData,
   columns,
   columnInstructions,
   documentRecord,
-  onDataUpdate
+  onDataUpdate,
+  onClose
 }) => {
   const { toast } = useToast();
   const [rowData, setRowData] = useState<Record<string, string>>(initialRowData);
@@ -287,179 +284,173 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-7xl w-[95vw] h-[90vh] p-0">
-        <DialogHeader className="px-6 py-4 border-b">
-          <div className="flex items-center justify-between">
-            <DialogTitle className="text-xl font-semibold">
+    <div className="fixed inset-0 bg-background z-50 flex flex-col">
+      {/* Header */}
+      <div className="flex items-center justify-between px-6 py-4 border-b bg-background">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="outline"
+            onClick={onClose}
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Runsheet
+          </Button>
+          <div>
+            <h1 className="text-xl font-semibold">
               Row {rowIndex + 1} - Side by Side Processor
-              {documentRecord && (
-                <span className="text-sm font-normal text-muted-foreground ml-2">
-                  • {documentRecord.stored_filename}
-                </span>
-              )}
-            </DialogTitle>
-            <div className="flex items-center gap-2">
-              {hasUnsavedChanges && (
-                <Badge variant="outline" className="text-amber-600 border-amber-600">
-                  Unsaved Changes
-                </Badge>
-              )}
-              <Button
-                onClick={handleSaveAndReturn}
-                className="flex items-center gap-2"
-                disabled={!hasUnsavedChanges}
-              >
-                <Save className="w-4 h-4" />
-                Save & Return
-              </Button>
-              <Button
-                variant="outline"
-                onClick={onClose}
-                className="flex items-center gap-2"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                Back to Runsheet
-              </Button>
-            </div>
-          </div>
-        </DialogHeader>
-
-        <div className="flex h-full">
-          {/* Left Panel - Row Data */}
-          <div className="w-1/2 border-r flex flex-col">
-            <div className="p-4 border-b bg-muted/50">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-lg font-semibold">Row Data</h3>
-                <div className="flex items-center gap-2">
-                  {/* Voice Input */}
-                  <Button
-                    variant={isListening ? "destructive" : "outline"}
-                    size="sm"
-                    onClick={isListening ? stopListening : startListening}
-                    disabled={isAnalyzing}
-                    className="flex items-center gap-2"
-                  >
-                    {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                    {isListening ? "Stop" : "Voice"}
-                  </Button>
-                  
-                  {/* Analyze Document */}
-                  {documentRecord && (
-                    <Button
-                      onClick={handleAnalyzeDocument}
-                      disabled={isAnalyzing}
-                      className="flex items-center gap-2"
-                      size="sm"
-                    >
-                      <Sparkles className="w-4 h-4" />
-                      {isAnalyzing ? "Analyzing..." : "Analyze Document"}
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <ScrollArea className="flex-1 p-4">
-              <div className="space-y-4">
-                {columns.map((columnName) => {
-                  const value = rowData[columnName] || '';
-                  const instruction = columnInstructions[columnName];
-                  const wasExtracted = lastAnalyzedData[columnName];
-                  
-                  return (
-                    <div key={columnName} className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-sm font-medium flex items-center">
-                          {columnName}
-                          {wasExtracted && getConfidenceBadge(0.85)}
-                        </Label>
-                        {value && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => speakText(value)}
-                            disabled={isSpeaking}
-                            className="h-6 w-6 p-0"
-                          >
-                            <Volume2 className="w-3 h-3" />
-                          </Button>
-                        )}
-                      </div>
-                      
-                      {instruction && (
-                        <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
-                          {instruction}
-                        </p>
-                      )}
-                      
-                      {value.length > 100 ? (
-                        <Textarea
-                          value={value}
-                          onChange={(e) => handleFieldChange(columnName, e.target.value)}
-                          className="min-h-[80px] resize-vertical"
-                          placeholder={`Enter ${columnName.toLowerCase()}...`}
-                        />
-                      ) : (
-                        <Input
-                          value={value}
-                          onChange={(e) => handleFieldChange(columnName, e.target.value)}
-                          placeholder={`Enter ${columnName.toLowerCase()}...`}
-                        />
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </ScrollArea>
-          </div>
-
-          {/* Right Panel - Document Viewer */}
-          <div className="w-1/2 flex flex-col">
-            <div className="p-4 border-b bg-muted/50">
-              <h3 className="text-lg font-semibold">Document</h3>
-              {documentRecord && (
-                <p className="text-sm text-muted-foreground mt-1">
-                  {documentRecord.stored_filename}
-                </p>
-              )}
-            </div>
-
-            <div className="flex-1 p-4">
-              {documentRecord ? (
-                <div className="h-full">
-                  {documentRecord.content_type?.includes('pdf') ? (
-                    <PDFViewer 
-                      file={null}
-                      previewUrl={DocumentService.getDocumentUrl(documentRecord.file_path)}
-                    />
-                  ) : (
-                    <div className="h-full w-full bg-muted rounded-lg flex items-center justify-center">
-                      <img 
-                        src={DocumentService.getDocumentUrl(documentRecord.file_path)}
-                        alt={documentRecord.stored_filename}
-                        className="max-h-full max-w-full object-contain"
-                      />
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <Card className="h-full flex items-center justify-center">
-                  <CardContent className="text-center">
-                    <p className="text-muted-foreground">
-                      No document linked to this row.
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      Link a document in the runsheet to view it here.
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
+            </h1>
+            {documentRecord && (
+              <p className="text-sm text-muted-foreground mt-1">
+                {documentRecord.stored_filename}
+              </p>
+            )}
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+        <div className="flex items-center gap-2">
+          {hasUnsavedChanges && (
+            <Badge variant="outline" className="text-amber-600 border-amber-600">
+              Unsaved Changes
+            </Badge>
+          )}
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Left Panel - Row Data */}
+        <div className="w-1/2 border-r flex flex-col">
+          <div className="p-4 border-b bg-muted/50">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-semibold">Row Data</h3>
+              <div className="flex items-center gap-2">
+                {/* Voice Input */}
+                <Button
+                  variant={isListening ? "destructive" : "outline"}
+                  size="sm"
+                  onClick={isListening ? stopListening : startListening}
+                  disabled={isAnalyzing}
+                  className="flex items-center gap-2"
+                >
+                  {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                  {isListening ? "Stop" : "Voice"}
+                </Button>
+                
+                {/* Analyze Document */}
+                {documentRecord && (
+                  <Button
+                    onClick={handleAnalyzeDocument}
+                    disabled={isAnalyzing}
+                    className="flex items-center gap-2"
+                    size="sm"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    {isAnalyzing ? "Analyzing..." : "Analyze Document"}
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <ScrollArea className="flex-1 p-4">
+            <div className="space-y-4">
+              {columns.map((columnName) => {
+                const value = rowData[columnName] || '';
+                const instruction = columnInstructions[columnName];
+                const wasExtracted = lastAnalyzedData[columnName];
+                
+                return (
+                  <div key={columnName} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm font-medium flex items-center">
+                        {columnName}
+                        {wasExtracted && getConfidenceBadge(0.85)}
+                      </Label>
+                      {value && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => speakText(value)}
+                          disabled={isSpeaking}
+                          className="h-6 w-6 p-0"
+                        >
+                          <Volume2 className="w-3 h-3" />
+                        </Button>
+                      )}
+                    </div>
+                    
+                    {instruction && (
+                      <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+                        {instruction}
+                      </p>
+                    )}
+                    
+                    {value.length > 100 ? (
+                      <Textarea
+                        value={value}
+                        onChange={(e) => handleFieldChange(columnName, e.target.value)}
+                        className="min-h-[80px] resize-vertical"
+                        placeholder={`Enter ${columnName.toLowerCase()}...`}
+                      />
+                    ) : (
+                      <Input
+                        value={value}
+                        onChange={(e) => handleFieldChange(columnName, e.target.value)}
+                        placeholder={`Enter ${columnName.toLowerCase()}...`}
+                      />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </ScrollArea>
+        </div>
+
+        {/* Right Panel - Document Viewer */}
+        <div className="w-1/2 flex flex-col">
+          <div className="p-4 border-b bg-muted/50">
+            <h3 className="text-lg font-semibold">Document</h3>
+            {documentRecord && (
+              <p className="text-sm text-muted-foreground mt-1">
+                {documentRecord.stored_filename}
+              </p>
+            )}
+          </div>
+
+          <div className="flex-1 p-4">
+            {documentRecord ? (
+              <div className="h-full">
+                {documentRecord.content_type?.includes('pdf') ? (
+                  <PDFViewer 
+                    file={null}
+                    previewUrl={DocumentService.getDocumentUrl(documentRecord.file_path)}
+                  />
+                ) : (
+                  <div className="h-full w-full bg-muted rounded-lg flex items-center justify-center">
+                    <img 
+                      src={DocumentService.getDocumentUrl(documentRecord.file_path)}
+                      alt={documentRecord.stored_filename}
+                      className="max-h-full max-w-full object-contain"
+                    />
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Card className="h-full flex items-center justify-center">
+                <CardContent className="text-center">
+                  <p className="text-muted-foreground">
+                    No document linked to this row.
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Link a document in the runsheet to view it here.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 
