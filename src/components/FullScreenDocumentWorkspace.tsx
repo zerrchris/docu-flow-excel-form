@@ -871,14 +871,14 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                             />
                            ) : (
                              <div
-                               className={`w-full h-full flex flex-col transition-colors focus:outline-none relative group
+                               className={`w-full h-full transition-colors focus:outline-none relative
                                  ${isFocused ? 'bg-primary/20 border-2 border-primary ring-2 ring-primary/20' : 'hover:bg-muted/50 border-2 border-transparent'}`}
                                onKeyDown={(e) => handleKeyDown(e, column)}
                                tabIndex={0}
                              >
                                {/* Always scrollable content area */}
                                <div 
-                                 className={`flex-1 min-h-0 p-3 whitespace-pre-wrap cursor-cell overflow-y-auto overflow-x-hidden ${
+                                 className={`h-full p-3 whitespace-pre-wrap cursor-cell overflow-y-auto overflow-x-hidden ${
                                    alignment === 'center' ? 'text-center' : 
                                    alignment === 'right' ? 'text-right' : 'text-left'
                                  }`}
@@ -890,22 +890,6 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                                  }}
                                >
                                  {localRowData[column] || ''}
-                               </div>
-                               
-                               {/* Re-extract button */}
-                               <div className="p-2 flex justify-end shrink-0">
-                                 <Button
-                                   variant="ghost"
-                                   size="sm"
-                                   onClick={(e) => {
-                                     e.stopPropagation();
-                                     handleReExtractField(column);
-                                   }}
-                                   className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-purple-100 dark:hover:bg-purple-900/20 text-purple-600 dark:text-purple-400 flex-shrink-0"
-                                   title={`Re-extract "${column}" field with AI feedback`}
-                                 >
-                                   <Sparkles className="h-4 w-4" />
-                                 </Button>
                                </div>
                              </div>
                            )}
