@@ -1351,7 +1351,8 @@ Image: [base64 image data]`;
       
       // Check if we have new columns from the extracted data and automatically add them
       const newColumnsFromExtraction = Object.keys(extractedData).filter(key => 
-        !columns.includes(key) && key !== 'Storage Path' && extractedData[key] && extractedData[key].trim() !== ''
+        !columns.includes(key) && key !== 'Storage Path' && extractedData[key] && 
+        typeof extractedData[key] === 'string' && extractedData[key].trim() !== ''
       );
       
       // ALWAYS update form data first, regardless of new columns
@@ -1402,7 +1403,9 @@ Image: [base64 image data]`;
       }
       
       // Show success message with extracted fields
-      const extractedFieldCount = Object.values(extractedData).filter(value => value.trim() !== '').length;
+      const extractedFieldCount = Object.values(extractedData).filter(value => 
+        value && typeof value === 'string' && value.trim() !== ''
+      ).length;
       toast({
         title: "✅ Data Extraction Complete",
         description: `Successfully extracted ${extractedFieldCount} fields. Please review and verify the data before adding to runsheet.`,
