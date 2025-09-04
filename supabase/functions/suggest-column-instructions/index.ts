@@ -90,6 +90,7 @@ Requirements per instruction:
 - Focus on title examination and landman workflow needs
 
 Return as JSON object with column names as keys and specialized landman instructions as values.`;
+    }
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
