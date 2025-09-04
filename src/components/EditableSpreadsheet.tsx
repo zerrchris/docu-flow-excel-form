@@ -1986,6 +1986,9 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   // Save and close runsheet - saves the data, clears active status, and navigates back to dashboard
   const saveAndCloseRunsheet = async () => {
     console.log('Save and Close button clicked!');
+    console.log('🔧 SAVE_AND_CLOSE: Current data state:', data);
+    console.log('🔧 SAVE_AND_CLOSE: Data length:', data.length);
+    console.log('🔧 SAVE_AND_CLOSE: First few rows:', data.slice(0, 3));
     
     if (!user) {
       toast({
