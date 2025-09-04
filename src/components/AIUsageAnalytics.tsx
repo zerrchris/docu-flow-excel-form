@@ -411,16 +411,28 @@ export const AIUsageAnalytics: React.FC = () => {
                       const { data: { session } } = await supabase.auth.getSession();
                       if (!session) return;
 
+                      console.log('Calling customer-portal function...');
                       const { data, error } = await supabase.functions.invoke('customer-portal', {
                         headers: { Authorization: `Bearer ${session.access_token}` }
                       });
 
-                      if (error) throw error;
-                      window.open(data.url, '_blank');
-                    } catch (error) {
+                      console.log('Function response:', { data, error });
+                      
+                      if (error) {
+                        console.error('Function error:', error);
+                        throw error;
+                      }
+                      
+                      if (data?.url) {
+                        window.open(data.url, '_blank');
+                      } else {
+                        throw new Error('No portal URL returned');
+                      }
+                    } catch (error: any) {
+                      console.error('Billing portal error:', error);
                       toast({
                         title: "Error",
-                        description: "Failed to open billing portal",
+                        description: error.message || "Failed to open billing portal",
                         variant: "destructive"
                       });
                     }
