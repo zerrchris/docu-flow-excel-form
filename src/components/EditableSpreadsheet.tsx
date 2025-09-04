@@ -3573,7 +3573,14 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         if (target && target.closest('input, textarea, select, [contenteditable="true"], [role="textbox"]')) {
           return; // don't steal typing from form fields
         }
-        if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        
+        // Prevent arrow keys from scrolling the page when navigating cells
+        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+          e.preventDefault();
+          return; // Let the cell-specific handler deal with navigation
+        }
+        // Handle letter keys for editing
+        else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
           startEditing(selectedCell.rowIndex, selectedCell.column, e.key, undefined);
           e.preventDefault();
         }
@@ -3850,8 +3857,8 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
           block: 'nearest',
           inline: 'nearest'
         });
-        // Focus the cell element to ensure proper tab index behavior
-        (cellElement.parentElement as HTMLElement)?.focus();
+        // Focus the cell element to ensure proper keyboard navigation
+        (cellElement as HTMLElement)?.focus();
       }
     }, 100); // Increased delay to allow for layout updates
     
@@ -6187,11 +6194,12 @@ ${extractionFields}`
                                      columnAlignments[column] === 'right' ? 'text-right justify-end' : 'text-left justify-start'}
                                    ${cellValidationErrors[`${rowIndex}-${column}`] ? 'border-red-400 bg-red-50 dark:bg-red-900/20' : ''}
                                  `}
-                                 onMouseDown={(e) => handleCellMouseDown(e, rowIndex, column)}
-                                 onMouseEnter={() => handleMouseEnter(rowIndex, column)}
-                                 onMouseUp={handleMouseUp}
-                                 onKeyDown={(e) => handleKeyDown(e, rowIndex, column)}
-                                 title={cellValidationErrors[`${rowIndex}-${column}`] || undefined}
+                                  onMouseDown={(e) => handleCellMouseDown(e, rowIndex, column)}
+                                  onMouseEnter={() => handleMouseEnter(rowIndex, column)}
+                                  onMouseUp={handleMouseUp}
+                                  onKeyDown={(e) => handleKeyDown(e, rowIndex, column)}
+                                  tabIndex={isSelected ? 0 : -1}
+                                  title={cellValidationErrors[`${rowIndex}-${column}`] || undefined}
                                >
                                 {row[column] || ''}
                               </div>
@@ -6285,11 +6293,12 @@ ${extractionFields}`
                                      ? 'bg-primary/10 border-2 border-primary/50'
                                      : 'hover:bg-muted/50 border-2 border-transparent'
                                    }`}
-                                 onMouseDown={(e) => handleCellMouseDown(e, rowIndex, column)}
-                                 onMouseEnter={() => handleMouseEnter(rowIndex, column)}
-                                 onMouseUp={handleMouseUp}
-                                 onKeyDown={(e) => handleKeyDown(e, rowIndex, column)}
-                                 title={documentMap.get(rowIndex)?.stored_filename || row[column] || ''}
+                                  onMouseDown={(e) => handleCellMouseDown(e, rowIndex, column)}
+                                  onMouseEnter={() => handleMouseEnter(rowIndex, column)}
+                                  onMouseUp={handleMouseUp}
+                                  onKeyDown={(e) => handleKeyDown(e, rowIndex, column)}
+                                  tabIndex={isSelected ? 0 : -1}
+                                  title={documentMap.get(rowIndex)?.stored_filename || row[column] || ''}
                                >
                                    <span 
                                      className="truncate block w-full text-left"
