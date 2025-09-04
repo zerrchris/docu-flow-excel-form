@@ -52,11 +52,19 @@ serve(async (req) => {
     logStep("Found Stripe customer", { customerId });
 
     const origin = req.headers.get("origin") || "http://localhost:3000";
-    const portalSession = await stripe.billingPortal.sessions.create({
-      customer: customerId,
-      return_url: `${origin}/`,
-    });
-    logStep("Customer portal session created", { sessionId: portalSession.id, url: portalSession.url });
+    logStep("Creating portal session", { customerId, returnUrl: `${origin}/` });
+    
+    let portalSession;
+    try {
+      portalSession = await stripe.billingPortal.sessions.create({
+        customer: customerId,
+        return_url: `${origin}/`,
+      });
+      logStep("Customer portal session created", { sessionId: portalSession.id, url: portalSession.url });
+    } catch (stripeError: any) {
+      logStep("Stripe portal creation failed", { error: stripeError.message, code: stripeError.code, type: stripeError.type });
+      throw new Error(`Stripe portal error: ${stripeError.message}`);
+    }
 
     return new Response(JSON.stringify({ url: portalSession.url }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
