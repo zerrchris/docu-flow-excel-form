@@ -71,6 +71,18 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Not authenticated');
 
+      // First, set up usage billing automatically
+      const { error: usageError } = await supabase.functions.invoke('create-usage-billing', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (usageError) {
+        console.warn('Failed to set up usage billing:', usageError);
+        // Continue with checkout even if usage billing setup fails
+      }
+
       const { data, error } = await supabase.functions.invoke('create-checkout', {
         body: { plan },
         headers: {

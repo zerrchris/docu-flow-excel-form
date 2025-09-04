@@ -171,10 +171,26 @@ const Pricing = () => {
               </CardHeader>
 
               <CardContent>
-                <div className="text-center">
-                  <p className="text-sm text-muted-foreground">
-                    Full access to all RunsheetPro features
-                  </p>
+                <div className="space-y-4">
+                  <ul className="space-y-2">
+                    <li className="flex items-center gap-2 text-sm">
+                      <Check className="h-4 w-4 text-green-600" />
+                      Full access to all RunsheetPro features
+                    </li>
+                    <li className="flex items-center gap-2 text-sm">
+                      <Check className="h-4 w-4 text-green-600" />
+                      AI usage charged separately at cost
+                    </li>
+                    <li className="flex items-center gap-2 text-sm">
+                      <Check className="h-4 w-4 text-green-600" />
+                      Transparent per-use AI billing
+                    </li>
+                  </ul>
+                  <div className="bg-blue-50 dark:bg-blue-950 p-3 rounded-lg">
+                    <p className="text-xs text-blue-800 dark:text-blue-200">
+                      <strong>Note:</strong> AI processing costs are billed separately based on actual usage. You'll see exact costs before processing.
+                    </p>
+                  </div>
                 </div>
               </CardContent>
 
