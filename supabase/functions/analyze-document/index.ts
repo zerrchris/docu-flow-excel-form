@@ -70,36 +70,63 @@ serve(async (req) => {
       );
     }
 
-    // Check if the data is a PDF by examining the base64 content header
-    // PDFs start with "%PDF" which is "JVBERi0" in base64
+    // Check if the data is a PDF and convert it automatically
     const base64Content = imageData.split(',')[1];
-    if (base64Content && base64Content.startsWith('JVBERi0')) {
-      console.error('PDF files are not supported by OpenAI vision API');
-      return new Response(
-        JSON.stringify({ 
-          error: 'PDF files are not currently supported for analysis. Please convert your PDF to an image format (PNG, JPEG) and try again.',
-          details: 'OpenAI vision API only supports image formats'
-        }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+    let processedImageData = imageData;
+    
+    if ((base64Content && base64Content.startsWith('JVBERi0')) || imageData.includes('data:application/pdf')) {
+      console.log('PDF detected, converting to image automatically...');
+      
+      try {
+        // Convert PDF to image using the pdf-lib and canvas-based conversion
+        const pdfData = atob(base64Content);
+        const pdfBytes = new Uint8Array(pdfData.length);
+        for (let i = 0; i < pdfData.length; i++) {
+          pdfBytes[i] = pdfData.charCodeAt(i);
         }
-      );
-    }
-
-    // Also check the MIME type for PDFs
-    if (imageData.includes('data:application/pdf')) {
-      console.error('PDF files are not supported by OpenAI vision API');
-      return new Response(
-        JSON.stringify({ 
-          error: 'PDF files are not currently supported for analysis. Please convert your PDF to an image format (PNG, JPEG) and try again.',
-          details: 'OpenAI vision API only supports image formats'
-        }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        
+        // Call the PDF conversion function internally
+        const pdfToImageResponse = await fetch(`${supabaseUrl}/functions/v1/convert-pdf-to-images`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': req.headers.get('authorization') || '',
+            'apikey': req.headers.get('apikey') || '',
+          },
+          body: JSON.stringify({
+            pdfData: base64Content,
+            quality: 1.5,
+            format: 'png'
+          })
+        });
+        
+        if (!pdfToImageResponse.ok) {
+          throw new Error('PDF conversion failed');
         }
-      );
+        
+        const conversionResult = await pdfToImageResponse.json();
+        
+        if (conversionResult.images && conversionResult.images.length > 0) {
+          // Use the first page for analysis
+          processedImageData = `data:image/png;base64,${conversionResult.images[0].data}`;
+          console.log('PDF successfully converted to image for analysis');
+        } else {
+          throw new Error('No images generated from PDF');
+        }
+        
+      } catch (conversionError) {
+        console.error('Failed to convert PDF:', conversionError);
+        return new Response(
+          JSON.stringify({ 
+            error: 'Failed to convert PDF to image for analysis. Please try converting your PDF to an image format manually.',
+            details: conversionError.message
+          }),
+          { 
+            status: 400, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      }
     }
 
     // Check if it's a valid image format
@@ -198,7 +225,7 @@ serve(async (req) => {
               {
                 type: 'image_url',
                 image_url: {
-                  url: imageData,
+                  url: processedImageData,
                   detail: 'high'
                 }
               }
