@@ -111,27 +111,52 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
       const isPdf = documentRecord.content_type === 'application/pdf' || documentRecord.stored_filename.toLowerCase().endsWith('.pdf');
       
       if (isPdf) {
-        toast({
-          title: "PDF Analysis Not Supported",
-          description: "PDF files cannot be analyzed directly. Please convert your PDF to an image format (PNG, JPEG) and try again.",
-          variant: "destructive"
-        });
-        return;
-      }
+        console.log('🔧 PDF detected, converting to image for analysis');
+        
+        // Call the PDF to image conversion function
+        try {
+          const { data: conversionData, error: conversionError } = await supabase.functions.invoke('convert-pdf-to-images', {
+            body: {
+              pdfData: await fetch(documentUrl).then(r => r.arrayBuffer()).then(ab => btoa(String.fromCharCode(...new Uint8Array(ab)))),
+              quality: 2,
+              format: 'png',
+              useOCR: true
+            }
+          });
+          
+          if (conversionError) throw conversionError;
+          
+          if (conversionData?.convertedImages?.[0]) {
+            imageData = `data:image/png;base64,${conversionData.convertedImages[0].data}`;
+            console.log('🔧 PDF converted to image successfully');
+          } else {
+            throw new Error('PDF conversion returned no images');
+          }
+        } catch (pdfError) {
+          console.error('🔧 PDF conversion failed:', pdfError);
+          toast({
+            title: "PDF Conversion Failed",
+            description: "Could not convert PDF to image for analysis. Please try with an image file.",
+            variant: "destructive"
+          });
+          return;
+        }
+      } else {
 
-      console.log('🔧 Fetching document from storage URL for side-by-side analysis');
-      // Convert the document URL to base64 for analysis
-      const response = await fetch(documentUrl);
-      const blob = await response.blob();
-      
-      // For images, convert to base64 data URL
-      const reader = new FileReader();
-      imageData = await new Promise((resolve) => {
-        reader.onloadend = () => {
-          resolve(reader.result as string); // Keep full data URL format
-        };
-        reader.readAsDataURL(blob);
-      });
+        console.log('🔧 Fetching document from storage URL for side-by-side analysis');
+        // Convert the document URL to base64 for analysis
+        const response = await fetch(documentUrl);
+        const blob = await response.blob();
+        
+        // For images, convert to base64 data URL
+        const reader = new FileReader();
+        imageData = await new Promise((resolve) => {
+          reader.onloadend = () => {
+            resolve(reader.result as string); // Keep full data URL format
+          };
+          reader.readAsDataURL(blob);
+        });
+      }
 
       // Call the same analyze-document function as expanded workspace
       console.log('🚀 Starting document analysis (side-by-side)...');

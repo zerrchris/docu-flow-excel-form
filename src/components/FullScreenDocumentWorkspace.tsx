@@ -424,22 +424,69 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
         // Check if it's PDF data (even if incorrectly labeled)
         const base64Content = documentUrl.split(',')[1];
         if (base64Content && base64Content.startsWith('JVBERi0')) {
-          toast({
-            title: "PDF Analysis Not Supported",
-            description: "PDF files cannot be analyzed directly. Please convert your PDF to an image format (PNG, JPEG) and try again.",
-            variant: "destructive"
-          });
-          return;
+          console.log('🔧 PDF detected in base64 data, converting to image');
+          
+          try {
+            const { data: conversionData, error: conversionError } = await supabase.functions.invoke('convert-pdf-to-images', {
+              body: {
+                pdfData: base64Content,
+                quality: 2,
+                format: 'png',
+                useOCR: true
+              }
+            });
+            
+            if (conversionError) throw conversionError;
+            
+            if (conversionData?.convertedImages?.[0]) {
+              imageData = `data:image/png;base64,${conversionData.convertedImages[0].data}`;
+              console.log('🔧 PDF converted to image successfully');
+            } else {
+              throw new Error('PDF conversion returned no images');
+            }
+          } catch (pdfError) {
+            console.error('🔧 PDF conversion failed:', pdfError);
+            toast({
+              title: "PDF Conversion Failed",
+              description: "Could not convert PDF to image for analysis. Please try with an image file.",
+              variant: "destructive"
+            });
+            return;
+          }
         }
         
         // Check MIME type for PDFs
         if (documentUrl.includes('data:application/pdf')) {
-          toast({
-            title: "PDF Analysis Not Supported", 
-            description: "PDF files cannot be analyzed directly. Please convert your PDF to an image format (PNG, JPEG) and try again.",
-            variant: "destructive"
-          });
-          return;
+          console.log('🔧 PDF detected by MIME type, converting to image');
+          
+          try {
+            const base64Data = documentUrl.split(',')[1];
+            const { data: conversionData, error: conversionError } = await supabase.functions.invoke('convert-pdf-to-images', {
+              body: {
+                pdfData: base64Data,
+                quality: 2,
+                format: 'png',
+                useOCR: true
+              }
+            });
+            
+            if (conversionError) throw conversionError;
+            
+            if (conversionData?.convertedImages?.[0]) {
+              imageData = `data:image/png;base64,${conversionData.convertedImages[0].data}`;
+              console.log('🔧 PDF converted to image successfully');
+            } else {
+              throw new Error('PDF conversion returned no images');
+            }
+          } catch (pdfError) {
+            console.error('🔧 PDF conversion failed:', pdfError);
+            toast({
+              title: "PDF Conversion Failed",
+              description: "Could not convert PDF to image for analysis. Please try with an image file.",
+              variant: "destructive"
+            });
+            return;
+          }
         }
       } else {
         console.log('🔧 Fetching document from storage URL');
@@ -448,13 +495,38 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
         const blob = await response.blob();
         
         if (isPdf || blob.type === 'application/pdf') {
-          // For PDFs, show clear error message
-          toast({
-            title: "PDF Analysis Not Supported",
-            description: "PDF files cannot be analyzed directly. Please convert your PDF to an image format (PNG, JPEG) and try again.",
-            variant: "destructive"
-          });
-          return;
+          console.log('🔧 PDF detected, converting to image for analysis');
+          
+          try {
+            const arrayBuffer = await response.arrayBuffer();
+            const base64Data = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+            
+            const { data: conversionData, error: conversionError } = await supabase.functions.invoke('convert-pdf-to-images', {
+              body: {
+                pdfData: base64Data,
+                quality: 2,
+                format: 'png',
+                useOCR: true
+              }
+            });
+            
+            if (conversionError) throw conversionError;
+            
+            if (conversionData?.convertedImages?.[0]) {
+              imageData = `data:image/png;base64,${conversionData.convertedImages[0].data}`;
+              console.log('🔧 PDF converted to image successfully');
+            } else {
+              throw new Error('PDF conversion returned no images');
+            }
+          } catch (pdfError) {
+            console.error('🔧 PDF conversion failed:', pdfError);
+            toast({
+              title: "PDF Conversion Failed",
+              description: "Could not convert PDF to image for analysis. Please try with an image file.",
+              variant: "destructive"
+            });
+            return;
+          }
         } else {
           // For images, convert to base64 data URL
           const reader = new FileReader();
