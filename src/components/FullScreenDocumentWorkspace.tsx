@@ -794,11 +794,17 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                           key={column}
                           className="border-r border-border font-semibold text-foreground relative group p-3 flex items-center justify-between"
                           style={{ 
-                            width: `${getColumnWidth(column)}px`, 
-                            minWidth: `${getColumnWidth(column)}px`
+                            width: `${Math.max(getColumnWidth(column), 120)}px`, 
+                            minWidth: '120px'
                           }}
                         >
-                          <span>{column}</span>
+                          <span 
+                            className="truncate pr-2 flex-1 min-w-0" 
+                            title={column}
+                            style={{ maxWidth: 'calc(100% - 32px)' }}
+                          >
+                            {column}
+                          </span>
                           {/* Re-extract button in header */}
                           <Button
                             variant="ghost"
@@ -836,8 +842,8 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                           key={column}
                           className="border-r border-border relative flex"
                           style={{ 
-                            width: `${getColumnWidth(column)}px`, 
-                            minWidth: `${getColumnWidth(column)}px`
+                            width: `${Math.max(getColumnWidth(column), 120)}px`, 
+                            minWidth: '120px'
                           }}
                         >
                           {isEditing ? (
