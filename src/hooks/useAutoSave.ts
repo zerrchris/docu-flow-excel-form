@@ -51,25 +51,10 @@ export function useAutoSave({
     });
   }, [runsheetId, runsheetName, columns, data, columnInstructions]);
 
-  // Save to localStorage for immediate persistence (backup)
+  // Backup system disabled - database should be the single source of truth
   const saveToLocalStorage = useCallback(() => {
-    if (!runsheetName.trim() || columns.length === 0) return;
-    
-    try {
-      const localStorageKey = `runsheet_backup_${runsheetId || 'temp'}`;
-      const backupData = {
-        runsheetId,
-        runsheetName,
-        columns,
-        data,
-        columnInstructions,
-        lastSaved: new Date().toISOString()
-      };
-      localStorage.setItem(localStorageKey, JSON.stringify(backupData));
-    } catch (error) {
-      console.error('Failed to save to localStorage:', error);
-    }
-  }, [runsheetId, runsheetName, columns, data, columnInstructions]);
+    console.log('🚫 localStorage backup disabled - using database as single source of truth');
+  }, []);
 
   // Load from localStorage on mount
   const loadFromLocalStorage = useCallback((targetRunsheetId?: string) => {

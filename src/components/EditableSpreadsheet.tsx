@@ -2089,9 +2089,8 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       setLastSaveTime(new Date());
       onUnsavedChanges?.(false);
 
-      // Clear the active runsheet and navigate
-      clearActiveRunsheet();
-      clearActiveRunsheet();
+      // Keep the runsheet active so it can be loaded again
+      // Don't clear the active runsheet - user might want to return to it
 
       toast({
         title: "Runsheet saved and closed",

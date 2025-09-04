@@ -170,47 +170,7 @@ const DocumentProcessor: React.FC = () => {
 
   // Data recovery handlers
   const handleUseBackupData = () => {
-    if (recoveryData?.backup) {
-      const backup = recoveryData.backup;
-      
-      console.log('🔄 Restoring backup data:', {
-        dataLength: backup.data?.length,
-        columns: backup.columns,
-        hasColumnInstructions: !!backup.columnInstructions
-      });
-      
-      // CRITICAL: Only restore if backup has the same columns as current data
-      // This prevents mixing data with incompatible column structures
-      if (backup.columns && backup.data && backup.data.length > 0) {
-        const backupDataKeys = Object.keys(backup.data[0] || {});
-        const columnsMatch = backup.columns.every(col => backupDataKeys.includes(col));
-        
-        if (columnsMatch) {
-          setSpreadsheetData(backup.data);
-          setColumns(backup.columns);
-          setColumnInstructions(backup.columnInstructions || {});
-          
-          toast({
-            title: "Backup data restored",
-            description: "Your previously saved work has been restored.",
-          });
-        } else {
-          console.error('⚠️ Backup column mismatch detected, keeping current data');
-          toast({
-            title: "Backup incompatible",
-            description: "The backup has different columns than your current data. Keeping current work.",
-            variant: "destructive"
-          });
-        }
-      } else {
-        console.error('⚠️ Invalid backup data structure');
-        toast({
-          title: "Invalid backup",
-          description: "The backup data is invalid. Keeping current work.",
-          variant: "destructive"
-        });
-      }
-    }
+    console.log('🚫 Backup system disabled - data should always be in database');
     setShowDataRecovery(false);
     setRecoveryData(null);
   };
