@@ -872,27 +872,28 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                            ) : (
                              <div
                                className={`w-full h-full flex flex-col transition-colors focus:outline-none relative group
-                                 ${isFocused ? 'bg-primary/20 border-2 border-primary ring-2 ring-primary/20' : 'hover:bg-muted/50 border-2 border-transparent'}
-                                 ${alignment === 'center' ? 'text-center items-center' : 
-                                   alignment === 'right' ? 'text-right items-end' : 'text-left items-start'}`}
+                                 ${isFocused ? 'bg-primary/20 border-2 border-primary ring-2 ring-primary/20' : 'hover:bg-muted/50 border-2 border-transparent'}`}
                                onKeyDown={(e) => handleKeyDown(e, column)}
                                tabIndex={0}
                              >
                                {/* Always scrollable content area */}
                                <div 
-                                 className={`flex-1 overflow-auto p-3 whitespace-pre-wrap min-h-0 cursor-cell ${
+                                 className={`flex-1 min-h-0 p-3 whitespace-pre-wrap cursor-cell overflow-y-auto overflow-x-hidden ${
                                    alignment === 'center' ? 'text-center' : 
                                    alignment === 'right' ? 'text-right' : 'text-left'
                                  }`}
                                  onClick={() => handleCellClick(column)}
                                  onDoubleClick={() => handleCellDoubleClick(column)}
-                                 onWheel={(e) => e.stopPropagation()}
+                                 style={{ 
+                                   scrollbarWidth: 'thin',
+                                   scrollbarColor: 'rgb(156 163 175) transparent'
+                                 }}
                                >
                                  {localRowData[column] || ''}
                                </div>
                                
-                               {/* Re-extract button - show for all cells including empty ones */}
-                               <div className="p-2 flex justify-end">
+                               {/* Re-extract button */}
+                               <div className="p-2 flex justify-end shrink-0">
                                  <Button
                                    variant="ghost"
                                    size="sm"
