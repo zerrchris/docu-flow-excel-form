@@ -2463,7 +2463,7 @@ Image: [base64 image data]`;
             <div className="mt-6">
             <EditableSpreadsheet
               initialColumns={columns}
-              initialData={spreadsheetData}
+              initialData={location.state?.runsheet?.data || activeRunsheet?.data || spreadsheetData}
               onColumnChange={handleColumnsChange}
               onDataChange={handleSpreadsheetDataChange}
               onColumnInstructionsChange={setColumnInstructions}
