@@ -1543,91 +1543,16 @@ Image: [base64 image data]`;
     console.log('🔧 DocumentProcessor: Final runsheetId before processing:', runsheetId);
     
     if (!runsheetId || runsheetId.startsWith('temp-')) {
-      // We need a proper saved runsheet to add documents
-      console.log('🔧 ADD_TO_SPREADSHEET: Need to save runsheet first before adding documents');
-      
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          toast({
-            title: "Authentication required",
-            description: "Please sign in to save documents.",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        // Check if we have an active runsheet with a name in memory (even if not saved)
-        // This happens when user creates named runsheet but hasn't saved it yet
-        let runsheetName;
-        if (activeRunsheet?.name && activeRunsheet.name !== 'Untitled Runsheet') {
-          runsheetName = activeRunsheet.name;
-          console.log('🔧 ADD_TO_SPREADSHEET: Using existing runsheet name from memory:', runsheetName);
-        } else {
-          // Fallback to auto-generated name
-          runsheetName = `Document Analysis ${new Date().toLocaleDateString()}`;
-          console.log('🔧 ADD_TO_SPREADSHEET: Using auto-generated name:', runsheetName);
-        }
-        const initialData = [targetData];
-
-        const { data: newRunsheet, error } = await supabase
-          .from('runsheets')
-          .insert({
-            name: runsheetName,
-            user_id: user.id,
-            columns: columns,
-            data: initialData,
-            column_instructions: columnInstructions
-          })
-          .select()
-          .single();
-
-        if (error) {
-          console.error('Error creating runsheet:', error);
-          toast({
-            title: "Failed to create runsheet",
-            description: error.message,
-            variant: "destructive",
-          });
-          return;
-        }
-
-        runsheetId = newRunsheet.id;
-        console.log('🔧 ADD_TO_SPREADSHEET: Created new runsheet with ID:', runsheetId);
-        
-        // Update the spreadsheet data and active runsheet
-        setSpreadsheetData(initialData);
-        
-        // Use the setCurrentRunsheet hook to properly track the new runsheet
-        setCurrentRunsheet(newRunsheet.id);
-        
-        setActiveRunsheet({
-          id: newRunsheet.id,
-          name: newRunsheet.name,
-          data: initialData,
-          columns: columns,
-          columnInstructions: columnInstructions
-        });
-
-        toast({
-          title: "Document added to new runsheet",
-          description: `Created "${runsheetName}" and added your document.`,
-        });
-        
-        // Navigate to the runsheet without the action parameter
-        navigate(`/runsheet?id=${runsheetId}`, { replace: true });
-        return; // Exit early since we've already added the data
-        
-      } catch (error) {
-        console.error('Error creating runsheet:', error);
-        toast({
-          title: "Failed to create runsheet",
-          description: "Please try again.",
-          variant: "destructive",
-        });
-        return;
-      }
+      // If we can't find a saved runsheet, show an error instead of creating a new one
+      toast({
+        title: "No runsheet found",
+        description: "Please save your runsheet first, then try adding documents to it.",
+        variant: "destructive",
+      });
+      return;
     }
+    
+    // Continue with normal flow - we have a valid runsheet ID
     
     
     // No longer auto-generate smart filenames - use original filename by default
