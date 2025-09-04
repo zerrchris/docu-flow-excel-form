@@ -56,7 +56,11 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
   }, [initialRowData, rowIndex]);
 
   const handleAnalyzeDocument = async () => {
+    console.log('🔍 SIDE-BY-SIDE: handleAnalyzeDocument called');
+    console.log('🔍 SIDE-BY-SIDE: documentRecord:', documentRecord);
+    
     if (!documentRecord) {
+      console.error('🔍 SIDE-BY-SIDE: No documentRecord available');
       toast({
         title: "Error",
         description: "No document available to analyze.",
@@ -189,10 +193,11 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
         });
       }
     } catch (error) {
-      console.error('Error analyzing document (side-by-side):', error);
+      console.error('🔍 SIDE-BY-SIDE: Error analyzing document:', error);
+      console.error('🔍 SIDE-BY-SIDE: Error stack:', error.stack);
       toast({
         title: "Error",
-        description: "Failed to analyze document. Please try again.",
+        description: `Failed to analyze document: ${error.message}`,
         variant: "destructive",
       });
     } finally {
