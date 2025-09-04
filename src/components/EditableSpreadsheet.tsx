@@ -331,7 +331,14 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   // Initialize auto-save hook - RE-ENABLED with safeguards
   const { save: autoSave, forceSave: autoForceSave, isSaving: autoSaving } = useAutoSave({
     runsheetId: currentRunsheet?.id || null,
-    runsheetName: runsheetName && runsheetName !== 'Untitled Runsheet' ? runsheetName : (currentRunsheet?.name || 'Untitled Runsheet'),
+    runsheetName: (() => {
+      // CRITICAL: For uploaded runsheets, use the actual name without fallbacks
+      if (initialRunsheetId?.startsWith('uploaded-') && initialRunsheetName) {
+        console.log('🔥 AUTO-SAVE: Using uploaded runsheet name:', initialRunsheetName);
+        return initialRunsheetName;
+      }
+      return runsheetName && runsheetName !== 'Untitled Runsheet' ? runsheetName : (currentRunsheet?.name || 'Untitled Runsheet');
+    })(),
     columns,
     data,
     columnInstructions,
@@ -925,6 +932,12 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         Object.values(row).some(value => value && value.trim() !== '')
       );
       
+      // CRITICAL: Skip emergency draft save for uploaded runsheets
+      if (runsheetName.includes('(Imported') || initialRunsheetId?.startsWith('uploaded-')) {
+        console.log('🚫 Emergency draft save disabled for uploaded runsheet:', runsheetName);
+        return;
+      }
+
       if (hasData) {
         try {
           const draft = {

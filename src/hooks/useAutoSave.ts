@@ -200,6 +200,12 @@ export function useAutoSave({
 
   // Auto-save when data changes (simplified - no complex state checking)
   useEffect(() => {
+    // CRITICAL: Skip auto-save completely for uploaded runsheets to prevent interference
+    if (runsheetName.includes('(Imported') || runsheetName.includes('uploaded-')) {
+      console.log('🚫 Auto-save disabled for uploaded runsheet:', runsheetName);
+      return;
+    }
+    
     // CRITICAL: Only auto-save if we have a proper user-defined name
     const forbiddenNames = ['Untitled Runsheet', 'untitled runsheet', 'Untitled', 'untitled'];
     const hasValidName = runsheetName.trim() && !forbiddenNames.includes(runsheetName.trim());

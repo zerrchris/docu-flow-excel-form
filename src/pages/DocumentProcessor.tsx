@@ -3227,7 +3227,8 @@ Image: [base64 image data]`;
                 // CRITICAL: Clear any emergency drafts that might interfere
                 try {
                   localStorage.removeItem('runsheet-emergency-draft');
-                  console.log('🔥 UPLOAD: Cleared emergency draft to prevent interference');
+                  localStorage.removeItem('runsheet-state-backup');
+                  console.log('🔥 UPLOAD: Cleared emergency draft and state backup to prevent interference');
                 } catch (error) {
                   console.log('🔥 UPLOAD: Could not clear emergency draft:', error);
                 }
