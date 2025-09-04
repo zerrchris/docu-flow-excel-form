@@ -171,7 +171,13 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       return result;
     }
     
-    // Only check for emergency draft if no initial data was provided
+    // NEVER use emergency draft for uploaded runsheets - they should use database data
+    if (initialRunsheetId?.startsWith('uploaded-')) {
+      console.log('🚫 Skipping emergency draft for uploaded runsheet - using database data only');
+      return [];
+    }
+    
+    // Only check for emergency draft if no initial data was provided AND not uploaded
     try {
       const emergencyDraft = localStorage.getItem('runsheet-emergency-draft');
       if (emergencyDraft) {
@@ -983,8 +989,30 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     return () => window.removeEventListener('runsheetSaved', handleRunsheetSaved);
   }, []);
 
-  // Complete emergency draft restoration on component mount
+  // Emergency draft restoration - SKIP completely for uploaded runsheets
   useEffect(() => {
+    // Handle upload cleanup event
+    const handleUploadCleanup = (event: CustomEvent) => {
+      console.log('🧹 Upload cleanup triggered, clearing all drafts');
+      try {
+        localStorage.removeItem('runsheet-emergency-draft');
+        localStorage.removeItem('runsheet-state-backup');
+        localStorage.removeItem('preserved-spreadsheet-state');
+      } catch (error) {
+        console.error('Error during upload cleanup:', error);
+      }
+    };
+    
+    window.addEventListener('uploadCleanup', handleUploadCleanup as EventListener);
+    
+    // SKIP emergency draft restoration completely for uploaded runsheets
+    if (initialRunsheetId?.startsWith('uploaded-')) {
+      console.log('🚫 Emergency draft restoration completely disabled for uploaded runsheet');
+      return () => {
+        window.removeEventListener('uploadCleanup', handleUploadCleanup as EventListener);
+      };
+    }
+    
     const restoreEmergencyDraft = () => {
       console.log('🔄 Emergency draft restoration check starting', {
         hasEmergencyDraft: !!localStorage.getItem('runsheet-emergency-draft'),

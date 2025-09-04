@@ -3224,14 +3224,21 @@ Image: [base64 image data]`;
                 
                 setShowRunsheetUploadDialog(false);
                 
-                // CRITICAL: Clear any emergency drafts that might interfere
+                // CRITICAL: Clear ALL local storage that might interfere with uploads
                 try {
                   localStorage.removeItem('runsheet-emergency-draft');
                   localStorage.removeItem('runsheet-state-backup');
-                  console.log('🔥 UPLOAD: Cleared emergency draft and state backup to prevent interference');
+                  localStorage.removeItem('preserved-spreadsheet-state');
+                  console.log('🔥 UPLOAD: Cleared all local storage interference');
                 } catch (error) {
-                  console.log('🔥 UPLOAD: Could not clear emergency draft:', error);
+                  console.log('🔥 UPLOAD: Could not clear local storage:', error);
                 }
+                
+                // FORCE a clean state for the uploaded runsheet
+                const uploadCleanupEvent = new CustomEvent('uploadCleanup', {
+                  detail: { uploadedRunsheetId: `uploaded-${Date.now()}` }
+                });
+                window.dispatchEvent(uploadCleanupEvent);
                 
                 // IMMEDIATELY set the uploaded columns to prevent DEFAULT_COLUMNS from loading
                 console.log('🔥 UPLOAD: Setting columns immediately to prevent defaults');
