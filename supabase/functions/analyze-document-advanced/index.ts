@@ -12,7 +12,7 @@ const REAL_ESTATE_SCHEMA = {
   name: "RealEstateRecord",
   schema: {
     type: "object",
-    required: ["instrument_number", "recording_date", "instrument_type", "grantor", "grantee"],
+    required: ["instrument_number", "recording_date", "instrument_type", "grantor", "grantee", "book_page"],
     properties: {
       instrument_number: { 
         type: "string", 

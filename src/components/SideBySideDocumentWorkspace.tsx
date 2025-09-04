@@ -91,7 +91,7 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
         setLastAnalyzedData(extractedData);
         setHasUnsavedChanges(true);
         
-        // Update the parent component with the new data
+        // Update the parent component with the new data immediately
         onDataUpdate(rowIndex, updatedRowData);
         
         toast({
