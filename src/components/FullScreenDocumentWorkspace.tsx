@@ -871,20 +871,23 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                             />
                            ) : (
                              <div
-                               className={`w-full h-full flex flex-col cursor-cell transition-colors focus:outline-none relative group
+                               className={`w-full h-full flex flex-col transition-colors focus:outline-none relative group
                                  ${isFocused ? 'bg-primary/20 border-2 border-primary ring-2 ring-primary/20' : 'hover:bg-muted/50 border-2 border-transparent'}
                                  ${alignment === 'center' ? 'text-center items-center' : 
                                    alignment === 'right' ? 'text-right items-end' : 'text-left items-start'}`}
-                               onClick={() => handleCellClick(column)}
-                               onDoubleClick={() => handleCellDoubleClick(column)}
                                onKeyDown={(e) => handleKeyDown(e, column)}
                                tabIndex={0}
                              >
-                               {/* Scrollable content area */}
-                               <div className={`flex-1 overflow-auto p-3 whitespace-pre-wrap min-h-0 ${
-                                 alignment === 'center' ? 'text-center' : 
-                                 alignment === 'right' ? 'text-right' : 'text-left'
-                               }`}>
+                               {/* Always scrollable content area */}
+                               <div 
+                                 className={`flex-1 overflow-auto p-3 whitespace-pre-wrap min-h-0 cursor-cell ${
+                                   alignment === 'center' ? 'text-center' : 
+                                   alignment === 'right' ? 'text-right' : 'text-left'
+                                 }`}
+                                 onClick={() => handleCellClick(column)}
+                                 onDoubleClick={() => handleCellDoubleClick(column)}
+                                 onWheel={(e) => e.stopPropagation()}
+                               >
                                  {localRowData[column] || ''}
                                </div>
                                
