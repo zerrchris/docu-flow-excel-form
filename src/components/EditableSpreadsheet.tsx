@@ -5729,15 +5729,42 @@ ${extractionFields}`
                                   console.log('Header clicked - checking if sticky is working');
                                   openColumnDialog(column);
                                 }}
-                             >
-                               <div className="flex flex-col items-center">
-                                 <span className="font-bold">{column}</span>
-                                 {localMissingColumns.includes(column) && (
-                                   <span className="text-xs text-yellow-700 dark:text-yellow-300 mt-1 font-medium animate-pulse">
-                                     Click to save
-                                   </span>
-                                 )}
-                               </div>
+                              >
+                                <div className="flex flex-col items-center">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-bold">{column}</span>
+                                    {/* Re-extract button for this column */}
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        // Find the first row with this column populated and a linked document
+                                        const firstRowWithData = data.findIndex((row, index) => 
+                                          row[column] && row[column].trim() !== '' && documentMap.has(index)
+                                        );
+                                        if (firstRowWithData !== -1) {
+                                          handleReExtractField(firstRowWithData, column);
+                                        } else {
+                                          toast({
+                                            title: "No data to re-extract",
+                                            description: `No rows found with data in "${column}" column that have linked documents.`,
+                                            variant: "destructive"
+                                          });
+                                        }
+                                      }}
+                                      className="h-5 w-5 p-0 hover:bg-purple-100 dark:hover:bg-purple-900/20 text-purple-600 dark:text-purple-400"
+                                      title={`Re-extract "${column}" field for rows with documents`}
+                                    >
+                                      <Sparkles className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                  {localMissingColumns.includes(column) && (
+                                    <span className="text-xs text-yellow-700 dark:text-yellow-300 mt-1 font-medium animate-pulse">
+                                      Click to save
+                                    </span>
+                                  )}
+                                </div>
                                 {/* Enhanced resize handle */}
                                <div
                                  className="absolute -right-1 top-0 bottom-0 w-2 cursor-col-resize hover:bg-primary/30 transition-all duration-200 z-10 group"
@@ -5962,7 +5989,7 @@ ${extractionFields}`
                          ) : (
                              <div
                                data-cell={`${rowIndex}-${column}`}
-                                className={`w-full h-full min-h-[2rem] py-2 px-3 flex items-start transition-all duration-200 whitespace-pre-wrap select-none rounded-sm group/cell relative
+                                className={`w-full h-full min-h-[2rem] py-2 px-3 flex items-start transition-all duration-200 whitespace-pre-wrap select-none rounded-sm
                                   ${isSelected 
                                     ? 'bg-primary/25 border-2 border-primary ring-2 ring-primary/20 shadow-sm' 
                                     : isInRange
@@ -5981,23 +6008,7 @@ ${extractionFields}`
                                  onKeyDown={(e) => handleKeyDown(e, rowIndex, column)}
                                  title={cellValidationErrors[`${rowIndex}-${column}`] || undefined}
                                >
-                                <span className="flex-1">{row[column] || ''}</span>
-                                
-                                {/* Re-extract button - only show if cell has data and row has a linked document */}
-                                {row[column] && row[column].trim() !== '' && documentMap.has(rowIndex) && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleReExtractField(rowIndex, column);
-                                    }}
-                                    className="h-5 w-5 p-0 ml-1 opacity-0 group-hover/cell:opacity-100 transition-opacity hover:bg-purple-100 dark:hover:bg-purple-900/20 text-purple-600 dark:text-purple-400 flex-shrink-0"
-                                    title={`Re-extract "${column}" field with AI feedback`}
-                                  >
-                                    <Sparkles className="h-3 w-3" />
-                                  </Button>
-                                )}
+                                {row[column] || ''}
                               </div>
                          )}
                          </td>
