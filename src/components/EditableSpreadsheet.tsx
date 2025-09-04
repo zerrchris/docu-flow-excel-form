@@ -917,24 +917,12 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     // For uploaded runsheets, always sync the data (bypass emergency draft check)
     const isUploadedRunsheet = initialRunsheetId?.startsWith('uploaded-');
     
-    if (!isUploadedRunsheet) {
-      // Don't override data if we have an emergency draft (for regular runsheets)
-      const hasEmergencyDraft = (() => {
-        try {
-          const emergencyDraft = localStorage.getItem('runsheet-emergency-draft');
-          return !!emergencyDraft;
-        } catch {
-          return false;
-        }
-      })();
-      
-      // Skip if there's an emergency draft for regular runsheets
-      if (hasEmergencyDraft) {
-        console.log('🔒 Preserving emergency draft - skipping initialData sync');
-        return;
-      }
-    } else {
-      console.log('✅ Uploaded runsheet detected - bypassing emergency draft check');
+    // Clear any emergency draft when loading fresh database data
+    try {
+      localStorage.removeItem('runsheet-emergency-draft');
+      console.log('🗑️ Cleared emergency draft - loading fresh database data');
+    } catch (error) {
+      console.error('Error clearing emergency draft:', error);
     }
     
     // Always ensure we have minimum rows
