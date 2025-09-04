@@ -1776,27 +1776,20 @@ Image: [base64 image data]`;
         };
       }
 
-      // Call the populate-runsheet-data function
-      const response = await fetch('/functions/v1/populate-runsheet-data', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
+      // Call the populate-runsheet-data function using Supabase client
+      const { data: result, error } = await supabase.functions.invoke('populate-runsheet-data', {
+        body: {
           runsheetId: runsheetId,
           extractedData: finalData,
           documentInfo: documentInfo
-        }),
+        }
       });
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        console.error('Error from populate-runsheet-data:', result);
+      if (error) {
+        console.error('Error from populate-runsheet-data:', error);
         toast({
           title: "Failed to add data",
-          description: result.error || "An unexpected error occurred",
+          description: error.message || "An unexpected error occurred",
           variant: "destructive",
         });
         return;
