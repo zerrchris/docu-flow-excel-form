@@ -441,30 +441,24 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
             console.log('🔧 MultipleFileUpload: Dispatching events for document upload');
             console.log('🔧 RunsheetId:', runsheetId, 'RowIndex:', currentRowIndex, 'Document:', result.document);
             
-            // Wait a moment for the database transaction to complete, then update document links
-            setTimeout(() => {
-              // Only refresh the document map, don't refresh the entire runsheet data
-              console.log('🔧 Dispatching updateDocumentFilename event');
-              window.dispatchEvent(new CustomEvent('updateDocumentFilename', {
-                detail: {
-                  runsheetId: runsheetId,
-                  rowIndex: currentRowIndex,
-                  filename: result.document.stored_filename
-                }
-              }));
-              
-              // Also dispatch document record created event for other components
-              setTimeout(() => {
-                console.log('🔧 Dispatching documentRecordCreated event');
-                window.dispatchEvent(new CustomEvent('documentRecordCreated', {
-                  detail: {
-                    runsheetId: runsheetId,
-                    rowIndex: currentRowIndex,
-                    document: result.document
-                  }
-                }));
-              }, 50);
-            }, 200);
+            // Immediately dispatch both events for faster UI updates
+            console.log('🔧 Dispatching updateDocumentFilename event');
+            window.dispatchEvent(new CustomEvent('updateDocumentFilename', {
+              detail: {
+                runsheetId: runsheetId,
+                rowIndex: currentRowIndex,
+                filename: result.document.stored_filename
+              }
+            }));
+            
+            console.log('🔧 Dispatching documentRecordCreated event');
+            window.dispatchEvent(new CustomEvent('documentRecordCreated', {
+              detail: {
+                runsheetId: runsheetId,
+                rowIndex: currentRowIndex,
+                document: result.document
+              }
+            }));
           }
         } else {
           // Update status to error
