@@ -549,14 +549,14 @@ Return only the filename, nothing else.`,
                         </p>
                       )}
                       
-                      {value.length > 100 ? (
+                       {value.length > 100 ? (
                         <Textarea
                           value={value}
                           onChange={(e) => handleFieldChange(columnName, e.target.value)}
-                          className="min-h-[80px] resize-vertical"
+                          className="min-h-[160px] resize-vertical"
                           placeholder={`Enter ${columnName.toLowerCase()}...`}
                         />
-                      ) : (
+                       ) : (
                         <Input
                           value={value}
                           onChange={(e) => handleFieldChange(columnName, e.target.value)}
