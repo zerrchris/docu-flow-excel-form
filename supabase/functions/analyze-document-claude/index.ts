@@ -1,9 +1,58 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
+
+// Usage tracking function
+const trackAIUsage = async (supabase: any, userId: string, model: string, inputTokens: number, outputTokens: number, totalTokens: number, cost: number, provider: string) => {
+  try {
+    const { error } = await supabase
+      .from('ai_usage_logs')
+      .insert({
+        user_id: userId,
+        model: model,
+        input_tokens: inputTokens,
+        output_tokens: outputTokens,
+        total_tokens: totalTokens,
+        cost: cost,
+        provider: provider,
+        timestamp: new Date().toISOString()
+      });
+
+    if (error) {
+      console.error('Failed to track AI usage:', error);
+    } else {
+      console.log('AI usage tracked successfully:', { model, totalTokens, cost });
+    }
+  } catch (error) {
+    console.error('Error tracking AI usage:', error);
+  }
+};
+
+// Calculate Claude cost based on model and token usage
+const calculateClaudeCost = (model: string, inputTokens: number, outputTokens: number): number => {
+  // Claude Sonnet 4 pricing (as of 2024)
+  const pricing = {
+    'claude-sonnet-4-20250514': {
+      input: 0.000003,  // $3 per 1M input tokens
+      output: 0.000015  // $15 per 1M output tokens
+    },
+    'claude-opus-4-20250514': {
+      input: 0.000015,  // $15 per 1M input tokens  
+      output: 0.000075  // $75 per 1M output tokens
+    },
+    'claude-3-5-haiku-20241022': {
+      input: 0.00000025, // $0.25 per 1M input tokens
+      output: 0.00000125 // $1.25 per 1M output tokens
+    }
+  };
+
+  const modelPricing = pricing[model] || pricing['claude-sonnet-4-20250514'];
+  return (inputTokens * modelPricing.input) + (outputTokens * modelPricing.output);
+};
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -11,10 +60,27 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders })
   }
 
+  // Initialize Supabase client
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  const supabase = createClient(supabaseUrl, supabaseServiceKey)
+
   try {
     const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY')
     if (!anthropicApiKey) {
       throw new Error('ANTHROPIC_API_KEY not configured')
+    }
+
+    // Get user from auth token
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) {
+      throw new Error('No authorization header provided')
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    if (authError || !user) {
+      throw new Error('Invalid authentication token')
     }
 
     const { prompt, fileUrl, fileName, contentType } = await req.json()
@@ -23,7 +89,7 @@ serve(async (req) => {
       throw new Error('Missing required parameters: prompt and fileUrl')
     }
 
-    console.log('Analyzing document with Claude:', { fileName, contentType })
+    console.log('Analyzing document with Claude:', { fileName, contentType, userId: user.id })
 
     // Fetch the document
     const docResponse = await fetch(fileUrl)
@@ -50,6 +116,8 @@ serve(async (req) => {
 
     console.log('Using media type:', mediaType)
 
+    const model = 'claude-sonnet-4-20250514'
+
     // Call Claude API with the document
     const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -59,7 +127,7 @@ serve(async (req) => {
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514', // Latest Claude model
+        model,
         max_tokens: 4000,
         messages: [{
           role: 'user',
@@ -88,17 +156,38 @@ serve(async (req) => {
     }
 
     const claudeData = await claudeResponse.json()
-    console.log('Claude response:', claudeData)
+    console.log('Claude response received')
 
     if (!claudeData.content || !claudeData.content[0] || !claudeData.content[0].text) {
       throw new Error('No content returned from Claude')
     }
 
     const generatedText = claudeData.content[0].text
+    const usage = claudeData.usage || {}
+    
+    // Extract token usage
+    const inputTokens = usage.input_tokens || 0
+    const outputTokens = usage.output_tokens || 0
+    const totalTokens = inputTokens + outputTokens
+    
+    // Calculate cost
+    const cost = calculateClaudeCost(model, inputTokens, outputTokens)
+    
+    console.log('Usage tracking:', { inputTokens, outputTokens, totalTokens, cost })
+
+    // Track usage in background
+    trackAIUsage(supabase, user.id, model, inputTokens, outputTokens, totalTokens, cost, 'anthropic')
 
     return new Response(JSON.stringify({ 
       generatedText,
-      usage: claudeData.usage || {}
+      usage: {
+        input_tokens: inputTokens,
+        output_tokens: outputTokens,
+        total_tokens: totalTokens,
+        cost: cost,
+        model: model,
+        provider: 'anthropic'
+      }
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
