@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { ArrowLeft, Sparkles, Mic, MicOff, Volume2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -298,7 +299,7 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
           </Button>
           <div>
             <h1 className="text-xl font-semibold">
-              Row {rowIndex + 1} - Side by Side Processor
+              Row {rowIndex + 1} - Doc Processor
             </h1>
             {documentRecord && (
               <p className="text-sm text-muted-foreground mt-1">
@@ -317,139 +318,156 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
       </div>
 
       {/* Main Content */}
-      <div className="flex flex-1 overflow-hidden">
+      <ResizablePanelGroup direction="horizontal" className="flex-1">
         {/* Left Panel - Row Data */}
-        <div className="w-1/2 border-r flex flex-col">
-          <div className="p-4 border-b bg-muted/50">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-lg font-semibold">Row Data</h3>
-              <div className="flex items-center gap-2">
-                {/* Voice Input */}
-                <Button
-                  variant={isListening ? "destructive" : "outline"}
-                  size="sm"
-                  onClick={isListening ? stopListening : startListening}
-                  disabled={isAnalyzing}
-                  className="flex items-center gap-2"
-                >
-                  {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                  {isListening ? "Stop" : "Voice"}
-                </Button>
-                
-                {/* Analyze Document */}
-                {documentRecord && (
+        <ResizablePanel defaultSize={40} minSize={25} maxSize={75}>
+          <div className="h-full flex flex-col">
+            <div className="p-4 border-b bg-muted/50">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-semibold">Row Data</h3>
+                <div className="flex items-center gap-2">
+                  {/* Voice Input */}
                   <Button
-                    onClick={handleAnalyzeDocument}
+                    variant={isListening ? "destructive" : "outline"}
+                    size="sm"
+                    onClick={isListening ? stopListening : startListening}
                     disabled={isAnalyzing}
                     className="flex items-center gap-2"
-                    size="sm"
                   >
-                    <Sparkles className="w-4 h-4" />
-                    {isAnalyzing ? "Analyzing..." : "Analyze Document"}
+                    {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                    {isListening ? "Stop" : "Voice"}
                   </Button>
-                )}
+                  
+                  {/* Analyze Document */}
+                  {documentRecord && (
+                    <Button
+                      onClick={handleAnalyzeDocument}
+                      disabled={isAnalyzing}
+                      className="flex items-center gap-2"
+                      size="sm"
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      {isAnalyzing ? "Analyzing..." : "Analyze Document"}
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
 
-          <ScrollArea className="flex-1 p-4">
-            <div className="space-y-4">
-              {columns.map((columnName) => {
-                const value = rowData[columnName] || '';
-                const instruction = columnInstructions[columnName];
-                const wasExtracted = lastAnalyzedData[columnName];
-                
-                return (
-                  <div key={columnName} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-sm font-medium flex items-center">
-                        {columnName}
-                        {wasExtracted && getConfidenceBadge(0.85)}
-                      </Label>
-                      {value && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => speakText(value)}
-                          disabled={isSpeaking}
-                          className="h-6 w-6 p-0"
-                        >
-                          <Volume2 className="w-3 h-3" />
-                        </Button>
+            <ScrollArea className="flex-1 p-4">
+              <div className="space-y-4">
+                {columns.map((columnName) => {
+                  const value = rowData[columnName] || '';
+                  const instruction = columnInstructions[columnName];
+                  const wasExtracted = lastAnalyzedData[columnName];
+                  
+                  return (
+                    <div key={columnName} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm font-medium flex items-center">
+                          {columnName}
+                          {wasExtracted && getConfidenceBadge(0.85)}
+                        </Label>
+                        {value && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => speakText(value)}
+                            disabled={isSpeaking}
+                            className="h-6 w-6 p-0"
+                          >
+                            <Volume2 className="w-3 h-3" />
+                          </Button>
+                        )}
+                      </div>
+                      
+                      {instruction && (
+                        <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+                          {instruction}
+                        </p>
+                      )}
+                      
+                      {value.length > 100 ? (
+                        <Textarea
+                          value={value}
+                          onChange={(e) => handleFieldChange(columnName, e.target.value)}
+                          className="min-h-[80px] resize-vertical"
+                          placeholder={`Enter ${columnName.toLowerCase()}...`}
+                        />
+                      ) : (
+                        <Input
+                          value={value}
+                          onChange={(e) => handleFieldChange(columnName, e.target.value)}
+                          placeholder={`Enter ${columnName.toLowerCase()}...`}
+                        />
                       )}
                     </div>
-                    
-                    {instruction && (
-                      <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
-                        {instruction}
-                      </p>
-                    )}
-                    
-                    {value.length > 100 ? (
-                      <Textarea
-                        value={value}
-                        onChange={(e) => handleFieldChange(columnName, e.target.value)}
-                        className="min-h-[80px] resize-vertical"
-                        placeholder={`Enter ${columnName.toLowerCase()}...`}
-                      />
-                    ) : (
-                      <Input
-                        value={value}
-                        onChange={(e) => handleFieldChange(columnName, e.target.value)}
-                        placeholder={`Enter ${columnName.toLowerCase()}...`}
-                      />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </ScrollArea>
-        </div>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+          </div>
+        </ResizablePanel>
+
+        <ResizableHandle withHandle />
 
         {/* Right Panel - Document Viewer */}
-        <div className="w-1/2 flex flex-col">
-          <div className="p-4 border-b bg-muted/50">
-            <h3 className="text-lg font-semibold">Document</h3>
-            {documentRecord && (
-              <p className="text-sm text-muted-foreground mt-1">
-                {documentRecord.stored_filename}
-              </p>
-            )}
-          </div>
+        <ResizablePanel defaultSize={60} minSize={25} maxSize={75}>
+          <div className="h-full flex flex-col">
+            <div className="p-4 border-b bg-muted/50">
+              <h3 className="text-lg font-semibold">Document</h3>
+              {documentRecord && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  {documentRecord.stored_filename}
+                </p>
+              )}
+            </div>
 
-          <div className="flex-1 p-4">
-            {documentRecord ? (
-              <div className="h-full">
-                {documentRecord.content_type?.includes('pdf') ? (
-                  <PDFViewer 
-                    file={null}
-                    previewUrl={DocumentService.getDocumentUrl(documentRecord.file_path)}
-                  />
-                ) : (
-                  <div className="h-full w-full bg-muted rounded-lg flex items-center justify-center">
-                    <img 
-                      src={DocumentService.getDocumentUrl(documentRecord.file_path)}
-                      alt={documentRecord.stored_filename}
-                      className="max-h-full max-w-full object-contain"
+            <div className="flex-1 overflow-hidden">
+              {documentRecord ? (
+                <div className="h-full w-full">
+                  {documentRecord.content_type?.includes('pdf') ? (
+                    <PDFViewer 
+                      file={null}
+                      previewUrl={DocumentService.getDocumentUrl(documentRecord.file_path)}
                     />
-                  </div>
-                )}
-              </div>
-            ) : (
-              <Card className="h-full flex items-center justify-center">
-                <CardContent className="text-center">
-                  <p className="text-muted-foreground">
-                    No document linked to this row.
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Link a document in the runsheet to view it here.
-                  </p>
-                </CardContent>
-              </Card>
-            )}
+                  ) : (
+                    <div className="h-full w-full overflow-auto bg-muted">
+                      <img 
+                        src={DocumentService.getDocumentUrl(documentRecord.file_path)}
+                        alt={documentRecord.stored_filename}
+                        className="w-full h-auto object-contain cursor-zoom-in"
+                        style={{ minHeight: '100%' }}
+                        onClick={(e) => {
+                          const img = e.target as HTMLImageElement;
+                          if (img.style.transform === 'scale(1.5)') {
+                            img.style.transform = 'scale(1)';
+                            img.style.cursor = 'zoom-in';
+                          } else {
+                            img.style.transform = 'scale(1.5)';
+                            img.style.cursor = 'zoom-out';
+                          }
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <Card className="h-full flex items-center justify-center m-4">
+                  <CardContent className="text-center">
+                    <p className="text-muted-foreground">
+                      No document linked to this row.
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Link a document in the runsheet to view it here.
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           </div>
-        </div>
-      </div>
+        </ResizablePanel>
+      </ResizablePanelGroup>
     </div>
   );
 };
