@@ -260,14 +260,23 @@ const DocumentProcessor: React.FC = () => {
       const selectedRunsheet = location.state?.runsheet;
       const isUploadAction = searchParams.get('action') === 'upload';
       
+      // CRITICAL: Check for uploaded runsheet data - never override uploaded columns
       if (selectedRunsheet && selectedRunsheet.columns) {
-        console.log('Skipping user preferences load - using runsheet columns instead');
+        console.log('🚫 UPLOAD PROTECTION: Skipping user preferences load - using runsheet columns instead');
+        setIsLoadingPreferences(false);
+        return;
+      }
+      
+      // Check for uploaded columns in sessionStorage
+      const uploadedColumns = sessionStorage.getItem('uploaded_columns');
+      if (uploadedColumns) {
+        console.log('🚫 UPLOAD PROTECTION: Found uploaded columns in session, skipping preferences');
         setIsLoadingPreferences(false);
         return;
       }
       
       if (isUploadAction) {
-        console.log('Skipping user preferences load - upload action detected');
+        console.log('🚫 UPLOAD PROTECTION: Upload action detected, skipping preferences');
         setIsLoadingPreferences(false);
         return;
       }
@@ -374,6 +383,16 @@ const DocumentProcessor: React.FC = () => {
         if (activeRunsheet.columnInstructions && Object.keys(activeRunsheet.columnInstructions).length > 0) {
           setColumnInstructions(activeRunsheet.columnInstructions);
         } else {
+          // CRITICAL: Check if we have uploaded columns - don't override them
+          const uploadedColumns = sessionStorage.getItem('uploaded_columns');
+          const selectedRunsheet = location.state?.runsheet;
+          
+          if (uploadedColumns || (selectedRunsheet && selectedRunsheet.columns)) {
+            console.log('🚫 UPLOAD PROTECTION: Not loading default preferences - uploaded data present');
+            setColumnInstructions({});
+            return;
+          }
+          
           try {
             // Load default extraction preferences if runsheet doesn't have instructions
             const defaultPrefs = await ExtractionPreferencesService.getDefaultPreferences();
@@ -2287,6 +2306,15 @@ Image: [base64 image data]`;
     
     // Load user preferences for new runsheet
     try {
+      // CRITICAL: Check if we have uploaded columns - don't override them
+      const uploadedColumns = sessionStorage.getItem('uploaded_columns');
+      const selectedRunsheet = location.state?.runsheet;
+      
+      if (uploadedColumns || (selectedRunsheet && selectedRunsheet.columns)) {
+        console.log('🚫 UPLOAD PROTECTION: Not loading user preferences for new runsheet - uploaded data present');
+        return;
+      }
+      
       const { data: { user } } = await supabase.auth.getUser();
       let initialColumns = DEFAULT_COLUMNS;
       let initialInstructions = DEFAULT_EXTRACTION_INSTRUCTIONS;
@@ -2378,6 +2406,15 @@ Image: [base64 image data]`;
     
     // Load user preferences for new runsheet
     try {
+      // CRITICAL: Check if we have uploaded columns - don't override them
+      const uploadedColumns = sessionStorage.getItem('uploaded_columns');
+      const selectedRunsheet = location.state?.runsheet;
+      
+      if (uploadedColumns || (selectedRunsheet && selectedRunsheet.columns)) {
+        console.log('🚫 UPLOAD PROTECTION: Not loading preferences for new runsheet - uploaded data present');
+        return;
+      }
+      
       const { data: { user } } = await supabase.auth.getUser();
       
       if (user) {
