@@ -209,24 +209,12 @@ export function useAutoSave({
     };
   }, []);
 
-  // Auto-save when data changes (simplified - no complex state checking)
+  // Auto-save disabled to prevent refresh behavior - only manual saves now
   useEffect(() => {
-    // CRITICAL: Only auto-save if we have a proper user-defined name
-    const forbiddenNames = ['Untitled Runsheet', 'untitled runsheet', 'Untitled', 'untitled'];
-    const hasValidName = runsheetName.trim() && !forbiddenNames.includes(runsheetName.trim());
-    
-    // CRITICAL: Don't auto-save if data is completely empty (prevents overwriting extracted data on load)
-    const hasAnyData = data.some(row => 
-      Object.values(row).some(value => value && value.trim() !== '')
-    );
-    
-    if (userId && hasValidName && columns.length > 0 && hasAnyData) {
-      // Save to localStorage immediately for backup
-      saveToLocalStorage();
-      // Debounced save to database
-      save();
-    }
-  }, [runsheetName, columns, data, columnInstructions, userId, save, saveToLocalStorage]);
+    // Disabled auto-save to prevent constant re-renders that feel like page refreshes
+    // Users now save manually with the save button only
+    console.log('🚫 Auto-save disabled - manual save only');
+  }, []);
 
   return {
     save,

@@ -320,7 +320,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   const [showInsertionPreview, setShowInsertionPreview] = useState(false);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Initialize auto-save hook - RE-ENABLED with safeguards
+  // Auto-save disabled to prevent refresh behavior - manual save only
   const { save: autoSave, forceSave: autoForceSave, isSaving: autoSaving } = useAutoSave({
     runsheetId: currentRunsheet?.id || null,
     runsheetName: runsheetName && runsheetName !== 'Untitled Runsheet' ? runsheetName : (currentRunsheet?.name || 'Untitled Runsheet'),
@@ -328,14 +328,14 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     data,
     columnInstructions,
     userId: user?.id,
-    debounceMs: 3000, // Increased to 3 seconds to prevent conflicts
+    debounceMs: 999999, // Effectively disable auto-save with very long delay
     onSaveStart: () => {
-      setAutoSaveStatus('saving');
-      setAutoSaveError('');
+      // Remove visual indicators that cause refresh feel
+      // setAutoSaveStatus('saving');
+      // setAutoSaveError('');
     },
     onSaveSuccess: (result) => {
-      setAutoSaveStatus('saved');
-      setLastAutoSaveTime(new Date());
+      // Only update essential state, no visual indicators
       setHasUnsavedChanges(false);
       
       // Update current runsheet ID if this was a new runsheet or converted from temporary
@@ -352,8 +352,8 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       }
     },
     onSaveError: (error) => {
-      setAutoSaveStatus('error');
-      setAutoSaveError(error);
+      // Minimal error handling without visual updates
+      console.error('Save error:', error);
     }
   });
 
