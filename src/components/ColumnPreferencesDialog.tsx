@@ -313,20 +313,22 @@ const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
-        <DialogHeader>
+      <DialogContent className="max-w-4xl h-[90vh] max-h-[800px] flex flex-col overflow-hidden">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>Default Column Preferences</DialogTitle>
           <DialogDescription>
             Customize the default columns that will appear when you create a new runsheet.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex gap-6 h-full">
+        <div className="flex gap-6 flex-1 min-h-0 overflow-hidden">{/* Content will be scrollable */}
           {/* Left Side: Column List */}
-          <div className="flex-1 space-y-4">
-            <div>
+          <div className="flex-1 space-y-4 flex flex-col min-h-0">
+            <div className="flex-shrink-0">
               <Label className="text-sm font-medium">Columns ({columns.length})</Label>
-              <div className="mt-2 space-y-2 max-h-96 overflow-y-auto">
+            </div>
+            <div className="flex-1 overflow-y-auto min-h-0">
+              <div className="space-y-2">
                 {columns.map((column, index) => (
                   <div
                     key={column}
@@ -382,7 +384,7 @@ const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
             </div>
 
             {/* Add New Column */}
-            <div className="space-y-2">
+            <div className="space-y-2 flex-shrink-0">
               <Label className="text-sm font-medium">Add New Column</Label>
               <div className="flex gap-2">
                 <Input
@@ -402,8 +404,8 @@ const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
             </div>
 
             {/* AI Suggestions */}
-            <div className="pt-2 border-t">
-              <Button 
+            <div className="pt-2 border-t flex-shrink-0">
+              <Button
                 onClick={generateAllAISuggestions}
                 disabled={isGeneratingAllAI || columns.length === 0}
                 className="w-full"
@@ -416,10 +418,10 @@ const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
           </div>
 
           {/* Right Side: Column Instructions */}
-          <div className="flex-1 space-y-4">
+          <div className="flex-1 space-y-4 flex flex-col min-h-0">
             {selectedColumn ? (
-              <div>
-                <div className="flex items-center justify-between">
+              <div className="flex flex-col h-full min-h-0">
+                <div className="flex items-center justify-between flex-shrink-0">
                   <Label className="text-sm font-medium">
                     Instructions for "{selectedColumn}"
                   </Label>
@@ -433,15 +435,17 @@ const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
                     {isGeneratingAI ? 'Generating...' : 'Use AI Suggestion'}
                   </Button>
                 </div>
-                <Textarea
-                  placeholder="Enter extraction instructions for this column..."
-                  value={columnInstructions[selectedColumn] || ''}
-                  onChange={(e) => updateColumnInstruction(selectedColumn, e.target.value)}
-                  className="mt-2 min-h-[200px]"
-                />
-                <p className="text-xs text-muted-foreground mt-2">
-                  These instructions help the AI understand what information to extract for this column.
-                </p>
+                <div className="flex-1 flex flex-col min-h-0">
+                  <Textarea
+                    placeholder="Enter extraction instructions for this column..."
+                    value={columnInstructions[selectedColumn] || ''}
+                    onChange={(e) => updateColumnInstruction(selectedColumn, e.target.value)}
+                    className="flex-1 min-h-[200px] resize-none"
+                  />
+                  <p className="text-xs text-muted-foreground mt-2 flex-shrink-0">
+                    These instructions help the AI understand what information to extract for this column.
+                  </p>
+                </div>
               </div>
             ) : (
               <div className="flex items-center justify-center h-48 border-2 border-dashed border-muted rounded-lg">
@@ -451,8 +455,8 @@ const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="flex justify-between items-center pt-4 border-t">
+        {/* Footer - Fixed at bottom */}
+        <div className="flex justify-between items-center pt-4 border-t flex-shrink-0">
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
