@@ -61,7 +61,7 @@ const DocumentProcessor: React.FC = () => {
   const [isProcessingCombination, setIsProcessingCombination] = useState(false);
   
   // Form and analysis state
-  const [columns, setColumns] = useState<string[]>(DEFAULT_COLUMNS);
+  const [columns, setColumns] = useState<string[]>([]);
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [spreadsheetData, setSpreadsheetData] = useState<Record<string, string>[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);

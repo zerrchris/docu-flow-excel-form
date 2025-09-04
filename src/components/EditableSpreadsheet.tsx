@@ -3120,7 +3120,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     document.body.removeChild(input);
   };
 
-  // Helper function to update spreadsheet data
+  // Helper function to update spreadsheet data immediately without flash
   const updateSpreadsheetData = async (headers: string[], parsedData: Record<string, string>[], fileName: string) => {
     // Document File Name column is no longer automatically added - users can toggle it if needed
     let finalHeaders = [...headers];
@@ -3145,10 +3145,15 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
 
     const newData = [...updatedParsedData, ...emptyRows];
 
-    // Update spreadsheet
+    // Update all spreadsheet state atomically to prevent flash
+    console.log('📊 Updating spreadsheet data atomically:', { headers: finalHeaders.length, data: newData.length });
+    
+    // Update state in one batch to prevent flashing
     setColumns(finalHeaders);
-    onColumnChange(finalHeaders);
     setData(newData);
+    setRunsheetName(fileName.replace(/\.[^/.]+$/, "") || 'Imported Runsheet');
+    
+    onColumnChange(finalHeaders);
     
     // Update parent component's data
     if (onDataChange) {
