@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { FileText, Camera, FolderOpen, Upload, Users, Settings, Plus, Cloud, Columns, Search, BarChart3 } from 'lucide-react';
+import { FileText, Camera, FolderOpen, Upload, Users, Settings, Plus, Cloud, Columns, Search, BarChart3, CreditCard } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
@@ -12,6 +12,7 @@ import LogoMark from '@/components/LogoMark';
 import AuthButton from '@/components/AuthButton';
 import { toast } from '@/hooks/use-toast';
 import { ExtractionPreferencesService } from '@/services/extractionPreferences';
+import { useSubscription } from '@/contexts/SubscriptionContext';
 
 import { useActiveRunsheet } from '@/hooks/useActiveRunsheet';
 import OpenRunsheetDialog from '@/components/OpenRunsheetDialog';
@@ -27,6 +28,7 @@ const Dashboard: React.FC = () => {
   const [newRunsheetName, setNewRunsheetName] = useState('');
   const navigate = useNavigate();
   const { activeRunsheet } = useActiveRunsheet();
+  const { manageSubscription } = useSubscription();
 
   useEffect(() => {
     const initAuth = async () => {
@@ -134,6 +136,12 @@ const Dashboard: React.FC = () => {
       description: "Track your OpenAI API usage and costs",
       icon: BarChart3,
       path: "/analytics"
+    },
+    {
+      title: "Manage Subscription",
+      description: "View and manage your billing and subscription",
+      icon: CreditCard,
+      action: "manage-subscription"
     },
     {
       title: "Column Preferences",
@@ -245,6 +253,8 @@ const Dashboard: React.FC = () => {
                     setShowColumnPreferences(true);
                   } else if (option.action === "new-runsheet") {
                     setShowNameNewRunsheetDialog(true);
+                  } else if (option.action === "manage-subscription") {
+                    manageSubscription();
                   } else if (option.path) {
                     navigate(option.path);
                   }
@@ -270,6 +280,8 @@ const Dashboard: React.FC = () => {
                           setShowColumnPreferences(true);
                         } else if (option.action === "new-runsheet") {
                           setShowNameNewRunsheetDialog(true);
+                        } else if (option.action === "manage-subscription") {
+                          manageSubscription();
                         } else if (option.path) {
                           navigate(option.path);
                         }

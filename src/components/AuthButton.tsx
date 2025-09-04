@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { User, LogIn, LogOut, Shield, KeyRound, ChevronDown } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { User, LogIn, LogOut, Shield, KeyRound, ChevronDown, CreditCard } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useSubscription } from '@/contexts/SubscriptionContext';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 const AuthButton: React.FC = () => {
@@ -12,6 +13,7 @@ const AuthButton: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const { toast } = useToast();
+  const { manageSubscription } = useSubscription();
 
   useEffect(() => {
     let mounted = true;
@@ -141,7 +143,7 @@ const AuthButton: React.FC = () => {
               <ChevronDown className="h-4 w-4 ml-2" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" className="bg-background border z-50">
             {isAdmin && (
               <DropdownMenuItem asChild>
                 <Link to="/admin" className="flex items-center w-full">
@@ -150,6 +152,11 @@ const AuthButton: React.FC = () => {
                 </Link>
               </DropdownMenuItem>
             )}
+            <DropdownMenuItem onClick={manageSubscription}>
+              <CreditCard className="h-4 w-4 mr-2" />
+              Manage Subscription
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleChangePassword}>
               <KeyRound className="h-4 w-4 mr-2" />
               Change Password
