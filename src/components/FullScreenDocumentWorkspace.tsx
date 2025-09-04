@@ -748,8 +748,8 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
           <ResizableHandle className="bg-border hover:bg-primary/20 transition-colors" />
 
           {/* Row data panel */}
-          <ResizablePanel defaultSize={30} minSize={20}>
-            <Card className="h-full border-t-2 border-primary border-b">
+          <ResizablePanel defaultSize={30} minSize={25} maxSize={60}>
+            <Card className="h-full border-t-2 border-primary border-b flex flex-col">
               <div className="p-4 border-b bg-muted/20 flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <h4 className="font-semibold">Working Row {rowIndex + 1}</h4>
@@ -784,7 +784,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                   Back to Runsheet
                 </Button>
               </div>
-              <div className="h-full overflow-auto border-b border-border" ref={tableRef}>
+              <div className="flex-1 min-h-0 overflow-auto border-b border-border" ref={tableRef}>
                 <div className="min-w-max">
                   <Table>
                     <TableHeader>
