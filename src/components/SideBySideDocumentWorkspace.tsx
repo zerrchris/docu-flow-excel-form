@@ -8,7 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
-import { ArrowLeft, Sparkles, Mic, MicOff, Volume2, RotateCcw, FileText, Wand2 } from 'lucide-react';
+import { ArrowLeft, Sparkles, Volume2, RotateCcw, FileText, Wand2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import PDFViewer from './PDFViewer';
@@ -45,132 +45,15 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
   const { toast } = useToast();
   const [rowData, setRowData] = useState<Record<string, string>>(initialRowData);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [lastAnalyzedData, setLastAnalyzedData] = useState<Record<string, string>>({});
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  
-  // Voice functionality refs
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
 
   // Update local row data when props change
   useEffect(() => {
     setRowData(initialRowData);
     setHasUnsavedChanges(false);
   }, [initialRowData, rowIndex]);
-
-  // Handle voice to text
-  const startListening = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm;codecs=opus'
-      });
-      
-      mediaRecorderRef.current = mediaRecorder;
-      audioChunksRef.current = [];
-
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
-      };
-
-      mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        await transcribeAudio(audioBlob);
-        stream.getTracks().forEach(track => track.stop());
-      };
-
-      mediaRecorder.start();
-      setIsListening(true);
-      
-      toast({
-        title: "Listening...",
-        description: "Speak your input. Click the mic again to stop.",
-      });
-    } catch (error) {
-      console.error('Error starting voice recording:', error);
-      toast({
-        title: "Error",
-        description: "Could not access microphone. Please check permissions.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const stopListening = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-      mediaRecorderRef.current.stop();
-      setIsListening(false);
-    }
-  };
-
-  const transcribeAudio = async (audioBlob: Blob) => {
-    try {
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const base64Audio = (reader.result as string).split(',')[1];
-        
-        const { data, error } = await supabase.functions.invoke('transcribe-audio', {
-          body: { audio: base64Audio }
-        });
-
-        if (error) throw error;
-
-        if (data?.text) {
-          // Use voice input to analyze and extract data
-          await analyzeVoiceInput(data.text);
-        }
-      };
-      reader.readAsDataURL(audioBlob);
-    } catch (error) {
-      console.error('Error transcribing audio:', error);
-      toast({
-        title: "Error",
-        description: "Failed to transcribe audio. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const analyzeVoiceInput = async (voiceText: string) => {
-    try {
-      setIsAnalyzing(true);
-      
-      const { data, error } = await supabase.functions.invoke('analyze-voice-text', {
-        body: {
-          voiceText,
-          currentData: rowData,
-          columnInstructions,
-          availableFields: columns
-        }
-      });
-
-      if (error) throw error;
-
-      if (data?.extractedData) {
-        const updatedRowData = { ...rowData, ...data.extractedData };
-        setRowData(updatedRowData);
-        setHasUnsavedChanges(true);
-        
-        toast({
-          title: "Voice input processed",
-          description: `Updated ${Object.keys(data.extractedData).length} fields from voice input.`,
-        });
-      }
-    } catch (error) {
-      console.error('Error analyzing voice input:', error);
-      toast({
-        title: "Error",
-        description: "Failed to process voice input. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
 
   const handleAnalyzeDocument = async () => {
     if (!documentRecord) {
@@ -454,22 +337,10 @@ Return only the filename, nothing else.`,
                        <Sparkles className="w-4 h-4" />
                        {isAnalyzing ? "Analyzing..." : "Analyze Document"}
                      </Button>
-                  )}
-                   
-                   {/* Voice Input */}
-                   <Button
-                     variant={isListening ? "destructive" : "outline"}
-                     size="sm"
-                     onClick={isListening ? stopListening : startListening}
-                     disabled={isAnalyzing}
-                     className="flex items-center gap-2"
-                   >
-                     {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                     {isListening ? "Stop" : "Voice"}
-                   </Button>
-                </div>
-              </div>
-            </div>
+                   )}
+                 </div>
+               </div>
+             </div>
 
             <ScrollArea className="flex-1 p-4">
               <div className="space-y-4">
