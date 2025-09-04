@@ -330,7 +330,16 @@ const DocumentProcessor: React.FC = () => {
     const preventDefaults = sessionStorage.getItem('prevent_default_columns');
     if (preventDefaults === 'true') {
       console.log('🚫 Preventing default column loading for upload');
+      console.log('🚫 Current columns state:', columns);
       sessionStorage.removeItem('prevent_default_columns');
+      setIsLoadingPreferences(false);
+      return;
+    }
+
+    // Don't load preferences if we have uploaded runsheet data
+    const selectedRunsheet = location.state?.runsheet;
+    if (selectedRunsheet && selectedRunsheet.columns && selectedRunsheet.columns.length > 0) {
+      console.log('🚫 Skipping default preferences - uploaded runsheet has columns');
       setIsLoadingPreferences(false);
       return;
     }
@@ -424,30 +433,21 @@ const DocumentProcessor: React.FC = () => {
         console.log('📊 First few rows:', selectedRunsheet.data.slice(0, 3));
         console.log('📊 Selected runsheet columns:', selectedRunsheet.columns);
         
-        // Key insight: Check if there's a mismatch between data keys and columns
-        if (selectedRunsheet.data.length > 0) {
-          const firstRowKeys = Object.keys(selectedRunsheet.data[0]);
-          console.log('📊 Data row keys:', firstRowKeys);
-          console.log('📊 Column names:', selectedRunsheet.columns);
+        // For uploaded runsheets, always use the provided columns and data
+        if (selectedRunsheet.columns && selectedRunsheet.columns.length > 0) {
+          console.log('📊 Using uploaded runsheet columns:', selectedRunsheet.columns);
+          setColumns(selectedRunsheet.columns);
+          setSpreadsheetData(selectedRunsheet.data);
           
-          const columnsMatch = selectedRunsheet.columns?.every(col => firstRowKeys.includes(col));
-          console.log('📊 Columns match data keys:', columnsMatch);
+          // Prevent default columns from loading later
+          sessionStorage.setItem('prevent_default_columns', 'true');
           
-          if (!columnsMatch) {
-            console.log('⚠️ COLUMN MISMATCH DETECTED! Data will not display correctly.');
-            console.log('⚠️ Expected columns:', selectedRunsheet.columns);
-            console.log('⚠️ Actual data keys:', firstRowKeys);
-            
-            // Fix the mismatch: use the actual data keys as columns
-            console.log('🔧 Fixing column mismatch by using data keys as columns');
-            setColumns(firstRowKeys.filter(key => key.trim() !== ''));
-            
-            // Also set the data directly since the columns are correct now
-            setSpreadsheetData(selectedRunsheet.data);
-            
-            // Don't load runsheet columns later - we've already fixed them
-            return;
-          }
+          console.log('📊 Set columns to:', selectedRunsheet.columns);
+          console.log('📊 Set data length to:', selectedRunsheet.data.length);
+          console.log('📊 First data row:', selectedRunsheet.data[0]);
+          
+          // For uploaded data, skip the rest of the processing since we have what we need
+          return;
         }
         
         // Convert the data to match the column structure if needed
