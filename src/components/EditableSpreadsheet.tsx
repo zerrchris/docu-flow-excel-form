@@ -1989,6 +1989,12 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     console.log('🔧 SAVE_AND_CLOSE: Current data state:', data);
     console.log('🔧 SAVE_AND_CLOSE: Data length:', data.length);
     console.log('🔧 SAVE_AND_CLOSE: First few rows:', data.slice(0, 3));
+    console.log('🔧 SAVE_AND_CLOSE: Sample row content:', JSON.stringify(data[0], null, 2));
+    console.log('🔧 SAVE_AND_CLOSE: All empty check:', data.every(row => Object.values(row).every(val => val === '')));
+    
+    // Check if user actually entered any data
+    const hasActualData = data.some(row => Object.values(row).some(val => val.trim() !== ''));
+    console.log('🔧 SAVE_AND_CLOSE: Has actual data entered by user:', hasActualData);
     
     if (!user) {
       toast({
@@ -3767,13 +3773,16 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
 
   const saveEdit = useCallback(async () => {
     if (editingCell) {
+      console.log('🔧 SAVE_EDIT: Saving cell edit for row', editingCell.rowIndex, 'column', editingCell.column, 'value:', cellValue);
       const newData = [...data];
       newData[editingCell.rowIndex] = {
         ...newData[editingCell.rowIndex],
         [editingCell.column]: cellValue
       };
+      console.log('🔧 SAVE_EDIT: Updated row data:', JSON.stringify(newData[editingCell.rowIndex], null, 2));
       setData(newData);
       onDataChange?.(newData);
+      console.log('🔧 SAVE_EDIT: Called onDataChange with updated data');
       setHasUnsavedChanges(true);
       
       // Handle Document File Name column edits specially - update the actual document filename
