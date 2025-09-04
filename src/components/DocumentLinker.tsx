@@ -853,20 +853,6 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                     <Maximize2 className="w-3.5 h-3.5" />
                   </Button>
                 )}
-               <Button
-                 variant="ghost"
-                 size="sm"
-                 tabIndex={-1}
-                 onClick={(e) => {
-                   e.stopPropagation(); // Prevent cell edit mode
-                   setEditedFilename(filename);
-                   setIsEditingName(true);
-                 }}
-                 className="h-7 w-7 p-1"
-                 title="Edit filename"
-               >
-                 <Edit2 className="w-3.5 h-3.5" />
-                </Button>
                 {/* Smart Filename Generation Button - Only show if we have row data */}
                 {rowData && (
                   <Button
