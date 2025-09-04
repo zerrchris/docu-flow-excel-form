@@ -291,7 +291,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
     
     const handleMouseMove = (e: MouseEvent) => {
       const diff = e.clientX - startX;
-      const newWidth = Math.max(100, startWidth + diff);
+      const newWidth = Math.max(120, startWidth + diff); // Minimum width of 120px
       
       setLocalColumnWidths(prev => ({
         ...prev,
