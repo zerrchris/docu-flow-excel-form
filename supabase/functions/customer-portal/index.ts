@@ -44,12 +44,24 @@ serve(async (req) => {
     logStep("User authenticated", { userId: user.id, email: user.email });
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
+    
+    // First try to find customer by email
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
+    let customerId;
+    
     if (customers.data.length === 0) {
-      throw new Error("No Stripe customer found for this user");
+      logStep("No customer found, creating new customer");
+      // Create a new customer if none exists
+      const customer = await stripe.customers.create({
+        email: user.email,
+        metadata: { user_id: user.id }
+      });
+      customerId = customer.id;
+      logStep("Created new Stripe customer", { customerId });
+    } else {
+      customerId = customers.data[0].id;
+      logStep("Found existing Stripe customer", { customerId });
     }
-    const customerId = customers.data[0].id;
-    logStep("Found Stripe customer", { customerId });
 
     const origin = req.headers.get("origin") || "http://localhost:3000";
     logStep("Creating portal session", { customerId, returnUrl: `${origin}/` });
