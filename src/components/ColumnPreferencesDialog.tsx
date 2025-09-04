@@ -443,7 +443,7 @@ const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
                     className="flex-1 min-h-[200px] resize-none"
                   />
                   <p className="text-xs text-muted-foreground mt-2 flex-shrink-0">
-                    These instructions help the AI understand what information to extract for this column.
+                    These instructions help the AI understand what information to extract for this column. Be as accurate and descriptive as possible to let the extraction return the results in the format you would like.
                   </p>
                 </div>
               </div>
