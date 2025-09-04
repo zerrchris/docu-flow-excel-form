@@ -784,7 +784,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                   Back to Runsheet
                 </Button>
               </div>
-              <div className="h-full overflow-auto" ref={tableRef}>
+              <div className="h-full overflow-auto border-b border-border" ref={tableRef}>
                 <div className="min-w-max">
                   <Table>
                     <TableHeader>
