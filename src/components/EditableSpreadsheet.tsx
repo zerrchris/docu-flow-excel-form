@@ -4698,19 +4698,9 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         return;
       }
       
-      // Check if the file is a PDF and handle appropriately
-      if (file.type === 'application/pdf') {
-        toast({
-          title: "PDF Analysis Not Supported",
-          description: "PDF files cannot be analyzed directly. Please convert your PDF to an image format (PNG, JPEG) and try again.",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Verify the file is a supported image format
-      const supportedImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-      if (file.type && !supportedImageTypes.includes(file.type)) {
+      // Verify the file is a supported format (images and PDFs)
+      const supportedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+      if (file.type && !supportedTypes.includes(file.type)) {
         // Handle octet-stream files that might actually be images
         if (file.type === 'application/octet-stream') {
           // Check if filename suggests it's an image
