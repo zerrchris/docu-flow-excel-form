@@ -67,20 +67,103 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
 
     try {
       setIsAnalyzing(true);
+      console.log('🔍 Starting document analysis for side-by-side workspace, row:', rowIndex);
       
-      const result = await DocumentService.analyzeDocumentAdvanced(
-        documentRecord.file_path,
-        documentRecord.stored_filename,
-        documentRecord.content_type || 'application/pdf',
-        columnInstructions,
-        true // Use vision
-      );
+      // Get extraction preferences (same as expanded workspace)
+      const { ExtractionPreferencesService } = await import('@/services/extractionPreferences');
+      const extractionPrefs = await ExtractionPreferencesService.getDefaultPreferences();
+      const extractionFields = extractionPrefs?.columns?.map(col => `${col}: ${extractionPrefs.column_instructions?.[col] || 'Extract this field'}`).join('\n') || 
+        columns.map(col => `${col}: Extract this field`).join('\n');
 
-      if (result.success && result.data) {
-        const extractedData = result.data;
-        const updatedRowData = { ...rowData };
+      const documentUrl = DocumentService.getDocumentUrl(documentRecord.file_path);
+      let imageData: string;
+      
+      // Check if it's a PDF
+      const isPdf = documentRecord.content_type === 'application/pdf' || documentRecord.stored_filename.toLowerCase().endsWith('.pdf');
+      
+      if (isPdf) {
+        toast({
+          title: "PDF Analysis Not Supported",
+          description: "PDF files cannot be analyzed directly. Please convert your PDF to an image format (PNG, JPEG) and try again.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      console.log('🔧 Fetching document from storage URL for side-by-side analysis');
+      // Convert the document URL to base64 for analysis
+      const response = await fetch(documentUrl);
+      const blob = await response.blob();
+      
+      // For images, convert to base64 data URL
+      const reader = new FileReader();
+      imageData = await new Promise((resolve) => {
+        reader.onloadend = () => {
+          resolve(reader.result as string); // Keep full data URL format
+        };
+        reader.readAsDataURL(blob);
+      });
+
+      // Call the same analyze-document function as expanded workspace
+      console.log('🚀 Starting document analysis (side-by-side)...');
+      const { data, error } = await supabase.functions.invoke('analyze-document', {
+        body: {
+          prompt: `Extract information from this document for the following fields and return as valid JSON:\n${extractionFields}\n\nReturn only a JSON object with field names as keys and extracted values as values. Do not include any markdown, explanations, or additional text.`,
+          imageData
+        },
+      });
+
+      console.log('📡 Supabase function response (side-by-side):', { data, error });
+
+      if (error) {
+        console.error('❌ Analysis error (side-by-side):', error);
+        toast({
+          title: "Analysis failed",
+          description: error.message || "Could not analyze the document",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (data?.generatedText) {
+        console.log('✅ Analysis successful (side-by-side), raw response:', data.generatedText);
         
-        // Update fields with extracted data
+        // Parse the JSON response from AI (same as expanded workspace)
+        let extractedData = {};
+        try {
+          // Try to parse as JSON first
+          extractedData = JSON.parse(data.generatedText);
+          console.log('✅ Parsed extracted data (side-by-side):', extractedData);
+        } catch (e) {
+          console.warn('⚠️ Failed to parse as JSON, trying to extract JSON from text...');
+          // Try to extract JSON from the text
+          const jsonMatch = data.generatedText.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            try {
+              extractedData = JSON.parse(jsonMatch[0]);
+              console.log('✅ Extracted JSON from text (side-by-side):', extractedData);
+            } catch (e2) {
+              console.error('❌ Could not parse extracted JSON (side-by-side):', e2);
+              toast({
+                title: "Analysis completed with errors",
+                description: "The document was analyzed but the data format was unexpected. Please check the results.",
+                variant: "destructive"
+              });
+              return;
+            }
+          } else {
+            console.error('❌ No JSON found in response (side-by-side)');
+            toast({
+              title: "Analysis failed",
+              description: "Could not extract structured data from the document",
+              variant: "destructive"
+            });
+            return;
+          }
+        }
+
+        // Update fields with extracted data (same as expanded workspace logic)
+        const updatedRowData = { ...rowData };
         Object.keys(extractedData).forEach(key => {
           if (columns.includes(key) && extractedData[key]) {
             updatedRowData[key] = extractedData[key];
@@ -99,10 +182,14 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
           description: `Extracted data from ${documentRecord.stored_filename}`,
         });
       } else {
-        throw new Error(result.error || 'Analysis failed');
+        toast({
+          title: "Analysis failed",
+          description: "No data was extracted from the document",
+          variant: "destructive"
+        });
       }
     } catch (error) {
-      console.error('Error analyzing document:', error);
+      console.error('Error analyzing document (side-by-side):', error);
       toast({
         title: "Error",
         description: "Failed to analyze document. Please try again.",
