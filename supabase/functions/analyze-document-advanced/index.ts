@@ -66,7 +66,8 @@ const REAL_ESTATE_SCHEMA = {
             field: { type: "string" },
             page_number: { type: "number" },
             quote: { type: "string" }
-          }
+          },
+          additionalProperties: false
         },
         description: "Source citations for each extracted field"
       }

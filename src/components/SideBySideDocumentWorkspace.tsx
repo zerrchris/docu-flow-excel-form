@@ -8,7 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
-import { ArrowLeft, Sparkles, Mic, MicOff, Volume2 } from 'lucide-react';
+import { ArrowLeft, Sparkles, Mic, MicOff, Volume2, RotateCcw, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import PDFViewer from './PDFViewer';
@@ -227,6 +227,120 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
     }
   };
 
+  const handleReanalyzeField = async (fieldName: string) => {
+    if (!documentRecord) {
+      toast({
+        title: "Error",
+        description: "No document available to analyze.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setIsAnalyzing(true);
+      
+      const { data, error } = await supabase.functions.invoke('re-extract-field', {
+        body: {
+          fileUrl: DocumentService.getDocumentUrl(documentRecord.file_path),
+          fileName: documentRecord.stored_filename,
+          contentType: documentRecord.content_type || 'application/pdf',
+          fieldName,
+          fieldInstruction: columnInstructions[fieldName] || `Extract the ${fieldName} from this document`,
+          currentValue: rowData[fieldName] || ''
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.extractedValue) {
+        const updatedRowData = { ...rowData, [fieldName]: data.extractedValue };
+        setRowData(updatedRowData);
+        setHasUnsavedChanges(true);
+        
+        toast({
+          title: "Field re-extracted",
+          description: `Updated ${fieldName} with new analysis.`,
+        });
+      }
+    } catch (error) {
+      console.error('Error re-analyzing field:', error);
+      toast({
+        title: "Error",
+        description: `Failed to re-analyze ${fieldName}. Please try again.`,
+        variant: "destructive",
+      });
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const handleSmartRename = async () => {
+    if (!documentRecord) {
+      toast({
+        title: "Error",
+        description: "No document available to rename.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setIsAnalyzing(true);
+      
+      // Generate smart filename based on extracted data
+      const { data, error } = await supabase.functions.invoke('generate-text', {
+        body: {
+          prompt: `Generate a descriptive filename for a document based on this extracted data:
+${Object.entries(rowData)
+  .filter(([_, value]) => value && value.trim() !== '')
+  .map(([key, value]) => `${key}: ${value}`)
+  .join('\n')}
+
+Rules:
+- Use only alphanumeric characters, hyphens, and underscores
+- Keep it under 50 characters
+- Make it descriptive and professional
+- Include the most important identifying information
+- Do not include file extension
+
+Return only the filename, nothing else.`,
+          maxTokens: 100
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.text) {
+        const suggestedName = data.text.trim().replace(/[^a-zA-Z0-9\-_]/g, '_');
+        const extension = documentRecord.stored_filename.split('.').pop();
+        const newFilename = `${suggestedName}.${extension}`;
+        
+        // Update the document record with new name
+        const { error: updateError } = await supabase
+          .from('documents')
+          .update({ stored_filename: newFilename })
+          .eq('id', documentRecord.id);
+
+        if (updateError) throw updateError;
+
+        toast({
+          title: "Document renamed",
+          description: `Renamed to: ${newFilename}`,
+        });
+      }
+    } catch (error) {
+      console.error('Error with smart rename:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate smart filename. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
   const handleFieldChange = (fieldName: string, value: string) => {
     const updatedRowData = { ...rowData, [fieldName]: value };
     setRowData(updatedRowData);
@@ -326,6 +440,20 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-lg font-semibold">Row Data</h3>
                 <div className="flex items-center gap-2">
+                  {/* Smart Rename */}
+                  {documentRecord && (
+                    <Button
+                      onClick={handleSmartRename}
+                      disabled={isAnalyzing}
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-2"
+                    >
+                      <FileText className="w-4 h-4" />
+                      Smart Rename
+                    </Button>
+                  )}
+                  
                   {/* Voice Input */}
                   <Button
                     variant={isListening ? "destructive" : "outline"}
@@ -363,23 +491,38 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
                   
                   return (
                     <div key={columnName} className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-sm font-medium flex items-center">
-                          {columnName}
-                          {wasExtracted && getConfidenceBadge(0.85)}
-                        </Label>
-                        {value && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => speakText(value)}
-                            disabled={isSpeaking}
-                            className="h-6 w-6 p-0"
-                          >
-                            <Volume2 className="w-3 h-3" />
-                          </Button>
-                        )}
-                      </div>
+                       <div className="flex items-center justify-between">
+                         <Label className="text-sm font-medium flex items-center">
+                           {columnName}
+                           {wasExtracted && getConfidenceBadge(0.85)}
+                         </Label>
+                         <div className="flex items-center gap-1">
+                           {documentRecord && (
+                             <Button
+                               variant="ghost"
+                               size="sm"
+                               onClick={() => handleReanalyzeField(columnName)}
+                               disabled={isAnalyzing}
+                               className="h-6 w-6 p-0"
+                               title={`Re-analyze ${columnName}`}
+                             >
+                               <RotateCcw className="w-3 h-3" />
+                             </Button>
+                           )}
+                           {value && (
+                             <Button
+                               variant="ghost"
+                               size="sm"
+                               onClick={() => speakText(value)}
+                               disabled={isSpeaking}
+                               className="h-6 w-6 p-0"
+                               title={`Read ${columnName} aloud`}
+                             >
+                               <Volume2 className="w-3 h-3" />
+                             </Button>
+                           )}
+                         </div>
+                       </div>
                       
                       {instruction && (
                         <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
