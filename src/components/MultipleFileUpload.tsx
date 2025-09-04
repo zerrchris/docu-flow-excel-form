@@ -9,6 +9,7 @@ import { toast } from '@/components/ui/use-toast';
 import { DocumentService } from '@/services/documentService';
 import { useActiveRunsheet } from '@/hooks/useActiveRunsheet';
 import { supabase } from '@/integrations/supabase/client';
+import { convertPDFToImages, isPDF, createFileFromBlob } from '@/utils/pdfToImage';
 
 interface FileUploadStatus {
   file: File;
@@ -102,7 +103,45 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
     }
   };
 
-  const handleFileSelect = useCallback((selectedFiles: FileList) => {
+  // Process PDFs to images if needed
+  const processPDFFiles = async (fileArray: File[]): Promise<File[]> => {
+    const processedFiles: File[] = [];
+    
+    for (const file of fileArray) {
+      if (isPDF(file)) {
+        try {
+          console.log('🔧 Converting PDF to images:', file.name);
+          const pages = await convertPDFToImages(file);
+          
+          // Create separate files for each page
+          pages.forEach((page, index) => {
+            const imageName = file.name.replace(/\.pdf$/i, `_page_${page.pageNumber}.png`);
+            const imageFile = createFileFromBlob(page.blob, imageName);
+            processedFiles.push(imageFile);
+          });
+          
+          toast({
+            title: "PDF Converted",
+            description: `${file.name} converted to ${pages.length} image(s) for processing.`,
+          });
+        } catch (error) {
+          console.error('PDF conversion error:', error);
+          toast({
+            title: "PDF Conversion Failed",
+            description: `Could not convert ${file.name}. Uploading as-is.`,
+            variant: "destructive",
+          });
+          processedFiles.push(file); // Keep original PDF if conversion fails
+        }
+      } else {
+        processedFiles.push(file);
+      }
+    }
+    
+    return processedFiles;
+  };
+
+  const handleFileSelect = useCallback(async (selectedFiles: FileList) => {
     console.log('🔧 handleFileSelect called with files:', selectedFiles.length);
     
     if (!currentRunsheet) {
@@ -114,11 +153,15 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
       return;
     }
 
-    // Add selected files to the upload queue
+    // Convert FileList to array and process PDFs
     const fileArray = Array.from(selectedFiles);
     console.log('🔧 Converting FileList to array:', fileArray.length, 'files');
     
-    const newFiles = fileArray.map((file, index) => {
+    // Process PDFs to images
+    const processedFiles = await processPDFFiles(fileArray);
+    console.log('🔧 After PDF processing:', processedFiles.length, 'files');
+    
+    const newFiles = processedFiles.map((file, index) => {
       console.log(`🔧 Processing file ${index}: ${file.name}`);
       return {
         file,
@@ -135,14 +178,14 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
     });
   }, [currentRunsheet]);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
     
     console.log('🔧 Drop event triggered');
     if (e.dataTransfer.files) {
       console.log('🔧 Files in drop:', e.dataTransfer.files.length);
-      handleFileSelect(e.dataTransfer.files);
+      await handleFileSelect(e.dataTransfer.files);
     }
   }, [handleFileSelect]);
 
