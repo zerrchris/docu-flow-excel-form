@@ -14,6 +14,8 @@ interface Runsheet {
   created_at: string;
   updated_at: string;
   data: any;
+  columns: string[];
+  column_instructions: Record<string, string>;
 }
 
 interface OpenRunsheetDialogProps {
@@ -49,7 +51,8 @@ const OpenRunsheetDialog: React.FC<OpenRunsheetDialogProps> = ({ open, onOpenCha
 
       const { data, error } = await supabase
         .from('runsheets')
-        .select('id, name, created_at, updated_at, data')
+        .select('id, name, created_at, updated_at, data, columns, column_instructions')
+        .eq('user_id', user.id)
         .order('updated_at', { ascending: false });
 
       if (error) {
@@ -58,7 +61,11 @@ const OpenRunsheetDialog: React.FC<OpenRunsheetDialogProps> = ({ open, onOpenCha
         return;
       }
 
-      setRunsheets(data || []);
+      setRunsheets((data || []).map(runsheet => ({
+        ...runsheet,
+        columns: Array.isArray(runsheet.columns) ? runsheet.columns : [],
+        column_instructions: typeof runsheet.column_instructions === 'object' && runsheet.column_instructions ? runsheet.column_instructions as Record<string, string> : {}
+      })));
     } catch (error) {
       console.error('Error fetching runsheets:', error);
       setRunsheets([]);
