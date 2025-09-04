@@ -3195,13 +3195,16 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     
     setRunsheetName(uniqueName);
     
-    // Generate default column instructions for all columns
-    const defaultInstructions: Record<string, string> = {};
-    finalHeaders.forEach(header => {
-      defaultInstructions[header] = generateExtractionSuggestion(header);
-    });
-    setColumnInstructions(defaultInstructions);
-    onColumnInstructionsChange?.(defaultInstructions);
+    
+    // DON'T auto-generate column instructions - let user configure them manually
+    // This ensures uploaded columns show up in the configuration dialog
+    console.log('📋 Skipping auto-generation of column instructions for uploaded data');
+    
+    // Only set column instructions if they don't already exist
+    if (Object.keys(columnInstructions).length === 0) {
+      setColumnInstructions({});
+      onColumnInstructionsChange?.({});
+    }
 
     // Auto-save the runsheet with imported data
     setTimeout(() => {
@@ -3525,13 +3528,9 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       });
       setData(updatedData);
       
-      // Add default instruction for the new column
-      const newInstructions = {
-        ...columnInstructions,
-        [newColumnName]: generateExtractionSuggestion(newColumnName)
-      };
-      setColumnInstructions(newInstructions);
-      onColumnInstructionsChange?.(newInstructions);
+      
+      // DON'T auto-generate instructions for new columns - let them appear in config dialog
+      console.log('📋 New column added without auto-generated instructions:', newColumnName);
     }
   };
 
@@ -3558,13 +3557,9 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       });
       setData(updatedData);
       
-      // Add default instruction for the new column
-      const newInstructions = {
-        ...columnInstructions,
-        [newColumnName]: generateExtractionSuggestion(newColumnName)
-      };
-      setColumnInstructions(newInstructions);
-      onColumnInstructionsChange?.(newInstructions);
+      
+      // DON'T auto-generate instructions for new columns - let them appear in config dialog
+      console.log('📋 New column inserted without auto-generated instructions:', newColumnName);
     }
   };
 
