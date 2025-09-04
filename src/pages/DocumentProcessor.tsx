@@ -328,9 +328,23 @@ const DocumentProcessor: React.FC = () => {
 
     // Check if default columns should be prevented (during uploads)
     const preventDefaults = sessionStorage.getItem('prevent_default_columns');
-    if (preventDefaults === 'true') {
+    const uploadedColumns = sessionStorage.getItem('uploaded_columns');
+    
+    if (preventDefaults === 'true' || uploadedColumns) {
       console.log('🚫 Preventing default column loading for upload');
       console.log('🚫 Current columns state:', columns);
+      
+      if (uploadedColumns) {
+        try {
+          const parsedColumns = JSON.parse(uploadedColumns);
+          console.log('🔥 LOADING UPLOADED COLUMNS FROM SESSION:', parsedColumns);
+          setColumns(parsedColumns);
+          sessionStorage.removeItem('uploaded_columns'); // Clean up
+        } catch (error) {
+          console.error('Failed to parse uploaded columns:', error);
+        }
+      }
+      
       sessionStorage.removeItem('prevent_default_columns');
       setIsLoadingPreferences(false);
       return;
@@ -392,14 +406,17 @@ const DocumentProcessor: React.FC = () => {
     const shouldClearActive = location.state?.clearActiveRunsheet;
     const preventAutoSave = location.state?.preventAutoSave;
     
+    
     console.log('🔄 DocumentProcessor: Navigation state effect triggered', {
       selectedRunsheet: selectedRunsheet?.id,
       selectedRunsheetName: selectedRunsheet?.name,
+      selectedRunsheetColumns: selectedRunsheet?.columns,
       shouldClearActive,
       preventAutoSave,
       loadedRef: loadedRunsheetRef.current,
       hasSpreadsheetData: spreadsheetData.length > 0,
       activeRunsheetName: activeRunsheet?.name,
+      currentColumns: columns,
       locationState: location.state
     });
     
@@ -435,16 +452,20 @@ const DocumentProcessor: React.FC = () => {
         
         // For uploaded runsheets, always use the provided columns and data
         if (selectedRunsheet.columns && selectedRunsheet.columns.length > 0) {
-          console.log('📊 Using uploaded runsheet columns:', selectedRunsheet.columns);
+          console.log('🔥 PROCESSING UPLOADED RUNSHEET');
+          console.log('🔥 Uploaded runsheet columns:', selectedRunsheet.columns);
+          console.log('🔥 Current columns before setting:', columns);
+          
           setColumns(selectedRunsheet.columns);
           setSpreadsheetData(selectedRunsheet.data);
           
+          console.log('🔥 Columns set to:', selectedRunsheet.columns);
+          console.log('🔥 Data length set to:', selectedRunsheet.data.length);
+          console.log('🔥 First data row:', selectedRunsheet.data[0]);
+          
           // Prevent default columns from loading later
           sessionStorage.setItem('prevent_default_columns', 'true');
-          
-          console.log('📊 Set columns to:', selectedRunsheet.columns);
-          console.log('📊 Set data length to:', selectedRunsheet.data.length);
-          console.log('📊 First data row:', selectedRunsheet.data[0]);
+          sessionStorage.setItem('uploaded_columns', JSON.stringify(selectedRunsheet.columns));
           
           // For uploaded data, skip the rest of the processing since we have what we need
           return;
@@ -3150,15 +3171,32 @@ Image: [base64 image data]`;
           <div className="py-4">
             <RunsheetFileUpload 
               onFileSelected={async (runsheetData) => {
-                console.log('📥 Runsheet file processed from DocumentProcessor:', runsheetData);
-                console.log('📥 Columns received:', runsheetData.columns);
-                console.log('📥 Data sample:', runsheetData.rows?.slice(0, 2));
-                console.log('📥 Total rows count:', runsheetData.rows?.length);
+                console.log('🔥 UPLOAD: Runsheet file processed from DocumentProcessor:', runsheetData);
+                console.log('🔥 UPLOAD: Columns received:', runsheetData.columns);
+                console.log('🔥 UPLOAD: Data sample:', runsheetData.rows?.slice(0, 2));
+                console.log('🔥 UPLOAD: Total rows count:', runsheetData.rows?.length);
+                console.log('🔥 UPLOAD: Current page columns before navigation:', columns);
+                
                 setShowRunsheetUploadDialog(false);
+                
+                // IMMEDIATELY set the uploaded columns to prevent DEFAULT_COLUMNS from loading
+                console.log('🔥 UPLOAD: Setting columns immediately to prevent defaults');
+                setColumns(runsheetData.columns);
+                setSpreadsheetData(runsheetData.rows);
+                
+                // Prevent any default loading
+                sessionStorage.setItem('prevent_default_columns', 'true');
+                sessionStorage.setItem('uploaded_columns', JSON.stringify(runsheetData.columns));
                 
                 // Create a proper runsheet name with timestamp
                 const timestamp = new Date().toLocaleString();
                 const uniqueName = `${runsheetData.name} (Imported ${timestamp})`;
+                
+                console.log('🔥 UPLOAD: About to navigate with state:', {
+                  runsheetColumns: runsheetData.columns,
+                  dataLength: runsheetData.rows?.length,
+                  uniqueName
+                });
                 
                 // Navigate to clean runsheet page with the uploaded data
                 navigate('/runsheet', { 
@@ -3172,7 +3210,8 @@ Image: [base64 image data]`;
                     },
                     clearActiveRunsheet: true,
                     isFileUpload: true,
-                    preventAutoSave: true
+                    preventAutoSave: true,
+                    uploadedColumns: runsheetData.columns // Additional flag
                   },
                   replace: true // Replace current URL to remove ?action=upload
                 });
