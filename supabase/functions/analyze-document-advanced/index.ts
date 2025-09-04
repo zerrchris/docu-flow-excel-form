@@ -62,6 +62,7 @@ const REAL_ESTATE_SCHEMA = {
         type: "array",
         items: {
           type: "object",
+          required: ["field", "page_number", "quote"],
           properties: {
             field: { type: "string" },
             page_number: { type: "number" },

@@ -8,7 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
-import { ArrowLeft, Sparkles, Mic, MicOff, Volume2, RotateCcw, FileText } from 'lucide-react';
+import { ArrowLeft, Sparkles, Mic, MicOff, Volume2, RotateCcw, FileText, Wand2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import PDFViewer from './PDFViewer';
@@ -440,44 +440,30 @@ Return only the filename, nothing else.`,
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-lg font-semibold">Row Data</h3>
                 <div className="flex items-center gap-2">
-                  {/* Smart Rename */}
-                  {documentRecord && (
-                    <Button
-                      onClick={handleSmartRename}
-                      disabled={isAnalyzing}
-                      variant="outline"
-                      size="sm"
-                      className="flex items-center gap-2"
-                    >
-                      <FileText className="w-4 h-4" />
-                      Smart Rename
-                    </Button>
-                  )}
-                  
-                  {/* Voice Input */}
-                  <Button
-                    variant={isListening ? "destructive" : "outline"}
-                    size="sm"
-                    onClick={isListening ? stopListening : startListening}
-                    disabled={isAnalyzing}
-                    className="flex items-center gap-2"
-                  >
-                    {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                    {isListening ? "Stop" : "Voice"}
-                  </Button>
-                  
                   {/* Analyze Document */}
                   {documentRecord && (
                     <Button
                       onClick={handleAnalyzeDocument}
                       disabled={isAnalyzing}
-                      className="flex items-center gap-2"
+                      className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white"
                       size="sm"
                     >
                       <Sparkles className="w-4 h-4" />
                       {isAnalyzing ? "Analyzing..." : "Analyze Document"}
                     </Button>
                   )}
+                   
+                   {/* Voice Input */}
+                   <Button
+                     variant={isListening ? "destructive" : "outline"}
+                     size="sm"
+                     onClick={isListening ? stopListening : startListening}
+                     disabled={isAnalyzing}
+                     className="flex items-center gap-2"
+                   >
+                     {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                     {isListening ? "Stop" : "Voice"}
+                   </Button>
                 </div>
               </div>
             </div>
@@ -496,19 +482,34 @@ Return only the filename, nothing else.`,
                            {columnName}
                            {wasExtracted && getConfidenceBadge(0.85)}
                          </Label>
-                         <div className="flex items-center gap-1">
-                           {documentRecord && (
-                             <Button
-                               variant="ghost"
-                               size="sm"
-                               onClick={() => handleReanalyzeField(columnName)}
-                               disabled={isAnalyzing}
-                               className="h-6 w-6 p-0"
-                               title={`Re-analyze ${columnName}`}
-                             >
-                               <RotateCcw className="w-3 h-3" />
-                             </Button>
-                           )}
+                        <div className="flex items-center gap-2">
+                          {/* Document File Name specific field with smart rename */}
+                          {columnName === 'Document File Name' && documentRecord && (
+                            <Button
+                              onClick={handleSmartRename}
+                              disabled={isAnalyzing}
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 hover:bg-purple-100 dark:hover:bg-purple-900/20 text-purple-600 dark:text-purple-400"
+                              title="Smart rename using file naming preferences"
+                            >
+                              <Wand2 className="w-3 h-3" />
+                            </Button>
+                          )}
+                          
+                          {/* Re-analyze field button */}
+                          {documentRecord && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleReanalyzeField(columnName)}
+                              disabled={isAnalyzing}
+                              className="h-6 w-6 p-0 hover:bg-purple-100 dark:hover:bg-purple-900/20 text-purple-600 dark:text-purple-400"
+                              title={`Re-analyze ${columnName}`}
+                            >
+                              <Sparkles className="w-3 h-3" />
+                            </Button>
+                          )}
                            {value && (
                              <Button
                                variant="ghost"
