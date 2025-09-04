@@ -240,7 +240,13 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
   };
 
   const handleReExtractWithNotes = async (notes: string) => {
+    console.log('🔍 SIDE-BY-SIDE RE-EXTRACT: Starting re-extraction');
+    console.log('🔍 SIDE-BY-SIDE RE-EXTRACT: documentRecord:', documentRecord);
+    console.log('🔍 SIDE-BY-SIDE RE-EXTRACT: fieldName:', reExtractDialog.fieldName);
+    console.log('🔍 SIDE-BY-SIDE RE-EXTRACT: notes:', notes);
+    
     if (!documentRecord) {
+      console.error('🔍 SIDE-BY-SIDE RE-EXTRACT: No documentRecord available');
       toast({
         title: "Error",
         description: "No document available to analyze.",
@@ -265,6 +271,7 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
         reader.readAsDataURL(blob);
       });
 
+      console.log('🔍 SIDE-BY-SIDE RE-EXTRACT: Calling re-extract-field function');
       const { data, error } = await supabase.functions.invoke('re-extract-field', {
         body: {
           imageData,
@@ -276,7 +283,12 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
         }
       });
 
-      if (error) throw error;
+      console.log('🔍 SIDE-BY-SIDE RE-EXTRACT: Function response:', { data, error });
+
+      if (error) {
+        console.error('🔍 SIDE-BY-SIDE RE-EXTRACT: Error from function:', error);
+        throw error;
+      }
 
       if (data?.extractedValue) {
         // Update the specific field with the re-extracted value
@@ -296,10 +308,12 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
         setReExtractDialog(prev => ({ ...prev, isOpen: false }));
       }
     } catch (error) {
-      console.error('Error re-analyzing field:', error);
+      console.error('🔍 SIDE-BY-SIDE RE-EXTRACT: Catch block error:', error);
+      console.error('🔍 SIDE-BY-SIDE RE-EXTRACT: Error message:', error.message);
+      console.error('🔍 SIDE-BY-SIDE RE-EXTRACT: Error stack:', error.stack);
       toast({
         title: "Error",
-        description: `Failed to re-analyze ${reExtractDialog.fieldName}. Please try again.`,
+        description: `Failed to re-analyze ${reExtractDialog.fieldName}: ${error.message}`,
         variant: "destructive",
       });
     } finally {
