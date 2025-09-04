@@ -61,7 +61,15 @@ const DocumentProcessor: React.FC = () => {
   const [isProcessingCombination, setIsProcessingCombination] = useState(false);
   
   // Form and analysis state
-  const [columns, setColumns] = useState<string[]>(DEFAULT_COLUMNS);
+  const [columns, setColumns] = useState<string[]>(() => {
+    // CRITICAL: Don't load default columns if upload action is active
+    const isUploadAction = new URLSearchParams(window.location.search).get('action') === 'upload';
+    if (isUploadAction) {
+      console.log('🚫 UPLOAD: Preventing default columns - upload action detected');
+      return [];
+    }
+    return DEFAULT_COLUMNS;
+  });
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [spreadsheetData, setSpreadsheetData] = useState<Record<string, string>[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
