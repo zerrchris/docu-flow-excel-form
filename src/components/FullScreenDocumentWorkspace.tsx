@@ -417,15 +417,23 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
       let analysisResult;
       
       if (isPdf) {
-        console.log('🔧 PDF detected, using Claude for direct analysis');
+        console.log('🔧 PDF detected, using OpenAI Vision after converting to image data');
         
-        // Use Claude for PDF analysis
-        const { data, error } = await supabase.functions.invoke('analyze-document-claude', {
+        // For PDFs, fetch and convert to base64 like we do for images
+        const response = await fetch(documentUrl);
+        const blob = await response.blob();
+        const reader = new FileReader();
+        const pdfData = await new Promise<string>((resolve) => {
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(blob);
+        });
+        
+        // Use OpenAI Vision with PDF data (OpenAI can handle PDFs)
+        const { data, error } = await supabase.functions.invoke('analyze-document', {
           body: {
             prompt: `Extract information from this document for the following fields and return as valid JSON:\n${extractionFields}\n\nReturn only a JSON object with field names as keys and extracted values as values. Do not include any markdown, explanations, or additional text.`,
-            fileUrl: documentUrl,
-            fileName: documentName,
-            contentType: isPdf ? 'application/pdf' : undefined
+            imageData: pdfData,
+            fileName: documentName
           },
         });
         
