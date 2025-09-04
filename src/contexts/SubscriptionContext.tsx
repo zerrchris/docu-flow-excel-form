@@ -111,12 +111,25 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Customer portal error:', error);
+        if (error.message?.includes('configuration')) {
+          alert('Stripe Customer Portal configuration issue. Please go to Stripe Dashboard > Settings > Billing > Customer Portal and save the configuration.');
+          return;
+        }
+        throw error;
+      }
 
-      // Open customer portal in a new tab
-      window.open(data.url, '_blank');
+      if (data?.url) {
+        // Open customer portal in a new tab
+        window.open(data.url, '_blank');
+      } else {
+        throw new Error('No portal URL returned');
+      }
     } catch (error) {
       console.error('Error opening customer portal:', error);
+      const message = error instanceof Error ? error.message : 'Failed to open subscription management. Please try again';
+      alert(message);
       throw error;
     }
   };
