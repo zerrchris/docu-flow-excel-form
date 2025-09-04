@@ -170,7 +170,17 @@ const DocumentProcessor: React.FC = () => {
 
   // Data recovery handlers
   const handleUseBackupData = () => {
-    console.log('🚫 Backup system disabled - data should always be in database');
+    if (recoveryData?.backup) {
+      console.log('🔄 Restoring data from backup');
+      setSpreadsheetData(recoveryData.backup.data || []);
+      setColumns(recoveryData.backup.columns || []);
+      setColumnInstructions(recoveryData.backup.columnInstructions || {});
+      setHasUnsavedChanges(true);
+      toast({
+        title: "Data restored",
+        description: "Your backup data has been restored. Remember to save your changes.",
+      });
+    }
     setShowDataRecovery(false);
     setRecoveryData(null);
   };
@@ -378,6 +388,93 @@ const DocumentProcessor: React.FC = () => {
     }
   }, [activeRunsheet?.id, activeRunsheet?.columns]);
 
+  // Auto-save data to database whenever spreadsheet data changes
+  useEffect(() => {
+    const saveToDatabase = async () => {
+      if (!activeRunsheet?.id || spreadsheetData.length === 0 || !currentUser) return;
+      
+      try {
+        console.log('💾 Auto-saving to database...', {
+          runsheetId: activeRunsheet.id,
+          rowCount: spreadsheetData.length
+        });
+        
+        const { error } = await supabase
+          .from('runsheets')
+          .update({
+            data: spreadsheetData,
+            columns: columns,
+            column_instructions: columnInstructions,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', activeRunsheet.id);
+          
+        if (error) throw error;
+        
+        console.log('✅ Auto-saved to database successfully');
+        setHasUnsavedChanges(false);
+      } catch (error) {
+        console.error('❌ Auto-save failed:', error);
+        // Keep hasUnsavedChanges true on failure
+      }
+    };
+
+    // Debounced auto-save - wait 2 seconds after user stops typing
+    const timeoutId = setTimeout(saveToDatabase, 2000);
+    return () => clearTimeout(timeoutId);
+  }, [spreadsheetData, columns, columnInstructions, activeRunsheet?.id, currentUser]);
+
+  // Load runsheet data from database when activeRunsheet changes
+  useEffect(() => {
+    const loadRunsheetData = async () => {
+      if (!activeRunsheet?.id) return;
+      
+      try {
+        console.log('📥 Loading runsheet data from database...', activeRunsheet.id);
+        
+        const { data, error } = await supabase
+          .from('runsheets')
+          .select('*')
+          .eq('id', activeRunsheet.id)
+          .single();
+          
+        if (error) throw error;
+        
+        if (data) {
+          // Only update if we don't already have this data loaded
+          const currentDataLength = spreadsheetData.length;
+          const dbData = Array.isArray(data.data) ? data.data as Record<string, string>[] : [];
+          const dbDataLength = dbData.length;
+          
+          if (currentDataLength === 0 || dbDataLength > currentDataLength) {
+            console.log('✅ Restoring data from database:', {
+              columns: data.columns?.length || 0,
+              rows: dbDataLength,
+              instructions: Object.keys(data.column_instructions || {}).length
+            });
+            
+            setSpreadsheetData(dbData);
+            setColumns(data.columns || []);
+            setColumnInstructions((data.column_instructions as Record<string, string>) || {});
+            setHasUnsavedChanges(false);
+          }
+        }
+      } catch (error) {
+        console.error('❌ Failed to load runsheet data:', error);
+        toast({
+          title: "Failed to load data",
+          description: "Could not restore your runsheet data. Please try refreshing.",
+          variant: "destructive",
+        });
+      }
+    };
+
+    // Only load if we have an active runsheet and haven't loaded this one yet
+    if (activeRunsheet?.id && loadedRunsheetRef.current !== activeRunsheet.id) {
+      loadRunsheetData();
+      loadedRunsheetRef.current = activeRunsheet.id;
+    }
+  }, [activeRunsheet?.id]);
 
   // Handle selected runsheet from navigation state - with stability improvements
   useEffect(() => {
