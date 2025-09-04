@@ -31,6 +31,15 @@ interface UsageData {
   avg_cost_per_request: number;
 }
 
+interface DetailedUsageData {
+  id: string;
+  function_name: string;
+  model_used: string;
+  created_at: string;
+  estimated_cost_usd: number;
+  success: boolean;
+}
+
 interface UsageSummary {
   totalRequests: number;
   totalTokens: number;
@@ -38,12 +47,15 @@ interface UsageSummary {
   avgCostPerRequest: number;
   mostUsedFunction: string;
   mostUsedModel: string;
+  pendingBillAmount: number;
+  billedAmount: number;
 }
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
 export const AIUsageAnalytics: React.FC = () => {
   const [usageData, setUsageData] = useState<UsageData[]>([]);
+  const [detailedUsage, setDetailedUsage] = useState<DetailedUsageData[]>([]);
   const [summary, setSummary] = useState<UsageSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState<'week' | 'month' | 'all'>('week');
@@ -80,11 +92,30 @@ export const AIUsageAnalytics: React.FC = () => {
       const filteredData = data || [];
       setUsageData(filteredData);
 
+      // Fetch detailed usage with billing status
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: detailedData } = await supabase
+          .from('ai_usage_analytics')
+          .select('id, function_name, model_used, created_at, estimated_cost_usd, success')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(100);
+        
+        setDetailedUsage(detailedData || []);
+      }
+
       // Calculate summary statistics
       if (filteredData.length > 0) {
         const totalRequests = filteredData.reduce((sum, item) => sum + item.request_count, 0);
         const totalTokens = filteredData.reduce((sum, item) => sum + item.total_tokens, 0);
         const totalCost = filteredData.reduce((sum, item) => sum + item.total_estimated_cost, 0);
+        
+        // For now, show all usage as pending since we don't have stripe_reported_at yet
+        const pendingBillAmount = detailedUsage
+          .reduce((sum, item) => sum + (item.estimated_cost_usd || 0), 0);
+        
+        const billedAmount = 0; // Will be updated once stripe_reported_at is added
         
         // Find most used function and model
         const functionCounts = filteredData.reduce((acc, item) => {
@@ -111,7 +142,9 @@ export const AIUsageAnalytics: React.FC = () => {
           totalCost,
           avgCostPerRequest: totalCost / totalRequests,
           mostUsedFunction,
-          mostUsedModel
+          mostUsedModel,
+          pendingBillAmount,
+          billedAmount
         });
       }
 
@@ -217,22 +250,27 @@ export const AIUsageAnalytics: React.FC = () => {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Tokens</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Pending Bill</CardTitle>
+              <Clock className="h-4 w-4 text-amber-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{summary.totalTokens.toLocaleString()}</div>
+              <div className="text-2xl font-bold text-amber-600">{formatCost(summary.pendingBillAmount)}</div>
+              <p className="text-xs text-muted-foreground">
+                Not yet billed
+              </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Most Used</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Billed Amount</CardTitle>
+              <TrendingUp className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-sm font-bold">{summary.mostUsedFunction.replace('analyze-', '').replace('-', ' ')}</div>
-              <Badge variant="secondary" className="text-xs">{summary.mostUsedModel}</Badge>
+              <div className="text-2xl font-bold text-green-600">{formatCost(summary.billedAmount)}</div>
+              <p className="text-xs text-muted-foreground">
+                Already charged
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -243,6 +281,7 @@ export const AIUsageAnalytics: React.FC = () => {
         <TabsList>
           <TabsTrigger value="daily">Daily Usage</TabsTrigger>
           <TabsTrigger value="functions">By Function</TabsTrigger>
+          <TabsTrigger value="billing">Billing Status</TabsTrigger>
         </TabsList>
 
         <TabsContent value="daily" className="space-y-4">
@@ -317,6 +356,78 @@ export const AIUsageAnalytics: React.FC = () => {
                     </div>
                   </div>
                 ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="billing" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Billing Status</CardTitle>
+              <CardDescription>Track which usage has been billed to your account</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center p-4 bg-green-50 dark:bg-green-950 rounded-lg">
+                  <div>
+                    <h4 className="font-medium text-green-800 dark:text-green-200">Already Billed</h4>
+                    <p className="text-sm text-green-600 dark:text-green-300">{formatCost(summary?.billedAmount || 0)}</p>
+                  </div>
+                  <Badge variant="outline" className="bg-green-100 text-green-800">Charged</Badge>
+                </div>
+                
+                <div className="flex justify-between items-center p-4 bg-amber-50 dark:bg-amber-950 rounded-lg">
+                  <div>
+                    <h4 className="font-medium text-amber-800 dark:text-amber-200">Pending Bill</h4>
+                    <p className="text-sm text-amber-600 dark:text-amber-300">{formatCost(summary?.pendingBillAmount || 0)}</p>
+                  </div>
+                  <Badge variant="outline" className="bg-amber-100 text-amber-800">Pending</Badge>
+                </div>
+
+                <div className="mt-6 p-4 border rounded-lg">
+                  <h4 className="font-medium mb-2">Recent Activity</h4>
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {detailedUsage.slice(0, 10).map((item) => (
+                      <div key={item.id} className="flex justify-between items-center text-sm">
+                        <div>
+                          <span className="font-medium">{item.function_name.replace('analyze-', '').replace('-', ' ')}</span>
+                          <span className="text-muted-foreground ml-2">
+                            {new Date(item.created_at).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span>{formatCost(item.estimated_cost_usd || 0)}</span>
+                          <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700">Pending</Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="text-center mt-4">
+                  <Button variant="outline" onClick={async () => {
+                    try {
+                      const { data: { session } } = await supabase.auth.getSession();
+                      if (!session) return;
+
+                      const { data, error } = await supabase.functions.invoke('customer-portal', {
+                        headers: { Authorization: `Bearer ${session.access_token}` }
+                      });
+
+                      if (error) throw error;
+                      window.open(data.url, '_blank');
+                    } catch (error) {
+                      toast({
+                        title: "Error",
+                        description: "Failed to open billing portal",
+                        variant: "destructive"
+                      });
+                    }
+                  }}>
+                    View Invoices & Billing
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
