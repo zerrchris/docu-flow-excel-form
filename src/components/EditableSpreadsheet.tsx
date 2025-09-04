@@ -4593,54 +4593,86 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     return () => document.removeEventListener('mouseup', handleGlobalMouseUp);
   }, []);
 
-  // Keyboard shortcuts for copy/paste - using ref-based approach for stability
+  // Keyboard shortcuts for copy/paste - comprehensive debugging
   useEffect(() => {
-    console.log('🔍 Setting up stable keyboard event listener');
+    console.log('🔍 Setting up comprehensive keyboard debugging');
     
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.defaultPrevented) return;
+      // Log ALL key events to see what's happening
+      if ((e.ctrlKey || e.metaKey) || ['c', 'v', 'x'].includes(e.key.toLowerCase())) {
+        console.log('🔍 KEYBOARD EVENT DETECTED:', {
+          key: e.key,
+          code: e.code,
+          ctrlKey: e.ctrlKey,
+          metaKey: e.metaKey,
+          shiftKey: e.shiftKey,
+          altKey: e.altKey,
+          defaultPrevented: e.defaultPrevented,
+          target: (e.target as HTMLElement)?.tagName,
+          targetClass: (e.target as HTMLElement)?.className,
+          activeElement: document.activeElement?.tagName,
+          activeElementClass: document.activeElement?.className,
+          isTrusted: e.isTrusted,
+          timeStamp: e.timeStamp
+        });
+      }
       
-      console.log('🔍 Key event received:', {
-        key: e.key,
-        ctrlKey: e.ctrlKey,
-        metaKey: e.metaKey,
-        target: (e.target as HTMLElement)?.tagName,
-        activeElement: document.activeElement?.tagName
-      });
+      if (e.defaultPrevented) {
+        console.log('🔍 Event already prevented, returning');
+        return;
+      }
       
       const target = e.target as HTMLElement | null;
-      if (target && target.closest('input, textarea, select, [contenteditable="true"], [role="textbox"]')) {
-        console.log('🔍 Ignoring key event - inside form field');
-        return; // allow native copy/paste inside form fields
+      const isInFormField = target && target.closest('input, textarea, select, [contenteditable="true"], [role="textbox"]');
+      
+      if (isInFormField) {
+        console.log('🔍 Ignoring - inside form field:', target?.tagName);
+        return;
       }
       
       if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
-        console.log('🔍 Copy triggered');
+        console.log('🔍 COPY TRIGGERED - calling copySelection()');
         copySelection();
         e.preventDefault();
+        console.log('🔍 Copy event prevented');
       } else if ((e.ctrlKey || e.metaKey) && e.key === 'x') {
-        console.log('🔍 Cut triggered');
+        console.log('🔍 CUT TRIGGERED - calling cutSelection()');
         cutSelection();
         e.preventDefault();
+        console.log('🔍 Cut event prevented');
       } else if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
-        console.log('🔍 Paste triggered');
+        console.log('🔍 PASTE TRIGGERED - calling pasteSelection()');
         pasteSelection();
         e.preventDefault();
+        console.log('🔍 Paste event prevented');
       } else if (e.key === 'Delete' && (selectedCell || selectedRange)) {
-        console.log('🔍 Delete triggered');
+        console.log('🔍 DELETE TRIGGERED - calling deleteSelectedCells()');
         deleteSelectedCells();
         e.preventDefault();
+        console.log('🔍 Delete event prevented');
       }
     };
     
-    document.addEventListener('keydown', handleKeyDown);
-    console.log('🔍 Stable keyboard event listener added to document');
+    // Also try capturing phase
+    const handleKeyDownCapture = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) || ['c', 'v', 'x'].includes(e.key.toLowerCase())) {
+        console.log('🔍 CAPTURE PHASE - Key event:', e.key, e.ctrlKey, e.metaKey);
+      }
+    };
+    
+    document.addEventListener('keydown', handleKeyDown, false); // Bubble phase
+    document.addEventListener('keydown', handleKeyDownCapture, true); // Capture phase
+    window.addEventListener('keydown', handleKeyDown, false); // Also try window
+    
+    console.log('🔍 Added keyboard listeners to document and window (both capture and bubble)');
     
     return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      console.log('🔍 Stable keyboard event listener removed');
+      document.removeEventListener('keydown', handleKeyDown, false);
+      document.removeEventListener('keydown', handleKeyDownCapture, true);
+      window.removeEventListener('keydown', handleKeyDown, false);
+      console.log('🔍 Removed all keyboard listeners');
     };
-  }, []); // Empty dependencies - functions will be captured from closure
+  }, []); // Empty dependencies - functions captured from closure
   
   // Function to update document row_index in database
   const updateDocumentRowIndexes = useCallback(async (newDocumentMap: Map<number, DocumentRecord>) => {
