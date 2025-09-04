@@ -409,21 +409,26 @@ export const AIUsageAnalytics: React.FC = () => {
                   <Button variant="outline" onClick={async () => {
                     try {
                       const { data: { session } } = await supabase.auth.getSession();
-                      if (!session) return;
-
+                      console.log('Session check:', session ? 'Session found' : 'No session');
+                      
                       console.log('Calling customer-portal function...');
                       const { data, error } = await supabase.functions.invoke('customer-portal', {
-                        headers: { Authorization: `Bearer ${session.access_token}` }
+                        headers: session ? { Authorization: `Bearer ${session.access_token}` } : {}
                       });
 
                       console.log('Function response:', { data, error });
                       
                       if (error) {
-                        console.error('Function error:', error);
+                        console.error('Function error details:', {
+                          message: error.message,
+                          context: error.context,
+                          details: error.details
+                        });
                         throw error;
                       }
                       
                       if (data?.url) {
+                        console.log('Opening portal URL:', data.url);
                         window.open(data.url, '_blank');
                       } else {
                         throw new Error('No portal URL returned');
