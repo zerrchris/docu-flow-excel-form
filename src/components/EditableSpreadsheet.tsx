@@ -5733,31 +5733,31 @@ ${extractionFields}`
                                 <div className="flex flex-col items-center">
                                   <div className="flex items-center gap-2">
                                     <span className="font-bold">{column}</span>
-                                    {/* Re-extract button for this column */}
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        // Find the first row with this column populated and a linked document
-                                        const firstRowWithData = data.findIndex((row, index) => 
-                                          row[column] && row[column].trim() !== '' && documentMap.has(index)
-                                        );
-                                        if (firstRowWithData !== -1) {
-                                          handleReExtractField(firstRowWithData, column);
-                                        } else {
-                                          toast({
-                                            title: "No data to re-extract",
-                                            description: `No rows found with data in "${column}" column that have linked documents.`,
-                                            variant: "destructive"
-                                          });
-                                        }
-                                      }}
-                                      className="h-5 w-5 p-0 hover:bg-purple-100 dark:hover:bg-purple-900/20 text-purple-600 dark:text-purple-400"
-                                      title={`Re-extract "${column}" field for rows with documents`}
-                                    >
-                                      <Sparkles className="h-3 w-3" />
-                                    </Button>
+                                     {/* Re-extract button for this column */}
+                                     <Button
+                                       variant="ghost"
+                                       size="sm"
+                                       onClick={(e) => {
+                                         e.stopPropagation();
+                                         // Find the first row with this column populated and a linked document
+                                         const firstRowWithData = data.findIndex((row, index) => 
+                                           row[column] && row[column].trim() !== '' && documentMap.has(index)
+                                         );
+                                         if (firstRowWithData !== -1) {
+                                           handleReExtractField(firstRowWithData, column);
+                                         } else {
+                                           toast({
+                                             title: "No data to re-extract",
+                                             description: `No rows found with data in "${column}" column that have linked documents.`,
+                                             variant: "destructive"
+                                           });
+                                         }
+                                       }}
+                                       className="h-6 w-6 p-1 hover:bg-purple-100 dark:hover:bg-purple-900/20 text-purple-600 dark:text-purple-400 border border-purple-200 bg-purple-50 dark:bg-purple-900/10"
+                                       title={`Re-extract "${column}" field for rows with documents`}
+                                     >
+                                       <Sparkles className="h-4 w-4" />
+                                     </Button>
                                   </div>
                                   {localMissingColumns.includes(column) && (
                                     <span className="text-xs text-yellow-700 dark:text-yellow-300 mt-1 font-medium animate-pulse">
