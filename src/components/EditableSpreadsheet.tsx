@@ -320,7 +320,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   const [showInsertionPreview, setShowInsertionPreview] = useState(false);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Auto-save disabled to prevent refresh behavior - manual save only
+  // Enable proper auto-save like Google Sheets - save immediately to database
   const { save: autoSave, forceSave: autoForceSave, isSaving: autoSaving } = useAutoSave({
     runsheetId: currentRunsheet?.id || null,
     runsheetName: runsheetName && runsheetName !== 'Untitled Runsheet' ? runsheetName : (currentRunsheet?.name || 'Untitled Runsheet'),
@@ -328,15 +328,16 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     data,
     columnInstructions,
     userId: user?.id,
-    debounceMs: 999999, // Effectively disable auto-save with very long delay
+    debounceMs: 2000, // Auto-save every 2 seconds like Google Sheets
     onSaveStart: () => {
-      // Remove visual indicators that cause refresh feel
-      // setAutoSaveStatus('saving');
-      // setAutoSaveError('');
+      setAutoSaveStatus('saving');
+      setAutoSaveError('');
     },
     onSaveSuccess: (result) => {
-      // Only update essential state, no visual indicators
+      // Update state to reflect successful save like Google Sheets
       setHasUnsavedChanges(false);
+      setAutoSaveStatus('saved');
+      setLastAutoSaveTime(new Date());
       
       // Update current runsheet ID if this was a new runsheet or converted from temporary
       if ((!currentRunsheetId || currentRunsheetId.startsWith('temp-')) && result?.id) {
@@ -349,30 +350,35 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
           columns,
           columnInstructions
         });
+        
+        // Clear emergency draft since we now have proper database persistence
+        try {
+          localStorage.removeItem('runsheet-emergency-draft');
+          console.log('🗑️ Cleared emergency draft - now using database persistence');
+        } catch (error) {
+          console.error('Error clearing emergency draft:', error);
+        }
       }
     },
-    onSaveError: (error) => {
-      // Minimal error handling without visual updates
-      console.error('Save error:', error);
+    onSaveError: (error: any) => {
+      // Show error state like Google Sheets does
+      setAutoSaveStatus('error');
+      const errorMessage = typeof error === 'string' ? error : (error && typeof error === 'object' && error.message) || 'Failed to save';
+      setAutoSaveError(errorMessage);
+      console.error('Auto-save error:', error);
     }
   });
 
-  // Wrapper functions to prevent auto-save for uploaded runsheets
+  // Enable auto-save for database persistence like Google Sheets
   const safeAutoSave = useCallback(() => {
-    if (currentRunsheetId?.startsWith('uploaded-')) {
-      console.log('🚫 Auto-save disabled for uploaded runsheet');
-      return Promise.resolve();
-    }
+    // Always auto-save to maintain Google Sheets-like behavior
     return autoSave();
-  }, [autoSave, currentRunsheetId]);
+  }, [autoSave]);
 
   const safeAutoForceSave = useCallback(() => {
-    if (currentRunsheetId?.startsWith('uploaded-')) {
-      console.log('🚫 Force auto-save disabled for uploaded runsheet');
-      return Promise.resolve();
-    }
+    // Always allow force save for database persistence
     return autoForceSave();
-  }, [autoForceSave, currentRunsheetId]);
+  }, [autoForceSave]);
 
   // Handle changes to initialData prop (for uploaded runsheets)
   useEffect(() => {
@@ -1839,6 +1845,69 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
     }, [hasUnsavedChanges, user, runsheetName, columns, data, columnInstructions, autoForceSave]);
+
+  // Auto-save trigger when data changes (Google Sheets behavior)
+  useEffect(() => {
+    if (hasUnsavedChanges && user?.id) {
+      console.log('🔄 Changes detected, scheduling auto-save');
+      const timeoutId = setTimeout(() => {
+        console.log('🔄 Executing scheduled auto-save');
+        safeAutoSave();
+      }, 2000); // 2 second delay to batch rapid changes
+      
+      return () => {
+        console.log('🔄 Clearing auto-save timeout');
+        clearTimeout(timeoutId);
+      };
+    }
+  }, [hasUnsavedChanges, user?.id, safeAutoSave]);
+
+  // Real-time syncing like Google Sheets - listen for changes from other users
+  useEffect(() => {
+    if (!currentRunsheetId || !user?.id) return;
+
+    console.log('🔴 Setting up real-time sync for runsheet:', currentRunsheetId);
+    
+    const channel = supabase
+      .channel(`runsheet-${currentRunsheetId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'runsheets',
+          filter: `id=eq.${currentRunsheetId}`
+        },
+        (payload) => {
+          console.log('🔴 Real-time update received:', payload);
+          
+          // Only update if the change was from another user to avoid feedback loops
+          if (payload.new && payload.new.user_id !== user.id) {
+            const { data: newData, columns: newColumns, column_instructions } = payload.new;
+            
+            if (newData) {
+              console.log('🔄 Updating data from real-time sync');
+              setData(newData);
+              setColumns(newColumns || []);
+              setColumnInstructions(column_instructions || {});
+              
+              // Show notification about remote changes
+              toast({
+                title: "Runsheet updated",
+                description: "Changes were made by another user and have been synced.",
+                variant: "default"
+              });
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log('🔴 Cleaning up real-time sync');
+      supabase.removeChannel(channel);
+    };
+  }, [currentRunsheetId, user?.id, toast, setData, setColumns, setColumnInstructions]);
 
   // Check if runsheet name exists and handle conflicts
   const checkRunsheetNameConflict = async (baseName: string, userId: string): Promise<{ hasConflict: boolean; suggestedName?: string }> => {
