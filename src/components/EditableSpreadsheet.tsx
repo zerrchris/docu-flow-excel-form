@@ -482,10 +482,9 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         newColumns.forEach((col: string) => row[col] = '');
         return row;
       }));
-      console.log('🔧 EDITABLE_SPREADSHEET: Setting columns to:', newColumns);
-      setColumns(newColumns);
-      setColumnInstructions(instructions);
-      console.log('🔧 EDITABLE_SPREADSHEET: Columns set, current state should now be:', newColumns);
+      // Clear current state first
+      setCurrentRunsheetId(null);
+      clearActiveRunsheet();
       setSelectedCell(null);
       setEditingCell(null);
       setCellValue('');
@@ -500,9 +499,16 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         return row;
       });
       console.log('🔧 EDITABLE_SPREADSHEET: Setting data with new columns, data sample:', newData[0]);
+      
+      // Set all the new state
       setData(newData);
+      setColumns(newColumns);
+      setColumnInstructions(instructions);
       onDataChange?.(newData);
       onColumnChange(newColumns);
+      
+      // Mark as having unsaved changes so it will save properly
+      setHasUnsavedChanges(true);
       
       toast({
         title: "New runsheet created",
