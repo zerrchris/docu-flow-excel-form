@@ -510,6 +510,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       });
     };
 
+    console.log('🔧 EDITABLE_SPREADSHEET: Setting up createNewRunsheetFromDashboard event listener');
     window.addEventListener('createNewRunsheetFromDashboard', handleDashboardNewRunsheet as EventListener);
     
     // Handle new runsheet start from DocumentProcessor - but ONLY for actual new runsheets

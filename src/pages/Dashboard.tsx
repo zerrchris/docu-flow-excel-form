@@ -80,7 +80,9 @@ const Dashboard: React.FC = () => {
           }
         });
         console.log('🔧 DASHBOARD: Event detail:', event.detail);
+        console.log('🔧 DASHBOARD: About to dispatch event to window');
         window.dispatchEvent(event);
+        console.log('🔧 DASHBOARD: Event dispatched successfully');
       }, 100);
       
       setShowNameNewRunsheetDialog(false);
