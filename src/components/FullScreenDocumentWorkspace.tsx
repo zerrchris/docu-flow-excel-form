@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 import { X, ZoomIn, ZoomOut, RotateCcw, ExternalLink, ArrowLeft, Brain, AlertTriangle, Sparkles } from 'lucide-react';
 import { DocumentService } from '@/services/documentService';
 import { ExtractionPreferencesService } from '@/services/extractionPreferences';
@@ -670,218 +671,136 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
       onWheel={(e) => { e.preventDefault(); e.stopPropagation(); }}
       onTouchMove={(e) => { e.preventDefault(); e.stopPropagation(); }}
     >
-      {/* Document Area */}
-      <div className="flex-1 flex flex-col min-h-0">
-        {/* Header with controls */}
-        <div className="flex items-center justify-between p-4 border-b bg-muted/30 shrink-0">
-          <div className="flex items-center space-x-2">
-            <h3 className="text-lg font-semibold truncate max-w-[300px]">{documentName}</h3>
-            <span className="text-sm text-muted-foreground">Row {rowIndex + 1}</span>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            {!isPdf && (
-              <>
-                <Button variant="outline" size="sm" onClick={handleZoomOut}>
-                  <ZoomOut className="h-4 w-4" />
-                </Button>
-                <span className="text-sm font-medium">{Math.round(zoom * 100)}%</span>
-                <Button variant="outline" size="sm" onClick={handleZoomIn}>
-                  <ZoomIn className="h-4 w-4" />
-                </Button>
-                <Button variant="outline" size="sm" onClick={handleZoomReset}>
-                  <RotateCcw className="h-4 w-4" />
-                </Button>
-              </>
-            )}
-            <Button variant="outline" size="sm" onClick={openInNewWindow}>
-              <ExternalLink className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b bg-muted/30 shrink-0">
+        <div className="flex items-center space-x-2">
+          <h3 className="text-lg font-semibold truncate max-w-[300px]">{documentName}</h3>
+          <span className="text-sm text-muted-foreground">Row {rowIndex + 1}</span>
         </div>
-
-        {/* Document content */}
-        <div className="flex-1 overflow-hidden">
-          {isLoading ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="animate-spin h-8 w-8 border-b-2 border-primary mx-auto"></div>
-              <span className="ml-2">Loading document...</span>
-            </div>
-          ) : error || !documentUrl ? (
-            <div className="flex items-center justify-center h-full text-muted-foreground">
-              {error || 'No document available'}
-            </div>
-          ) : isPdf ? (
-            <PDFViewer file={null} previewUrl={documentUrl} />
-          ) : (
-            <ScrollArea className="h-full overscroll-contain">
-              <div className="min-h-full bg-muted/10 flex items-center justify-center p-4" onWheel={handleImageWheel}>
-                <img
-                  src={documentUrl}
-                  alt={documentName}
-                  className="max-w-full object-contain transition-transform duration-200 select-none cursor-grab active:cursor-grabbing"
-                  style={{
-                    transform: `translate(${panX / zoom}px, ${panY / zoom}px) scale(${zoom}) rotate(${rotation}deg)`,
-                    transformOrigin: 'center',
-                    willChange: 'transform'
-                  }}
-                  draggable={false}
-                  onMouseDown={handleImageMouseDown}
-                  onMouseMove={handleImageMouseMove}
-                  onMouseUp={handleImageMouseUp}
-                  onMouseLeave={handleImageMouseUp}
-                  onError={() => setError('Failed to load image')}
-                />
-              </div>
-            </ScrollArea>
+        
+        <div className="flex items-center space-x-2">
+          {!isPdf && (
+            <>
+              <Button variant="outline" size="sm" onClick={handleZoomOut}>
+                <ZoomOut className="h-4 w-4" />
+              </Button>
+              <span className="text-sm font-medium">{Math.round(zoom * 100)}%</span>
+              <Button variant="outline" size="sm" onClick={handleZoomIn}>
+                <ZoomIn className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleZoomReset}>
+                <RotateCcw className="h-4 w-4" />
+              </Button>
+            </>
           )}
+          <Button variant="outline" size="sm" onClick={openInNewWindow}>
+            <ExternalLink className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            <X className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 
-      {/* Working Row Area - Fixed at bottom */}
-      <Card className="border-t-2 border-primary shrink-0">
-        <div className="p-4 border-b bg-muted/20 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <h4 className="font-semibold">Working Row {rowIndex + 1}</h4>
-            {documentUrl && !isLoading && !error && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  const hasExisting = editableFields.some((c) => ((localRowData[c] || '').toString().trim() !== ''));
-                  if (hasExisting) {
-                    setShowAnalyzeWarning(true);
-                  } else {
-                    analyzeDocumentAndPopulateRow();
-                  }
-                }}
-                disabled={isAnalyzing}
-                className="gap-2 text-blue-600 hover:text-blue-700 border-blue-200 hover:border-blue-300"
-                title="Analyze document and extract data to populate row fields"
-              >
-                <Brain className="h-4 w-4" />
-                {isAnalyzing ? 'Analyzing...' : 'Analyze'}
-              </Button>
-            )}
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleBackToRunsheet}
-            className="gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Runsheet
-          </Button>
-        </div>
-        <div className="h-48 overflow-auto" ref={tableRef}>
-          <div className="min-w-max">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/50">
-                  {editableFields.map((column) => (
-                    <TableHead 
-                      key={column}
-                      className="border-r border-border font-semibold text-foreground relative group"
-                      style={{ 
-                        width: `${getColumnWidth(column)}px`, 
-                        minWidth: `${getColumnWidth(column)}px`
+      {/* Resizable content area */}
+      <div className="flex-1 min-h-0">
+        <ResizablePanelGroup direction="vertical" className="h-full">
+          {/* Document panel */}
+          <ResizablePanel defaultSize={70} minSize={30}>
+            <div className="h-full overflow-hidden">
+              {isLoading ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="animate-spin h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                  <span className="ml-2">Loading document...</span>
+                </div>
+              ) : error || !documentUrl ? (
+                <div className="flex items-center justify-center h-full text-muted-foreground">
+                  {error || 'No document available'}
+                </div>
+              ) : isPdf ? (
+                <PDFViewer file={null} previewUrl={documentUrl} />
+              ) : (
+                <ScrollArea className="h-full overscroll-contain">
+                  <div className="min-h-full bg-muted/10 flex items-center justify-center p-4" onWheel={handleImageWheel}>
+                    <img
+                      src={documentUrl}
+                      alt={documentName}
+                      className="max-w-full object-contain transition-transform duration-200 select-none cursor-grab active:cursor-grabbing"
+                      style={{
+                        transform: `translate(${panX / zoom}px, ${panY / zoom}px) scale(${zoom}) rotate(${rotation}deg)`,
+                        transformOrigin: 'center',
+                        willChange: 'transform'
                       }}
+                      draggable={false}
+                      onMouseDown={handleImageMouseDown}
+                      onMouseMove={handleImageMouseMove}
+                      onMouseUp={handleImageMouseUp}
+                      onMouseLeave={handleImageMouseUp}
+                      onError={() => setError('Failed to load image')}
+                    />
+                  </div>
+                </ScrollArea>
+              )}
+            </div>
+          </ResizablePanel>
+
+          {/* Resize handle */}
+          <ResizableHandle className="bg-border hover:bg-primary/20 transition-colors" />
+
+          {/* Row data panel */}
+          <ResizablePanel defaultSize={30} minSize={20}>
+            <Card className="h-full border-t-2 border-primary">
+              <div className="p-4 border-b bg-muted/20 flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <h4 className="font-semibold">Working Row {rowIndex + 1}</h4>
+                  {documentUrl && !isLoading && !error && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const hasExisting = editableFields.some((c) => ((localRowData[c] || '').toString().trim() !== ''));
+                        if (hasExisting) {
+                          setShowAnalyzeWarning(true);
+                        } else {
+                          analyzeDocumentAndPopulateRow();
+                        }
+                      }}
+                      disabled={isAnalyzing}
+                      className="gap-2 text-blue-600 hover:text-blue-700 border-blue-200 hover:border-blue-300"
+                      title="Analyze document and extract data to populate row fields"
                     >
-                      <div className="flex items-center gap-2 justify-between">
-                        <span>{column}</span>
-                        {/* Re-extract button in header */}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleReExtractField(column);
-                          }}
-                          className="h-6 w-6 p-0 hover:bg-purple-100 dark:hover:bg-purple-900/20 text-purple-600 dark:text-purple-400 flex-shrink-0"
-                          title={`Re-extract "${column}" field with AI feedback`}
-                        >
-                          <Sparkles className="h-3 w-3" />
-                        </Button>
-                      </div>
-                      
-                      {/* Column resize handle */}
-                      <div
-                        className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-primary/70 group-hover:bg-primary/40 transition-colors"
-                        onMouseDown={(e) => handleMouseDown(e, column)}
-                        style={{ right: '-4px' }}
-                      />
-                    </TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <TableRow className="hover:bg-muted/30">
-                  {editableFields.map((column) => {
-                    const isEditing = editingColumn === column;
-                    const isFocused = focusedColumn === column;
-                    const alignment = columnAlignments[column] || 'left';
-                    
-                    return (
-                      <TableCell 
-                        key={column}
-                        className="border-r border-border p-0 relative"
-                        style={{ 
-                          width: `${getColumnWidth(column)}px`, 
-                          minWidth: `${getColumnWidth(column)}px`
-                        }}
-                      >
-                        {isEditing ? (
-                          <Textarea
-                            value={editingValue}
-                            onChange={(e) => setEditingValue(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' && !e.shiftKey) {
-                                e.preventDefault();
-                                finishEditing();
-                              } else if (e.key === 'Escape') {
-                                e.preventDefault();
-                                cancelEditing();
-                              } else if (e.key === 'Tab') {
-                                e.preventDefault();
-                                finishEditing();
-                                const currentIndex = editableFields.indexOf(column);
-                                const nextIndex = e.shiftKey 
-                                  ? (currentIndex - 1 + editableFields.length) % editableFields.length
-                                  : (currentIndex + 1) % editableFields.length;
-                                const nextColumn = editableFields[nextIndex];
-                                setTimeout(() => startEditing(nextColumn), 0);
-                              }
-                            }}
-                            onBlur={finishEditing}
-                            className={`w-full border-2 border-primary rounded-none bg-background focus:ring-0 focus:outline-none resize-none p-2 ${
-                              alignment === 'center' ? 'text-center' : 
-                              alignment === 'right' ? 'text-right' : 'text-left'
-                            }`}
+                      <Brain className="h-4 w-4" />
+                      {isAnalyzing ? 'Analyzing...' : 'Analyze'}
+                    </Button>
+                  )}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleBackToRunsheet}
+                  className="gap-2"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to Runsheet
+                </Button>
+              </div>
+              <div className="h-full overflow-auto" ref={tableRef}>
+                <div className="min-w-max">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/50">
+                        {editableFields.map((column) => (
+                          <TableHead 
+                            key={column}
+                            className="border-r border-border font-semibold text-foreground relative group"
                             style={{ 
-                              minHeight: '60px',
-                              width: '100%'
+                              width: `${getColumnWidth(column)}px`, 
+                              minWidth: `${getColumnWidth(column)}px`
                             }}
-                            autoFocus
-                            rows={Math.max(3, Math.ceil(editingValue.length / 50))}
-                          />
-                         ) : (
-                           <div
-                             className={`min-h-[2rem] py-2 px-3 cursor-cell flex items-start transition-colors whitespace-pre-wrap focus:outline-none relative group
-                               ${isFocused ? 'bg-primary/20 border-2 border-primary ring-2 ring-primary/20' : 'hover:bg-muted/50 border-2 border-transparent'}
-                               ${alignment === 'center' ? 'text-center justify-center' : 
-                                 alignment === 'right' ? 'text-right justify-end' : 'text-left justify-start'}`}
-                             onClick={() => handleCellClick(column)}
-                             onDoubleClick={() => handleCellDoubleClick(column)}
-                             onKeyDown={(e) => handleKeyDown(e, column)}
-                             tabIndex={0}
-                           >
-                              <span className="flex-1">{localRowData[column] || ''}</span>
-                              
-                              {/* Re-extract button - show for all cells including empty ones */}
+                          >
+                            <div className="flex items-center gap-2 justify-between">
+                              <span>{column}</span>
+                              {/* Re-extract button in header */}
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -889,22 +808,114 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                                   e.stopPropagation();
                                   handleReExtractField(column);
                                 }}
-                                className="h-6 w-6 p-0 ml-2 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-purple-100 dark:hover:bg-purple-900/20 text-purple-600 dark:text-purple-400 flex-shrink-0"
+                                className="h-6 w-6 p-0 hover:bg-purple-100 dark:hover:bg-purple-900/20 text-purple-600 dark:text-purple-400 flex-shrink-0"
                                 title={`Re-extract "${column}" field with AI feedback`}
                               >
-                                <Sparkles className="h-4 w-4" />
+                                <Sparkles className="h-3 w-3" />
                               </Button>
-                           </div>
-                         )}
-                      </TableCell>
-                    );
-                  })}
-                </TableRow>
-              </TableBody>
-            </Table>
-          </div>
-        </div>
-      </Card>
+                            </div>
+                            
+                            {/* Column resize handle */}
+                            <div
+                              className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-primary/70 group-hover:bg-primary/40 transition-colors"
+                              onMouseDown={(e) => handleMouseDown(e, column)}
+                              style={{ right: '-4px' }}
+                            />
+                          </TableHead>
+                        ))}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <TableRow className="hover:bg-muted/30">
+                        {editableFields.map((column) => {
+                          const isEditing = editingColumn === column;
+                          const isFocused = focusedColumn === column;
+                          const alignment = columnAlignments[column] || 'left';
+                          
+                          return (
+                            <TableCell 
+                              key={column}
+                              className="border-r border-border p-0 relative"
+                              style={{ 
+                                width: `${getColumnWidth(column)}px`, 
+                                minWidth: `${getColumnWidth(column)}px`
+                              }}
+                            >
+                              {isEditing ? (
+                                <Textarea
+                                  value={editingValue}
+                                  onChange={(e) => setEditingValue(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                      e.preventDefault();
+                                      finishEditing();
+                                    } else if (e.key === 'Escape') {
+                                      e.preventDefault();
+                                      cancelEditing();
+                                    } else if (e.key === 'Tab') {
+                                      e.preventDefault();
+                                      finishEditing();
+                                      const currentIndex = editableFields.indexOf(column);
+                                      const nextIndex = e.shiftKey 
+                                        ? (currentIndex - 1 + editableFields.length) % editableFields.length
+                                        : (currentIndex + 1) % editableFields.length;
+                                      const nextColumn = editableFields[nextIndex];
+                                      setTimeout(() => startEditing(nextColumn), 0);
+                                    }
+                                  }}
+                                  onBlur={finishEditing}
+                                  className={`w-full border-2 border-primary rounded-none bg-background focus:ring-0 focus:outline-none resize-none p-2 ${
+                                    alignment === 'center' ? 'text-center' : 
+                                    alignment === 'right' ? 'text-right' : 'text-left'
+                                  }`}
+                                  style={{ 
+                                    minHeight: '60px',
+                                    width: '100%'
+                                  }}
+                                  autoFocus
+                                  rows={Math.max(3, Math.ceil(editingValue.length / 50))}
+                                />
+                               ) : (
+                                 <div
+                                   className={`min-h-[2rem] py-2 px-3 cursor-cell flex items-start transition-colors whitespace-pre-wrap focus:outline-none relative group
+                                     ${isFocused ? 'bg-primary/20 border-2 border-primary ring-2 ring-primary/20' : 'hover:bg-muted/50 border-2 border-transparent'}
+                                     ${alignment === 'center' ? 'text-center justify-center' : 
+                                       alignment === 'right' ? 'text-right justify-end' : 'text-left justify-start'}`}
+                                   onClick={() => handleCellClick(column)}
+                                   onDoubleClick={() => handleCellDoubleClick(column)}
+                                   onKeyDown={(e) => handleKeyDown(e, column)}
+                                   tabIndex={0}
+                                 >
+                                   <span className="flex-1">{localRowData[column] || ''}</span>
+                                   
+                                   {/* Re-extract button - show for all cells including empty ones */}
+                                   <Button
+                                     variant="ghost"
+                                     size="sm"
+                                     onClick={(e) => {
+                                       e.stopPropagation();
+                                       handleReExtractField(column);
+                                     }}
+                                     className="h-6 w-6 p-0 ml-2 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-purple-100 dark:hover:bg-purple-900/20 text-purple-600 dark:text-purple-400 flex-shrink-0"
+                                     title={`Re-extract "${column}" field with AI feedback`}
+                                   >
+                                     <Sparkles className="h-4 w-4" />
+                                   </Button>
+                                 </div>
+                               )}
+                            </TableCell>
+                          );
+                        })}
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            </Card>
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      </div>
+
       <AlertDialog open={showAnalyzeWarning} onOpenChange={setShowAnalyzeWarning}>
         <AlertDialogContent>
           <AlertDialogHeader>
