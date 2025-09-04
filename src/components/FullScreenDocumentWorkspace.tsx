@@ -791,7 +791,23 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                         minWidth: `${getColumnWidth(column)}px`
                       }}
                     >
-                      {column}
+                      <div className="flex items-center gap-2 justify-between">
+                        <span>{column}</span>
+                        {/* Re-extract button in header */}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleReExtractField(column);
+                          }}
+                          className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-purple-100 dark:hover:bg-purple-900/20 text-purple-600 dark:text-purple-400 flex-shrink-0"
+                          title={`Re-extract "${column}" field with AI feedback`}
+                        >
+                          <Sparkles className="h-3 w-3" />
+                        </Button>
+                      </div>
+                      
                       {/* Column resize handle */}
                       <div
                         className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-primary/70 group-hover:bg-primary/40 transition-colors"
@@ -863,23 +879,21 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                              onKeyDown={(e) => handleKeyDown(e, column)}
                              tabIndex={0}
                            >
-                             <span className="flex-1">{localRowData[column] || ''}</span>
-                             
-                             {/* Re-extract button - only show if cell has data */}
-                             {localRowData[column] && localRowData[column].trim() !== '' && (
-                               <Button
-                                 variant="ghost"
-                                 size="sm"
-                                 onClick={(e) => {
-                                   e.stopPropagation();
-                                   handleReExtractField(column);
-                                 }}
-                                 className="h-6 w-6 p-0 ml-2 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-purple-100 dark:hover:bg-purple-900/20 text-purple-600 dark:text-purple-400 flex-shrink-0"
-                                 title={`Re-extract "${column}" field with AI feedback`}
-                               >
-                                 <Sparkles className="h-4 w-4" />
-                               </Button>
-                             )}
+                              <span className="flex-1">{localRowData[column] || ''}</span>
+                              
+                              {/* Re-extract button - show for all cells including empty ones */}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleReExtractField(column);
+                                }}
+                                className="h-6 w-6 p-0 ml-2 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-purple-100 dark:hover:bg-purple-900/20 text-purple-600 dark:text-purple-400 flex-shrink-0"
+                                title={`Re-extract "${column}" field with AI feedback`}
+                              >
+                                <Sparkles className="h-4 w-4" />
+                              </Button>
                            </div>
                          )}
                       </TableCell>

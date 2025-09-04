@@ -55,7 +55,13 @@ const ReExtractDialog: React.FC<ReExtractDialogProps> = ({
               Current Value:
             </Label>
             <div className="mt-1 p-3 bg-muted/30 rounded-md text-sm">
-              {currentValue || <span className="text-muted-foreground italic">Empty</span>}
+              {currentValue ? (
+                currentValue
+              ) : (
+                <span className="text-muted-foreground italic">
+                  Empty - No data was extracted for this field
+                </span>
+              )}
             </div>
           </div>
           
@@ -67,7 +73,10 @@ const ReExtractDialog: React.FC<ReExtractDialogProps> = ({
               id="notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="E.g., 'The date should be from the top right corner' or 'Missing the second grantor name' or 'This should be empty - no value found'"
+              placeholder={currentValue ? 
+                "E.g., 'The date should be from the top right corner' or 'Missing the second grantor name' or 'This should be empty - no value found'" : 
+                "E.g., 'Look for the property address in the middle section' or 'The date might be stamped at the top' or 'Check for signatures at the bottom'"
+              }
               className="mt-1 min-h-[80px]"
               disabled={isLoading}
             />
