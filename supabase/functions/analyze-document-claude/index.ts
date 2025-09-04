@@ -92,9 +92,12 @@ serve(async (req) => {
     console.log('Analyzing document with Claude:', { fileName, contentType, userId: user.id })
 
     // Fetch the document
+    console.log('Fetching document from URL:', fileUrl)
     const docResponse = await fetch(fileUrl)
+    console.log('Document fetch response:', { status: docResponse.status, ok: docResponse.ok })
     if (!docResponse.ok) {
-      throw new Error(`Failed to fetch document: ${docResponse.statusText}`)
+      console.error('Failed to fetch document:', { status: docResponse.status, statusText: docResponse.statusText })
+      throw new Error(`Failed to fetch document: ${docResponse.status} ${docResponse.statusText}`)
     }
 
     const documentBytes = await docResponse.arrayBuffer()
@@ -116,7 +119,7 @@ serve(async (req) => {
 
     console.log('Using media type:', mediaType)
 
-    const model = 'claude-sonnet-4-20250514'
+    const model = 'claude-3-5-haiku-20241022' // Use faster model for better reliability
 
     // Call Claude API with the document
     const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
@@ -133,10 +136,10 @@ serve(async (req) => {
           role: 'user',
           content: [
             {
-              type: 'document',
+              type: 'image',
               source: {
                 type: 'base64',
-                media_type: mediaType,
+                media_type: mediaType.startsWith('image/') ? mediaType : 'image/png',
                 data: base64Document
               }
             },
@@ -151,8 +154,13 @@ serve(async (req) => {
 
     if (!claudeResponse.ok) {
       const errorText = await claudeResponse.text()
-      console.error('Claude API error:', errorText)
-      throw new Error(`Claude API error: ${claudeResponse.statusText}`)
+      console.error('Claude API error response:', {
+        status: claudeResponse.status,
+        statusText: claudeResponse.statusText,
+        headers: Object.fromEntries(claudeResponse.headers.entries()),
+        body: errorText
+      })
+      throw new Error(`Claude API error: ${claudeResponse.status} ${claudeResponse.statusText} - ${errorText}`)
     }
 
     const claudeData = await claudeResponse.json()
