@@ -33,38 +33,63 @@ serve(async (req) => {
     let prompt = '';
     
     if (mode === 'single' && columnName) {
-      prompt = `Generate detailed extraction instructions for the column "${columnName}" in a document processing system. 
+      prompt = `As an expert in landman work, oil & gas title examination, real estate transactions, and mineral rights documentation, generate detailed extraction instructions for the column "${columnName}".
 
-The instruction should help AI extract accurate information from legal documents, real estate documents, financial records, and other business documents.
+Context: This is for processing legal documents including:
+- Oil and gas leases (primary and secondary terms, royalty rates, bonus payments, drilling obligations)
+- Mineral deeds and reservations (surface vs mineral rights, fractional interests)
+- Real estate deeds (warranty, quitclaim, special warranty)
+- Easements and right-of-way agreements
+- Court records and probate documents
+- Assignment and conveyance records
+- Lease amendments and modifications
+- Division orders and ownership records
+
+The instruction should help AI extract accurate information with focus on:
+- Legal precision and exact terminology
+- Understanding of oil & gas industry standards
+- Proper handling of fractional interests and legal descriptions
+- Recognition of key lease clauses and provisions
+- Awareness of common document formats in title work
 
 Requirements:
-- Be very specific about what to look for
-- Include examples of formats or patterns when applicable
-- Mention common label variations the field might have
-- Specify the expected output format
-- Be 2-3 sentences maximum
-- Focus on accuracy and precision
+- Be very specific about what to look for in oil & gas and real estate documents
+- Include examples of formats or patterns specific to landman work
+- Mention industry-specific label variations
+- Specify expected output format for legal accuracy
+- Be 2-3 sentences maximum focused on landman/title examination needs
 
-Return only the instruction text, no additional formatting or explanation.`;
+Return only the instruction text, no additional formatting.`;
     } else {
-      prompt = `Generate comprehensive extraction instructions for these columns in a document processing system: ${columns.join(', ')}
+      prompt = `As an expert in landman work, oil & gas title examination, real estate transactions, and mineral rights documentation, generate comprehensive extraction instructions for these columns: ${columns.join(', ')}
 
-The instructions should help AI extract accurate information from legal documents, real estate documents, financial records, and other business documents.
+Context: This is for processing legal documents in oil & gas title work including:
+- Oil and gas leases (primary/secondary terms, royalty rates, bonus payments, drilling obligations, Pugh clauses)
+- Mineral deeds and reservations (surface vs mineral rights, fractional interests, depth limitations)
+- Real estate deeds (warranty, quitclaim, special warranty deeds)
+- Easements, right-of-way, and surface use agreements
+- Court records, probate documents, and heirship determinations
+- Assignment and conveyance records with effective dates
+- Lease amendments, ratifications, and modifications
+- Division orders and ownership records
+- Pooling and unitization agreements
 
-For each column, provide:
-- Very specific guidance on what to look for
-- Examples of formats or patterns when applicable
-- Common label variations the field might have
-- Expected output format
+For each column, provide landman-focused instructions covering:
+- Legal precision with oil & gas industry terminology
+- Understanding of lease clauses and mineral rights concepts
+- Proper handling of fractional interests and legal descriptions
+- Recognition of key provisions in oil & gas agreements
+- Awareness of title examination standards and practices
+
+Requirements per instruction:
+- Very specific guidance for oil & gas and real estate documents
+- Examples of formats specific to landman work
+- Industry-specific label variations and terminology
+- Expected output format for legal accuracy
 - 2-3 sentences maximum per instruction
-- Focus on accuracy and precision
+- Focus on title examination and landman workflow needs
 
-Return the response as a JSON object where keys are the column names and values are the instruction text. Example format:
-{
-  "Column Name": "Detailed instruction text here...",
-  "Another Column": "Another instruction..."
-}`;
-    }
+Return as JSON object with column names as keys and specialized landman instructions as values.`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -77,7 +102,7 @@ Return the response as a JSON object where keys are the column names and values 
         messages: [
           {
             role: 'system',
-            content: 'You are an expert in document processing and data extraction. You create precise, actionable instructions for AI systems to extract specific information from documents.'
+            content: 'You are an expert landman and oil & gas title examiner with deep knowledge of mineral rights, real estate law, and oil & gas lease provisions. You specialize in creating precise extraction instructions for legal document processing systems used in title examination and landman work.'
           },
           {
             role: 'user',

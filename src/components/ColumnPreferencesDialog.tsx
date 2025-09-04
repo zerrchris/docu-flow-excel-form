@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { toast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { X, Plus, GripVertical, Save, RotateCcw, Sparkles, Wand2 } from 'lucide-react';
 import { ExtractionPreferencesService } from '@/services/extractionPreferences';
 import { supabase } from '@/integrations/supabase/client';
@@ -31,6 +31,7 @@ const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const [isGeneratingAllAI, setIsGeneratingAllAI] = useState(false);
+  const { toast } = useToast();
 
   // Load current preferences when dialog opens
   useEffect(() => {
