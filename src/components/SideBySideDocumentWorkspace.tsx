@@ -8,9 +8,10 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
-import { ArrowLeft, Sparkles, Volume2, RotateCcw, FileText, Wand2 } from 'lucide-react';
+import { ArrowLeft, Sparkles, Volume2, RotateCcw, FileText, Wand2, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import PDFViewer from './PDFViewer';
 import { DocumentService, type DocumentRecord } from '@/services/documentService';
 
@@ -48,6 +49,7 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [lastAnalyzedData, setLastAnalyzedData] = useState<Record<string, string>>({});
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [showAnalyzeWarning, setShowAnalyzeWarning] = useState(false);
 
   // Update local row data when props change
   useEffect(() => {
@@ -55,7 +57,7 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
     setHasUnsavedChanges(false);
   }, [initialRowData, rowIndex]);
 
-  const handleAnalyzeDocument = async () => {
+  const handleAnalyzeDocument = async (forceOverwrite = false) => {
     console.log('🔍 SIDE-BY-SIDE: handleAnalyzeDocument called');
     console.log('🔍 SIDE-BY-SIDE: documentRecord:', documentRecord);
     
@@ -67,6 +69,16 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
         variant: "destructive",
       });
       return;
+    }
+
+    // Check for existing data (same logic as expanded workspace)
+    if (!forceOverwrite) {
+      const hasExisting = columns.some((col) => ((rowData[col] || '').toString().trim() !== ''));
+      if (hasExisting) {
+        console.log('🔍 SIDE-BY-SIDE: Has existing data, showing warning');
+        setShowAnalyzeWarning(true);
+        return;
+      }
     }
 
     try {
@@ -424,9 +436,16 @@ Return only the filename, nothing else.`,
                 <h3 className="text-lg font-semibold">Row Data</h3>
                 <div className="flex items-center gap-2">
                   {/* Analyze Document */}
-                  {documentRecord && (
+                   {documentRecord && (
                      <Button
-                       onClick={handleAnalyzeDocument}
+                       onClick={() => {
+                         const hasExisting = columns.some((col) => ((rowData[col] || '').toString().trim() !== ''));
+                         if (hasExisting) {
+                           setShowAnalyzeWarning(true);
+                         } else {
+                           handleAnalyzeDocument();
+                         }
+                       }}
                        disabled={isAnalyzing}
                        className="flex items-center gap-2"
                        size="sm"
@@ -583,6 +602,32 @@ Return only the filename, nothing else.`,
           </div>
         </ResizablePanel>
       </ResizablePanelGroup>
+
+      {/* Analyze Document Warning Dialog */}
+      <AlertDialog open={showAnalyzeWarning} onOpenChange={setShowAnalyzeWarning}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-yellow-500" />
+              Replace Existing Data?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This row already contains data. Analyzing the document will replace the existing information with newly extracted data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowAnalyzeWarning(false)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={() => { 
+              setShowAnalyzeWarning(false); 
+              handleAnalyzeDocument(true); // Force overwrite
+            }}>
+              Replace Data
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
