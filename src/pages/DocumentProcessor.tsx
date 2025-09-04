@@ -1063,8 +1063,21 @@ const DocumentProcessor: React.FC = () => {
     }
 
     // Check if all columns have extraction instructions configured (excluding Document File Name)
+    console.log('🔍 VALIDATION CHECK:');
     console.log('Current columns:', columns);
     console.log('Current columnInstructions:', columnInstructions);
+    
+    // Show which columns have instructions and which don't
+    columns.forEach(col => {
+      if (col !== 'Document File Name') {
+        const hasInstruction = columnInstructions[col] && columnInstructions[col].trim() !== '';
+        console.log(`Column "${col}": ${hasInstruction ? '✅ HAS' : '❌ MISSING'} instructions`);
+        if (hasInstruction) {
+          console.log(`  → "${columnInstructions[col].substring(0, 50)}..."`);
+        }
+      }
+    });
+    
     const columnsWithoutInstructions = columns.filter(column => 
       column !== 'Document File Name' && // Skip Document File Name - it's user-specified, not extracted
       (!columnInstructions[column] || columnInstructions[column].trim() === '')
