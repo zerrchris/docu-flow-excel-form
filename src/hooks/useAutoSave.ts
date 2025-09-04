@@ -209,12 +209,8 @@ export function useAutoSave({
     };
   }, []);
 
-  // Auto-save disabled to prevent refresh behavior - only manual saves now
-  useEffect(() => {
-    // Disabled auto-save to prevent constant re-renders that feel like page refreshes
-    // Users now save manually with the save button only
-    console.log('🚫 Auto-save disabled - manual save only');
-  }, []);
+  // Auto-save completely disabled to prevent refresh behavior - only manual saves now
+  // No useEffect hooks that trigger on data changes to prevent constant re-renders
 
   return {
     save,
