@@ -338,7 +338,7 @@ const Home: React.FC = () => {
                   <h4 className="text-2xl font-semibold">Review & Add to Runsheet</h4>
                 </div>
                 <p className="text-muted-foreground text-lg mb-4">
-                  Review the extracted data for accuracy, make any necessary corrections, then click "Add to Runsheet". The data will be added to the next row of your runsheet with a document file reference.
+                  Review the extracted data for accuracy, make any necessary corrections, then click "Add to Runsheet". Go back to your runsheet to see the data has been added to the next row with a document file reference.
                 </p>
                 <ul className="space-y-2 text-muted-foreground">
                   <li>• Automatic data validation</li>
