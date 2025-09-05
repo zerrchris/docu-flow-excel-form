@@ -191,6 +191,49 @@ const Home: React.FC = () => {
               </div>
             </div>
 
+            {/* Add Documents Directly to Runsheet */}
+            <div className="grid lg:grid-cols-2 gap-8 items-center">
+              <div className="order-2 lg:order-1">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
+                    •
+                  </div>
+                  <h4 className="text-2xl font-semibold">Add Documents Directly to Runsheet</h4>
+                </div>
+                <p className="text-muted-foreground text-lg mb-4">
+                  Upload or capture documents directly to your runsheet for instant linking and organization. Documents appear in your runsheet with reference numbers and can be accessed anytime.
+                </p>
+                <ul className="space-y-2 text-muted-foreground">
+                  <li>• Upload files directly to runsheet rows</li>
+                  <li>• Screen capture for quick document addition</li>
+                  <li>• Automatic document reference numbering</li>
+                  <li>• Permanent document-to-row linking</li>
+                </ul>
+              </div>
+              <div className="order-1 lg:order-2">
+                <div 
+                  className="relative group cursor-pointer"
+                  onMouseEnter={() => setHoveredImage("/lovable-uploads/71200d6b-0740-4bd9-b89d-878aea657b25.png")}
+                  onMouseLeave={() => setHoveredImage(null)}
+                  onClick={() => setEnlargedImage("/lovable-uploads/71200d6b-0740-4bd9-b89d-878aea657b25.png")}
+                >
+                  <img 
+                    src="/lovable-uploads/71200d6b-0740-4bd9-b89d-878aea657b25.png"
+                    alt="Documents added directly to runsheet with reference numbers"
+                    className="rounded-lg shadow-lg w-full transition-all duration-300 group-hover:brightness-75"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <div className="bg-black/50 backdrop-blur-sm rounded-full p-3 flex items-center gap-2 text-white">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                      </svg>
+                      <span className="text-sm font-medium">Click to enlarge</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Step 2 */}
             <div className="grid lg:grid-cols-2 gap-8 items-center">
               <div className="order-2 lg:order-1">
@@ -344,48 +387,6 @@ const Home: React.FC = () => {
             </div>
 
 
-              {/* Add Documents Directly to Runsheet */}
-              <div className="grid lg:grid-cols-2 gap-8 items-center">
-                <div className="order-2 lg:order-1">
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
-                      •
-                    </div>
-                    <h4 className="text-2xl font-semibold">Add Documents Directly to Runsheet</h4>
-                  </div>
-                  <p className="text-muted-foreground text-lg mb-4">
-                    Upload or capture documents directly to your runsheet for instant linking and organization. Documents appear in your runsheet with reference numbers and can be accessed anytime.
-                  </p>
-                  <ul className="space-y-2 text-muted-foreground">
-                    <li>• Upload files directly to runsheet rows</li>
-                    <li>• Screen capture for quick document addition</li>
-                    <li>• Automatic document reference numbering</li>
-                    <li>• Permanent document-to-row linking</li>
-                  </ul>
-                </div>
-                <div className="order-1 lg:order-2">
-                  <div 
-                    className="relative group cursor-pointer"
-                    onMouseEnter={() => setHoveredImage("/lovable-uploads/71200d6b-0740-4bd9-b89d-878aea657b25.png")}
-                    onMouseLeave={() => setHoveredImage(null)}
-                    onClick={() => setEnlargedImage("/lovable-uploads/71200d6b-0740-4bd9-b89d-878aea657b25.png")}
-                  >
-                    <img 
-                      src="/lovable-uploads/71200d6b-0740-4bd9-b89d-878aea657b25.png"
-                      alt="Documents added directly to runsheet with reference numbers"
-                      className="rounded-lg shadow-lg w-full transition-all duration-300 group-hover:brightness-75"
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      <div className="bg-black/50 backdrop-blur-sm rounded-full p-3 flex items-center gap-2 text-white">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
-                        </svg>
-                        <span className="text-sm font-medium">Click to enlarge</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-               </div>
 
               {/* Brain Button Analysis */}
               <div className="grid lg:grid-cols-2 gap-8 items-center">
