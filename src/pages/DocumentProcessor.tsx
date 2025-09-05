@@ -2188,6 +2188,9 @@ Image: [base64 image data]`;
 
   // Handle starting a new runsheet
   const handleStartNew = () => {
+    // Mark this as user-triggered
+    sessionStorage.setItem('user_requested_new_runsheet', 'true');
+    
     if (hasUnsavedChanges) {
       setPendingNavigation({ path: 'new-runsheet' });
       setShowNavigationDialog(true);
@@ -2220,11 +2223,22 @@ Image: [base64 image data]`;
         }
       }
       
+      // ONLY create a new runsheet if this was explicitly triggered by user action
+      // Don't create untitled runsheets automatically on page refresh
+      const isUserTriggered = sessionStorage.getItem('user_requested_new_runsheet');
+      if (!isUserTriggered) {
+        console.log('🚫 Preventing automatic untitled runsheet creation - not user triggered');
+        return;
+      }
+      
+      // Clear the flag after use
+      sessionStorage.removeItem('user_requested_new_runsheet');
+      
       // Use the same successful pattern as Dashboard
       setTimeout(() => {
         const event = new CustomEvent('createNewRunsheetFromDashboard', {
           detail: {
-            name: 'Untitled Runsheet',
+            name: 'New Runsheet ' + new Date().toLocaleDateString(), // More descriptive name
             columns: initialColumns,
             instructions: initialInstructions
           }
@@ -2713,6 +2727,8 @@ Image: [base64 image data]`;
                 setShowNavigationDialog(false);
                 if (pendingNavigation) {
                   if (pendingNavigation.path === 'new-runsheet') {
+                      // Mark as user-triggered before calling
+                      sessionStorage.setItem('user_requested_new_runsheet', 'true');
                       startNewRunsheetSimple();
                   } else if (pendingNavigation.state) {
                     navigate(pendingNavigation.path, { state: pendingNavigation.state });
@@ -2796,6 +2812,8 @@ Image: [base64 image data]`;
                   // Now navigate
                   if (pendingNavigation) {
                     if (pendingNavigation.path === 'new-runsheet') {
+                      // Mark as user-triggered before calling
+                      sessionStorage.setItem('user_requested_new_runsheet', 'true');
                       startNewRunsheetSimple();
                     } else if (pendingNavigation.state) {
                       navigate(pendingNavigation.path, { state: pendingNavigation.state });
