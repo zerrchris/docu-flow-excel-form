@@ -616,54 +616,11 @@ export const FileManager: React.FC = () => {
         </Card>
         )}
       </div>
+    </div>
+  );
 
-      {/* New Runsheet Dialog */}
-      <Dialog open={showNewRunsheetDialog} onOpenChange={setShowNewRunsheetDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Create New Runsheet</DialogTitle>
-            <DialogDescription>
-              Enter a name for your new runsheet. This will help you organize your documents and data.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label htmlFor="runsheet-name" className="text-sm font-medium">
-                Runsheet Name
-              </label>
-              <Input
-                id="runsheet-name"
-                value={newRunsheetName}
-                onChange={(e) => setNewRunsheetName(e.target.value)}
-                placeholder="Enter runsheet name..."
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && newRunsheetName.trim()) {
-                    createNewRunsheet();
-                  }
-                }}
-                autoFocus
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowNewRunsheetDialog(false);
-                setNewRunsheetName('');
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={createNewRunsheet}
-              disabled={!newRunsheetName.trim()}
-            >
-              Create Runsheet
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+  const renderRunsheetDetailsView = () => (
+    <div>Documents view placeholder</div>
   );
 
   return (
@@ -820,6 +777,69 @@ export const FileManager: React.FC = () => {
               {isDeleting ? 'Deleting...' : 'Delete'}
             </AlertDialogAction>
           </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* File Preview */}
+      <FilePreview 
+        file={previewFile}
+        isOpen={showPreview}
+        onClose={() => {
+          setShowPreview(false);
+          setPreviewFile(null);
+        }}
+      />
+
+      {/* New Runsheet Dialog */}
+      <Dialog open={showNewRunsheetDialog} onOpenChange={setShowNewRunsheetDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create New Runsheet</DialogTitle>
+            <DialogDescription>
+              Enter a name for your new runsheet. This will help you organize your documents and data.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label htmlFor="runsheet-name" className="text-sm font-medium">
+                Runsheet Name
+              </label>
+              <Input
+                id="runsheet-name"
+                value={newRunsheetName}
+                onChange={(e) => setNewRunsheetName(e.target.value)}
+                placeholder="Enter runsheet name..."
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && newRunsheetName.trim()) {
+                    createNewRunsheet();
+                  }
+                }}
+                autoFocus
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowNewRunsheetDialog(false);
+                setNewRunsheetName('');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={createNewRunsheet}
+              disabled={!newRunsheetName.trim()}
+            >
+              Create Runsheet
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
         </AlertDialogContent>
       </AlertDialog>
 
