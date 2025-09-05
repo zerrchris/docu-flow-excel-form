@@ -133,14 +133,38 @@ Return as JSON object with column names as keys and specialized landman instruct
     } else {
       try {
         // Try to parse as JSON first
-        result = JSON.parse(content);
+        let jsonContent = content.trim();
+        
+        // Handle JSON wrapped in markdown code blocks
+        const jsonMatch = jsonContent.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+        if (jsonMatch) {
+          jsonContent = jsonMatch[1].trim();
+        }
+        
+        result = JSON.parse(jsonContent);
       } catch (e) {
-        // If JSON parsing fails, return raw content
+        // If JSON parsing fails, try to extract JSON from the content
         console.error('Failed to parse JSON response:', e);
-        return new Response(JSON.stringify({ error: 'Invalid response format from AI' }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        console.error('Raw content:', content);
+        
+        // Try to find JSON object in the text
+        const jsonObjectMatch = content.match(/\{[\s\S]*\}/);
+        if (jsonObjectMatch) {
+          try {
+            result = JSON.parse(jsonObjectMatch[0]);
+          } catch (e2) {
+            console.error('Failed to parse extracted JSON:', e2);
+            return new Response(JSON.stringify({ error: 'Invalid response format from AI' }), {
+              status: 500,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          }
+        } else {
+          return new Response(JSON.stringify({ error: 'Invalid response format from AI' }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
       }
     }
 
