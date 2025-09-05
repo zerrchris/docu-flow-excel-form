@@ -54,7 +54,7 @@ import SideBySideDocumentWorkspace from './SideBySideDocumentWorkspace';
 import ViewportPortal from './ViewportPortal';
 import { AutoSaveIndicator } from './AutoSaveIndicator';
 import { useImmediateSave } from '@/hooks/useImmediateSave';
-import { StorageDebugDialog } from './StorageDebugDialog';
+
 
 import type { User } from '@supabase/supabase-js';
 import { 
@@ -274,7 +274,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   const [hasManuallyResizedColumns, setHasManuallyResizedColumns] = useState(false);
   const [documentMap, setDocumentMap] = useState<Map<number, DocumentRecord>>(new Map());
   const [currentRunsheetId, setCurrentRunsheetId] = useState<string | null>(null);
-  const [showStorageDebug, setShowStorageDebug] = useState(false);
+  
 
   // Resolve a reliable runsheet ID for document operations (inline viewer, linking)
   const effectiveRunsheetId = currentRunsheet?.id || '';
@@ -5149,17 +5149,6 @@ ${extractionFields}`
               {isSaving || immediateSaving ? 'Saving...' : 'Save & Close'}
             </Button>
 
-            {/* Storage Debug Button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowStorageDebug(true)}
-              className="gap-2"
-              title="Debug Storage Issues"
-            >
-              <Bug className="h-4 w-4" />
-              Debug
-            </Button>
 
             {/* Download Button */}
             <DropdownMenu>
@@ -6730,14 +6719,9 @@ ${extractionFields}`
           onResetColumnWidths={resetColumnWidths}
         />
 
-        {/* Storage Debug Dialog */}
-        <StorageDebugDialog
-          open={showStorageDebug}
-          onOpenChange={setShowStorageDebug}
-          runsheetId={effectiveRunsheetId}
-        />
+    );
       </div>
     );
-});
+  });
 
 export default EditableSpreadsheet;

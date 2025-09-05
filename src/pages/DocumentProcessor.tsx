@@ -11,7 +11,7 @@ import AuthButton from '@/components/AuthButton';
 
 import DocumentUpload from '@/components/DocumentUpload';
 import MultipleFileUpload from '@/components/MultipleFileUpload';
-import { StorageDebugDialog } from '@/components/StorageDebugDialog';
+// StorageDebugDialog removed - no longer needed
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 import { GoogleDrivePicker } from '@/components/GoogleDrivePicker';
 import { ExtractionPreferencesService } from '@/services/extractionPreferences';
@@ -74,7 +74,7 @@ const DocumentProcessor: React.FC = () => {
   const [missingDataDialog, setMissingDataDialog] = useState(false);
   const [confirmAddFileDialog, setConfirmAddFileDialog] = useState(false);
   const [hasAddedToSpreadsheet, setHasAddedToSpreadsheet] = useState(false);
-  const [showStorageDebug, setShowStorageDebug] = useState(false);
+  // Debug dialog state removed
   const [showRunsheetUploadDialog, setShowRunsheetUploadDialog] = useState(false);
   
   // Note: Navigation blocking removed since runsheet auto-saves
@@ -2377,16 +2377,6 @@ Image: [base64 image data]`;
                     <Upload className="h-4 w-4" />
                     Upload New Document
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowStorageDebug(true)}
-                    className="gap-2"
-                    title="Debug Storage Issues"
-                  >
-                    <Bug className="h-4 w-4" />
-                    Debug
-                  </Button>
                   <AuthButton />
                 </div>
               </div>
@@ -3170,12 +3160,6 @@ Image: [base64 image data]`;
         </DialogContent>
       </Dialog>
 
-      {/* Storage Debug Dialog */}
-      <StorageDebugDialog
-        open={showStorageDebug}
-        onOpenChange={setShowStorageDebug}
-        runsheetId={activeRunsheet?.id || location.state?.runsheetId || searchParams.get('id') || undefined}
-      />
     </div>
   );
 };
