@@ -201,7 +201,7 @@ const Home: React.FC = () => {
                   <h4 className="text-2xl font-semibold">Ready to Analyze?</h4>
                 </div>
                 <p className="text-muted-foreground text-lg mb-4">
-                  When ready to analyze a document, first add your document(s) to the runsheet using the "Document Capture" button. Once documents are added to your sheet, go to the side by side document analysis to review and extract data.
+                  When ready to analyze a document, first add your document(s) to the runsheet. Once documents are added to your sheet, go to the side by side document analysis to review and extract data.
                 </p>
                 <ul className="space-y-2 text-muted-foreground">
                   <li>• Supports PDF, JPG, PNG formats</li>
