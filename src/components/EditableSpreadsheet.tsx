@@ -5201,50 +5201,22 @@ ${extractionFields}`
                   <ChevronDown className="h-3 w-3" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" className="bg-background border shadow-lg z-50">
                 <DropdownMenuItem 
                   onClick={(e) => {
-                    console.log('🔧 DEBUG: Add 10 rows clicked');
                     e.preventDefault();
                     e.stopPropagation();
                     setShowAddRowsDialog(true);
                   }}
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Rows
+                  Custom Amount...
                 </DropdownMenuItem>
                 
                 <DropdownMenuSeparator />
                 
                 <DropdownMenuItem 
-                  onClick={() => {
-                    console.log('=== LOCALSTORAGE DEBUG ===');
-                    const keys = Object.keys(localStorage);
-                    const runsheetKeys = keys.filter(k => k.includes('runsheet') || k.includes('backup'));
-                    console.log('All localStorage keys:', keys);
-                    console.log('Runsheet-related keys:', runsheetKeys);
-                    
-                    runsheetKeys.forEach(key => {
-                      try {
-                        const value = localStorage.getItem(key);
-                        console.log(`${key}:`, value ? JSON.parse(value) : 'null');
-                      } catch (e) {
-                        console.log(`${key}:`, localStorage.getItem(key));
-                      }
-                    });
-                    
-                    toast({
-                      title: "Debug info in console",
-                      description: "Check browser console for localStorage data",
-                    });
-                  }}
-                >
-                  <AlertCircle className="h-4 w-4 mr-2" />
-                  🔍 Check Backups (Debug)
-                </DropdownMenuItem>
-                <DropdownMenuItem 
                   onClick={(e) => {
-                    console.log('🔧 DEBUG: Add 10 rows clicked');
                     e.preventDefault();
                     e.stopPropagation();
                     addMoreRows(10);
@@ -5255,7 +5227,6 @@ ${extractionFields}`
                 </DropdownMenuItem>
                 <DropdownMenuItem 
                   onClick={(e) => {
-                    console.log('🔧 DEBUG: Add 25 rows clicked');
                     e.preventDefault();
                     e.stopPropagation();
                     addMoreRows(25);
@@ -5266,7 +5237,6 @@ ${extractionFields}`
                 </DropdownMenuItem>
                 <DropdownMenuItem 
                   onClick={(e) => {
-                    console.log('🔧 DEBUG: Add 50 rows clicked');
                     e.preventDefault();
                     e.stopPropagation();
                     addMoreRows(50);
@@ -5277,7 +5247,6 @@ ${extractionFields}`
                 </DropdownMenuItem>
                 <DropdownMenuItem 
                   onClick={(e) => {
-                    console.log('🔧 DEBUG: Add 100 rows clicked');
                     e.preventDefault();
                     e.stopPropagation();
                     addMoreRows(100);
@@ -5285,16 +5254,6 @@ ${extractionFields}`
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Add 100 rows
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    checkLocalStorageBackups();
-                  }}
-                >
-                  <Bug className="h-4 w-4 mr-2" />
-                  Check Backups (Debug)
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
