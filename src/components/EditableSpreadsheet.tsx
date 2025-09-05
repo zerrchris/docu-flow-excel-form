@@ -53,7 +53,7 @@ import FullScreenDocumentWorkspace from './FullScreenDocumentWorkspace';
 import SideBySideDocumentWorkspace from './SideBySideDocumentWorkspace';
 import ViewportPortal from './ViewportPortal';
 import { AutoSaveIndicator } from './AutoSaveIndicator';
-import { useAutoSave } from '@/hooks/useAutoSave';
+import { useImmediateSave } from '@/hooks/useImmediateSave';
 import { StorageDebugDialog } from './StorageDebugDialog';
 
 import type { User } from '@supabase/supabase-js';
@@ -321,15 +321,10 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   const [showInsertionPreview, setShowInsertionPreview] = useState(false);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Enable proper auto-save like Google Sheets - save immediately to database
-  const { save: autoSave, forceSave: autoForceSave, isSaving: autoSaving } = useAutoSave({
-    runsheetId: currentRunsheet?.id || null,
-    runsheetName: runsheetName && runsheetName !== 'Untitled Runsheet' ? runsheetName : (currentRunsheet?.name || 'Untitled Runsheet'),
-    columns,
-    data,
-    columnInstructions,
+  // Immediate save system like Google Sheets - no debouncing, save on every change
+  const { saveToDatabase, isSaving: immediateSaving } = useImmediateSave({
+    runsheetId: currentRunsheet?.id || currentRunsheetId,
     userId: user?.id,
-    debounceMs: 2000, // Auto-save every 2 seconds like Google Sheets
     onSaveStart: () => {
       setAutoSaveStatus('saving');
       setAutoSaveError('');
@@ -352,7 +347,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
           columnInstructions
         });
         
-        // Clear emergency draft since we now have proper database persistence
+        // Clear localStorage since we now have database persistence
         try {
           localStorage.removeItem('runsheet-emergency-draft');
           console.log('🗑️ Cleared emergency draft - now using database persistence');
@@ -366,20 +361,102 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       setAutoSaveStatus('error');
       const errorMessage = typeof error === 'string' ? error : (error && typeof error === 'object' && error.message) || 'Failed to save';
       setAutoSaveError(errorMessage);
-      console.error('Auto-save error:', error);
+      console.error('Immediate save error:', error);
     }
   });
 
-  // Enable auto-save for database persistence like Google Sheets
-  const safeAutoSave = useCallback(() => {
-    // Always auto-save to maintain Google Sheets-like behavior
-    return autoSave();
-  }, [autoSave]);
+  // Immediate save function - no debouncing like Google Sheets
+  const saveImmediately = useCallback(async () => {
+    if (runsheetName && runsheetName !== 'Untitled Runsheet') {
+      console.log('💾 Saving immediately to database');
+      try {
+        await saveToDatabase(data, columns, runsheetName, columnInstructions);
+      } catch (error) {
+        console.error('Immediate save failed:', error);
+      }
+    }
+  }, [saveToDatabase, data, columns, runsheetName, columnInstructions]);
 
-  const safeAutoForceSave = useCallback(() => {
-    // Always allow force save for database persistence
-    return autoForceSave();
-  }, [autoForceSave]);
+  // Real-time database sync - sync with other users/tabs like Google Sheets
+  useEffect(() => {
+    if (!currentRunsheetId || !user) return;
+
+    console.log('🔄 Setting up real-time sync for runsheet:', currentRunsheetId);
+
+    const channel = supabase
+      .channel(`runsheet-${currentRunsheetId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public', 
+          table: 'runsheets',
+          filter: `id=eq.${currentRunsheetId}`
+        },
+        (payload) => {
+          console.log('🔄 Database changed, syncing local state');
+          
+          const runsheetData = payload.new as any;
+          const newData = runsheetData.data as Record<string, string>[];
+          const newColumns = runsheetData.columns as string[];
+          const newInstructions = runsheetData.column_instructions as Record<string, string>;
+          
+          // Only update if data actually changed (avoid infinite loops)
+          const currentDataHash = JSON.stringify({ data, columns, columnInstructions });
+          const newDataHash = JSON.stringify({ data: newData, columns: newColumns, columnInstructions: newInstructions });
+          
+          if (currentDataHash !== newDataHash) {
+            console.log('📊 Updating local state with database changes');
+            setData(newData || []);
+            setColumns(newColumns || []);
+            setColumnInstructions(newInstructions || {});
+            
+            toast({
+              title: "Synced",
+              description: "Spreadsheet updated with latest changes",
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log('🔄 Cleaning up real-time sync');
+      supabase.removeChannel(channel);
+    };
+  }, [currentRunsheetId, user, data, columns, columnInstructions, toast]);
+
+  // Load data ONLY from database on mount - single source of truth
+  useEffect(() => {
+    const loadFromDatabase = async () => {
+      if (!currentRunsheetId || !user) return;
+      
+      console.log('📊 Loading data from database (single source of truth)');
+      
+      try {
+        const { data: runsheet, error } = await supabase
+          .from('runsheets')
+          .select('*')
+          .eq('id', currentRunsheetId)
+          .single();
+          
+        if (error) throw error;
+        
+        // Set state directly from database
+        setData((runsheet.data as Record<string, string>[]) || []);
+        setColumns((runsheet.columns as string[]) || []);
+        setColumnInstructions((runsheet.column_instructions as Record<string, string>) || {});
+        setRunsheetName(runsheet.name);
+        
+        console.log('✅ Loaded from database:', (runsheet.data as any[])?.length, 'rows');
+        
+      } catch (error) {
+        console.error('❌ Failed to load from database:', error);
+      }
+    };
+    
+    loadFromDatabase();
+  }, [currentRunsheetId, user]);
 
   // Handle changes to initialData prop (for uploaded runsheets)
   useEffect(() => {
@@ -642,7 +719,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     const handleSaveEvent = async () => {
       if (user) {
         try {
-          await safeAutoForceSave();
+          await saveImmediately();
           // Send success response back to DocumentProcessor
           const responseEvent = new CustomEvent('runsheetSaveComplete', {
             detail: { success: true }
@@ -817,7 +894,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
           if (payload['Storage Path']) {
             console.log('🔧 AUTO_SAVE: Triggering immediate auto-save for batch processing');
             setTimeout(() => {
-              safeAutoSave();
+      saveImmediately();
             }, 200); // Short delay to allow state updates to complete
           }
           
@@ -1726,12 +1803,12 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       // Immediate auto-save for critical changes, delayed for regular edits
       // This ensures deletions and major changes are saved immediately
       const timeoutId = setTimeout(() => {
-        safeAutoSave();
+        saveImmediately();
       }, 2000); // Reduced from 30 seconds to 2 seconds for faster saves
       
       return () => clearTimeout(timeoutId);
     }
-  }, [data, columns, runsheetName, columnInstructions, user, lastSavedState, autoSave, onUnsavedChanges]);
+  }, [data, columns, runsheetName, columnInstructions, user, lastSavedState, saveImmediately, onUnsavedChanges]);
 
   // Aggressive fallback auto-save every 30 seconds
   useEffect(() => {
@@ -1739,12 +1816,12 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     
     const interval = setInterval(() => {
       if (hasUnsavedChanges) {
-        safeAutoSave();
+        saveImmediately();
       }
     }, 30000); // Auto-save every 30 seconds if there are changes
 
     return () => clearInterval(interval);
-  }, [user, hasUnsavedChanges, autoSave]);
+  }, [user, hasUnsavedChanges, saveImmediately]);
 
   // Enhanced page navigation and visibility handling
   useEffect(() => {
@@ -1776,7 +1853,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         navigator.sendBeacon(saveUrl, payload);
         
         // Also try regular auto-save
-        safeAutoForceSave();
+      saveImmediately();
       }
     };
 
@@ -1793,7 +1870,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
           documentMap: Array.from(documentMap.entries()),
           timestamp: Date.now()
         }));
-        safeAutoForceSave();
+        saveImmediately();
       } else if (!document.hidden) {
         // When page becomes visible again, check for preserved state
         const preservedState = sessionStorage.getItem('preserveRunsheetState');
@@ -1833,7 +1910,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-    }, [hasUnsavedChanges, user, runsheetName, columns, data, columnInstructions, autoForceSave]);
+    }, [hasUnsavedChanges, user, runsheetName, columns, data, columnInstructions, saveImmediately]);
 
   // Auto-save trigger when data changes (Google Sheets behavior)
   useEffect(() => {
@@ -1841,7 +1918,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       console.log('🔄 Changes detected, scheduling auto-save');
       const timeoutId = setTimeout(() => {
         console.log('🔄 Executing scheduled auto-save');
-        safeAutoSave();
+        saveImmediately();
       }, 2000); // 2 second delay to batch rapid changes
       
       return () => {
@@ -1849,7 +1926,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         clearTimeout(timeoutId);
       };
     }
-  }, [hasUnsavedChanges, user?.id, safeAutoSave]);
+  }, [hasUnsavedChanges, user?.id, saveImmediately]);
 
   // Real-time syncing like Google Sheets - listen for changes from other users
   useEffect(() => {
@@ -3958,6 +4035,17 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       onDataChange?.(newData);
       console.log('🔧 SAVE_EDIT: Called onDataChange with updated data');
       setHasUnsavedChanges(true);
+
+      // ✅ IMMEDIATE DATABASE SAVE - Save immediately like Google Sheets
+      console.log('💾 Saving cell edit immediately to database');
+      if (runsheetName && runsheetName !== 'Untitled Runsheet' && user) {
+        try {
+          await saveToDatabase(newData, columns, runsheetName, columnInstructions);
+          console.log('✅ Cell edit saved to database immediately');
+        } catch (error) {
+          console.error('❌ Failed to save cell edit to database:', error);
+        }
+      }
       
       // Handle Document File Name column edits specially - update the actual document filename
       if (editingCell.column === 'Document File Name' && currentRunsheetId && cellValue.trim()) {
@@ -4033,7 +4121,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       
       setEditingCell(null);
     }
-  }, [editingCell, cellValue, data, onDataChange, currentRunsheetId, user, documentMap, setDocumentMap, onDocumentMapChange, toast]);
+  }, [editingCell, cellValue, data, onDataChange, currentRunsheetId, user, documentMap, setDocumentMap, onDocumentMapChange, toast, runsheetName, columns, columnInstructions, saveToDatabase]);
 
   const cancelEdit = useCallback(() => {
     setEditingCell(null);
@@ -4733,66 +4821,28 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     });
     updateDocumentMap(newDocumentMap);
     
-    // IMMEDIATE SAVE - Don't wait for auto-save timer
-    try {
-      console.log('🗑️ IMMEDIATE SAVE: Saving deletion immediately to prevent data loss on refresh');
-      
-      if (currentRunsheet?.id && user) {
-        const updatedRunsheet = {
-          name: runsheetName,
-          columns: columns,
-          data: newData,
-          column_instructions: columnInstructions,
-          user_id: user.id,
-          updated_at: new Date().toISOString(),
-        };
-
-        const { error } = await supabase
-          .from('runsheets')
-          .update(updatedRunsheet)
-          .eq('id', currentRunsheet.id)
-          .eq('user_id', user.id);
-
-        if (error) {
-          console.error('🗑️ SAVE ERROR: Failed to save deletion immediately:', error);
-          throw error;
-        }
-
-        console.log('🗑️ SAVE SUCCESS: Deletion saved immediately to database');
-        
-        // Update the last saved state to match current state
-        const newSavedState = JSON.stringify({
-          data: newData,
-          columns: columns,
-          runsheetName,
-          columnInstructions
-        });
-        setLastSavedState(newSavedState);
+    // ✅ IMMEDIATE DATABASE SAVE - Save immediately like Google Sheets
+    console.log('💾 Saving row deletion immediately to database');
+    if (runsheetName && runsheetName !== 'Untitled Runsheet' && user) {
+      try {
+        await saveToDatabase(newData, columns, runsheetName, columnInstructions);
+        console.log('✅ Row deletion saved to database immediately');
         setHasUnsavedChanges(false);
         onUnsavedChanges?.(false);
-        
-        // Update document row indexes in database
-        updateDocumentRowIndexes(newDocumentMap);
-        
-        toast({
-          title: "Row deleted and saved",
-          description: `Row ${rowIndex + 1} has been deleted and changes saved immediately.`,
-          variant: "default"
-        });
+      } catch (error) {
+        console.error('❌ Failed to save row deletion to database:', error);
       }
-    } catch (error) {
-      console.error('🗑️ SAVE ERROR: Failed to save deletion:', error);
-      toast({
-        title: "Delete failed",
-        description: "Failed to save deletion. Please try again.",
-        variant: "destructive"
-      });
-      
-      // Revert the deletion on save failure
-      setData(data);
-      updateDocumentMap(documentMap);
     }
-  }, [data, documentMap, updateDocumentMap, hasUnsavedChanges, toast, currentRunsheet, user, runsheetName, columns, columnInstructions, onUnsavedChanges, updateDocumentRowIndexes]);
+    
+    // Update document row indexes in database
+    updateDocumentRowIndexes(newDocumentMap);
+    
+    toast({
+      title: "Row deleted and saved",
+      description: `Row ${rowIndex + 1} has been deleted and changes saved immediately.`,
+      variant: "default"
+    });
+  }, [data, documentMap, updateDocumentMap, hasUnsavedChanges, toast, user, runsheetName, columns, columnInstructions, onUnsavedChanges, updateDocumentRowIndexes, saveToDatabase]);
 
   // Function to move row up
   const moveRowUp = useCallback((rowIndex: number) => {
@@ -5342,7 +5392,7 @@ ${extractionFields}`
               className="gap-2"
             >
               <Save className="h-4 w-4" />
-              {isSaving || autoSaving ? 'Saving...' : 'Save'}
+              {isSaving || immediateSaving ? 'Saving...' : 'Save'}
             </Button>
             
             {/* Auto-save status indicator */}
@@ -5362,7 +5412,7 @@ ${extractionFields}`
               className="gap-2"
             >
               <Save className="h-4 w-4" />
-              {isSaving || autoSaving ? 'Saving...' : 'Save & Close'}
+              {isSaving || immediateSaving ? 'Saving...' : 'Save & Close'}
             </Button>
 
             {/* Storage Debug Button */}
