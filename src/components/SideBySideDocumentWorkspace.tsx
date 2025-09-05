@@ -8,7 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
-import { ArrowLeft, Sparkles, RotateCcw, FileText, Wand2, AlertTriangle, Settings } from 'lucide-react';
+import { ArrowLeft, Sparkles, RotateCcw, FileText, Wand2, AlertTriangle, Settings, Edit3 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -65,6 +65,17 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
   });
   const [isReExtracting, setIsReExtracting] = useState(false);
   const [showColumnPreferences, setShowColumnPreferences] = useState(false);
+  
+  // Individual field instruction editing
+  const [fieldInstructionDialog, setFieldInstructionDialog] = useState<{
+    isOpen: boolean;
+    fieldName: string;
+    currentInstruction: string;
+  }>({
+    isOpen: false,
+    fieldName: '',
+    currentInstruction: ''
+  });
 
   // Update local row data when props change
   useEffect(() => {
@@ -550,19 +561,34 @@ Return only the filename, nothing else.`,
                              </Button>
                            )}
                            
-                           {/* Re-analyze field button */}
-                           {documentRecord && (
-                             <Button
-                               variant="ghost"
-                               size="sm"
-                               onClick={() => handleReanalyzeField(columnName)}
-                               disabled={isAnalyzing}
-                               className="h-6 w-6 p-0 hover:bg-purple-100 dark:hover:bg-purple-900/20 text-purple-600 dark:text-purple-400"
-                               title={`Re-analyze ${columnName}`}
-                             >
-                               <Sparkles className="w-3 h-3" />
-                             </Button>
-                            )}
+                            {/* Edit field instruction button */}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setFieldInstructionDialog({
+                                isOpen: true,
+                                fieldName: columnName,
+                                currentInstruction: columnInstructions[columnName] || ''
+                              })}
+                              className="h-6 w-6 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/20 text-blue-600 dark:text-blue-400"
+                              title={`Edit instructions for ${columnName}`}
+                            >
+                              <Edit3 className="w-3 h-3" />
+                            </Button>
+                            
+                            {/* Re-analyze field button */}
+                            {documentRecord && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleReanalyzeField(columnName)}
+                                disabled={isAnalyzing}
+                                className="h-6 w-6 p-0 hover:bg-purple-100 dark:hover:bg-purple-900/20 text-purple-600 dark:text-purple-400"
+                                title={`Re-analyze ${columnName}`}
+                              >
+                                <Sparkles className="w-3 h-3" />
+                              </Button>
+                             )}
                           </div>
                         </div>
                        
@@ -699,6 +725,79 @@ Return only the filename, nothing else.`,
           });
         }}
       />
+
+      {/* Individual Field Instruction Dialog */}
+      <AlertDialog open={fieldInstructionDialog.isOpen} onOpenChange={(open) => 
+        setFieldInstructionDialog(prev => ({ ...prev, isOpen: open }))
+      }>
+        <AlertDialogContent className="max-w-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Edit Extraction Instructions</AlertDialogTitle>
+            <AlertDialogDescription>
+              Update the AI instructions for extracting "{fieldInstructionDialog.fieldName}" from documents.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="instruction">Instruction for {fieldInstructionDialog.fieldName}</Label>
+              <Textarea
+                id="instruction"
+                value={fieldInstructionDialog.currentInstruction}
+                onChange={(e) => setFieldInstructionDialog(prev => ({
+                  ...prev,
+                  currentInstruction: e.target.value
+                }))}
+                placeholder={`Enter instructions for extracting ${fieldInstructionDialog.fieldName}...`}
+                className="min-h-[120px]"
+              />
+              <p className="text-sm text-muted-foreground">
+                Provide specific instructions to help the AI extract this field accurately from documents.
+              </p>
+            </div>
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={async () => {
+              try {
+                // Save the individual field instruction
+                const { ExtractionPreferencesService } = await import('@/services/extractionPreferences');
+                const prefs = await ExtractionPreferencesService.getDefaultPreferences();
+                
+                if (prefs) {
+                  const currentInstructions = (prefs.column_instructions as Record<string, string>) || {};
+                  const updatedInstructions = {
+                    ...currentInstructions,
+                    [fieldInstructionDialog.fieldName]: fieldInstructionDialog.currentInstruction
+                  };
+                  
+                  await ExtractionPreferencesService.saveDefaultPreferences(
+                    prefs.columns || [],
+                    updatedInstructions
+                  );
+                }
+
+                toast({
+                  title: "Instruction saved",
+                  description: `Updated instructions for ${fieldInstructionDialog.fieldName}`,
+                });
+                
+                setFieldInstructionDialog(prev => ({ ...prev, isOpen: false }));
+              } catch (error) {
+                console.error('Error saving field instruction:', error);
+                toast({
+                  title: "Error",
+                  description: "Failed to save instruction. Please try again.",
+                  variant: "destructive",
+                });
+              }
+            }}>
+              Save Instructions
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
