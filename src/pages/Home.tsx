@@ -250,11 +250,11 @@ const Home: React.FC = () => {
               <div className="order-1 lg:order-2">
                 <div 
                   className="relative group cursor-pointer"
-                  onMouseEnter={() => setHoveredImage("/lovable-uploads/98320272-b5c8-4a78-b5d0-d8cbf36a89a6.png")}
+                  onMouseEnter={() => setHoveredImage("/lovable-uploads/779001b4-1ed1-4330-82f8-44c86d351a62.png")}
                   onMouseLeave={() => setHoveredImage(null)}
-                  onClick={() => setEnlargedImage("/lovable-uploads/98320272-b5c8-4a78-b5d0-d8cbf36a89a6.png")}
+                  onClick={() => setEnlargedImage("/lovable-uploads/779001b4-1ed1-4330-82f8-44c86d351a62.png")}
                 >
-                  <img src="/lovable-uploads/98320272-b5c8-4a78-b5d0-d8cbf36a89a6.png" alt="Document analysis with AI extracting data" className="rounded-lg shadow-lg w-full transition-all duration-300 group-hover:brightness-75" />
+                  <img src="/lovable-uploads/779001b4-1ed1-4330-82f8-44c86d351a62.png" alt="Document analysis with AI extracting data" className="rounded-lg shadow-lg w-full transition-all duration-300 group-hover:brightness-75" />
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                     <div className="bg-black/50 backdrop-blur-sm rounded-full p-3 flex items-center gap-2 text-white">
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
