@@ -46,6 +46,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
   const [isPdf, setIsPdf] = useState(false);
+  const [fitToWidth, setFitToWidth] = useState(false);
   const [localRowData, setLocalRowData] = useState(rowData);
   const [editingColumn, setEditingColumn] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState<string>('');
@@ -683,14 +684,16 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
               <Button variant="outline" size="sm" onClick={handleZoomIn}>
                 <ZoomIn className="h-4 w-4" />
               </Button>
-              <Button variant="outline" size="sm" onClick={handleZoomReset}>
-                <RotateCcw className="h-4 w-4" />
+              <Button 
+                variant={fitToWidth ? "default" : "outline"} 
+                size="sm" 
+                onClick={() => setFitToWidth(!fitToWidth)}
+                title="Fit to width"
+              >
+                Fit Width
               </Button>
             </>
           )}
-          <Button variant="outline" size="sm" onClick={openInNewWindow}>
-            <ExternalLink className="h-4 w-4" />
-          </Button>
           <Button variant="ghost" size="sm" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
@@ -720,11 +723,13 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                     <img
                       src={documentUrl}
                       alt={documentName}
-                      className="max-w-full object-contain transition-transform duration-200 select-none cursor-grab active:cursor-grabbing"
-                      style={{
-                        transform: `translate(${panX / zoom}px, ${panY / zoom}px) scale(${zoom}) rotate(${rotation}deg)`,
-                        transformOrigin: 'center',
-                        willChange: 'transform'
+                       className={`max-w-full object-contain transition-transform duration-200 select-none cursor-grab active:cursor-grabbing ${
+                         fitToWidth ? 'w-full h-auto' : ''
+                       }`}
+                       style={{
+                         transform: fitToWidth ? 'none' : `translate(${panX / zoom}px, ${panY / zoom}px) scale(${zoom}) rotate(${rotation}deg)`,
+                         transformOrigin: 'center',
+                         willChange: 'transform'
                       }}
                       draggable={false}
                       onMouseDown={handleImageMouseDown}
