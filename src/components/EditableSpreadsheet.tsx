@@ -367,52 +367,8 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     }
   }, [saveToDatabase, data, columns, runsheetName, columnInstructions]);
 
-  // Real-time database sync - sync with other users/tabs like Google Sheets
-  useEffect(() => {
-    if (!currentRunsheetId || !user) return;
-
-    console.log('🔄 Setting up real-time sync for runsheet:', currentRunsheetId);
-
-    const channel = supabase
-      .channel(`runsheet-${currentRunsheetId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public', 
-          table: 'runsheets',
-          filter: `id=eq.${currentRunsheetId}`
-        },
-        (payload) => {
-          console.log('🔄 Database changed, syncing local state');
-          
-          const runsheetData = payload.new as any;
-          const newData = runsheetData.data as Record<string, string>[];
-          const newColumns = runsheetData.columns as string[];
-          const newInstructions = runsheetData.column_instructions as Record<string, string>;
-          
-          // Only update if data actually changed (avoid infinite loops)
-          const currentDataHash = JSON.stringify({ data, columns, columnInstructions });
-          const newDataHash = JSON.stringify({ data: newData, columns: newColumns, columnInstructions: newInstructions });
-          
-          if (currentDataHash !== newDataHash) {
-            console.log('📊 Updating local state with database changes');
-            setData(newData || []);
-            setColumns(newColumns || []);
-            setColumnInstructions(newInstructions || {});
-            
-            // Removed annoying sync toast that was disrupting user experience
-            // User will see the AutoSaveIndicator for save status instead
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      console.log('🔄 Cleaning up real-time sync');
-      supabase.removeChannel(channel);
-    };
-  }, [currentRunsheetId, user, data, columns, columnInstructions, toast]);
+  // Single-user database sync - data is saved immediately on every change
+  // No real-time sync needed since only one user per runsheet
 
   // Load data ONLY from database on mount - single source of truth
   useEffect(() => {
@@ -474,8 +430,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     }
   }, [initialData, initialColumns]); // Only depend on initialData changes
 
-  // Real-time sync disabled - using database-first approach for single user
-  // No need for collaboration features since only one user per runsheet
+  // Database-first approach for reliable single-user data persistence
 
   // Listen for document upload save requests
   React.useEffect(() => {
@@ -1081,13 +1036,6 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   useEffect(() => {
     if (currentRunsheet?.id && currentRunsheetId !== currentRunsheet.id) {
       console.log('📋 Syncing currentRunsheetId with active runsheet:', currentRunsheet.id);
-      
-      // SECURITY: Don't sync if we're viewing a named runsheet and trying to switch to "Untitled"
-      if (runsheetName !== 'Untitled Runsheet' && currentRunsheet.name === 'Untitled Runsheet') {
-        console.log('🚫 Preventing sync to "Untitled Runsheet" while viewing named runsheet:', runsheetName);
-        return;
-      }
-      
       setCurrentRunsheetId(currentRunsheet.id);
       
       // Also sync the runsheet name if it differs
@@ -1100,22 +1048,15 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     // a state restoration issue - prioritize the active runsheet
     if (currentRunsheet?.id && !currentRunsheetId) {
       console.log('🔄 Restoring currentRunsheetId from active runsheet after page refresh:', currentRunsheet.id);
-      
-      // SECURITY: Don't restore "Untitled Runsheet" if we have a different named runsheet
-      if (currentRunsheet.name === 'Untitled Runsheet' && runsheetName !== 'Untitled Runsheet') {
-        console.log('🚫 Preventing restoration of "Untitled Runsheet" over named runsheet:', runsheetName);
-        return;
-      }
-      
       setCurrentRunsheetId(currentRunsheet.id);
       setRunsheetName(currentRunsheet.name || 'Untitled Runsheet');
       
-      // Clear any conflicting emergency draft since we have a proper active runsheet
+      // Clear any conflicting data
       try {
         localStorage.removeItem('runsheet-emergency-draft');
-        console.log('🗑️ Cleared conflicting emergency draft');
+        console.log('🗑️ Cleared conflicting data');
       } catch (error) {
-        console.error('Error clearing emergency draft:', error);
+        console.error('Error clearing conflicting data:', error);
       }
     }
   }, [currentRunsheet, currentRunsheetId, runsheetName]);
@@ -1763,64 +1704,14 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     }
   }, [hasUnsavedChanges, user?.id, saveImmediately]);
 
-  // Real-time syncing like Google Sheets - listen for changes from other users
+  // Simple database sync - no real-time multi-user complexity needed
+  // Data is saved immediately on every change, so no sync required
   useEffect(() => {
-    if (!currentRunsheetId || !user?.id) return;
-
-    console.log('🔴 Setting up real-time sync for runsheet:', currentRunsheetId);
-    
-    const channel = supabase
-      .channel(`runsheet-${currentRunsheetId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'runsheets',
-          filter: `id=eq.${currentRunsheetId}`
-        },
-        (payload) => {
-          console.log('🔴 Real-time update received:', payload);
-          
-          // Only update if the change was from another user to avoid feedback loops
-          // CRITICAL: Also check if this is just an "Untitled Runsheet" being pushed inappropriately
-          if (payload.new && payload.new.user_id !== user.id) {
-            const { data: newData, columns: newColumns, column_instructions, name: newName } = payload.new;
-            
-            // SECURITY: Prevent "Untitled Runsheet" from overriding named runsheets
-            if (newName === 'Untitled Runsheet' && runsheetName !== 'Untitled Runsheet') {
-              console.log('🚫 Blocking real-time sync of "Untitled Runsheet" over named runsheet:', runsheetName);
-              return;
-            }
-            
-            if (newData) {
-              console.log('🔄 Updating data from real-time sync');
-              setData(newData);
-              setColumns(newColumns || []);
-              setColumnInstructions(column_instructions || {});
-              
-              // Update runsheet name if it changed
-              if (newName && newName !== runsheetName) {
-                setRunsheetName(newName);
-              }
-              
-              // Show notification about remote changes
-              toast({
-                title: "Runsheet updated",
-                description: "Changes were made by another user and have been synced.",
-                variant: "default"
-              });
-            }
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      console.log('🔴 Cleaning up real-time sync');
-      supabase.removeChannel(channel);
-    };
-  }, [currentRunsheetId, user?.id, toast, setData, setColumns, setColumnInstructions]);
+    // Only log for debugging - no real-time sync needed for single-user
+    if (currentRunsheetId) {
+      console.log('📊 Single-user runsheet active:', currentRunsheetId);
+    }
+  }, [currentRunsheetId]);
 
   // Check if runsheet name exists and handle conflicts
   const checkRunsheetNameConflict = async (baseName: string, userId: string): Promise<{ hasConflict: boolean; suggestedName?: string }> => {
