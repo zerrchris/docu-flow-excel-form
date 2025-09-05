@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CheckCircle, XCircle, AlertCircle, FileText, Brain } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { DocumentService, type DocumentRecord } from '@/services/documentService';
@@ -43,6 +45,7 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
   const [results, setResults] = useState<BatchAnalysisResult[]>([]);
   const [progress, setProgress] = useState(0);
   const [abortController, setAbortController] = useState<AbortController | null>(null);
+  const [skipRowsWithData, setSkipRowsWithData] = useState(true);
 
   // Initialize results when dialog opens
   useEffect(() => {
@@ -169,6 +172,20 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
       for (const [rowIndex, document] of documentsToAnalyze) {
         if (controller.signal.aborted) break;
 
+        // Check if we should skip this row due to existing data
+        const hasExistingData = updatedData[rowIndex] && Object.values(updatedData[rowIndex]).some(value => value && value.trim() !== '');
+        
+        if (skipRowsWithData && hasExistingData) {
+          setResults(prev => prev.map(result => 
+            result.rowIndex === rowIndex 
+              ? { ...result, status: 'success', extractedData: {}, error: 'Skipped - row has existing data' }
+              : result
+          ));
+          completedCount++;
+          setProgress((completedCount / totalDocuments) * 100);
+          continue;
+        }
+
         // Update status to analyzing
         setResults(prev => prev.map(result => 
           result.rowIndex === rowIndex 
@@ -185,11 +202,21 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
               updatedData[rowIndex] = {};
             }
             
-            // Merge extracted data with existing data
-            updatedData[rowIndex] = {
-              ...updatedData[rowIndex],
-              ...extractedData
-            };
+            // Merge or overwrite based on user preference
+            if (skipRowsWithData) {
+              // Only add data to empty fields
+              Object.keys(extractedData).forEach(key => {
+                if (!updatedData[rowIndex][key] || updatedData[rowIndex][key].trim() === '') {
+                  updatedData[rowIndex][key] = extractedData[key];
+                }
+              });
+            } else {
+              // Overwrite existing data
+              updatedData[rowIndex] = {
+                ...updatedData[rowIndex],
+                ...extractedData
+              };
+            }
 
             // Update results
             setResults(prev => prev.map(result => 
@@ -297,16 +324,29 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
             </div>
           ) : (
             <>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">
-                    Progress: {Math.round(progress)}%
-                  </span>
-                  <span className="text-sm text-muted-foreground">
-                    {results.filter(r => r.status === 'success').length} / {results.length} completed
-                  </span>
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="skip-existing" 
+                    checked={skipRowsWithData}
+                    onCheckedChange={(checked) => setSkipRowsWithData(checked === true)}
+                  />
+                  <Label htmlFor="skip-existing" className="text-sm">
+                    Skip rows that already have data (recommended)
+                  </Label>
                 </div>
-                <Progress value={progress} className="w-full" />
+                
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">
+                      Progress: {Math.round(progress)}%
+                    </span>
+                    <span className="text-sm text-muted-foreground">
+                      {results.filter(r => r.status === 'success').length} / {results.length} completed
+                    </span>
+                  </div>
+                  <Progress value={progress} className="w-full" />
+                </div>
               </div>
 
               <ScrollArea className="flex-1 h-[300px] border rounded-md p-4">
@@ -327,9 +367,14 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-medium">{getStatusText(result.status)}</p>
-                        {result.status === 'success' && result.extractedData && (
+                        {result.status === 'success' && result.extractedData && Object.keys(result.extractedData).length > 0 && (
                           <p className="text-xs text-muted-foreground">
                             {Object.keys(result.extractedData).length} fields extracted
+                          </p>
+                        )}
+                        {result.status === 'success' && result.error && (
+                          <p className="text-xs text-yellow-600 max-w-[150px] truncate">
+                            {result.error}
                           </p>
                         )}
                         {result.status === 'error' && result.error && (
