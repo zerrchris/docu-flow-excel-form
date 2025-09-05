@@ -495,13 +495,22 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
             }));
             
             console.log('🔧 Dispatching documentRecordCreated event');
-            window.dispatchEvent(new CustomEvent('documentRecordCreated', {
-              detail: {
-                runsheetId: runsheetId,
-                rowIndex: currentRowIndex,
-                document: result.document
-              }
-            }));
+            
+            // Small delay to ensure database transaction is committed
+            setTimeout(() => {
+              window.dispatchEvent(new CustomEvent('documentRecordCreated', {
+                detail: {
+                  runsheetId: runsheetId,
+                  rowIndex: currentRowIndex,
+                  document: result.document,
+                  allPossibleIds: {
+                    activeRunsheetId: runsheetId,
+                    locationStateId: runsheetId, 
+                    finalRunsheetId: runsheetId
+                  }
+                }
+              }));
+            }, 100); // Small delay for database consistency
           }
         } else {
           // Update status to error
