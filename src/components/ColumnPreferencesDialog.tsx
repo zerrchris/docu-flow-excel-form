@@ -317,17 +317,17 @@ const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col overflow-hidden">
+      <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle>Default Column Preferences</DialogTitle>
           <DialogDescription>
-            Customize the default columns that will appear when you create a new runsheet.
+            Customize the default columns and their extraction instructions for new runsheets.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 space-y-4 min-h-0 overflow-hidden">
-          {/* Column List */}
-          <div className="flex-1 flex flex-col min-h-0">
+        <div className="flex-1 grid grid-cols-2 gap-6 min-h-0 overflow-hidden">
+          {/* Left Panel - Column List */}
+          <div className="flex flex-col min-h-0">
             <div className="flex items-center justify-between mb-4">
               <Label className="text-sm font-medium">Columns ({columns.length})</Label>
               <Button
@@ -342,15 +342,18 @@ const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
               </Button>
             </div>
             
-            <div className="flex-1 overflow-y-auto min-h-0 border rounded-lg p-4">
+            <div className="flex-1 overflow-y-auto border rounded-lg p-4 mb-4">
               <div className="space-y-2">
                 {columns.map((column, index) => (
                   <div
                     key={column}
-                    className="flex items-center gap-2 p-3 border rounded-lg hover:bg-muted transition-colors"
+                    className={`flex items-center gap-2 p-3 border rounded-lg transition-colors cursor-pointer ${
+                      selectedColumn === column ? 'bg-primary/10 border-primary' : 'hover:bg-muted'
+                    }`}
+                    onClick={() => setSelectedColumn(column)}
                   >
                     <GripVertical className="h-4 w-4 text-muted-foreground cursor-move" />
-                    <Badge variant="outline" className="flex-1 justify-start text-sm">
+                    <Badge variant={selectedColumn === column ? "default" : "outline"} className="flex-1 justify-start text-sm">
                       {column}
                     </Badge>
                     
@@ -358,7 +361,10 @@ const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => generateAISuggestion(column)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          generateAISuggestion(column);
+                        }}
                         disabled={isGeneratingAI}
                         className="h-8 w-8 p-0"
                         title="Generate AI instruction"
@@ -368,7 +374,10 @@ const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => moveColumn(index, 'up')}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          moveColumn(index, 'up');
+                        }}
                         disabled={index === 0}
                         className="h-8 w-8 p-0"
                         title="Move up"
@@ -378,7 +387,10 @@ const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => moveColumn(index, 'down')}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          moveColumn(index, 'down');
+                        }}
                         disabled={index === columns.length - 1}
                         className="h-8 w-8 p-0"
                         title="Move down"
@@ -388,7 +400,10 @@ const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => removeColumn(column)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeColumn(column);
+                        }}
                         disabled={columns.length <= 1}
                         className="h-8 w-8 p-0 text-destructive hover:text-destructive"
                         title="Remove column"
@@ -407,38 +422,80 @@ const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
                 )}
               </div>
             </div>
+
+            {/* Add New Column */}
+            <div className="flex-shrink-0">
+              <Label className="text-sm font-medium mb-2 block">Add New Column</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={newColumnName}
+                  onChange={(e) => setNewColumnName(e.target.value)}
+                  placeholder="Column name"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && newColumnName.trim()) {
+                      addColumn();
+                    }
+                  }}
+                  className="flex-1"
+                />
+                <Button
+                  onClick={addColumn}
+                  disabled={!newColumnName.trim() || columns.includes(newColumnName.trim())}
+                  size="sm"
+                  className="gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add
+                </Button>
+              </div>
+            </div>
           </div>
 
-          {/* Add New Column */}
-          <div className="flex-shrink-0">
-            <Label className="text-sm font-medium mb-2 block">Add New Column</Label>
-            <div className="flex gap-2">
-              <Input
-                value={newColumnName}
-                onChange={(e) => setNewColumnName(e.target.value)}
-                placeholder="Column name"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && newColumnName.trim()) {
-                    addColumn();
-                  }
-                }}
-                className="flex-1"
-              />
-              <Button
-                onClick={addColumn}
-                disabled={!newColumnName.trim() || columns.includes(newColumnName.trim())}
-                size="sm"
-                className="gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                Add
-              </Button>
+          {/* Right Panel - Selected Column Instructions */}
+          <div className="flex flex-col min-h-0">
+            <div className="flex items-center justify-between mb-4">
+              <Label className="text-sm font-medium">
+                {selectedColumn ? `Instructions for "${selectedColumn}"` : 'Select a column to edit instructions'}
+              </Label>
+              {selectedColumn && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => generateAISuggestion(selectedColumn)}
+                  disabled={isGeneratingAI}
+                  className="gap-2"
+                >
+                  <Wand2 className="h-4 w-4" />
+                  {isGeneratingAI ? 'Generating...' : 'AI Suggest'}
+                </Button>
+              )}
             </div>
+            
+            {selectedColumn ? (
+              <div className="flex-1 flex flex-col min-h-0">
+                <Textarea
+                  value={columnInstructions[selectedColumn] || ''}
+                  onChange={(e) => updateColumnInstruction(selectedColumn, e.target.value)}
+                  placeholder={`Enter extraction instructions for ${selectedColumn}...`}
+                  className="flex-1 min-h-[300px] resize-none"
+                />
+                <p className="text-xs text-muted-foreground mt-2">
+                  Provide detailed instructions to help the AI extract "{selectedColumn}" information accurately from documents.
+                </p>
+              </div>
+            ) : (
+              <div className="flex-1 flex items-center justify-center border rounded-lg border-dashed">
+                <div className="text-center text-muted-foreground">
+                  <p className="text-lg mb-2">Select a column</p>
+                  <p className="text-sm">Click on a column from the left to edit its extraction instructions</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Footer with actions */}
-        <div className="flex-shrink-0 flex justify-between items-center pt-4 border-t">
+        <div className="flex-shrink-0 flex justify-between items-center pt-4 border-t mt-4">
           <div className="flex gap-2">
             <Button
               variant="outline"
