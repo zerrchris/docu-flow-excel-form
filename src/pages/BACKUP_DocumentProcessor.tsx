@@ -20,7 +20,7 @@ import { ExtractionPreferencesService } from '@/services/extractionPreferences';
 import { AdminSettingsService } from '@/services/adminSettings';
 import { useActiveRunsheet } from '@/hooks/useActiveRunsheet';
 import { useAutoSave } from '@/hooks/useAutoSave';
-import { DataRecoveryDialog } from '@/components/DataRecoveryDialog';
+// DataRecoveryDialog removed - database is single source of truth
 import { RunsheetFileUpload } from '@/components/RunsheetFileUpload';
 import { supabase } from '@/integrations/supabase/client';
 import { isRowEmpty } from '@/utils/rowValidation';
@@ -78,8 +78,7 @@ const DocumentProcessor: React.FC = () => {
   const [missingDataDialog, setMissingDataDialog] = useState(false);
   const [confirmAddFileDialog, setConfirmAddFileDialog] = useState(false);
   const [hasAddedToSpreadsheet, setHasAddedToSpreadsheet] = useState(false);
-  const [showDataRecovery, setShowDataRecovery] = useState(false);
-  const [recoveryData, setRecoveryData] = useState<any>(null);
+  // Data recovery state removed - database is single source of truth
   const [showStorageDebug, setShowStorageDebug] = useState(false);
   const [showRunsheetUploadDialog, setShowRunsheetUploadDialog] = useState(false);
   
@@ -156,29 +155,12 @@ const DocumentProcessor: React.FC = () => {
         const backupRowCount = backupData.data?.length || 0;
         const currentRowCount = spreadsheetData.length;
         
-        // Show recovery dialog if backup has more data or is significantly newer
-        if (backupRowCount > currentRowCount) {
-          setRecoveryData({
-            backup: backupData,
-            current: { dataRows: currentRowCount }
-          });
-          setShowDataRecovery(true);
-        }
+        // Data recovery removed - database is single source of truth
       }
     }
   }, [activeRunsheet?.id, currentUser, loadFromLocalStorage, spreadsheetData.length]);
 
-  // Data recovery handlers
-  const handleUseBackupData = () => {
-    console.log('🚫 Backup system disabled - data should always be in database');
-    setShowDataRecovery(false);
-    setRecoveryData(null);
-  };
-
-  const handleKeepCurrentData = () => {
-    setShowDataRecovery(false);
-    setRecoveryData(null);
-  };
+  // Data recovery handlers removed - database is single source of truth
 
   // Track user activity to prevent data loss
   useEffect(() => {
@@ -3026,22 +3008,7 @@ Image: [base64 image data]`;
         </DialogContent>
       </Dialog>
 
-      {/* Data Recovery Dialog */}
-      {recoveryData && (
-        <DataRecoveryDialog
-          isOpen={showDataRecovery}
-          onClose={handleKeepCurrentData}
-          onUseBackup={handleUseBackupData}
-          onKeepCurrent={handleKeepCurrentData}
-          backupData={{
-            lastSaved: recoveryData.backup?.lastSaved || '',
-            dataRows: recoveryData.backup?.data?.length || 0
-          }}
-          currentData={{
-            dataRows: recoveryData.current?.dataRows || 0
-          }}
-        />
-      )}
+      {/* Data Recovery Dialog removed - database is single source of truth */}
 
       {/* Runsheet File Upload Dialog */}
       <Dialog open={showRunsheetUploadDialog} onOpenChange={setShowRunsheetUploadDialog}>
