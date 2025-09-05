@@ -1149,8 +1149,8 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     // Reduce frequency to avoid interrupting document processing
     const timeoutId = setTimeout(saveEmergencyDraft, 5000); // Increased from 1 second
     
-    // Set up periodic saving every 2 minutes instead of 30 seconds
-    const intervalId = setInterval(saveEmergencyDraft, 120000);
+    // Set up emergency draft backup every 10 minutes (less frequent)
+    const intervalId = setInterval(saveEmergencyDraft, 600000); // 10 minutes instead of 2
     
     return () => {
       clearTimeout(timeoutId);
@@ -1837,7 +1837,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
 
   // Legacy save functions removed - now using auto-save hooks above
 
-  // Track changes and trigger auto-save with proper change detection
+  // Track changes for unsaved indicator (no auto-save timer)
   useEffect(() => {
     if (!user) return;
     
@@ -1856,28 +1856,14 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       setHasUnsavedChanges(true);
       onUnsavedChanges?.(true);
       
-      // Immediate auto-save for critical changes, delayed for regular edits
-      // This ensures deletions and major changes are saved immediately
-      const timeoutId = setTimeout(() => {
-        saveImmediately();
-      }, 2000); // Reduced from 30 seconds to 2 seconds for faster saves
-      
-      return () => clearTimeout(timeoutId);
+      // No timer-based auto-save here - saves happen immediately on user actions (cell edits, etc.)
+      // This effect is only for tracking unsaved state for UI indicators
     }
-  }, [data, columns, runsheetName, columnInstructions, user, lastSavedState, saveImmediately, onUnsavedChanges]);
+  }, [data, columns, runsheetName, columnInstructions, user, lastSavedState, onUnsavedChanges]);
 
-  // Aggressive fallback auto-save every 30 seconds
-  useEffect(() => {
-    if (!user) return;
-    
-    const interval = setInterval(() => {
-      if (hasUnsavedChanges) {
-        saveImmediately();
-      }
-    }, 30000); // Auto-save every 30 seconds if there are changes
-
-    return () => clearInterval(interval);
-  }, [user, hasUnsavedChanges, saveImmediately]);
+  // REMOVED: Aggressive 30-second auto-save timer 
+  // This was causing unnecessary saves when user wasn't making changes
+  // Changes are now saved immediately on edit, no need for timer-based saves
 
   // Enhanced page navigation and visibility handling
   useEffect(() => {
@@ -3521,7 +3507,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
 
     // Auto-save the runsheet with imported data
     setTimeout(() => {
-      autoSaveRunsheet(); // Auto-save with the imported data
+      saveImmediately(); // Use the new immediate save system instead
     }, 100); // Small delay to ensure state updates are complete
 
     toast({
@@ -6856,7 +6842,7 @@ ${extractionFields}`
                 <Button 
                   onClick={async () => {
                     setShowUnsavedChangesDialog(false);
-                    await autoSaveRunsheet();
+                    await saveImmediately();
                     setShowNewRunsheetDialog(true);
                   }}
                   className="w-full sm:w-auto"
