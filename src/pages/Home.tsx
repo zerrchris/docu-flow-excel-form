@@ -343,45 +343,6 @@ const Home: React.FC = () => {
               </div>
             </div>
 
-            {/* Batch Processing Step */}
-            <div className="grid lg:grid-cols-2 gap-8 items-center">
-              <div className="order-2 lg:order-2">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
-                    •
-                  </div>
-                  <h4 className="text-2xl font-semibold">Batch Process Multiple Documents</h4>
-                </div>
-                <p className="text-muted-foreground text-lg mb-4">
-                  Upload multiple documents at once and let our AI analyze them one at a time in sequence. Each instrument is processed, you inspect it for accuracy, and it is automatically added to your runsheet. The next document automatically appears for review, and the process repeats until all your instruments are analyzed - creating a seamless, efficient workflow.
-                </p>
-                 <ul className="space-y-2 text-muted-foreground">
-                   <li>• Upload multiple files simultaneously</li>
-                   <li>• Parallel AI processing for speed</li>
-                   <li>• Automatic queue management</li>
-                   <li>• Progress tracking for each document</li>
-                   
-                 </ul>
-               </div>
-               <div className="order-1 lg:order-1">
-                 <div 
-                   className="relative group cursor-pointer"
-                   onMouseEnter={() => setHoveredImage("/lovable-uploads/83b659c7-5a73-4ad3-993c-f20fe21afa72.png")}
-                   onMouseLeave={() => setHoveredImage(null)}
-                   onClick={() => setEnlargedImage("/lovable-uploads/83b659c7-5a73-4ad3-993c-f20fe21afa72.png")}
-                 >
-                   <img src="/lovable-uploads/83b659c7-5a73-4ad3-993c-f20fe21afa72.png" alt="Batch processing multiple documents" className="rounded-lg shadow-lg w-full transition-all duration-300 group-hover:brightness-75" />
-                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                     <div className="bg-black/50 backdrop-blur-sm rounded-full p-3 flex items-center gap-2 text-white">
-                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
-                       </svg>
-                       <span className="text-sm font-medium">Click to enlarge</span>
-                     </div>
-                   </div>
-                 </div>
-               </div>
-             </div>
 
               {/* Add Documents Directly to Runsheet */}
               <div className="grid lg:grid-cols-2 gap-8 items-center">
