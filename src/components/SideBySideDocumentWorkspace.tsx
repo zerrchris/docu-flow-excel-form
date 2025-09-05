@@ -8,12 +8,13 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
-import { ArrowLeft, Sparkles, RotateCcw, FileText, Wand2, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Sparkles, RotateCcw, FileText, Wand2, AlertTriangle, Settings } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import PDFViewer from './PDFViewer';
 import ReExtractDialog from './ReExtractDialog';
+import ColumnPreferencesDialog from './ColumnPreferencesDialog';
 import { DocumentService, type DocumentRecord } from '@/services/documentService';
 
 interface ExtractedField {
@@ -63,6 +64,7 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
     currentValue: ''
   });
   const [isReExtracting, setIsReExtracting] = useState(false);
+  const [showColumnPreferences, setShowColumnPreferences] = useState(false);
 
   // Update local row data when props change
   useEffect(() => {
@@ -470,6 +472,15 @@ Return only the filename, nothing else.`,
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowColumnPreferences(true)}
+            className="flex items-center gap-2"
+          >
+            <Settings className="w-4 h-4" />
+            Edit Instructions
+          </Button>
           {hasUnsavedChanges && (
             <Badge variant="outline" className="text-amber-600 border-amber-600">
               Unsaved Changes
@@ -520,46 +531,42 @@ Return only the filename, nothing else.`,
                   return (
                     <div key={columnName} className="space-y-2">
                        <div className="flex items-center justify-between">
-                         <Label className="text-sm font-medium flex items-center">
-                           {columnName}
-                           {wasExtracted && getConfidenceBadge(0.85)}
-                         </Label>
-                        <div className="flex items-center gap-2">
-                          {/* Document File Name specific field with smart rename */}
-                          {columnName === 'Document File Name' && documentRecord && (
-                            <Button
-                              onClick={handleSmartRename}
-                              disabled={isAnalyzing}
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0 hover:bg-purple-100 dark:hover:bg-purple-900/20 text-purple-600 dark:text-purple-400"
-                              title="Smart rename using file naming preferences"
-                            >
-                              <Wand2 className="w-3 h-3" />
-                            </Button>
-                          )}
-                          
-                          {/* Re-analyze field button */}
-                          {documentRecord && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleReanalyzeField(columnName)}
-                              disabled={isAnalyzing}
-                              className="h-6 w-6 p-0 hover:bg-purple-100 dark:hover:bg-purple-900/20 text-purple-600 dark:text-purple-400"
-                              title={`Re-analyze ${columnName}`}
-                            >
-                              <Sparkles className="w-3 h-3" />
-                            </Button>
+                          <Label className="text-sm font-medium flex items-center">
+                            {columnName}
+                            {wasExtracted && getConfidenceBadge(0.85)}
+                          </Label>
+                         <div className="flex items-center gap-2">
+                           {/* Document File Name specific field with smart rename */}
+                           {columnName === 'Document File Name' && documentRecord && (
+                             <Button
+                               onClick={handleSmartRename}
+                               disabled={isAnalyzing}
+                               variant="ghost"
+                               size="sm"
+                               className="h-6 w-6 p-0 hover:bg-purple-100 dark:hover:bg-purple-900/20 text-purple-600 dark:text-purple-400"
+                               title="Smart rename using file naming preferences"
+                             >
+                               <Wand2 className="w-3 h-3" />
+                             </Button>
                            )}
-                         </div>
-                       </div>
-                      
-                      {instruction && (
-                        <p className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
-                          {instruction}
-                        </p>
-                      )}
+                           
+                           {/* Re-analyze field button */}
+                           {documentRecord && (
+                             <Button
+                               variant="ghost"
+                               size="sm"
+                               onClick={() => handleReanalyzeField(columnName)}
+                               disabled={isAnalyzing}
+                               className="h-6 w-6 p-0 hover:bg-purple-100 dark:hover:bg-purple-900/20 text-purple-600 dark:text-purple-400"
+                               title={`Re-analyze ${columnName}`}
+                             >
+                               <Sparkles className="w-3 h-3" />
+                             </Button>
+                            )}
+                          </div>
+                        </div>
+                       
+                       {/* Removed extraction instruction display - cleaner form */}
                       
                        {value.length > 100 ? (
                         <Textarea
@@ -677,6 +684,20 @@ Return only the filename, nothing else.`,
         currentValue={reExtractDialog.currentValue}
         onReExtract={handleReExtractWithNotes}
         isLoading={isReExtracting}
+      />
+      
+      {/* Column Preferences Dialog */}
+      <ColumnPreferencesDialog
+        open={showColumnPreferences}
+        onOpenChange={setShowColumnPreferences}
+        onPreferencesSaved={(newColumns, newInstructions) => {
+          // Update column instructions locally
+          console.log('Updated extraction instructions:', newInstructions);
+          toast({
+            title: "Instructions updated",
+            description: "Extraction instructions have been saved.",
+          });
+        }}
       />
     </div>
   );
