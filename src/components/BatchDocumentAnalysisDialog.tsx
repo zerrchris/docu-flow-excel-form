@@ -403,10 +403,19 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
               </Button>
             )}
             {!isAnalyzing && documentMap.size > 0 && (
-              <Button onClick={startBatchAnalysis} className="flex items-center gap-2">
-                <Brain className="w-4 h-4" />
-                Start Analysis
-              </Button>
+              <>
+                {results.length > 0 && results.every(r => r.status === 'success' || r.status === 'error') ? (
+                  <Button variant="outline" disabled className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4" />
+                    Analysis Complete
+                  </Button>
+                ) : (
+                  <Button onClick={startBatchAnalysis} className="flex items-center gap-2">
+                    <Brain className="w-4 h-4" />
+                    Start Analysis
+                  </Button>
+                )}
+              </>
             )}
           </div>
         </div>
