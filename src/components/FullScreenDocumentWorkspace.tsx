@@ -779,8 +779,9 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                   Back to Runsheet
                 </Button>
               </div>
-              <div className="flex-1 min-h-0 flex flex-col border-b border-border" ref={tableRef}>
-                <div className="min-w-max flex-1 flex flex-col">
+              <div className="flex-1 min-h-0 flex flex-col border-b border-border overflow-hidden">
+                <ScrollArea className="h-full w-full">
+                  <div ref={tableRef} className="min-w-max flex-1 flex flex-col">
                   {/* Sticky Header */}
                   <div className="sticky top-0 z-10 bg-muted/50 border-b border-border">
                     <div className="flex">
@@ -896,9 +897,10 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                            )}
                         </div>
                       );
-                    })}
+                     })}
                   </div>
-                </div>
+                  </div>
+                </ScrollArea>
               </div>
             </Card>
           </ResizablePanel>

@@ -533,8 +533,8 @@ Return only the filename, nothing else.`,
                </div>
              </div>
 
-            <ScrollArea className="flex-1 p-4">
-              <div className="space-y-4">
+            <ScrollArea className="flex-1">
+              <div className="p-4 space-y-4 min-w-[400px]">
                 {columns.map((columnName) => {
                   const value = rowData[columnName] || '';
                   const instruction = columnInstructions[columnName];
