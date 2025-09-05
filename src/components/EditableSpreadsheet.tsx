@@ -5375,10 +5375,6 @@ ${extractionFields}`
                   <span>{data.length} rows</span>
                 </div>
                 
-                {/* Keyboard shortcuts hint */}
-                <div className="flex items-center gap-1 ml-2 px-2 py-1 bg-muted/50 rounded text-xs text-muted-foreground">
-                  <span>Ctrl+C copy • Ctrl+X cut • Ctrl+V paste • Del clear • Arrows navigate</span>
-                </div>
               </div>
             )}
           </div>
