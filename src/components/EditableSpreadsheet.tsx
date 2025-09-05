@@ -5195,7 +5195,18 @@ ${extractionFields}`
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setShowBatchAnalysisDialog(true)}
+                onClick={async () => {
+                  // Refresh document map before opening dialog
+                  if (currentRunsheetId) {
+                    try {
+                      const updatedDocumentMap = await DocumentService.getDocumentMapForRunsheet(currentRunsheetId);
+                      updateDocumentMap(updatedDocumentMap);
+                    } catch (error) {
+                      console.error('Error refreshing document map:', error);
+                    }
+                  }
+                  setShowBatchAnalysisDialog(true);
+                }}
                 className="gap-2"
               >
                 <Brain className="h-4 w-4" />
