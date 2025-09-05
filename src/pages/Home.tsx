@@ -7,7 +7,6 @@ import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { useSubscription } from '@/contexts/SubscriptionContext';
-
 import LogoMark from '@/components/LogoMark';
 import AuthButton from '@/components/AuthButton';
 const Home: React.FC = () => {
@@ -53,22 +52,14 @@ const Home: React.FC = () => {
                   <CreditCard className="h-3 w-3" />
                   {subscriptionTier} Plan
                 </Badge>}
-              {user ? (
-                <>
-                  {subscribed ? (
-                    <Link to="/pricing">
+              {user ? <>
+                  {subscribed ? <Link to="/pricing">
                       <Button variant="outline">Manage Subscription</Button>
-                    </Link>
-                  ) : (
-                    <Link to="/pricing">
+                    </Link> : <Link to="/pricing">
                       <Button>Get Subscription</Button>
-                    </Link>
-                  )}
+                    </Link>}
                   <AuthButton />
-                </>
-              ) : (
-                <AuthButton />
-              )}
+                </> : <AuthButton />}
             </div>
           </div>
         </div>
@@ -85,23 +76,19 @@ const Home: React.FC = () => {
           </h2>
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">Save hours of manual entry—AI pulls key details from leases, deeds, and other instruments straight into your runsheets so landmen can focus on decisions, not data entry.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            {user ? (
-              <>
+            {user ? <>
                 <Link to="/app">
                   <Button size="lg" className="gap-2">
                     <FileText className="h-5 w-5" />
                     Open App
                   </Button>
                 </Link>
-              </>
-            ) : (
-              <Link to="/signin">
+              </> : <Link to="/signin">
                 <Button size="lg" className="gap-2">
                   <LogIn className="h-5 w-5" />
                   Get Started
                 </Button>
-              </Link>
-            )}
+              </Link>}
           </div>
         </div>
       </section>
@@ -134,12 +121,7 @@ const Home: React.FC = () => {
                 </ul>
               </div>
               <div className="order-1 lg:order-2">
-                <div 
-                  className="relative group cursor-pointer"
-                  onMouseEnter={() => setHoveredImage("/lovable-uploads/255c2ba1-c964-4a54-9d70-6c1da31848f3.png")}
-                  onMouseLeave={() => setHoveredImage(null)}
-                  onClick={() => setEnlargedImage("/lovable-uploads/255c2ba1-c964-4a54-9d70-6c1da31848f3.png")}
-                >
+                <div className="relative group cursor-pointer" onMouseEnter={() => setHoveredImage("/lovable-uploads/255c2ba1-c964-4a54-9d70-6c1da31848f3.png")} onMouseLeave={() => setHoveredImage(null)} onClick={() => setEnlargedImage("/lovable-uploads/255c2ba1-c964-4a54-9d70-6c1da31848f3.png")}>
                   <img src="/lovable-uploads/255c2ba1-c964-4a54-9d70-6c1da31848f3.png" alt="RunsheetPro welcome screen with workflow options" className="rounded-lg shadow-lg w-full transition-all duration-300 group-hover:brightness-75" />
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                     <div className="bg-black/50 backdrop-blur-sm rounded-full p-3 flex items-center gap-2 text-white">
@@ -156,12 +138,7 @@ const Home: React.FC = () => {
             {/* Step 1.5 - Working with Runsheet */}
             <div className="grid lg:grid-cols-2 gap-8 items-center">
               <div>
-                <div 
-                  className="relative group cursor-pointer"
-                  onMouseEnter={() => setHoveredImage("/lovable-uploads/901ca479-cc15-44c2-ac1e-511e6913d2d5.png")}
-                  onMouseLeave={() => setHoveredImage(null)}
-                  onClick={() => setEnlargedImage("/lovable-uploads/901ca479-cc15-44c2-ac1e-511e6913d2d5.png")}
-                >
+                <div className="relative group cursor-pointer" onMouseEnter={() => setHoveredImage("/lovable-uploads/901ca479-cc15-44c2-ac1e-511e6913d2d5.png")} onMouseLeave={() => setHoveredImage(null)} onClick={() => setEnlargedImage("/lovable-uploads/901ca479-cc15-44c2-ac1e-511e6913d2d5.png")}>
                   <img src="/lovable-uploads/901ca479-cc15-44c2-ac1e-511e6913d2d5.png" alt="Active runsheet interface with data" className="rounded-lg shadow-lg w-full transition-all duration-300 group-hover:brightness-75" />
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                     <div className="bg-black/50 backdrop-blur-sm rounded-full p-3 flex items-center gap-2 text-white">
@@ -211,17 +188,8 @@ const Home: React.FC = () => {
                 </ul>
               </div>
               <div className="order-1 lg:order-2">
-                <div 
-                  className="relative group cursor-pointer"
-                  onMouseEnter={() => setHoveredImage("/lovable-uploads/71200d6b-0740-4bd9-b89d-878aea657b25.png")}
-                  onMouseLeave={() => setHoveredImage(null)}
-                  onClick={() => setEnlargedImage("/lovable-uploads/71200d6b-0740-4bd9-b89d-878aea657b25.png")}
-                >
-                  <img 
-                    src="/lovable-uploads/71200d6b-0740-4bd9-b89d-878aea657b25.png"
-                    alt="Documents added directly to runsheet with reference numbers"
-                    className="rounded-lg shadow-lg w-full transition-all duration-300 group-hover:brightness-75"
-                  />
+                <div className="relative group cursor-pointer" onMouseEnter={() => setHoveredImage("/lovable-uploads/71200d6b-0740-4bd9-b89d-878aea657b25.png")} onMouseLeave={() => setHoveredImage(null)} onClick={() => setEnlargedImage("/lovable-uploads/71200d6b-0740-4bd9-b89d-878aea657b25.png")}>
+                  <img src="/lovable-uploads/71200d6b-0740-4bd9-b89d-878aea657b25.png" alt="Documents added directly to runsheet with reference numbers" className="rounded-lg shadow-lg w-full transition-all duration-300 group-hover:brightness-75" />
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                     <div className="bg-black/50 backdrop-blur-sm rounded-full p-3 flex items-center gap-2 text-white">
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -253,12 +221,7 @@ const Home: React.FC = () => {
                 </ul>
               </div>
               <div className="order-1 lg:order-2">
-                <div 
-                  className="relative group cursor-pointer"
-                  onMouseEnter={() => setHoveredImage("/lovable-uploads/aba611da-296a-4b5c-88b5-3904082a0a42.png")}
-                  onMouseLeave={() => setHoveredImage(null)}
-                  onClick={() => setEnlargedImage("/lovable-uploads/aba611da-296a-4b5c-88b5-3904082a0a42.png")}
-                >
+                <div className="relative group cursor-pointer" onMouseEnter={() => setHoveredImage("/lovable-uploads/aba611da-296a-4b5c-88b5-3904082a0a42.png")} onMouseLeave={() => setHoveredImage(null)} onClick={() => setEnlargedImage("/lovable-uploads/aba611da-296a-4b5c-88b5-3904082a0a42.png")}>
                   <img src="/lovable-uploads/aba611da-296a-4b5c-88b5-3904082a0a42.png" alt="Side by side document analysis interface" className="rounded-lg shadow-lg w-full transition-all duration-300 group-hover:brightness-75" />
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                     <div className="bg-black/50 backdrop-blur-sm rounded-full p-3 flex items-center gap-2 text-white">
@@ -291,12 +254,7 @@ const Home: React.FC = () => {
                 </ul>
               </div>
               <div className="order-1 lg:order-2">
-                <div 
-                  className="relative group cursor-pointer"
-                  onMouseEnter={() => setHoveredImage("/lovable-uploads/1324f743-c50e-4191-b0a4-e6bc142a4a6c.png")}
-                  onMouseLeave={() => setHoveredImage(null)}
-                  onClick={() => setEnlargedImage("/lovable-uploads/1324f743-c50e-4191-b0a4-e6bc142a4a6c.png")}
-                >
+                <div className="relative group cursor-pointer" onMouseEnter={() => setHoveredImage("/lovable-uploads/1324f743-c50e-4191-b0a4-e6bc142a4a6c.png")} onMouseLeave={() => setHoveredImage(null)} onClick={() => setEnlargedImage("/lovable-uploads/1324f743-c50e-4191-b0a4-e6bc142a4a6c.png")}>
                   <img src="/lovable-uploads/1324f743-c50e-4191-b0a4-e6bc142a4a6c.png" alt="Document analysis with AI extracting data" className="rounded-lg shadow-lg w-full transition-all duration-300 group-hover:brightness-75" />
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                     <div className="bg-black/50 backdrop-blur-sm rounded-full p-3 flex items-center gap-2 text-white">
@@ -313,12 +271,7 @@ const Home: React.FC = () => {
             {/* Step 4 */}
             <div className="grid lg:grid-cols-2 gap-8 items-center">
               <div>
-                <div 
-                  className="relative group cursor-pointer"
-                  onMouseEnter={() => setHoveredImage("/lovable-uploads/98320272-b5c8-4a78-b5d0-d8cbf36a89a6.png")}
-                  onMouseLeave={() => setHoveredImage(null)}
-                  onClick={() => setEnlargedImage("/lovable-uploads/98320272-b5c8-4a78-b5d0-d8cbf36a89a6.png")}
-                >
+                <div className="relative group cursor-pointer" onMouseEnter={() => setHoveredImage("/lovable-uploads/98320272-b5c8-4a78-b5d0-d8cbf36a89a6.png")} onMouseLeave={() => setHoveredImage(null)} onClick={() => setEnlargedImage("/lovable-uploads/98320272-b5c8-4a78-b5d0-d8cbf36a89a6.png")}>
                   <img src="/lovable-uploads/98320272-b5c8-4a78-b5d0-d8cbf36a89a6.png" alt="Add to runsheet with highlighted button" className="rounded-lg shadow-lg w-full transition-all duration-300 group-hover:brightness-75" />
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                     <div className="bg-black/50 backdrop-blur-sm rounded-full p-3 flex items-center gap-2 text-white">
@@ -337,9 +290,7 @@ const Home: React.FC = () => {
                   </div>
                   <h4 className="text-2xl font-semibold">Review & Add to Runsheet</h4>
                 </div>
-                <p className="text-muted-foreground text-lg mb-4">
-                  Review the extracted data for accuracy, make any necessary corrections, then click "Add to Runsheet". Go back to your runsheet to see the data has been added to the next row with a document file reference.
-                </p>
+                <p className="text-muted-foreground text-lg mb-4">Review the extracted data for accuracy, make any necessary corrections, then click "Add to Runsheet". Go back to your runsheet to see the data has been added to the row with a document file reference.</p>
                 <ul className="space-y-2 text-muted-foreground">
                   <li>• Automatic data validation</li>
                   <li>• Document reference number assigned</li>
@@ -367,12 +318,7 @@ const Home: React.FC = () => {
                 </ul>
               </div>
               <div className="order-1 lg:order-2">
-                <div 
-                  className="relative group cursor-pointer"
-                  onMouseEnter={() => setHoveredImage("/lovable-uploads/dcd42115-3fc1-4647-8e5c-1773e44f0763.png")}
-                  onMouseLeave={() => setHoveredImage(null)}
-                  onClick={() => setEnlargedImage("/lovable-uploads/dcd42115-3fc1-4647-8e5c-1773e44f0763.png")}
-                >
+                <div className="relative group cursor-pointer" onMouseEnter={() => setHoveredImage("/lovable-uploads/dcd42115-3fc1-4647-8e5c-1773e44f0763.png")} onMouseLeave={() => setHoveredImage(null)} onClick={() => setEnlargedImage("/lovable-uploads/dcd42115-3fc1-4647-8e5c-1773e44f0763.png")}>
                   <img src="/lovable-uploads/dcd42115-3fc1-4647-8e5c-1773e44f0763.png" alt="Runsheet showing linked documents with file access" className="rounded-lg shadow-lg w-full transition-all duration-300 group-hover:brightness-75" />
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                     <div className="bg-black/50 backdrop-blur-sm rounded-full p-3 flex items-center gap-2 text-white">
@@ -408,18 +354,8 @@ const Home: React.FC = () => {
                   </ul>
                 </div>
                 <div className="order-1 lg:order-1">
-                  <div 
-                    className="relative group cursor-pointer"
-                    onMouseEnter={() => setHoveredImage("/lovable-uploads/8ab8b967-6004-4e23-ada6-0fda1ef1a14b.png")}
-                    onMouseLeave={() => setHoveredImage(null)}
-                    onClick={() => setEnlargedImage("/lovable-uploads/8ab8b967-6004-4e23-ada6-0fda1ef1a14b.png")}
-                  >
-                    <img 
-                      src="/lovable-uploads/8ab8b967-6004-4e23-ada6-0fda1ef1a14b.png"
-                      alt="One-click AI analysis brain button in RunsheetPro populating fields"
-                      className="rounded-lg shadow-lg w-full transition-all duration-300 group-hover:brightness-75"
-                      loading="lazy" decoding="async"
-                    />
+                  <div className="relative group cursor-pointer" onMouseEnter={() => setHoveredImage("/lovable-uploads/8ab8b967-6004-4e23-ada6-0fda1ef1a14b.png")} onMouseLeave={() => setHoveredImage(null)} onClick={() => setEnlargedImage("/lovable-uploads/8ab8b967-6004-4e23-ada6-0fda1ef1a14b.png")}>
+                    <img src="/lovable-uploads/8ab8b967-6004-4e23-ada6-0fda1ef1a14b.png" alt="One-click AI analysis brain button in RunsheetPro populating fields" className="rounded-lg shadow-lg w-full transition-all duration-300 group-hover:brightness-75" loading="lazy" decoding="async" />
                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                       <div className="bg-black/50 backdrop-blur-sm rounded-full p-3 flex items-center gap-2 text-white">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -452,17 +388,8 @@ const Home: React.FC = () => {
                   </ul>
                 </div>
                 <div>
-                  <div 
-                    className="relative group cursor-pointer"
-                    onMouseEnter={() => setHoveredImage("/lovable-uploads/09cb2d94-09f3-47de-a814-f63096d089d6.png")}
-                    onMouseLeave={() => setHoveredImage(null)}
-                    onClick={() => setEnlargedImage("/lovable-uploads/09cb2d94-09f3-47de-a814-f63096d089d6.png")}
-                  >
-                    <img 
-                      src="/lovable-uploads/09cb2d94-09f3-47de-a814-f63096d089d6.png"
-                      alt="Quick document view with expanded interface showing warranty deed"
-                      className="rounded-lg shadow-lg w-full transition-all duration-300 group-hover:brightness-75"
-                    />
+                  <div className="relative group cursor-pointer" onMouseEnter={() => setHoveredImage("/lovable-uploads/09cb2d94-09f3-47de-a814-f63096d089d6.png")} onMouseLeave={() => setHoveredImage(null)} onClick={() => setEnlargedImage("/lovable-uploads/09cb2d94-09f3-47de-a814-f63096d089d6.png")}>
+                    <img src="/lovable-uploads/09cb2d94-09f3-47de-a814-f63096d089d6.png" alt="Quick document view with expanded interface showing warranty deed" className="rounded-lg shadow-lg w-full transition-all duration-300 group-hover:brightness-75" />
                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                       <div className="bg-black/50 backdrop-blur-sm rounded-full p-3 flex items-center gap-2 text-white">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -509,28 +436,16 @@ const Home: React.FC = () => {
       </footer>
 
       {/* Image Enlargement Overlay */}
-      {enlargedImage && (
-        <div 
-          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-          onClick={() => setEnlargedImage(null)}
-        >
+      {enlargedImage && <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setEnlargedImage(null)}>
           <div className="relative max-w-7xl max-h-full">
-            <img 
-              src={enlargedImage} 
-              alt="Enlarged view" 
-              className="max-w-full max-h-full object-contain rounded-lg"
-            />
-            <button 
-              onClick={() => setEnlargedImage(null)}
-              className="absolute top-4 right-4 text-white bg-black/50 hover:bg-black/70 rounded-full p-2 transition-colors"
-            >
+            <img src={enlargedImage} alt="Enlarged view" className="max-w-full max-h-full object-contain rounded-lg" />
+            <button onClick={() => setEnlargedImage(null)} className="absolute top-4 right-4 text-white bg-black/50 hover:bg-black/70 rounded-full p-2 transition-colors">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           </div>
-        </div>
-      )}
+        </div>}
     </div>;
 };
 export default Home;
