@@ -61,6 +61,19 @@ export const useActiveRunsheet = () => {
     
     // Load from localStorage on mount if not already loaded
     if (!globalCurrentRunsheetId) {
+      // Check if we're in the middle of creating a new runsheet
+      const creatingNew = sessionStorage.getItem('creating_new_runsheet');
+      if (creatingNew) {
+        const createdTime = parseInt(creatingNew);
+        if (Date.now() - createdTime < 3000) { // 3 seconds
+          console.log('🚫 Skipping localStorage load - new runsheet being created');
+          return;
+        } else {
+          // Clean up old flag
+          sessionStorage.removeItem('creating_new_runsheet');
+        }
+      }
+      
       loadCurrentIdFromLocalStorage();
       notifyListeners();
     }

@@ -411,10 +411,8 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
             setColumns(newColumns || []);
             setColumnInstructions(newInstructions || {});
             
-            toast({
-              title: "Synced",
-              description: "Spreadsheet updated with latest changes",
-            });
+            // Removed annoying sync toast that was disrupting user experience
+            // User will see the AutoSaveIndicator for save status instead
           }
         }
       )
@@ -628,7 +626,13 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         newColumns.forEach((col: string) => row[col] = '');
         return row;
       }));
-      // Clear current state first
+      // Clear current state first - AGGRESSIVELY clear localStorage to prevent restoration
+      console.log('🧹 Clearing current runsheet state for new runsheet:', name);
+      
+      // Clear localStorage immediately to prevent active runsheet restoration
+      localStorage.removeItem('currentRunsheetId');
+      localStorage.removeItem('activeRunsheet');
+      
       setCurrentRunsheetId(null);
       clearActiveRunsheet();
       setSelectedCell(null);
@@ -655,6 +659,11 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       
       // CRITICAL: Immediately save the new runsheet to database to get a proper ID
       // This prevents the localStorage active runsheet from taking over
+      console.log('🆕 Creating new runsheet immediately to prevent localStorage override:', name);
+      
+      // Set a flag to prevent any automatic runsheet loading for a few seconds
+      sessionStorage.setItem('creating_new_runsheet', Date.now().toString());
+      
       setTimeout(async () => {
         if (user) {
           try {
@@ -683,6 +692,9 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
             });
             
             console.log('✅ New runsheet created and set as active:', newRunsheet.id);
+            
+            // Clear the creation flag
+            sessionStorage.removeItem('creating_new_runsheet');
           } catch (error) {
             console.error('Failed to create new runsheet:', error);
             toast({
