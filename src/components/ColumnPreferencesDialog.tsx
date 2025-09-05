@@ -45,9 +45,11 @@ const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
     try {
       const preferences = await ExtractionPreferencesService.getDefaultPreferences();
       
-      if (preferences && preferences.columns && preferences.column_instructions) {
+      if (preferences && preferences.columns && preferences.columns.length > 0) {
         setColumns(preferences.columns);
         setColumnInstructions(preferences.column_instructions as Record<string, string>);
+        // Select first column by default to show its instructions
+        setSelectedColumn(preferences.columns[0]);
       } else {
         // Use comprehensive default columns for runsheet/title work when no preferences exist
         const defaultColumns = [
@@ -88,6 +90,8 @@ const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
         
         setColumns(defaultColumns);
         setColumnInstructions(defaultInstructions);
+        // Select first column by default to show its instructions
+        setSelectedColumn(defaultColumns[0]);
       }
     } catch (error) {
       console.error('Error loading preferences:', error);
