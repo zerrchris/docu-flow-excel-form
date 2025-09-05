@@ -1025,8 +1025,8 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       const availableWidth = Math.max(containerWidth, 800); // Minimum width of 800px
       const columnWidth = Math.floor(availableWidth / columns.length);
       
-      // Only set widths if no columns have been manually resized
-      if (!hasManuallyResizedColumns) {
+      // Only set widths if no columns have been manually resized AND we're not loading preferences
+      if (!hasManuallyResizedColumns && !isLoadingColumnWidths) {
         const newWidths: Record<string, number> = {};
         columns.forEach(column => {
           newWidths[column] = columnWidth;
@@ -1034,7 +1034,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         setColumnWidths(newWidths);
       }
     }
-  }, [columns, hasManuallyResizedColumns]);
+  }, [columns, hasManuallyResizedColumns, isLoadingColumnWidths]);
 
   // Sync data with initialData prop changes
   useEffect(() => {
@@ -1483,7 +1483,10 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         console.log('Loading column width preferences for runsheet:', currentRunsheetId);
         const preferences = await ColumnWidthPreferencesService.loadPreferences(currentRunsheetId);
         console.log('✅ Loaded column width preferences:', preferences);
-        setColumnWidths(preferences);
+        if (Object.keys(preferences).length > 0) {
+          setColumnWidths(preferences);
+          setHasManuallyResizedColumns(true); // Mark as manually resized to prevent auto-sizing
+        }
       } catch (error) {
         console.error('Error loading column width preferences:', error);
       } finally {
