@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { Plus, Trash2, Check, X, ArrowUp, ArrowDown, Save, FolderOpen, Download, Upload, AlignLeft, AlignCenter, AlignRight, Cloud, ChevronDown, FileText, Archive, ExternalLink, AlertTriangle, FileStack, Settings, Eye, EyeOff, Sparkles, Bug, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, Check, X, ArrowUp, ArrowDown, Save, FolderOpen, Download, Upload, AlignLeft, AlignCenter, AlignRight, Cloud, ChevronDown, FileText, Archive, ExternalLink, AlertTriangle, FileStack, Settings, Eye, EyeOff, Sparkles, Bug, AlertCircle, Brain } from 'lucide-react';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -51,6 +51,7 @@ import InlineDocumentViewer from './InlineDocumentViewer';
 import ColumnPreferencesDialog from './ColumnPreferencesDialog';
 import FullScreenDocumentWorkspace from './FullScreenDocumentWorkspace';
 import SideBySideDocumentWorkspace from './SideBySideDocumentWorkspace';
+import { BatchDocumentAnalysisDialog } from './BatchDocumentAnalysisDialog';
 import ViewportPortal from './ViewportPortal';
 import { AutoSaveIndicator } from './AutoSaveIndicator';
 import { useImmediateSave } from '@/hooks/useImmediateSave';
@@ -288,6 +289,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   const [inlineViewerRow, setInlineViewerRow] = useState<number | null>(null);
    const [fullScreenWorkspace, setFullScreenWorkspace] = useState<{ runsheetId: string; rowIndex: number } | null>(null);
    const [sideBySideWorkspace, setSideBySideWorkspace] = useState<{ runsheetId: string; rowIndex: number } | null>(null);
+   const [showBatchAnalysisDialog, setShowBatchAnalysisDialog] = useState(false);
    const [showDocumentFileNameColumn, setShowDocumentFileNameColumn] = useState(true);
   
   // Auto-save state
@@ -5188,6 +5190,19 @@ ${extractionFields}`
               </Button>
             )}
             
+            {/* Batch Analysis Button */}
+            {documentMap.size > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowBatchAnalysisDialog(true)}
+                className="gap-2"
+              >
+                <Brain className="h-4 w-4" />
+                Analyze All ({documentMap.size})
+              </Button>
+            )}
+            
             {/* Add Rows Button */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -6683,6 +6698,21 @@ ${extractionFields}`
             onColumnInstructionsChange?.(newInstructions);
           }}
           onResetColumnWidths={resetColumnWidths}
+        />
+
+        {/* Batch Document Analysis Dialog */}
+        <BatchDocumentAnalysisDialog
+          isOpen={showBatchAnalysisDialog}
+          onClose={() => setShowBatchAnalysisDialog(false)}
+          runsheetId={effectiveRunsheetId}
+          columns={columns}
+          columnInstructions={columnInstructions}
+          documentMap={documentMap}
+          onDataUpdate={(newData) => {
+            setData(newData);
+            onDataChange?.(newData);
+          }}
+          currentData={data}
         />
 
     );
