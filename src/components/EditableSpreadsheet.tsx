@@ -1081,6 +1081,13 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   useEffect(() => {
     if (currentRunsheet?.id && currentRunsheetId !== currentRunsheet.id) {
       console.log('📋 Syncing currentRunsheetId with active runsheet:', currentRunsheet.id);
+      
+      // SECURITY: Don't sync if we're viewing a named runsheet and trying to switch to "Untitled"
+      if (runsheetName !== 'Untitled Runsheet' && currentRunsheet.name === 'Untitled Runsheet') {
+        console.log('🚫 Preventing sync to "Untitled Runsheet" while viewing named runsheet:', runsheetName);
+        return;
+      }
+      
       setCurrentRunsheetId(currentRunsheet.id);
       
       // Also sync the runsheet name if it differs
@@ -1093,6 +1100,13 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     // a state restoration issue - prioritize the active runsheet
     if (currentRunsheet?.id && !currentRunsheetId) {
       console.log('🔄 Restoring currentRunsheetId from active runsheet after page refresh:', currentRunsheet.id);
+      
+      // SECURITY: Don't restore "Untitled Runsheet" if we have a different named runsheet
+      if (currentRunsheet.name === 'Untitled Runsheet' && runsheetName !== 'Untitled Runsheet') {
+        console.log('🚫 Preventing restoration of "Untitled Runsheet" over named runsheet:', runsheetName);
+        return;
+      }
+      
       setCurrentRunsheetId(currentRunsheet.id);
       setRunsheetName(currentRunsheet.name || 'Untitled Runsheet');
       
@@ -1769,14 +1783,26 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
           console.log('🔴 Real-time update received:', payload);
           
           // Only update if the change was from another user to avoid feedback loops
+          // CRITICAL: Also check if this is just an "Untitled Runsheet" being pushed inappropriately
           if (payload.new && payload.new.user_id !== user.id) {
-            const { data: newData, columns: newColumns, column_instructions } = payload.new;
+            const { data: newData, columns: newColumns, column_instructions, name: newName } = payload.new;
+            
+            // SECURITY: Prevent "Untitled Runsheet" from overriding named runsheets
+            if (newName === 'Untitled Runsheet' && runsheetName !== 'Untitled Runsheet') {
+              console.log('🚫 Blocking real-time sync of "Untitled Runsheet" over named runsheet:', runsheetName);
+              return;
+            }
             
             if (newData) {
               console.log('🔄 Updating data from real-time sync');
               setData(newData);
               setColumns(newColumns || []);
               setColumnInstructions(column_instructions || {});
+              
+              // Update runsheet name if it changed
+              if (newName && newName !== runsheetName) {
+                setRunsheetName(newName);
+              }
               
               // Show notification about remote changes
               toast({
