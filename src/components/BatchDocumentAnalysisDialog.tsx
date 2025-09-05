@@ -179,8 +179,19 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
       for (const [rowIndex, document] of documentsToAnalyze) {
         if (controller.signal.aborted) break;
 
-        // Check if we should skip this row due to existing data
-        const hasExistingData = updatedData[rowIndex] && Object.values(updatedData[rowIndex]).some(value => value && value.trim() !== '');
+        // Check if we should skip this row due to existing meaningful data
+        // We'll be more intelligent here - only skip if there's actual content data, not just filenames
+        const hasExistingData = updatedData[rowIndex] && columns.some(column => {
+          const value = updatedData[rowIndex][column];
+          // Skip if there's meaningful data that's not just a filename or document reference
+          return value && value.trim() !== '' && 
+                 !value.toLowerCase().includes('.pdf') && 
+                 !value.toLowerCase().includes('.png') && 
+                 !value.toLowerCase().includes('.jpg') && 
+                 !value.toLowerCase().includes('.jpeg') &&
+                 !value.toLowerCase().includes('document') &&
+                 value.length > 5; // Ignore very short values that might be auto-generated
+        });
         
         if (skipRowsWithData && hasExistingData) {
           setResults(prev => prev.map(result => 
