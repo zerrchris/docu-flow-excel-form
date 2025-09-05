@@ -1028,6 +1028,13 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
 
   // Sync data with initialData prop changes
   useEffect(() => {
+    // Don't override columns if we're in the middle of creating a new runsheet from Dashboard
+    const isCreatingNewRunsheet = sessionStorage.getItem('creating_new_runsheet');
+    if (isCreatingNewRunsheet) {
+      console.log('🚫 Skipping initialData sync - new runsheet creation in progress');
+      return;
+    }
+
     console.log('🔍 initialData sync effect triggered with:', {
       initialDataLength: initialData?.length,
       initialRunsheetId,
