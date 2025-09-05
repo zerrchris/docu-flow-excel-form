@@ -116,7 +116,6 @@ export const FileManager: React.FC = () => {
     }
   };
 
-
   const loadRunsheetDocuments = async (runsheetId: string) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -359,6 +358,7 @@ export const FileManager: React.FC = () => {
         variant: "destructive",
       });
     }
+  };
 
   const filteredRunsheets = runsheets.filter(runsheet =>
     runsheet.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -614,13 +614,8 @@ export const FileManager: React.FC = () => {
             </TableBody>
           </Table>
         </Card>
-        )}
-      </div>
+      )}
     </div>
-  );
-
-  const renderRunsheetDetailsView = () => (
-    <div>Documents view placeholder</div>
   );
 
   return (
@@ -789,117 +784,6 @@ export const FileManager: React.FC = () => {
           setPreviewFile(null);
         }}
       />
-
-      {/* New Runsheet Dialog */}
-      <Dialog open={showNewRunsheetDialog} onOpenChange={setShowNewRunsheetDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Create New Runsheet</DialogTitle>
-            <DialogDescription>
-              Enter a name for your new runsheet. This will help you organize your documents and data.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label htmlFor="runsheet-name" className="text-sm font-medium">
-                Runsheet Name
-              </label>
-              <Input
-                id="runsheet-name"
-                value={newRunsheetName}
-                onChange={(e) => setNewRunsheetName(e.target.value)}
-                placeholder="Enter runsheet name..."
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && newRunsheetName.trim()) {
-                    createNewRunsheet();
-                  }
-                }}
-                autoFocus
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowNewRunsheetDialog(false);
-                setNewRunsheetName('');
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={createNewRunsheet}
-              disabled={!newRunsheetName.trim()}
-            >
-              Create Runsheet
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-};
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* File Preview */}
-      <FilePreview 
-        file={previewFile}
-        isOpen={showPreview}
-        onClose={() => {
-          setShowPreview(false);
-          setPreviewFile(null);
-        }}
-      />
-
-      {/* New Runsheet Dialog */}
-      <Dialog open={showNewRunsheetDialog} onOpenChange={setShowNewRunsheetDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Create New Runsheet</DialogTitle>
-            <DialogDescription>
-              Enter a name for your new runsheet. This will help you organize your documents and data.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label htmlFor="runsheet-name" className="text-sm font-medium">
-                Runsheet Name
-              </label>
-              <Input
-                id="runsheet-name"
-                value={newRunsheetName}
-                onChange={(e) => setNewRunsheetName(e.target.value)}
-                placeholder="Enter runsheet name..."
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && newRunsheetName.trim()) {
-                    createNewRunsheet();
-                  }
-                }}
-                autoFocus
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowNewRunsheetDialog(false);
-                setNewRunsheetName('');
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={createNewRunsheet}
-              disabled={!newRunsheetName.trim()}
-            >
-              Create Runsheet
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
