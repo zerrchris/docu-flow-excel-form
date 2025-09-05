@@ -21,28 +21,28 @@ const notifyListeners = () => {
   listeners.forEach(listener => listener(globalCurrentRunsheetId));
 };
 
-const saveCurrentIdToLocalStorage = () => {
+const saveCurrentIdToSessionStorage = () => {
   try {
     if (globalCurrentRunsheetId) {
-      localStorage.setItem(CURRENT_RUNSHEET_ID_KEY, globalCurrentRunsheetId);
+      sessionStorage.setItem(CURRENT_RUNSHEET_ID_KEY, globalCurrentRunsheetId);
     } else {
-      localStorage.removeItem(CURRENT_RUNSHEET_ID_KEY);
+      sessionStorage.removeItem(CURRENT_RUNSHEET_ID_KEY);
     }
   } catch (error) {
-    console.error('Error saving current runsheet ID to localStorage:', error);
+    console.error('Error saving current runsheet ID to sessionStorage:', error);
   }
 };
 
-const loadCurrentIdFromLocalStorage = () => {
+const loadCurrentIdFromSessionStorage = () => {
   try {
-    const stored = localStorage.getItem(CURRENT_RUNSHEET_ID_KEY);
+    const stored = sessionStorage.getItem(CURRENT_RUNSHEET_ID_KEY);
     if (stored) {
       globalCurrentRunsheetId = stored;
-      console.log('📋 Loaded current runsheet ID from localStorage:', stored);
+      console.log('📋 Loaded current runsheet ID from sessionStorage:', stored);
     }
   } catch (error) {
-    console.error('Error loading current runsheet ID from localStorage:', error);
-    localStorage.removeItem(CURRENT_RUNSHEET_ID_KEY);
+    console.error('Error loading current runsheet ID from sessionStorage:', error);
+    sessionStorage.removeItem(CURRENT_RUNSHEET_ID_KEY);
     globalCurrentRunsheetId = null;
   }
 };
@@ -74,7 +74,7 @@ export const useActiveRunsheet = () => {
         }
       }
       
-      loadCurrentIdFromLocalStorage();
+      loadCurrentIdFromSessionStorage();
       notifyListeners();
     }
 
@@ -155,13 +155,13 @@ export const useActiveRunsheet = () => {
     }
     
     globalCurrentRunsheetId = runsheetId;
-    saveCurrentIdToLocalStorage();
+    saveCurrentIdToSessionStorage();
     notifyListeners();
   };
 
   const clearActiveRunsheet = () => {
     globalCurrentRunsheetId = null;
-    localStorage.removeItem(CURRENT_RUNSHEET_ID_KEY);
+    sessionStorage.removeItem(CURRENT_RUNSHEET_ID_KEY);
     notifyListeners();
   };
 

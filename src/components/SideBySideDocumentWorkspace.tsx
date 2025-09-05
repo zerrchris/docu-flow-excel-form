@@ -430,6 +430,7 @@ Return only the filename, nothing else.`,
         description: "Row data has been updated.",
       });
       
+      // Close the workspace (parent component will handle active runsheet)
       onClose();
     } catch (error) {
       console.error('Error saving changes:', error);

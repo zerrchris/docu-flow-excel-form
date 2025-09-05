@@ -2,8 +2,10 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { SubscriptionProvider } from "./contexts/SubscriptionContext";
+import { useActiveRunsheet } from "./hooks/useActiveRunsheet";
+import { useEffect } from "react";
 import Home from "./pages/Home";
 import Dashboard from "./pages/Dashboard";
 import AppPage from "./pages/App";
@@ -23,6 +25,22 @@ import Analytics from "./pages/Analytics";
 import AuthStatus from "./pages/AuthStatus";
  
 const queryClient = new QueryClient();
+
+// Component to handle navigation-based runsheet clearing
+const NavigationHandler = () => {
+  const location = useLocation();
+  const { clearActiveRunsheet, currentRunsheetId } = useActiveRunsheet();
+
+  useEffect(() => {
+    // Clear active runsheet when navigating away from /runsheet
+    if (currentRunsheetId && location.pathname !== '/runsheet') {
+      console.log('📋 Clearing active runsheet - navigated away from /runsheet to:', location.pathname);
+      clearActiveRunsheet();
+    }
+  }, [location.pathname, currentRunsheetId, clearActiveRunsheet]);
+
+  return null;
+};
  
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -31,6 +49,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <NavigationHandler />
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/app" element={<Dashboard />} />
