@@ -162,17 +162,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       return result;
     }
     
-    // Only check for emergency draft if no initial data was provided
-    try {
-      const emergencyDraft = localStorage.getItem('runsheet-emergency-draft');
-      if (emergencyDraft) {
-        const draft = JSON.parse(emergencyDraft);
-        console.log('🔄 Restoring emergency draft from localStorage (no initialData)');
-        return draft.data || [];
-      }
-    } catch (error) {
-      console.error('Error loading emergency draft:', error);
-    }
+    // Emergency draft system REMOVED - using immediate database saves instead
     
     // Prevent default rows creation if upload action is active
     const preventDefault = sessionStorage.getItem('prevent_default_runsheet_creation');
@@ -1109,83 +1099,15 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     }
   }, [currentRunsheet, currentRunsheetId, runsheetName]);
 
-  // Emergency draft saving - auto-save to localStorage every 30 seconds and on data changes
-  useEffect(() => {
-    const saveEmergencyDraft = () => {
-      if (!data || data.length === 0) return;
-      
-      // Skip saving if documents are being processed to avoid interrupting workflow
-      const hasDocuments = documentMap.size > 0;
-      const isProcessingDocuments = hasDocuments || inlineViewerRow !== null;
-      
-      if (isProcessingDocuments) {
-        console.log('⏸️ Skipping emergency draft save - document processing in progress');
-        return;
-      }
-      
-      // Check if there's meaningful data to save
-      const hasData = data.some(row => 
-        Object.values(row).some(value => value && value.trim() !== '')
-      );
-      
-      if (hasData) {
-        try {
-          const draft = {
-            data,
-            columns,
-            columnInstructions,
-            runsheetName,
-            currentRunsheetId,
-            timestamp: Date.now()
-          };
-          localStorage.setItem('runsheet-emergency-draft', JSON.stringify(draft));
-          console.log('💾 Emergency draft saved to localStorage');
-        } catch (error) {
-          console.error('Error saving emergency draft:', error);
-        }
-      }
-    };
+  // REMOVED: Emergency draft system - unnecessary with immediate database saves
+  // All user actions now save immediately to database, making localStorage backup redundant
 
-    // Reduce frequency to avoid interrupting document processing
-    const timeoutId = setTimeout(saveEmergencyDraft, 5000); // Increased from 1 second
-    
-    // Set up emergency draft backup every 10 minutes (less frequent)
-    const intervalId = setInterval(saveEmergencyDraft, 600000); // 10 minutes instead of 2
-    
-    return () => {
-      clearTimeout(timeoutId);
-      clearInterval(intervalId);
-    };
-  }, [data, columns, columnInstructions, runsheetName, currentRunsheetId, documentMap, inlineViewerRow]);
+  // Emergency draft cleanup REMOVED - no longer needed with direct database saves
 
-  // Clear emergency draft when runsheet is successfully saved
-  useEffect(() => {
-    const handleRunsheetSaved = () => {
-      try {
-        localStorage.removeItem('runsheet-emergency-draft');
-        console.log('🗑️ Emergency draft cleared - runsheet saved');
-      } catch (error) {
-        console.error('Error clearing emergency draft:', error);
-      }
-    };
-
-    window.addEventListener('runsheetSaved', handleRunsheetSaved);
-    return () => window.removeEventListener('runsheetSaved', handleRunsheetSaved);
-  }, []);
-
-  // Complete emergency draft restoration on component mount
-  useEffect(() => {
-    const restoreEmergencyDraft = () => {
-      console.log('🔄 Emergency draft restoration check starting', {
-        hasEmergencyDraft: !!localStorage.getItem('runsheet-emergency-draft'),
-        currentRunsheetId,
-        documentMapSize: documentMap.size,
-        runsheetName,
-        dataLength: data.length
-      });
-      
-      try {
-        const emergencyDraft = localStorage.getItem('runsheet-emergency-draft');
+  // REMOVED: Emergency draft restoration system - unnecessary with direct database saves  
+  // Database is now the single source of truth, no localStorage fallback needed
+  
+  // Update local missing columns based on current column instructions
         if (emergencyDraft) {
           const draft = JSON.parse(emergencyDraft);
           const draftAge = Date.now() - (draft.timestamp || 0);
@@ -1196,8 +1118,12 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
           const isProcessingDocuments = hasDocuments || inlineViewerRow !== null;
           const hasActiveRunsheetName = runsheetName && runsheetName !== 'Untitled Runsheet';
           const hasActiveRunsheet = !!currentRunsheet; // Check if there's already an active runsheet
-          
-          if (draftAge < 24 * 60 * 60 * 1000) {
+  useEffect(() => {
+    // Don't check for missing columns while loading a runsheet
+    if (isLoadingRunsheet) {
+      console.log('Skipping missing column check - runsheet is loading');
+      return;
+    }
             // Check if this is a "New" button click or fresh runsheet creation
             const isNewRunsheetCreation = runsheetName === 'Untitled Runsheet' && 
                                         !hasCurrentRunsheet && 
@@ -1251,16 +1177,9 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
                 toast({
                   title: "Draft restored",
                   description: "Your previous work has been restored from backup.",
-                  variant: "default"
-                });
-              }
-            }
-          } else {
-            // Clean up old draft
-            localStorage.removeItem('runsheet-emergency-draft');
-            console.log('🗑️ Removed old emergency draft (>24h)');
-          }
-      }
+    
+    // Get existing column instructions
+    const existingInstructions = await ExtractionPreferencesService.getDefaultPreferences();
       
       // Check for temporary state from navigation (highest priority)
       const tempState = sessionStorage.getItem('tempRunsheetState');
@@ -1321,19 +1240,6 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
             sessionStorage.removeItem('tempRunsheetState');
             console.log('🗑️ Cleared temp state - too old or active work detected');
           }
-        } catch (error) {
-          console.error('Error restoring temp state:', error);
-          sessionStorage.removeItem('tempRunsheetState');
-        }
-      }
-      } catch (error) {
-        console.error('Error restoring emergency draft:', error);
-      }
-    };
-
-    // Only restore on initial mount, not on every re-render
-    restoreEmergencyDraft();
-  }, []); // Empty dependency array - only runs once on mount
 
   // Update local missing columns based on current column instructions
   useEffect(() => {
