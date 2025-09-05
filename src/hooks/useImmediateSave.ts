@@ -15,9 +15,11 @@ interface ImmediateSaveResult {
     data: Record<string, string>[], 
     columns: string[], 
     runsheetName: string, 
-    columnInstructions: Record<string, string>
+    columnInstructions: Record<string, string>,
+    silent?: boolean  // New parameter for silent saves
   ) => Promise<any>;
   isSaving: boolean;
+  isSilentSaving: boolean;  // New state for background saves
 }
 
 export function useImmediateSave({
@@ -29,13 +31,15 @@ export function useImmediateSave({
 }: ImmediateSaveOptions): ImmediateSaveResult {
   const { toast } = useToast();
   const isSavingRef = useRef(false);
+  const isSilentSavingRef = useRef(false);
 
   // Immediate database save function
   const saveToDatabase = useCallback(async (
     data: Record<string, string>[], 
     columns: string[], 
     runsheetName: string, 
-    columnInstructions: Record<string, string>
+    columnInstructions: Record<string, string>,
+    silent: boolean = false  // Default to false for backwards compatibility
   ): Promise<any> => {
     if (!userId || !runsheetName.trim() || columns.length === 0) {
       console.log('⚠️ Skipping save - missing required data');
@@ -49,20 +53,28 @@ export function useImmediateSave({
       return null;
     }
 
-    if (isSavingRef.current) {
+    // Check if a save is already in progress (either regular or silent)
+    if (isSavingRef.current || isSilentSavingRef.current) {
       console.log('⏳ Save already in progress, skipping...');
       return null;
     }
 
-    isSavingRef.current = true;
-    onSaveStart?.();
+    // Set the appropriate saving state
+    if (silent) {
+      isSilentSavingRef.current = true;
+    } else {
+      isSavingRef.current = true;
+      onSaveStart?.();
+    }
     
-    console.log('💾 Saving immediately to database:', {
-      runsheetId,
-      dataLength: data.length,
-      columnsLength: columns.length,
-      runsheetName
-    });
+    if (!silent) {
+      console.log('💾 Saving immediately to database:', {
+        runsheetId,
+        dataLength: data.length,
+        columnsLength: columns.length,
+        runsheetName
+      });
+    }
 
     try {
       const runsheetData = {
@@ -88,7 +100,7 @@ export function useImmediateSave({
 
         if (error) throw error;
         result = updateResult;
-        console.log('✅ Updated existing runsheet');
+        if (!silent) console.log('✅ Updated existing runsheet');
       } else {
         // Check for existing runsheet with same name
         const { data: existingRunsheet, error: checkError } = await supabase
@@ -114,7 +126,7 @@ export function useImmediateSave({
 
           if (error) throw error;
           result = updateResult;
-          console.log('✅ Updated existing runsheet by name');
+          if (!silent) console.log('✅ Updated existing runsheet by name');
         } else {
           // Create new runsheet
           const { data: insertResult, error } = await supabase
@@ -125,32 +137,44 @@ export function useImmediateSave({
 
           if (error) throw error;
           result = insertResult;
-          console.log('✅ Created new runsheet');
+          if (!silent) console.log('✅ Created new runsheet');
         }
       }
 
-      onSaveSuccess?.(result);
+      if (!silent) {
+        onSaveSuccess?.(result);
+      }
       return result;
       
     } catch (error) {
       console.error('❌ Database save failed:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to save to database';
-      onSaveError?.(errorMessage);
       
-      toast({
-        title: "Save failed",
-        description: "Changes could not be saved. Please check your connection.",
-        variant: "destructive"
-      });
+      // Only show toast and call error callback for non-silent saves
+      if (!silent) {
+        onSaveError?.(errorMessage);
+        
+        toast({
+          title: "Save failed",
+          description: "Changes could not be saved. Please check your connection.",
+          variant: "destructive"
+        });
+      }
       
       throw error;
     } finally {
-      isSavingRef.current = false;
+      // Clear the appropriate saving state
+      if (silent) {
+        isSilentSavingRef.current = false;
+      } else {
+        isSavingRef.current = false;
+      }
     }
   }, [userId, runsheetId, onSaveStart, onSaveSuccess, onSaveError, toast]);
 
   return {
     saveToDatabase,
-    isSaving: isSavingRef.current
+    isSaving: isSavingRef.current,
+    isSilentSaving: isSilentSavingRef.current
   };
 }

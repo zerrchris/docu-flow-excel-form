@@ -365,14 +365,14 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     }
   });
 
-  // Immediate save function - no debouncing like Google Sheets
+  // Regular save function for manual saves (shows UI feedback)
   const saveImmediately = useCallback(async () => {
     if (runsheetName && runsheetName !== 'Untitled Runsheet') {
-      console.log('💾 Saving immediately to database');
+      console.log('💾 Saving manually to database');
       try {
-        await saveToDatabase(data, columns, runsheetName, columnInstructions);
+        await saveToDatabase(data, columns, runsheetName, columnInstructions, false); // Non-silent save
       } catch (error) {
-        console.error('Immediate save failed:', error);
+        console.error('Manual save failed:', error);
       }
     }
   }, [saveToDatabase, data, columns, runsheetName, columnInstructions]);
@@ -4092,12 +4092,12 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       console.log('🔧 SAVE_EDIT: Called onDataChange with updated data');
       setHasUnsavedChanges(true);
 
-      // ✅ IMMEDIATE DATABASE SAVE - Save immediately like Google Sheets
-      console.log('💾 Saving cell edit immediately to database');
+      // ✅ SILENT BACKGROUND SAVE - Save in background without affecting UI
+      console.log('💾 Saving cell edit silently in background');
       if (runsheetName && runsheetName !== 'Untitled Runsheet' && user) {
         try {
-          await saveToDatabase(newData, columns, runsheetName, columnInstructions);
-          console.log('✅ Cell edit saved to database immediately');
+          await saveToDatabase(newData, columns, runsheetName, columnInstructions, true); // Silent save
+          console.log('✅ Cell edit saved to database silently');
         } catch (error) {
           console.error('❌ Failed to save cell edit to database:', error);
         }
@@ -4877,12 +4877,12 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     });
     updateDocumentMap(newDocumentMap);
     
-    // ✅ IMMEDIATE DATABASE SAVE - Save immediately like Google Sheets
-    console.log('💾 Saving row deletion immediately to database');
+    // ✅ SILENT BACKGROUND SAVE - Save in background without affecting UI
+    console.log('💾 Saving row deletion silently in background');
     if (runsheetName && runsheetName !== 'Untitled Runsheet' && user) {
       try {
-        await saveToDatabase(newData, columns, runsheetName, columnInstructions);
-        console.log('✅ Row deletion saved to database immediately');
+        await saveToDatabase(newData, columns, runsheetName, columnInstructions, true); // Silent save
+        console.log('✅ Row deletion saved to database silently');
         setHasUnsavedChanges(false);
         onUnsavedChanges?.(false);
       } catch (error) {
@@ -4894,8 +4894,8 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     updateDocumentRowIndexes(newDocumentMap);
     
     toast({
-      title: "Row deleted and saved",
-      description: `Row ${rowIndex + 1} has been deleted and changes saved immediately.`,
+      title: "Row deleted",
+      description: `Row ${rowIndex + 1} has been deleted and saved in background.`,
       variant: "default"
     });
   }, [data, documentMap, updateDocumentMap, hasUnsavedChanges, toast, user, runsheetName, columns, columnInstructions, onUnsavedChanges, updateDocumentRowIndexes, saveToDatabase]);
