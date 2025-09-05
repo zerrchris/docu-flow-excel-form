@@ -99,7 +99,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { setActiveRunsheet, clearActiveRunsheet, currentRunsheet, updateRunsheet } = useActiveRunsheet();
+  const { setActiveRunsheet, clearActiveRunsheet, currentRunsheet, updateRunsheet, setCurrentRunsheet } = useActiveRunsheet();
   const [user, setUser] = useState<User | null>(null);
   
   // Track locally which columns need configuration
@@ -653,7 +653,48 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       onDataChange?.(newData);
       onColumnChange(newColumns);
       
-      // Mark as having unsaved changes so it will save properly
+      // CRITICAL: Immediately save the new runsheet to database to get a proper ID
+      // This prevents the localStorage active runsheet from taking over
+      setTimeout(async () => {
+        if (user) {
+          try {
+            const { data: newRunsheet, error } = await supabase
+              .from('runsheets')
+              .insert({
+                user_id: user.id,
+                name: name,
+                columns: newColumns,
+                data: newData,
+                column_instructions: instructions
+              })
+              .select()
+              .single();
+
+            if (error) throw error;
+
+            // Set this as the active runsheet immediately
+            setCurrentRunsheet(newRunsheet.id);
+            setActiveRunsheet({
+              id: newRunsheet.id,
+              name: newRunsheet.name,
+              data: newData,
+              columns: newColumns,
+              columnInstructions: instructions
+            });
+            
+            console.log('✅ New runsheet created and set as active:', newRunsheet.id);
+          } catch (error) {
+            console.error('Failed to create new runsheet:', error);
+            toast({
+              title: "Error creating runsheet",
+              description: "Failed to save new runsheet. Please try again.",
+              variant: "destructive"
+            });
+          }
+        }
+      }, 100);
+      
+      // Mark as having unsaved changes so auto-save picks it up as fallback
       setHasUnsavedChanges(true);
       
       toast({
