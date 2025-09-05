@@ -212,11 +212,11 @@ const Home: React.FC = () => {
               <div className="order-1 lg:order-2">
                 <div 
                   className="relative group cursor-pointer"
-                  onMouseEnter={() => setHoveredImage("/lovable-uploads/cfda4119-bec2-4448-b708-e11f90354a3c.png")}
+                  onMouseEnter={() => setHoveredImage("/lovable-uploads/255c2ba1-c964-4a54-9d70-6c1da31848f3.png")}
                   onMouseLeave={() => setHoveredImage(null)}
-                  onClick={() => setEnlargedImage("/lovable-uploads/cfda4119-bec2-4448-b708-e11f90354a3c.png")}
+                  onClick={() => setEnlargedImage("/lovable-uploads/255c2ba1-c964-4a54-9d70-6c1da31848f3.png")}
                 >
-                  <img src="/lovable-uploads/cfda4119-bec2-4448-b708-e11f90354a3c.png" alt="Side by side document analysis interface" className="rounded-lg shadow-lg w-full transition-all duration-300 group-hover:brightness-75" />
+                  <img src="/lovable-uploads/255c2ba1-c964-4a54-9d70-6c1da31848f3.png" alt="Side by side document analysis interface" className="rounded-lg shadow-lg w-full transition-all duration-300 group-hover:brightness-75" />
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                     <div className="bg-black/50 backdrop-blur-sm rounded-full p-3 flex items-center gap-2 text-white">
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -250,11 +250,11 @@ const Home: React.FC = () => {
               <div className="order-1 lg:order-2">
                 <div 
                   className="relative group cursor-pointer"
-                  onMouseEnter={() => setHoveredImage("/lovable-uploads/2fd54341-a545-4946-a108-dd4ce81b1cbc.png")}
+                  onMouseEnter={() => setHoveredImage("/lovable-uploads/98320272-b5c8-4a78-b5d0-d8cbf36a89a6.png")}
                   onMouseLeave={() => setHoveredImage(null)}
-                  onClick={() => setEnlargedImage("/lovable-uploads/2fd54341-a545-4946-a108-dd4ce81b1cbc.png")}
+                  onClick={() => setEnlargedImage("/lovable-uploads/98320272-b5c8-4a78-b5d0-d8cbf36a89a6.png")}
                 >
-                  <img src="/lovable-uploads/2fd54341-a545-4946-a108-dd4ce81b1cbc.png" alt="Document analysis with AI extracting data" className="rounded-lg shadow-lg w-full transition-all duration-300 group-hover:brightness-75" />
+                  <img src="/lovable-uploads/98320272-b5c8-4a78-b5d0-d8cbf36a89a6.png" alt="Document analysis with AI extracting data" className="rounded-lg shadow-lg w-full transition-all duration-300 group-hover:brightness-75" />
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                     <div className="bg-black/50 backdrop-blur-sm rounded-full p-3 flex items-center gap-2 text-white">
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
