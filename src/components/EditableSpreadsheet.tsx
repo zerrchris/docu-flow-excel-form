@@ -6627,6 +6627,13 @@ ${extractionFields}`
                   [column]: width
                 }));
                 setHasManuallyResizedColumns(true);
+                
+                // Save the preference immediately (same as main spreadsheet resizing)
+                ColumnWidthPreferencesService.saveColumnWidth(
+                  column,
+                  width,
+                  currentRunsheetId
+                );
               }}
             />
           </ViewportPortal>
