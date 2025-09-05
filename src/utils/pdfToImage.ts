@@ -141,5 +141,21 @@ export const createFileFromBlob = (blob: Blob, fileName: string): File => {
  * Check if a file is a PDF
  */
 export const isPDF = (file: File): boolean => {
-  return file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+  // First check the MIME type - this is more reliable than file extension
+  if (file.type === 'application/pdf') {
+    return true;
+  }
+  
+  // Only check extension if MIME type is not set or is generic
+  if (file.type === '' || file.type === 'application/octet-stream') {
+    return file.name.toLowerCase().endsWith('.pdf');
+  }
+  
+  // If it has a specific image MIME type, don't treat as PDF even if extension says .pdf
+  if (file.type.startsWith('image/')) {
+    console.log(`File ${file.name} has .pdf extension but image MIME type: ${file.type}, treating as image`);
+    return false;
+  }
+  
+  return false;
 };
