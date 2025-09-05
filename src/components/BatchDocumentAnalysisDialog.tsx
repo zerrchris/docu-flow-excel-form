@@ -168,6 +168,13 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
     let completedCount = 0;
     const updatedData = [...currentData];
 
+    // Add warning for page navigation during analysis
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = 'Analysis in progress. Are you sure you want to leave?';
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
     try {
       for (const [rowIndex, document] of documentsToAnalyze) {
         if (controller.signal.aborted) break;
@@ -218,6 +225,25 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
               };
             }
 
+            // Save progress to database immediately after each document
+            try {
+              await supabase.functions.invoke('save-runsheet', {
+                body: {
+                  runsheetId: runsheetId,
+                  runsheetData: {
+                    name: runsheetId, // Placeholder, will be handled by the function
+                    columns: columns,
+                    data: updatedData,
+                    columnInstructions: columnInstructions
+                  }
+                }
+              });
+              console.log(`✅ Saved progress after analyzing row ${rowIndex}`);
+            } catch (saveError) {
+              console.error(`Failed to save progress for row ${rowIndex}:`, saveError);
+              // Continue analysis even if save fails
+            }
+
             // Update results
             setResults(prev => prev.map(result => 
               result.rowIndex === rowIndex 
@@ -238,12 +264,12 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
 
         completedCount++;
         setProgress((completedCount / totalDocuments) * 100);
+        
+        // Update parent component with current progress
+        onDataUpdate([...updatedData]);
       }
 
-      if (!controller.signal.aborted) {
-        // Update the data in the parent component
-        onDataUpdate(updatedData);
-        
+      if (!controller.signal.aborted) {        
         const successCount = results.filter(r => r.status === 'success').length;
         const errorCount = results.filter(r => r.status === 'error').length;
         
@@ -260,6 +286,7 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
         variant: "destructive"
       });
     } finally {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
       setIsAnalyzing(false);
       setAbortController(null);
     }
