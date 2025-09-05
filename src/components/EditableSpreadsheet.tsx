@@ -2402,8 +2402,8 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       setLastSaveTime(new Date());
       onUnsavedChanges?.(false);
 
-      // Keep the runsheet active so it can be loaded again
-      // Don't clear the active runsheet - user might want to return to it
+      // Clear the active runsheet since user is closing it
+      clearActiveRunsheet();
 
       toast({
         title: "Runsheet saved and closed",
@@ -2852,9 +2852,9 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     onColumnChange(runsheet.columns);
     
     setShowOpenDialog(false);
-    // Reset column width state for new runsheet
-    setColumnWidths({});
-    setHasManuallyResizedColumns(false);
+    
+    // Only reset column width state for completely new runsheets, not when reopening existing ones
+    // Column width preferences will be loaded by the effect hook
     
     // Wait a bit to ensure state updates are complete, then re-enable missing column checks
     setTimeout(() => {
