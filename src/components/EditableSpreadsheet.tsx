@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { Plus, Trash2, Check, X, ArrowUp, ArrowDown, Save, FolderOpen, Download, Upload, AlignLeft, AlignCenter, AlignRight, Cloud, ChevronDown, FileText, Archive, ExternalLink, AlertTriangle, FileStack, Settings, Eye, EyeOff, Sparkles, Bug, AlertCircle, Brain } from 'lucide-react';
+import { Plus, Trash2, Check, X, ArrowUp, ArrowDown, Save, FolderOpen, Download, Upload, AlignLeft, AlignCenter, AlignRight, Cloud, ChevronDown, FileText, Archive, ExternalLink, AlertTriangle, FileStack, Settings, Eye, EyeOff, Sparkles, Bug, AlertCircle, Brain, FileEdit } from 'lucide-react';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -52,6 +52,7 @@ import ColumnPreferencesDialog from './ColumnPreferencesDialog';
 import FullScreenDocumentWorkspace from './FullScreenDocumentWorkspace';
 import SideBySideDocumentWorkspace from './SideBySideDocumentWorkspace';
 import { BatchDocumentAnalysisDialog } from './BatchDocumentAnalysisDialog';
+import { BatchFileRenameDialog } from './BatchFileRenameDialog';
 import ViewportPortal from './ViewportPortal';
 import { AutoSaveIndicator } from './AutoSaveIndicator';
 import { useImmediateSave } from '@/hooks/useImmediateSave';
@@ -289,7 +290,8 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   const [inlineViewerRow, setInlineViewerRow] = useState<number | null>(null);
    const [fullScreenWorkspace, setFullScreenWorkspace] = useState<{ runsheetId: string; rowIndex: number } | null>(null);
    const [sideBySideWorkspace, setSideBySideWorkspace] = useState<{ runsheetId: string; rowIndex: number } | null>(null);
-   const [showBatchAnalysisDialog, setShowBatchAnalysisDialog] = useState(false);
+  const [showBatchAnalysisDialog, setShowBatchAnalysisDialog] = useState(false);
+  const [showBatchRenameDialog, setShowBatchRenameDialog] = useState(false);
    const [showDocumentFileNameColumn, setShowDocumentFileNameColumn] = useState(true);
   
   // Auto-save state
@@ -5214,6 +5216,30 @@ ${extractionFields}`
               </Button>
             )}
             
+            {/* Batch File Rename Button */}
+            {documentMap.size > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  // Refresh document map before opening dialog
+                  if (currentRunsheetId) {
+                    try {
+                      const updatedDocumentMap = await DocumentService.getDocumentMapForRunsheet(currentRunsheetId);
+                      updateDocumentMap(updatedDocumentMap);
+                    } catch (error) {
+                      console.error('Error refreshing document map:', error);
+                    }
+                  }
+                  setShowBatchRenameDialog(true);
+                }}
+                className="gap-2"
+              >
+                <FileEdit className="h-4 w-4" />
+                Rename Files ({documentMap.size})
+              </Button>
+            )}
+            
             {/* Add Rows Button */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -6724,6 +6750,17 @@ ${extractionFields}`
             onDataChange?.(newData);
           }}
           currentData={data}
+        />
+        
+        {/* Batch File Rename Dialog */}
+        <BatchFileRenameDialog
+          isOpen={showBatchRenameDialog}
+          onClose={() => setShowBatchRenameDialog(false)}
+          runsheetId={currentRunsheetId || ''}
+          columns={columns}
+          documentMap={documentMap}
+          currentData={data}
+          onDocumentMapUpdate={updateDocumentMap}
         />
 
     );
