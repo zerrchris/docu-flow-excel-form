@@ -218,9 +218,24 @@ serve(async (req) => {
     
     console.log('Usage tracking:', { inputTokens, outputTokens, totalTokens, cost })
 
-    // Track usage in background (don't await to avoid blocking the response)
-    trackAIUsage(supabase, user.id, model, inputTokens, outputTokens, totalTokens, cost, 'anthropic')
-      .catch(error => console.error('Failed to track usage:', error))
+    // Track usage in background
+    try {
+      await supabase
+        .from('ai_usage_logs')
+        .insert({
+          user_id: user.id,
+          model: model,
+          input_tokens: inputTokens,
+          output_tokens: outputTokens,
+          total_tokens: totalTokens,
+          cost: cost,
+          provider: 'anthropic',
+          timestamp: new Date().toISOString()
+        });
+      console.log('AI usage tracked successfully');
+    } catch (usageError) {
+      console.error('Failed to track AI usage:', usageError);
+    }
 
     console.log('Analysis completed successfully')
     return new Response(JSON.stringify({ 
