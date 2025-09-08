@@ -3667,15 +3667,34 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       if (cellElement) {
         // Force layout recalculation before scrolling
         cellElement.getBoundingClientRect();
+        
+        // Scroll into view with more aggressive settings
         cellElement.scrollIntoView({
           behavior: 'smooth',
-          block: 'nearest',
-          inline: 'nearest'
+          block: 'center',
+          inline: 'center'
         });
+        
         // Focus the cell element to ensure proper keyboard navigation
         (cellElement as HTMLElement)?.focus();
+        
+        // Additional fallback scrolling if needed
+        setTimeout(() => {
+          const rect = cellElement.getBoundingClientRect();
+          const isVisible = rect.top >= 0 && rect.left >= 0 && 
+                           rect.bottom <= window.innerHeight && 
+                           rect.right <= window.innerWidth;
+          
+          if (!isVisible) {
+            cellElement.scrollIntoView({
+              behavior: 'auto',
+              block: 'center',
+              inline: 'center'
+            });
+          }
+        }, 50);
       }
-    }, 100); // Increased delay to allow for layout updates
+    }, 50); // Reduced delay for faster response
     
     // Only start editing if explicitly requested (for double-click or typing)
     if (shouldStartEditing) {
@@ -4136,7 +4155,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
           // Then start editing after a delay to ensure cell is in view
           setTimeout(() => {
             startEditing(nextRowIndex, nextColumn, data[nextRowIndex]?.[nextColumn] || '', undefined);
-          }, 150); // Longer delay to ensure scrolling completes
+          }, 100); // Reduced delay to match improved scrolling timing
         }
       }
     }
