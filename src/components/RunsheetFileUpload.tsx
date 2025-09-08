@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Upload, FileSpreadsheet, X, CheckCircle, AlertCircle } from 'lucide-react';
@@ -8,11 +8,13 @@ import * as XLSX from 'xlsx';
 interface RunsheetFileUploadProps {
   onFileSelected: (data: { name: string; columns: string[]; rows: Record<string, string>[] }) => void;
   onCancel: () => void;
+  selectedFile?: File; // Optional pre-selected file (e.g., from Google Drive)
 }
 
 export const RunsheetFileUpload: React.FC<RunsheetFileUploadProps> = ({ 
   onFileSelected, 
-  onCancel 
+  onCancel,
+  selectedFile: preSelectedFile
 }) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -22,6 +24,14 @@ export const RunsheetFileUpload: React.FC<RunsheetFileUploadProps> = ({
   const [selectedHeaderRow, setSelectedHeaderRow] = useState<number>(0);
   const [showPreview, setShowPreview] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Handle pre-selected file (e.g., from Google Drive)
+  useEffect(() => {
+    if (preSelectedFile && !selectedFile) {
+      setSelectedFile(preSelectedFile);
+      parseFileForPreview(preSelectedFile);
+    }
+  }, [preSelectedFile, selectedFile]);
 
   const validateFile = (file: File): boolean => {
     const validTypes = [

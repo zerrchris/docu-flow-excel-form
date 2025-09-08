@@ -41,6 +41,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { GoogleDrivePicker } from './GoogleDrivePicker';
+import { RunsheetFileUpload } from './RunsheetFileUpload';
 import DocumentUpload from './DocumentUpload';
 import DocumentLinker from './DocumentLinker';
 import { DocumentService, type DocumentRecord } from '@/services/documentService';
@@ -272,6 +273,8 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   const [columnAlignments, setColumnAlignments] = useState<Record<string, 'left' | 'center' | 'right'>>({});
   const [editingColumnAlignment, setEditingColumnAlignment] = useState<'left' | 'center' | 'right'>('left');
   const [showGoogleDrivePicker, setShowGoogleDrivePicker] = useState(false);
+  const [showGoogleFileUpload, setShowGoogleFileUpload] = useState(false);
+  const [googleSelectedFile, setGoogleSelectedFile] = useState<File | null>(null);
   const [isSavingAsDefault, setIsSavingAsDefault] = useState(false);
   const [hasManuallyResizedColumns, setHasManuallyResizedColumns] = useState(false);
   const [documentMap, setDocumentMap] = useState<Map<number, DocumentRecord>>(new Map());
@@ -6621,8 +6624,44 @@ ${extractionFields}`
         <GoogleDrivePicker
           isOpen={showGoogleDrivePicker}
           onClose={() => setShowGoogleDrivePicker(false)}
-          onFileSelect={performUpload}
+          onFileSelect={(file, fileName) => {
+            if (file && fileName) {
+              // Store the file and show the upload dialog with header row selection
+              setGoogleSelectedFile(file);
+              setShowGoogleFileUpload(true);
+              setShowGoogleDrivePicker(false);
+            }
+          }}
         />
+
+        {/* Google Drive File Upload with Header Row Selection */}
+        {showGoogleFileUpload && googleSelectedFile && (
+          <Dialog open={showGoogleFileUpload} onOpenChange={setShowGoogleFileUpload}>
+            <DialogContent className="max-w-6xl w-[95vw] max-h-[90vh] overflow-auto">
+              <DialogHeader>
+                <DialogTitle>Select Header Row for Google Drive File</DialogTitle>
+                <DialogDescription>
+                  Choose which row contains your column headers, then upload the file.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="py-4">
+                <RunsheetFileUpload 
+                  selectedFile={googleSelectedFile}
+                  onFileSelected={async (runsheetData) => {
+                    console.log('📥 Google Drive file processed:', runsheetData);
+                    await updateSpreadsheetData(runsheetData.columns, runsheetData.rows, runsheetData.name);
+                    setShowGoogleFileUpload(false);
+                    setGoogleSelectedFile(null);
+                  }}
+                  onCancel={() => {
+                    setShowGoogleFileUpload(false);
+                    setGoogleSelectedFile(null);
+                  }}
+                />
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
 
         {/* Name Conflict Dialog */}
         <AlertDialog open={showNameConflictDialog} onOpenChange={setShowNameConflictDialog}>
