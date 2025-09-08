@@ -54,6 +54,7 @@ const EnhancedPDFViewer: React.FC<EnhancedPDFViewerProps> = ({ file, previewUrl 
   // Reset states when file/previewUrl changes
   useEffect(() => {
     if (previewUrl || file) {
+      console.log('EnhancedPDFViewer: Starting to load PDF', { previewUrl, file: file?.name });
       setLoading(true);
       setError(null);
       setCurrentPage(1);
@@ -134,7 +135,7 @@ const EnhancedPDFViewer: React.FC<EnhancedPDFViewerProps> = ({ file, previewUrl 
 
   // PDF event handlers
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
-    console.log('PDF loaded successfully:', numPages, 'pages');
+    console.log('EnhancedPDFViewer: PDF loaded successfully:', numPages, 'pages', { documentSource });
     setTotalPages(numPages);
     setCurrentPage(1);
     setLoading(false);
@@ -142,7 +143,7 @@ const EnhancedPDFViewer: React.FC<EnhancedPDFViewerProps> = ({ file, previewUrl 
   };
 
   const onDocumentLoadError = (error: Error) => {
-    console.error('Error loading PDF:', error);
+    console.error('EnhancedPDFViewer: Error loading PDF:', error, { documentSource });
     setError('Failed to load PDF document');
     setLoading(false);
   };
@@ -244,10 +245,12 @@ const EnhancedPDFViewer: React.FC<EnhancedPDFViewerProps> = ({ file, previewUrl 
 
   // Check if we have either a file or previewUrl for a PDF
   if (!previewUrl && !file) {
+    console.log('EnhancedPDFViewer: No previewUrl or file provided');
     return null;
   }
 
   const documentSource = previewUrl || file;
+  console.log('EnhancedPDFViewer: Using document source:', documentSource);
 
   return (
     <div 
