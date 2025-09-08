@@ -4849,12 +4849,58 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         imageData = await dataUrlPromise;
       }
 
-      // Call analyze-document edge function using Supabase client
-      console.log('🔍 Calling analyze-document edge function...');
-      const { data: analysisResult, error: functionError } = await supabase.functions.invoke('analyze-document', {
-        body: {
-          imageData,
-          prompt: `Analyze this document and extract the following information. 
+      // Choose the appropriate analysis function based on file type
+      let analysisResult, functionError;
+      
+      if (file.name.toLowerCase().endsWith('.pdf')) {
+        console.log('🔍 Calling analyze-document-claude for PDF...');
+        
+        // For PDF files, we need to get the URL from storage
+        let fileUrl: string;
+        
+        // Check if we have a document record with file_path
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('User not authenticated');
+
+        const { data: documentRecord } = await supabase
+          .from('documents')
+          .select('file_path')
+          .eq('runsheet_id', currentRunsheetId)
+          .eq('row_index', targetRowIndex)
+          .eq('user_id', user.id)
+          .single();
+        
+        if (documentRecord?.file_path) {
+          // File exists in storage, get the public URL
+          const { data } = supabase.storage
+            .from('documents')
+            .getPublicUrl(documentRecord.file_path);
+          fileUrl = data.publicUrl;
+        } else {
+          // Upload the file first
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) throw new Error('User not authenticated');
+          
+          const filePath = `${user.id}/${currentRunsheetId}/${targetRowIndex}/${file.name}`;
+          
+          const { error: uploadError } = await supabase.storage
+            .from('documents')
+            .upload(filePath, file);
+            
+          if (uploadError) throw uploadError;
+          
+          const { data } = supabase.storage
+            .from('documents')
+            .getPublicUrl(filePath);
+          fileUrl = data.publicUrl;
+        }
+        
+        ({ data: analysisResult, error: functionError } = await supabase.functions.invoke('analyze-document-claude', {
+          body: {
+            fileUrl,
+            fileName: file.name,
+            contentType: 'application/pdf',
+            prompt: `Analyze this document and extract the following information.
 
 IMPORTANT INSTRUCTIONS:
 - "Instrument Number" should be the actual document number (like "2022-817"), NOT a date or time
@@ -4866,8 +4912,28 @@ IMPORTANT INSTRUCTIONS:
 Return the data as a JSON object with the exact field names specified:
 
 ${extractionFields}`
-        }
-      });
+          }
+        }));
+      } else {
+        console.log('🔍 Calling analyze-document edge function...');
+        ({ data: analysisResult, error: functionError } = await supabase.functions.invoke('analyze-document', {
+          body: {
+            imageData,
+            prompt: `Analyze this document and extract the following information.
+
+IMPORTANT INSTRUCTIONS:
+- "Instrument Number" should be the actual document number (like "2022-817"), NOT a date or time
+- "Book and Page" should be the book/page reference number
+- "Recording Date" should be the date when the document was recorded (may include time)
+- "Document Date" should be the date when the document was created/signed
+- Be very careful to distinguish between dates and document numbers
+
+Return the data as a JSON object with the exact field names specified:
+
+${extractionFields}`
+          }
+        }));
+      }
 
       if (functionError) {
         console.error('🔍 Edge function error:', functionError);
