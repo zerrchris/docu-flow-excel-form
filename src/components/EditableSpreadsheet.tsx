@@ -3902,13 +3902,26 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
           
           saveEdit();
           
-        // Move to the next row in the same column (Excel-like behavior)
-        const nextRowIndex = currentRowIndex + 1;
-        if (nextRowIndex < data.length) {
-          setTimeout(() => {
-            selectCell(nextRowIndex, currentColumn, false);
-          }, 0);
-        }
+          // Move to the next row in the same column (Excel-like behavior)
+          const nextRowIndex = currentRowIndex + 1;
+          if (nextRowIndex < data.length) {
+            setTimeout(() => {
+              selectCell(nextRowIndex, currentColumn, false);
+            }, 0);
+          } else {
+            // If we're at the last row, create a new row and move to it
+            const newRow: Record<string, string> = {};
+            columns.forEach(col => {
+              newRow[col] = '';
+            });
+            const newData = [...data, newRow];
+            setData(newData);
+            onDataChange?.(newData);
+            
+            setTimeout(() => {
+              selectCell(nextRowIndex, currentColumn, false);
+            }, 0);
+          }
         } else {
           // Enter should start editing mode
           startEditing(rowIndex, column, data[rowIndex]?.[column] || '', undefined);
