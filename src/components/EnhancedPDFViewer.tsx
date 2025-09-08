@@ -462,10 +462,6 @@ const EnhancedPDFViewer: React.FC<EnhancedPDFViewerProps> = ({ file, previewUrl 
                   onLoadError={onDocumentLoadError}
                   loading={<div className="text-muted-foreground">Loading PDF...</div>}
                   error={<div className="text-destructive">Failed to load PDF</div>}
-                  options={{
-                    cMapUrl: 'https://unpkg.com/pdfjs-dist@3.11.174/cmaps/',
-                    cMapPacked: true,
-                  }}
                 >
                   {viewMode === 'continuous' ? (
                     // Continuous view - show all pages
