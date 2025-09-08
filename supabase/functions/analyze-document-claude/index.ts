@@ -101,16 +101,22 @@ serve(async (req) => {
     }
 
     const documentBytes = await docResponse.arrayBuffer()
+    console.log('Document size:', documentBytes.byteLength, 'bytes')
     
     // Convert to base64 safely without stack overflow
     const uint8Array = new Uint8Array(documentBytes)
     let base64Document = ''
     
-    // Process in chunks to avoid stack overflow for large files
-    const chunkSize = 8192
-    for (let i = 0; i < uint8Array.length; i += chunkSize) {
-      const chunk = uint8Array.slice(i, i + chunkSize)
-      base64Document += btoa(String.fromCharCode.apply(null, Array.from(chunk)))
+    try {
+      // Use a more robust base64 conversion method for large files
+      // Convert using TextDecoder for better memory management
+      const decoder = new TextDecoder('latin1')
+      const binaryString = decoder.decode(uint8Array)
+      base64Document = btoa(binaryString)
+      console.log('Base64 conversion completed, length:', base64Document.length)
+    } catch (conversionError) {
+      console.error('Base64 conversion error:', conversionError)
+      throw new Error(`Failed to convert document to base64: ${conversionError.message}`)
     }
 
     // Determine media type for Claude
@@ -212,8 +218,13 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in analyze-document-claude:', error)
+    console.error('Error stack:', error.stack)
+    console.error('Error name:', error.name)
+    console.error('Error message:', error.message)
+    
     return new Response(JSON.stringify({ 
-      error: error.message || 'Document analysis failed' 
+      error: error.message || 'Document analysis failed',
+      details: error.stack || 'No stack trace available'
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
