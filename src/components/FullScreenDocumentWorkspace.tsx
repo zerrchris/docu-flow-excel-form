@@ -10,7 +10,7 @@ import { DocumentService } from '@/services/documentService';
 import { ExtractionPreferencesService } from '@/services/extractionPreferences';
 import { ColumnWidthPreferencesService } from '@/services/columnWidthPreferences';
 import { useActiveRunsheet } from '@/hooks/useActiveRunsheet';
-import EnhancedPDFViewer from './EnhancedPDFViewer';
+import SimplePDFViewer from './SimplePDFViewer';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -632,7 +632,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                   {error || 'No document available'}
                 </div>
               ) : isPdf ? (
-                <EnhancedPDFViewer file={null} previewUrl={documentUrl} />
+                <SimplePDFViewer file={null} previewUrl={documentUrl} />
               ) : (
                 <ScrollArea className="h-full overscroll-contain">
                   <div className="min-h-full bg-muted/10 flex items-center justify-center p-4" onWheel={handleImageWheel}>

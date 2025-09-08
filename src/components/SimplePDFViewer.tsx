@@ -72,12 +72,13 @@ const SimplePDFViewer: React.FC<SimplePDFViewerProps> = ({ file, previewUrl }) =
   useEffect(() => {
     if (loading && documentSource) {
       const timeout = setTimeout(() => {
-        console.warn('SimplePDFViewer: PDF loading timeout, assuming single page');
+        console.warn('SimplePDFViewer: PDF loading timeout, forcing render');
         setTotalPages(1);
         setCurrentPage(1);
         setPageInput('1');
         setLoading(false);
-      }, 10000); // 10 second timeout
+        setError(null); // Clear any error and try to render
+      }, 3000); // Reduce timeout to 3 seconds
 
       return () => clearTimeout(timeout);
     }
