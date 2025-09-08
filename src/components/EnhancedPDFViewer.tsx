@@ -24,7 +24,7 @@ import {
 import { cn } from '@/lib/utils';
 
 // Configure PDF.js worker for react-pdf
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/legacy/build/pdf.worker.min.js`;
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
 interface EnhancedPDFViewerProps {
   file: File | null;
@@ -59,6 +59,21 @@ const EnhancedPDFViewer: React.FC<EnhancedPDFViewerProps> = ({ file, previewUrl 
       setError(null);
       setCurrentPage(1);
       setPageInput('');
+      
+      // Test if the PDF URL is accessible
+      if (previewUrl) {
+        fetch(previewUrl, { method: 'HEAD' })
+          .then(response => {
+            console.log('PDF URL accessibility check:', {
+              url: previewUrl,
+              status: response.status,
+              contentType: response.headers.get('content-type')
+            });
+          })
+          .catch(error => {
+            console.error('PDF URL accessibility error:', error);
+          });
+      }
     }
   }, [previewUrl, file]);
 
@@ -447,6 +462,10 @@ const EnhancedPDFViewer: React.FC<EnhancedPDFViewerProps> = ({ file, previewUrl 
                   onLoadError={onDocumentLoadError}
                   loading={<div className="text-muted-foreground">Loading PDF...</div>}
                   error={<div className="text-destructive">Failed to load PDF</div>}
+                  options={{
+                    cMapUrl: 'https://unpkg.com/pdfjs-dist@3.11.174/cmaps/',
+                    cMapPacked: true,
+                  }}
                 >
                   {viewMode === 'continuous' ? (
                     // Continuous view - show all pages
