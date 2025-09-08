@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowLeft, Eye, Edit2, Trash2, Search, FileImage, FileSpreadsheet, Plus, ArrowUp, Home, Type } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -60,6 +61,10 @@ export const FileManager: React.FC = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [previewFile, setPreviewFile] = useState<StoredFile | null>(null);
+  const [selectedFileIds, setSelectedFileIds] = useState<Set<string>>(new Set());
+  const [selectedRunsheetIds, setSelectedRunsheetIds] = useState<Set<string>>(new Set());
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   useEffect(() => {
     if (currentView === 'runsheets') {
@@ -360,6 +365,134 @@ export const FileManager: React.FC = () => {
     }
   };
 
+  // Bulk operations
+  const handleBulkDelete = async () => {
+    setIsBulkDeleting(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      if (currentView === 'runsheets') {
+        // Delete runsheets and their documents
+        const runsheetsToDelete = Array.from(selectedRunsheetIds)
+          .map(id => runsheets.find(r => r.id === id))
+          .filter(Boolean) as Runsheet[];
+
+        for (const runsheet of runsheetsToDelete) {
+          // Delete all associated documents first
+          await DocumentService.deleteDocumentsForRunsheet(runsheet.id);
+          
+          // Delete the runsheet
+          const { error } = await supabase
+            .from('runsheets')
+            .delete()
+            .eq('id', runsheet.id);
+
+          if (error) throw error;
+
+          // Clear active runsheet if it's being deleted
+          if (activeRunsheet && activeRunsheet.id === runsheet.id) {
+            clearActiveRunsheet();
+          }
+        }
+
+        toast({
+          title: "Bulk Delete Successful",
+          description: `Successfully deleted ${runsheetsToDelete.length} runsheet(s) and their documents.`,
+        });
+      } else {
+        // Delete files
+        const filesToDelete = Array.from(selectedFileIds)
+          .map(id => runsheetDocuments.find(f => f.id === id))
+          .filter(Boolean) as StoredFile[];
+
+        // Check if any files are linked to runsheets
+        const linkedFiles = filesToDelete.filter(file => file.rowIndex !== undefined);
+        if (linkedFiles.length > 0) {
+          toast({
+            title: "Cannot Delete",
+            description: `${linkedFiles.length} selected document(s) are linked to runsheet rows and cannot be deleted. Please unlink them first.`,
+            variant: "destructive",
+          });
+          setIsBulkDeleting(false);
+          return;
+        }
+
+        for (const file of filesToDelete) {
+          // Delete from database
+          const { error: dbError } = await supabase
+            .from('documents')
+            .delete()
+            .eq('id', file.id);
+
+          if (dbError) throw dbError;
+
+          // Delete from storage
+          const { error: storageError } = await supabase.storage
+            .from('documents')
+            .remove([file.fullPath]);
+
+          if (storageError) {
+            console.warn('Storage deletion failed for:', file.fullPath, storageError);
+          }
+        }
+
+        toast({
+          title: "Bulk Delete Successful",
+          description: `Successfully deleted ${filesToDelete.length} document(s).`,
+        });
+      }
+
+      setShowBulkDeleteDialog(false);
+      setSelectedFileIds(new Set());
+      setSelectedRunsheetIds(new Set());
+      
+      // Refresh the appropriate view
+      if (currentView === 'runsheets') {
+        loadRunsheets();
+      } else {
+        loadRunsheetDocuments(currentRunsheetId!);
+      }
+    } catch (error: any) {
+      console.error('Error in bulk delete:', error);
+      toast({
+        title: "Bulk Delete Failed",
+        description: error.message || "Failed to delete selected items.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (currentView === 'runsheets') {
+      setSelectedRunsheetIds(checked ? new Set(filteredRunsheets.map(r => r.id)) : new Set());
+    } else {
+      setSelectedFileIds(checked ? new Set(filteredDocuments.map(f => f.id)) : new Set());
+    }
+  };
+
+  const handleSelectItem = (id: string, checked: boolean) => {
+    if (currentView === 'runsheets') {
+      const newSelected = new Set(selectedRunsheetIds);
+      if (checked) {
+        newSelected.add(id);
+      } else {
+        newSelected.delete(id);
+      }
+      setSelectedRunsheetIds(newSelected);
+    } else {
+      const newSelected = new Set(selectedFileIds);
+      if (checked) {
+        newSelected.add(id);
+      } else {
+        newSelected.delete(id);
+      }
+      setSelectedFileIds(newSelected);
+    }
+  };
+
   const filteredRunsheets = runsheets.filter(runsheet =>
     runsheet.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -392,21 +525,34 @@ export const FileManager: React.FC = () => {
 
       {/* Runsheets Section */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold">Runsheets</h3>
-          <Button 
-            onClick={() => {
-              // Clear active runsheet and navigate to create new one
-              clearActiveRunsheet();
-              navigate('/runsheet?action=new');
-            }} 
-            size="sm" 
-            className="gap-2"
-          >
-            <Plus className="h-4 w-4" />
-            New Runsheet
-          </Button>
-        </div>
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold">Runsheets</h3>
+            <div className="flex items-center gap-2">
+              {selectedRunsheetIds.size > 0 && (
+                <Button 
+                  variant="destructive" 
+                  size="sm" 
+                  onClick={() => setShowBulkDeleteDialog(true)}
+                  className="gap-2"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Delete Selected ({selectedRunsheetIds.size})
+                </Button>
+              )}
+              <Button 
+                onClick={() => {
+                  // Clear active runsheet and navigate to create new one
+                  clearActiveRunsheet();
+                  navigate('/runsheet?action=new');
+                }} 
+                size="sm" 
+                className="gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                New Runsheet
+              </Button>
+            </div>
+          </div>
         
         {isLoading ? (
           <Card className="p-4">
@@ -431,32 +577,46 @@ export const FileManager: React.FC = () => {
         ) : (
           <Card>
             <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Rows</TableHead>
-                  <TableHead>Documents</TableHead>
-                  <TableHead>Last Modified</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
+               <TableHeader>
+                 <TableRow>
+                   <TableHead className="w-12">
+                     <Checkbox
+                       checked={selectedRunsheetIds.size === filteredRunsheets.length && filteredRunsheets.length > 0}
+                       onCheckedChange={handleSelectAll}
+                     />
+                   </TableHead>
+                   <TableHead>Name</TableHead>
+                   <TableHead>Rows</TableHead>
+                   <TableHead>Documents</TableHead>
+                   <TableHead>Last Modified</TableHead>
+                   <TableHead className="text-right">Actions</TableHead>
+                 </TableRow>
+               </TableHeader>
               <TableBody>
-                {filteredRunsheets.map((runsheet) => (
-                  <TableRow 
-                    key={runsheet.id}
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => {
-                      setCurrentRunsheetId(runsheet.id);
-                      setCurrentRunsheetName(runsheet.name);
-                      setCurrentView('runsheet-details');
-                    }}
-                  >
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
-                        <FileSpreadsheet className="h-4 w-4 text-primary" />
-                        {runsheet.name}
-                      </div>
-                    </TableCell>
+                 {filteredRunsheets.map((runsheet) => (
+                   <TableRow 
+                     key={runsheet.id}
+                     className="hover:bg-muted/50"
+                   >
+                     <TableCell onClick={(e) => e.stopPropagation()}>
+                       <Checkbox
+                         checked={selectedRunsheetIds.has(runsheet.id)}
+                         onCheckedChange={(checked) => handleSelectItem(runsheet.id, checked as boolean)}
+                       />
+                     </TableCell>
+                     <TableCell 
+                       className="font-medium cursor-pointer"
+                       onClick={() => {
+                         setCurrentRunsheetId(runsheet.id);
+                         setCurrentRunsheetName(runsheet.name);
+                         setCurrentView('runsheet-details');
+                       }}
+                     >
+                       <div className="flex items-center gap-2">
+                         <FileSpreadsheet className="h-4 w-4 text-primary" />
+                         {runsheet.name}
+                       </div>
+                     </TableCell>
                     <TableCell>{runsheet.data.length}</TableCell>
                     <TableCell>
                       <Badge variant="secondary">
@@ -528,12 +688,23 @@ export const FileManager: React.FC = () => {
                 placeholder="Search documents..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <div className="flex gap-4 text-sm text-muted-foreground">
-              <span>{runsheetDocuments.length} documents</span>
-            </div>
+                 className="pl-10"
+               />
+             </div>
+             <div className="flex gap-4 text-sm text-muted-foreground">
+               <span>{runsheetDocuments.length} documents</span>
+               {selectedFileIds.size > 0 && (
+                 <Button 
+                   variant="destructive" 
+                   size="sm" 
+                   onClick={() => setShowBulkDeleteDialog(true)}
+                   className="gap-2"
+                 >
+                   <Trash2 className="h-4 w-4" />
+                   Delete Selected ({selectedFileIds.size})
+                 </Button>
+               )}
+             </div>
           </div>
         </div>
       </Card>
@@ -553,24 +724,38 @@ export const FileManager: React.FC = () => {
         </Card>
       ) : (
         <Card>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Document</TableHead>
-                <TableHead>Row</TableHead>
-                <TableHead>Size</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
+           <Table>
+             <TableHeader>
+               <TableRow>
+                 <TableHead className="w-12">
+                   <Checkbox
+                     checked={selectedFileIds.size === filteredDocuments.length && filteredDocuments.length > 0}
+                     onCheckedChange={handleSelectAll}
+                   />
+                 </TableHead>
+                 <TableHead>Document</TableHead>
+                 <TableHead>Row</TableHead>
+                 <TableHead>Size</TableHead>
+                 <TableHead>Date</TableHead>
+                 <TableHead className="text-right">Actions</TableHead>
+               </TableRow>
+             </TableHeader>
             <TableBody>
-              {filteredDocuments.map((file) => (
-                <TableRow key={file.id}>
-                  <TableCell className="font-medium">
-                    <div className="flex items-center gap-2">
-                      <FileImage className="h-4 w-4 text-muted-foreground" />
-                      {file.name}
-                    </div>
+               {filteredDocuments.map((file) => (
+                 <TableRow key={file.id}>
+                   <TableCell onClick={(e) => e.stopPropagation()}>
+                     <Checkbox
+                       checked={selectedFileIds.has(file.id)}
+                       onCheckedChange={(checked) => handleSelectItem(file.id, checked as boolean)}
+                       disabled={file.rowIndex !== undefined}
+                       title={file.rowIndex !== undefined ? `Cannot select - linked to Row ${file.rowIndex + 1}` : "Select document"}
+                     />
+                   </TableCell>
+                   <TableCell className="font-medium">
+                     <div className="flex items-center gap-2">
+                       <FileImage className="h-4 w-4 text-muted-foreground" />
+                       {file.name}
+                     </div>
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline">
@@ -770,6 +955,44 @@ export const FileManager: React.FC = () => {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {isDeleting ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Delete Dialog */}
+      <AlertDialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Bulk Delete Confirmation</AlertDialogTitle>
+            <AlertDialogDescription>
+              {currentView === 'runsheets' ? (
+                <>
+                  This action cannot be undone. This will permanently delete {selectedRunsheetIds.size} selected runsheet(s) and all their associated documents.
+                </>
+              ) : (
+                <>
+                  This action cannot be undone. This will permanently delete {selectedFileIds.size} selected document(s).
+                  {Array.from(selectedFileIds).some(id => {
+                    const file = runsheetDocuments.find(f => f.id === id);
+                    return file?.rowIndex !== undefined;
+                  }) && (
+                    <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-yellow-800 dark:bg-yellow-900/20 dark:border-yellow-800 dark:text-yellow-200">
+                      Note: Documents linked to runsheet rows cannot be deleted and will be skipped.
+                    </div>
+                  )}
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isBulkDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleBulkDelete}
+              disabled={isBulkDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isBulkDeleting ? 'Deleting...' : 'Delete Selected'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
