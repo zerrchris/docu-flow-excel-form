@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-do
 import { toast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Upload, FolderOpen, Plus, AlertTriangle, Smartphone, Files, Home, FileStack, RefreshCw, Bug } from 'lucide-react';
 import DataForm from '@/components/DataForm';
 import RealtimeVoiceInput from '@/components/RealtimeVoiceInput';
@@ -76,6 +77,8 @@ const DocumentProcessor: React.FC = () => {
   const [hasAddedToSpreadsheet, setHasAddedToSpreadsheet] = useState(false);
   // Debug dialog state removed
   const [showRunsheetUploadDialog, setShowRunsheetUploadDialog] = useState(false);
+  const [showRunsheetCreationDialog, setShowRunsheetCreationDialog] = useState(false);
+  const [newRunsheetName, setNewRunsheetName] = useState('');
   
   // Note: Navigation blocking removed since runsheet auto-saves
   const navigate = useNavigate();
@@ -85,6 +88,104 @@ const DocumentProcessor: React.FC = () => {
   // Ref to track if we've already loaded a runsheet to prevent infinite loops
   const loadedRunsheetRef = useRef<string | null>(null);
   
+  // Create new runsheet with proper naming and column preferences
+  const createNewRunsheet = async () => {
+    if (!newRunsheetName.trim()) {
+      toast({
+        title: "Name required",
+        description: "Please enter a name for your runsheet.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "Authentication Required",
+          description: "Please sign in to create a runsheet.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Load user's default extraction preferences
+      console.log('Loading user extraction preferences for new runsheet...');
+      const { data: preferences, error: prefError } = await supabase
+        .from('user_extraction_preferences')
+        .select('columns, column_instructions')
+        .eq('user_id', user.id)
+        .eq('is_default', true)
+        .single();
+
+      let defaultColumns = ['Recording Information', 'Instrument Type', 'Recorded', 'Grantor(s)', 'Grantee(s)', 'Description', 'Comments'];
+      let defaultInstructions: Record<string, string> = {
+        'Recording Information': 'Extract the recording information as it appears in the document',
+        'Instrument Type': 'Extract the instrument type information as it appears in the document',
+        'Recorded': 'Extract the recorded information as it appears in the document',
+        'Grantor(s)': 'Extract the grantor(s) information as it appears in the document',
+        'Grantee(s)': 'Extract the grantee(s) information as it appears in the document',
+        'Description': 'Extract the description information as it appears in the document',
+        'Comments': 'Extract the comments information as it appears in the document'
+      };
+
+      if (preferences && !prefError) {
+        console.log('Using user preferences for new runsheet:', preferences);
+        defaultColumns = preferences.columns || defaultColumns;
+        defaultInstructions = (preferences.column_instructions as Record<string, string>) || defaultInstructions;
+      } else {
+        console.log('No user preferences found, using default columns');
+      }
+
+      // Create and save the runsheet immediately
+      const runsheetData = {
+        name: newRunsheetName.trim(),
+        columns: defaultColumns,
+        data: [],
+        column_instructions: defaultInstructions,
+        user_id: user.id
+      };
+
+      const { data: savedRunsheet, error: saveError } = await supabase
+        .from('runsheets')
+        .insert(runsheetData)
+        .select()
+        .single();
+
+      if (saveError) throw saveError;
+
+      console.log('New runsheet saved to database:', savedRunsheet);
+
+      // Set up the spreadsheet with the saved runsheet data
+      setColumns(defaultColumns);
+      setColumnInstructions(defaultInstructions);
+      setSpreadsheetData([]);
+      setFormData({});
+
+      // Set as active runsheet
+      setCurrentRunsheet(savedRunsheet.id);
+
+      toast({
+        title: "Runsheet Created",
+        description: `"${newRunsheetName.trim()}" has been created successfully.`,
+      });
+
+      setShowRunsheetCreationDialog(false);
+      setNewRunsheetName('');
+
+      // Remove the action parameter from URL
+      navigate('/runsheet', { replace: true });
+      
+    } catch (error: any) {
+      console.error('Error creating runsheet:', error);
+      toast({
+        title: "Creation Failed",
+        description: error.message || "Failed to create runsheet. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
   // Preferences loading state
   const [isLoadingPreferences, setIsLoadingPreferences] = useState(true);
   
@@ -598,6 +699,22 @@ const DocumentProcessor: React.FC = () => {
       }, 100);
       
       return; // Don't process runsheet loading if google-drive action is happening
+    } else if (action === 'new') {
+      console.log('New runsheet action detected, showing runsheet creation dialog...');
+      
+      // Clear any active runsheet display
+      clearActiveRunsheet();
+      setSpreadsheetData([]);
+      setFormData({});
+      
+      // Clear columns temporarily while we set up the new runsheet
+      setColumns([]);
+      setColumnInstructions({});
+      
+      // Show the new runsheet creation dialog
+      setShowRunsheetCreationDialog(true);
+      
+      return; // Don't process other actions
     }
     
     // Load specific runsheet if ID is provided and no action is specified
@@ -3175,6 +3292,56 @@ Image: [base64 image data]`;
               }}
             />
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* New Runsheet Creation Dialog */}
+      <Dialog open={showRunsheetCreationDialog} onOpenChange={setShowRunsheetCreationDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create New Runsheet</DialogTitle>
+            <DialogDescription>
+              Enter a name for your new runsheet. Your default column preferences will be applied automatically.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label htmlFor="runsheet-name" className="text-sm font-medium">
+                Runsheet Name
+              </label>
+              <Input
+                id="runsheet-name"
+                value={newRunsheetName}
+                onChange={(e) => setNewRunsheetName(e.target.value)}
+                placeholder="Enter runsheet name..."
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && newRunsheetName.trim()) {
+                    createNewRunsheet();
+                  }
+                }}
+                autoFocus
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowRunsheetCreationDialog(false);
+                setNewRunsheetName('');
+                // Navigate back to file manager if user cancels
+                navigate('/file-manager');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={createNewRunsheet}
+              disabled={!newRunsheetName.trim()}
+            >
+              Create Runsheet
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
