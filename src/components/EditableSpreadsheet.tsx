@@ -4850,10 +4850,11 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       }
 
       // Choose the appropriate analysis function based on file type
+      console.log('🔍 File analysis - name:', file.name, 'type:', file.type);
       let analysisResult, functionError;
       
       if (file.name.toLowerCase().endsWith('.pdf')) {
-        console.log('🔍 Calling analyze-document-claude for PDF...');
+        console.log('🔍 PDF detected - using Claude function for PDF analysis');
         
         // For PDF files, we need to get the URL from storage
         let fileUrl: string;
@@ -4872,29 +4873,39 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         
         if (documentRecord?.file_path) {
           // File exists in storage, get the public URL
+          console.log('🔍 Found existing document in storage:', documentRecord.file_path);
           const { data } = supabase.storage
             .from('documents')
             .getPublicUrl(documentRecord.file_path);
           fileUrl = data.publicUrl;
+          console.log('🔍 Generated public URL:', fileUrl);
         } else {
           // Upload the file first
+          console.log('🔍 Document not in storage, uploading PDF...');
           const { data: { user } } = await supabase.auth.getUser();
           if (!user) throw new Error('User not authenticated');
           
           const filePath = `${user.id}/${currentRunsheetId}/${targetRowIndex}/${file.name}`;
+          console.log('🔍 Uploading to path:', filePath);
           
           const { error: uploadError } = await supabase.storage
             .from('documents')
             .upload(filePath, file);
             
-          if (uploadError) throw uploadError;
+          if (uploadError) {
+            console.error('🔍 Upload error:', uploadError);
+            throw uploadError;
+          }
           
+          console.log('🔍 File uploaded successfully, generating public URL...');
           const { data } = supabase.storage
             .from('documents')
             .getPublicUrl(filePath);
           fileUrl = data.publicUrl;
+          console.log('🔍 Generated public URL for new upload:', fileUrl);
         }
         
+        console.log('🔍 About to call analyze-document-claude with fileUrl:', fileUrl);
         ({ data: analysisResult, error: functionError } = await supabase.functions.invoke('analyze-document-claude', {
           body: {
             fileUrl,
@@ -4914,7 +4925,9 @@ Return the data as a JSON object with the exact field names specified:
 ${extractionFields}`
           }
         }));
+        console.log('🔍 Claude function response:', { analysisResult, functionError });
       } else {
+        console.log('🔍 Non-PDF file detected - using OpenAI vision function');
         console.log('🔍 Calling analyze-document edge function...');
         ({ data: analysisResult, error: functionError } = await supabase.functions.invoke('analyze-document', {
           body: {

@@ -139,7 +139,7 @@ serve(async (req) => {
               type: 'image',
               source: {
                 type: 'base64',
-                media_type: mediaType.startsWith('image/') ? mediaType : 'image/png',
+                media_type: mediaType, // Use the actual media type (supports application/pdf)
                 data: base64Document
               }
             },
