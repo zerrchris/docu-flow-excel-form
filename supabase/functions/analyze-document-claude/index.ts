@@ -97,18 +97,140 @@ serve(async (req) => {
       })
     }
 
-    console.log('All validation passed, returning test response')
+    console.log('All validation passed, starting document analysis')
+    console.log('Analyzing document with Claude:', { fileName, contentType, userId: user.id })
 
-    // For now, return a test response to see if we get this far
+    // Fetch the document
+    console.log('Fetching document from URL:', fileUrl)
+    const docResponse = await fetch(fileUrl)
+    console.log('Document fetch response:', { status: docResponse.status, ok: docResponse.ok })
+    
+    if (!docResponse.ok) {
+      console.error('Failed to fetch document:', { status: docResponse.status, statusText: docResponse.statusText })
+      return new Response(JSON.stringify({ 
+        error: `Failed to fetch document: ${docResponse.status} ${docResponse.statusText}` 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const documentBytes = await docResponse.arrayBuffer()
+    console.log('Document size:', documentBytes.byteLength, 'bytes')
+    
+    // Convert to base64 safely
+    const uint8Array = new Uint8Array(documentBytes)
+    let base64Document = ''
+    
+    try {
+      // Use a simple and reliable base64 conversion
+      const binaryString = Array.from(uint8Array, byte => String.fromCharCode(byte)).join('')
+      base64Document = btoa(binaryString)
+      console.log('Base64 conversion completed, length:', base64Document.length)
+    } catch (conversionError) {
+      console.error('Base64 conversion error:', conversionError)
+      return new Response(JSON.stringify({ 
+        error: `Failed to convert document to base64: ${conversionError.message}` 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    // Determine media type for Claude
+    let mediaType = contentType || 'application/pdf'
+    console.log('Using media type:', mediaType)
+
+    const model = 'claude-3-5-haiku-20241022'
+    console.log('Calling Claude API with model:', model)
+
+    // Call Claude API with the document
+    const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${anthropicApiKey}`,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: 4000,
+        messages: [{
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: {
+                type: 'base64',
+                media_type: mediaType,
+                data: base64Document
+              }
+            },
+            {
+              type: 'text',
+              text: prompt
+            }
+          ]
+        }]
+      })
+    })
+
+    console.log('Claude API response status:', claudeResponse.status)
+
+    if (!claudeResponse.ok) {
+      const errorText = await claudeResponse.text()
+      console.error('Claude API error response:', {
+        status: claudeResponse.status,
+        statusText: claudeResponse.statusText,
+        body: errorText
+      })
+      return new Response(JSON.stringify({ 
+        error: `Claude API error: ${claudeResponse.status} - ${errorText}` 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const claudeData = await claudeResponse.json()
+    console.log('Claude response received successfully')
+
+    if (!claudeData.content || !claudeData.content[0] || !claudeData.content[0].text) {
+      console.error('No content returned from Claude:', claudeData)
+      return new Response(JSON.stringify({ 
+        error: 'No content returned from Claude' 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const generatedText = claudeData.content[0].text
+    const usage = claudeData.usage || {}
+    
+    // Extract token usage
+    const inputTokens = usage.input_tokens || 0
+    const outputTokens = usage.output_tokens || 0
+    const totalTokens = inputTokens + outputTokens
+    
+    // Calculate cost (Claude Haiku pricing)
+    const cost = (inputTokens * 0.00000025) + (outputTokens * 0.00000125)
+    
+    console.log('Usage tracking:', { inputTokens, outputTokens, totalTokens, cost })
+
+    // Track usage in background (don't await to avoid blocking the response)
+    trackAIUsage(supabase, user.id, model, inputTokens, outputTokens, totalTokens, cost, 'anthropic')
+      .catch(error => console.error('Failed to track usage:', error))
+
+    console.log('Analysis completed successfully')
     return new Response(JSON.stringify({ 
-      generatedText: '{"test": "This is a test response to verify the function is working"}',
-      message: 'Function is working - this is a test response',
+      generatedText,
       usage: {
-        input_tokens: 100,
-        output_tokens: 50,
-        total_tokens: 150,
-        cost: 0.001,
-        model: 'test-model',
+        input_tokens: inputTokens,
+        output_tokens: outputTokens,
+        total_tokens: totalTokens,
+        cost: cost,
+        model: model,
         provider: 'anthropic'
       }
     }), {
