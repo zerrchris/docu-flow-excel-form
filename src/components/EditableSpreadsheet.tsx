@@ -3876,12 +3876,15 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
             });
           }
         }
-      } else if (currentRunsheetId && user) {
-        // For other columns, trigger document filename updates with debounce
-        setTimeout(() => {
-          DocumentService.updateDocumentFilenames(currentRunsheetId, newData);
-        }, 2000);
-      }
+      } 
+      // DISABLED: Automatic filename updates removed to prevent unwanted renaming
+      // File names should only change when explicitly requested via "Rename Files" button
+      // } else if (currentRunsheetId && user) {
+      //   // For other columns, trigger document filename updates with debounce
+      //   setTimeout(() => {
+      //     DocumentService.updateDocumentFilenames(currentRunsheetId, newData);
+      //   }, 2000);
+      // }
       
       setEditingCell(null);
     }
