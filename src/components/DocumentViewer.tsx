@@ -3,7 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { AlertCircle, RotateCcw, ExternalLink } from 'lucide-react';
-import PDFViewer from './PDFViewer';
+import EnhancedPDFViewer from './EnhancedPDFViewer';
 
 interface DocumentViewerProps {
   file: File | null;
@@ -162,7 +162,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ file, previewUrl }) => 
 
   // For PDFs, use the dedicated PDF viewer
   if (isPdf && previewUrl) {
-    return <PDFViewer file={file} previewUrl={previewUrl} />;
+    return <EnhancedPDFViewer file={file} previewUrl={previewUrl} />;
   }
 
   return (

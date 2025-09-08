@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { X, ZoomIn, ZoomOut, RotateCcw, ExternalLink } from 'lucide-react';
 import { DocumentService } from '@/services/documentService';
-import PDFViewer from './PDFViewer';
+import EnhancedPDFViewer from './EnhancedPDFViewer';
 
 interface InlineDocumentViewerProps {
   runsheetId: string;
@@ -229,7 +229,7 @@ const InlineDocumentViewer: React.FC<InlineDocumentViewerProps> = ({
       {/* Document content */}
       <div className="flex-1 overflow-hidden" style={{ scrollBehavior: 'smooth' }}>
         {isPdf ? (
-          <PDFViewer file={null} previewUrl={documentUrl} />
+          <EnhancedPDFViewer file={null} previewUrl={documentUrl} />
         ) : (
           <div 
             className="h-full overflow-auto overscroll-none bg-muted/10 flex items-center justify-center"
