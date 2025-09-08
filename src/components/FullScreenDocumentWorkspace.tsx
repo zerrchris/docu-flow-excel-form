@@ -763,10 +763,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                               value={editingValue}
                               onChange={(e) => setEditingValue(e.target.value)}
                               onKeyDown={(e) => {
-                                if (e.key === 'Enter' && !e.shiftKey) {
-                                  e.preventDefault();
-                                  finishEditing();
-                                } else if (e.key === 'Escape') {
+                                if (e.key === 'Escape') {
                                   e.preventDefault();
                                   cancelEditing();
                                 } else if (e.key === 'Tab') {
