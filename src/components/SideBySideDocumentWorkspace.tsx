@@ -41,13 +41,15 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
   rowData: initialRowData,
   columns,
   columnInstructions,
-  documentRecord,
+  documentRecord: providedDocumentRecord,
   onDataUpdate,
   onClose
 }) => {
   const { toast } = useToast();
   const [rowData, setRowData] = useState<Record<string, string>>(initialRowData);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [documentRecord, setDocumentRecord] = useState<DocumentRecord | undefined>(providedDocumentRecord);
+  const [isLoadingDocument, setIsLoadingDocument] = useState(false);
   
   const [lastAnalyzedData, setLastAnalyzedData] = useState<Record<string, string>>({});
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -76,6 +78,24 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
     fieldName: '',
     currentInstruction: ''
   });
+
+  // Load document if not provided
+  useEffect(() => {
+    if (!providedDocumentRecord && runsheetId && rowIndex !== undefined) {
+      setIsLoadingDocument(true);
+      DocumentService.getDocumentForRow(runsheetId, rowIndex)
+        .then(document => {
+          setDocumentRecord(document || undefined);
+          setIsLoadingDocument(false);
+        })
+        .catch(error => {
+          console.error('Error loading document:', error);
+          setIsLoadingDocument(false);
+        });
+    } else {
+      setDocumentRecord(providedDocumentRecord);
+    }
+  }, [providedDocumentRecord, runsheetId, rowIndex]);
 
   // Update local row data when props change
   useEffect(() => {
@@ -654,7 +674,15 @@ Return only the filename, nothing else.`,
             </div>
 
             <div className="flex-1 overflow-hidden">
-              {documentRecord ? (
+              {isLoadingDocument ? (
+                <Card className="h-full flex items-center justify-center m-4">
+                  <CardContent className="text-center">
+                    <p className="text-muted-foreground">
+                      Loading document...
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : documentRecord ? (
                 <div className="h-full w-full">
                   {documentRecord.content_type?.includes('pdf') ? (
                     <PDFViewer 
