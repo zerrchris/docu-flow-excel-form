@@ -731,7 +731,28 @@ const DocumentProcessor: React.FC = () => {
       });
       window.dispatchEvent(loadEvent);
     }
-  }, [searchParams, loadedRunsheetRef]);
+    
+    // If no runsheet ID in URL and no active runsheet, redirect to dashboard
+    // This prevents the "untitled runsheet" issue when opening new tabs
+    if (!runsheetId && !action && !activeRunsheet?.id) {
+      console.log('No runsheet context - redirecting to dashboard to prevent empty state');
+      navigate('/app', { replace: true });
+    }
+  }, [searchParams, loadedRunsheetRef, activeRunsheet?.id, navigate]);
+
+  // Update URL when active runsheet changes to ensure proper tab behavior
+  useEffect(() => {
+    if (activeRunsheet?.id && !activeRunsheet.id.startsWith('temp-')) {
+      const currentRunsheetId = searchParams.get('id') || searchParams.get('runsheet');
+      const currentAction = searchParams.get('action');
+      
+      // Only update URL if the runsheet ID is different and we're not in an action mode
+      if (currentRunsheetId !== activeRunsheet.id && !currentAction) {
+        console.log('Updating URL to include runsheet ID:', activeRunsheet.id);
+        navigate(`/runsheet?id=${activeRunsheet.id}`, { replace: true });
+      }
+    }
+  }, [activeRunsheet?.id, searchParams, navigate]);
 
   // File handling now done through RunsheetFileUpload component
   
