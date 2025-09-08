@@ -6,57 +6,13 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Usage tracking function
-const trackAIUsage = async (supabase: any, userId: string, model: string, inputTokens: number, outputTokens: number, totalTokens: number, cost: number, provider: string) => {
-  try {
-    const { error } = await supabase
-      .from('ai_usage_logs')
-      .insert({
-        user_id: userId,
-        model: model,
-        input_tokens: inputTokens,
-        output_tokens: outputTokens,
-        total_tokens: totalTokens,
-        cost: cost,
-        provider: provider,
-        timestamp: new Date().toISOString()
-      });
-
-    if (error) {
-      console.error('Failed to track AI usage:', error);
-    } else {
-      console.log('AI usage tracked successfully:', { model, totalTokens, cost });
-    }
-  } catch (error) {
-    console.error('Error tracking AI usage:', error);
-  }
-};
-
-// Calculate Claude cost based on model and token usage
-const calculateClaudeCost = (model: string, inputTokens: number, outputTokens: number): number => {
-  // Claude Sonnet 4 pricing (as of 2024)
-  const pricing = {
-    'claude-sonnet-4-20250514': {
-      input: 0.000003,  // $3 per 1M input tokens
-      output: 0.000015  // $15 per 1M output tokens
-    },
-    'claude-opus-4-20250514': {
-      input: 0.000015,  // $15 per 1M input tokens  
-      output: 0.000075  // $75 per 1M output tokens
-    },
-    'claude-3-5-haiku-20241022': {
-      input: 0.00000025, // $0.25 per 1M input tokens
-      output: 0.00000125 // $1.25 per 1M output tokens
-    }
-  };
-
-  const modelPricing = pricing[model] || pricing['claude-sonnet-4-20250514'];
-  return (inputTokens * modelPricing.input) + (outputTokens * modelPricing.output);
-};
-
 serve(async (req) => {
+  console.log('=== CLAUDE FUNCTION STARTED ===')
+  console.log('Method:', req.method)
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    console.log('CORS preflight request')
     return new Response(null, { headers: corsHeaders })
   }
 
@@ -66,164 +22,93 @@ serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
   try {
-    console.log('=== CLAUDE FUNCTION START ===');
+    console.log('=== STARTING FUNCTION LOGIC ===')
     
+    // Test if we have the API key
     const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY')
-    console.log('API key exists:', !!anthropicApiKey);
+    console.log('Anthropic API key exists:', !!anthropicApiKey)
+    
     if (!anthropicApiKey) {
-      console.error('ANTHROPIC_API_KEY not configured');
-      throw new Error('ANTHROPIC_API_KEY not configured')
+      console.error('ANTHROPIC_API_KEY not configured')
+      return new Response(JSON.stringify({ 
+        error: 'ANTHROPIC_API_KEY not configured' 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
     }
 
     // Get user from auth token
     const authHeader = req.headers.get('Authorization')
-    console.log('Auth header exists:', !!authHeader);
+    console.log('Auth header exists:', !!authHeader)
+    
     if (!authHeader) {
-      throw new Error('No authorization header provided')
+      console.error('No authorization header')
+      return new Response(JSON.stringify({ 
+        error: 'No authorization header provided' 
+      }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
     }
 
     const token = authHeader.replace('Bearer ', '')
+    console.log('Attempting user authentication...')
+    
     const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-    console.log('User auth result:', { userId: user?.id, authError });
+    console.log('Auth result:', { userId: user?.id, error: authError?.message })
+    
     if (authError || !user) {
-      throw new Error('Invalid authentication token')
+      console.error('Authentication failed:', authError)
+      return new Response(JSON.stringify({ 
+        error: 'Invalid authentication token' 
+      }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
     }
 
-    const requestBody = await req.json()
-    console.log('Request body received:', { 
-      hasPrompt: !!requestBody.prompt, 
-      hasFileUrl: !!requestBody.fileUrl, 
-      fileName: requestBody.fileName,
-      contentType: requestBody.contentType 
-    });
-    
+    console.log('User authenticated successfully:', user.id)
+
+    // Parse request body
+    let requestBody
+    try {
+      requestBody = await req.json()
+      console.log('Request body parsed:', Object.keys(requestBody))
+    } catch (parseError) {
+      console.error('Failed to parse request body:', parseError)
+      return new Response(JSON.stringify({ 
+        error: 'Invalid JSON in request body' 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
     const { prompt, fileUrl, fileName, contentType } = requestBody
 
     if (!prompt || !fileUrl) {
-      throw new Error('Missing required parameters: prompt and fileUrl')
-    }
-
-    console.log('Analyzing document with Claude:', { fileName, contentType, userId: user.id })
-
-    // Fetch the document
-    console.log('Fetching document from URL:', fileUrl)
-    const docResponse = await fetch(fileUrl)
-    console.log('Document fetch response:', { status: docResponse.status, ok: docResponse.ok })
-    if (!docResponse.ok) {
-      console.error('Failed to fetch document:', { status: docResponse.status, statusText: docResponse.statusText })
-      throw new Error(`Failed to fetch document: ${docResponse.status} ${docResponse.statusText}`)
-    }
-
-    const documentBytes = await docResponse.arrayBuffer()
-    console.log('Document size:', documentBytes.byteLength, 'bytes')
-    
-    // Convert to base64 safely without stack overflow
-    const uint8Array = new Uint8Array(documentBytes)
-    let base64Document = ''
-    
-    try {
-      // Use a more robust base64 conversion method for large files
-      // Convert using TextDecoder for better memory management
-      const decoder = new TextDecoder('latin1')
-      const binaryString = decoder.decode(uint8Array)
-      base64Document = btoa(binaryString)
-      console.log('Base64 conversion completed, length:', base64Document.length)
-    } catch (conversionError) {
-      console.error('Base64 conversion error:', conversionError)
-      throw new Error(`Failed to convert document to base64: ${conversionError.message}`)
-    }
-
-    // Determine media type for Claude
-    let mediaType = contentType
-    if (!mediaType) {
-      if (fileName?.toLowerCase().endsWith('.pdf')) {
-        mediaType = 'application/pdf'
-      } else if (fileName?.toLowerCase().match(/\.(jpg|jpeg)$/)) {
-        mediaType = 'image/jpeg'
-      } else if (fileName?.toLowerCase().endsWith('.png')) {
-        mediaType = 'image/png'
-      } else {
-        mediaType = 'application/pdf' // Default to PDF
-      }
-    }
-
-    console.log('Using media type:', mediaType)
-
-    const model = 'claude-3-5-haiku-20241022' // Use faster model for better reliability
-
-    // Call Claude API with the document
-    const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${anthropicApiKey}`,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model,
-        max_tokens: 4000,
-        messages: [{
-          role: 'user',
-          content: [
-            {
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: mediaType, // Use the actual media type (supports application/pdf)
-                data: base64Document
-              }
-            },
-            {
-              type: 'text',
-              text: prompt
-            }
-          ]
-        }]
+      console.error('Missing required parameters:', { hasPrompt: !!prompt, hasFileUrl: !!fileUrl })
+      return new Response(JSON.stringify({ 
+        error: 'Missing required parameters: prompt and fileUrl' 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
-    })
-
-    if (!claudeResponse.ok) {
-      const errorText = await claudeResponse.text()
-      console.error('Claude API error response:', {
-        status: claudeResponse.status,
-        statusText: claudeResponse.statusText,
-        headers: Object.fromEntries(claudeResponse.headers.entries()),
-        body: errorText
-      })
-      throw new Error(`Claude API error: ${claudeResponse.status} ${claudeResponse.statusText} - ${errorText}`)
     }
 
-    const claudeData = await claudeResponse.json()
-    console.log('Claude response received')
+    console.log('All validation passed, returning test response')
 
-    if (!claudeData.content || !claudeData.content[0] || !claudeData.content[0].text) {
-      throw new Error('No content returned from Claude')
-    }
-
-    const generatedText = claudeData.content[0].text
-    const usage = claudeData.usage || {}
-    
-    // Extract token usage
-    const inputTokens = usage.input_tokens || 0
-    const outputTokens = usage.output_tokens || 0
-    const totalTokens = inputTokens + outputTokens
-    
-    // Calculate cost
-    const cost = calculateClaudeCost(model, inputTokens, outputTokens)
-    
-    console.log('Usage tracking:', { inputTokens, outputTokens, totalTokens, cost })
-
-    // Track usage in background
-    trackAIUsage(supabase, user.id, model, inputTokens, outputTokens, totalTokens, cost, 'anthropic')
-
+    // For now, return a test response to see if we get this far
     return new Response(JSON.stringify({ 
-      generatedText,
+      generatedText: '{"test": "This is a test response to verify the function is working"}',
+      message: 'Function is working - this is a test response',
       usage: {
-        input_tokens: inputTokens,
-        output_tokens: outputTokens,
-        total_tokens: totalTokens,
-        cost: cost,
-        model: model,
+        input_tokens: 100,
+        output_tokens: 50,
+        total_tokens: 150,
+        cost: 0.001,
+        model: 'test-model',
         provider: 'anthropic'
       }
     }), {
@@ -231,14 +116,14 @@ serve(async (req) => {
     })
 
   } catch (error) {
-    console.error('Error in analyze-document-claude:', error)
-    console.error('Error stack:', error.stack)
-    console.error('Error name:', error.name)
+    console.error('=== FUNCTION ERROR ===')
+    console.error('Error:', error)
     console.error('Error message:', error.message)
+    console.error('Error stack:', error.stack)
     
     return new Response(JSON.stringify({ 
-      error: error.message || 'Document analysis failed',
-      details: error.stack || 'No stack trace available'
+      error: error.message || 'Unknown error occurred',
+      stack: error.stack
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
