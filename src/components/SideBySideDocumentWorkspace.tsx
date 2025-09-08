@@ -143,27 +143,22 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
       let analysisResult;
       
       if (isPdf) {
-        console.log('🔧 PDF detected, using OpenAI Vision after converting to image data');
+        console.log('🔧 PDF detected, using Claude for PDF analysis');
         
-        // For PDFs, fetch and convert to base64 like we do for images  
-        const response = await fetch(documentUrl);
-        const blob = await response.blob();
-        const reader = new FileReader();
-        const pdfData = await new Promise<string>((resolve) => {
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.readAsDataURL(blob);
-        });
-        
-        // Use OpenAI Vision with PDF data (OpenAI can handle PDFs)
-        const { data, error } = await supabase.functions.invoke('analyze-document', {
+        // For PDFs, use Claude function which handles PDFs natively
+        const { data, error } = await supabase.functions.invoke('analyze-document-claude', {
           body: {
-            prompt: `Extract information from this document for the following fields and return as valid JSON:\n${extractionFields}\n\nReturn only a JSON object with field names as keys and extracted values as values. Do not include any markdown, explanations, or additional text.`,
-            imageData: pdfData,
-            fileName: documentRecord.stored_filename
-          },
+            fileUrl: documentUrl,
+            fileName: documentRecord.stored_filename,
+            contentType: 'application/pdf',
+            prompt: `Extract information from this document for the following fields and return as valid JSON:\n${extractionFields}\n\nReturn only a JSON object with field names as keys and extracted values as values. Do not include any markdown, explanations, or additional text.`
+          }
         });
-        
-        if (error) throw error;
+
+        if (error) {
+          throw new Error(error.message || 'Failed to analyze document with Claude');
+        }
+
         analysisResult = data;
       } else {
         console.log('🔧 Image detected, using OpenAI Vision for analysis');
