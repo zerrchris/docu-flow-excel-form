@@ -5234,7 +5234,7 @@ ${extractionFields}`
                 className="gap-2"
               >
                 <Brain className="h-4 w-4" />
-                Analyze All ({documentMap.size})
+                Analyze All
               </Button>
             )}
             
@@ -5258,7 +5258,7 @@ ${extractionFields}`
                 className="gap-2"
               >
                 <FileEdit className="h-4 w-4" />
-                Rename Files ({documentMap.size})
+                Rename Files
               </Button>
             )}
             
