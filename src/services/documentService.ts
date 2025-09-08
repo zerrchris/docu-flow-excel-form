@@ -84,12 +84,16 @@ export class DocumentService {
         // Skip if row index is out of bounds
         if (doc.row_index >= spreadsheetData.length) continue;
         
-        // Generate new filename based on current spreadsheet data
+        // Generate new filename based on current spreadsheet data using user preferences
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) continue;
+        
         const { data: newFilename, error } = await supabase
-          .rpc('generate_document_filename', {
+          .rpc('generate_document_filename_with_preferences', {
             runsheet_data: spreadsheetData,
             row_index: doc.row_index,
-            original_filename: doc.original_filename
+            original_filename: doc.original_filename,
+            user_id: user.id
           });
 
         if (error || !newFilename || newFilename === doc.stored_filename) {
