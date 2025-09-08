@@ -4130,10 +4130,13 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         }
         
         if (nextColumn && nextRowIndex >= 0 && nextRowIndex < data.length) {
+          // First select the cell and wait for scrolling
+          selectCell(nextRowIndex, nextColumn, false);
+          
+          // Then start editing after a delay to ensure cell is in view
           setTimeout(() => {
-            selectCell(nextRowIndex, nextColumn);
             startEditing(nextRowIndex, nextColumn, data[nextRowIndex]?.[nextColumn] || '', undefined);
-          }, 0);
+          }, 150); // Longer delay to ensure scrolling completes
         }
       }
     }
