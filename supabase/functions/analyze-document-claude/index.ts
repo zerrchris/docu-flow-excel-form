@@ -101,7 +101,17 @@ serve(async (req) => {
     }
 
     const documentBytes = await docResponse.arrayBuffer()
-    const base64Document = btoa(String.fromCharCode(...new Uint8Array(documentBytes)))
+    
+    // Convert to base64 safely without stack overflow
+    const uint8Array = new Uint8Array(documentBytes)
+    let base64Document = ''
+    
+    // Process in chunks to avoid stack overflow for large files
+    const chunkSize = 8192
+    for (let i = 0; i < uint8Array.length; i += chunkSize) {
+      const chunk = uint8Array.slice(i, i + chunkSize)
+      base64Document += btoa(String.fromCharCode.apply(null, Array.from(chunk)))
+    }
 
     // Determine media type for Claude
     let mediaType = contentType
