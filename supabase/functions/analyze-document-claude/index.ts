@@ -66,24 +66,38 @@ serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
   try {
+    console.log('=== CLAUDE FUNCTION START ===');
+    
     const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY')
+    console.log('API key exists:', !!anthropicApiKey);
     if (!anthropicApiKey) {
+      console.error('ANTHROPIC_API_KEY not configured');
       throw new Error('ANTHROPIC_API_KEY not configured')
     }
 
     // Get user from auth token
     const authHeader = req.headers.get('Authorization')
+    console.log('Auth header exists:', !!authHeader);
     if (!authHeader) {
       throw new Error('No authorization header provided')
     }
 
     const token = authHeader.replace('Bearer ', '')
     const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    console.log('User auth result:', { userId: user?.id, authError });
     if (authError || !user) {
       throw new Error('Invalid authentication token')
     }
 
-    const { prompt, fileUrl, fileName, contentType } = await req.json()
+    const requestBody = await req.json()
+    console.log('Request body received:', { 
+      hasPrompt: !!requestBody.prompt, 
+      hasFileUrl: !!requestBody.fileUrl, 
+      fileName: requestBody.fileName,
+      contentType: requestBody.contentType 
+    });
+    
+    const { prompt, fileUrl, fileName, contentType } = requestBody
 
     if (!prompt || !fileUrl) {
       throw new Error('Missing required parameters: prompt and fileUrl')
