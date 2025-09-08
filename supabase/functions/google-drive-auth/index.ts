@@ -140,7 +140,18 @@ serve(async (req) => {
       }
       
       const content = await contentResponse.arrayBuffer()
-      const base64Content = btoa(String.fromCharCode(...new Uint8Array(content)))
+      
+      // Handle large files properly by converting to base64 in chunks
+      const uint8Array = new Uint8Array(content)
+      let binary = ''
+      const chunkSize = 1024
+      
+      for (let i = 0; i < uint8Array.length; i += chunkSize) {
+        const chunk = uint8Array.slice(i, i + chunkSize)
+        binary += String.fromCharCode.apply(null, Array.from(chunk))
+      }
+      
+      const base64Content = btoa(binary)
       
       return new Response(
         JSON.stringify({
