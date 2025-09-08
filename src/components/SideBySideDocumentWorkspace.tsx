@@ -601,12 +601,34 @@ Return only the filename, nothing else.`,
                           onChange={(e) => handleFieldChange(columnName, e.target.value)}
                           className="min-h-[160px] resize-vertical"
                           placeholder={`Enter ${columnName.toLowerCase()}...`}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault();
+                              const currentIndex = columns.findIndex(col => col === columnName);
+                              const nextIndex = currentIndex + 1;
+                              if (nextIndex < columns.length) {
+                                const nextField = document.querySelector(`input[placeholder*="${columns[nextIndex].toLowerCase()}"], textarea[placeholder*="${columns[nextIndex].toLowerCase()}"]`) as HTMLElement;
+                                nextField?.focus();
+                              }
+                            }
+                          }}
                         />
                        ) : (
                         <Input
                           value={value}
                           onChange={(e) => handleFieldChange(columnName, e.target.value)}
                           placeholder={`Enter ${columnName.toLowerCase()}...`}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              const currentIndex = columns.findIndex(col => col === columnName);
+                              const nextIndex = currentIndex + 1;
+                              if (nextIndex < columns.length) {
+                                const nextField = document.querySelector(`input[placeholder*="${columns[nextIndex].toLowerCase()}"], textarea[placeholder*="${columns[nextIndex].toLowerCase()}"]`) as HTMLElement;
+                                nextField?.focus();
+                              }
+                            }
+                          }}
                         />
                       )}
                     </div>
