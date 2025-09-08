@@ -44,7 +44,9 @@ const SimplePDFViewer: React.FC<SimplePDFViewerProps> = ({ file, previewUrl }) =
   // Reset states when file/previewUrl changes
   useEffect(() => {
     if (documentSource) {
-      console.log('SimplePDFViewer: Starting to load PDF', { previewUrl, file: file?.name });
+      console.log('SimplePDFViewer: Starting to load PDF', { previewUrl, file: file?.name, documentSource });
+      console.log('SimplePDFViewer: Document source type:', typeof documentSource);
+      console.log('SimplePDFViewer: PDF.js worker src:', pdfjs.GlobalWorkerOptions.workerSrc);
       setLoading(true);
       setError(null);
       setCurrentPage(1);
@@ -64,7 +66,8 @@ const SimplePDFViewer: React.FC<SimplePDFViewerProps> = ({ file, previewUrl }) =
 
   const onDocumentLoadError = (error: Error) => {
     console.error('SimplePDFViewer: Error loading PDF:', error);
-    setError('Failed to load PDF document');
+    console.error('SimplePDFViewer: Error details:', error.message, error.stack);
+    setError(`Failed to load PDF: ${error.message}`);
     setLoading(false);
   };
 
@@ -212,6 +215,16 @@ const SimplePDFViewer: React.FC<SimplePDFViewerProps> = ({ file, previewUrl }) =
                 onLoadError={onDocumentLoadError}
                 loading=""
                 error=""
+                options={{
+                  cMapUrl: 'https://unpkg.com/pdfjs-dist@4.4.168/cmaps/',
+                  cMapPacked: true,
+                  standardFontDataUrl: 'https://unpkg.com/pdfjs-dist@4.4.168/standard_fonts/'
+                }}
+                onItemClick={(item) => console.log('PDF item clicked:', item)}
+                onPassword={(callback) => {
+                  console.log('PDF requires password');
+                  callback(null); // No password
+                }}
               >
                 <Page 
                   pageNumber={currentPage}
@@ -219,6 +232,10 @@ const SimplePDFViewer: React.FC<SimplePDFViewerProps> = ({ file, previewUrl }) =
                   className="shadow-lg border border-border bg-white"
                   renderAnnotationLayer={true}
                   renderTextLayer={true}
+                  onLoadSuccess={() => console.log('Page loaded successfully')}
+                  onLoadError={(error) => console.error('Page load error:', error)}
+                  onRenderSuccess={() => console.log('Page rendered successfully')}
+                  onRenderError={(error) => console.error('Page render error:', error)}
                 />
               </Document>
             </div>

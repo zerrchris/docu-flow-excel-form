@@ -12,7 +12,7 @@ import { ArrowLeft, Sparkles, RotateCcw, FileText, Wand2, AlertTriangle, Setting
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import SimplePDFViewer from './SimplePDFViewer';
+import PDFViewerWithFallback from './PDFViewerWithFallback';
 import ReExtractDialog from './ReExtractDialog';
 import ColumnPreferencesDialog from './ColumnPreferencesDialog';
 import { DocumentService, type DocumentRecord } from '@/services/documentService';
@@ -685,7 +685,7 @@ Return only the filename, nothing else.`,
               ) : documentRecord ? (
                 <div className="h-full w-full">
                   {documentRecord.content_type?.includes('pdf') ? (
-                    <SimplePDFViewer 
+                    <PDFViewerWithFallback 
                       file={null}
                       previewUrl={DocumentService.getDocumentUrl(documentRecord.file_path)}
                     />
