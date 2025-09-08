@@ -6029,7 +6029,7 @@ ${extractionFields}`
                        return (
                           <td
                            key={`${rowIndex}-${column}`}
-                            className={`border-r border-b border-border p-0 cursor-text overflow-hidden`}
+                            className={`border-b border-border p-0 cursor-text overflow-hidden`}
                             style={{ 
                                width: "350px", 
                                minWidth: "350px",
