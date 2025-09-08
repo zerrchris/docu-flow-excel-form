@@ -103,7 +103,7 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ file, previewUrl }) => {
   };
 
   // Check if we have either a file or previewUrl for a PDF
-  if (!previewUrl && (!file || !file.type.includes('pdf'))) {
+  if (!previewUrl && !file) {
     return null;
   }
 
@@ -196,7 +196,7 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ file, previewUrl }) => {
                     }`}
                   >
                     <Document
-                      file={previewUrl}
+                      file={previewUrl || file}
                       loading=""
                       error=""
                     >
@@ -235,7 +235,7 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ file, previewUrl }) => {
             <div ref={scrollRef} className="w-full h-full overflow-auto overscroll-contain pdf-scrollable" onWheelCapture={(e) => e.stopPropagation()}>
               <div className="flex justify-center items-start p-4">
                 <Document
-                  file={previewUrl}
+                  file={previewUrl || file}
                   onLoadSuccess={onDocumentLoadSuccess}
                   onLoadError={onDocumentLoadError}
                   loading={<div className="text-muted-foreground">Loading PDF...</div>}
