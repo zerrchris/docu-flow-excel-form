@@ -5967,7 +5967,7 @@ ${extractionFields}`
                          ) : (
                               <div
                                 data-cell={`${rowIndex}-${column}`}
-                                 className={`w-full h-full min-h-[2rem] py-2 px-3 flex items-start transition-all duration-200 whitespace-pre-wrap select-none rounded-sm
+                                 className={`w-full h-full min-h-[2rem] py-2 px-3 flex items-start transition-all duration-200 break-words overflow-hidden select-none rounded-sm
                                    ${isSelected 
                                      ? 'bg-primary/25 border-2 border-primary ring-2 ring-primary/20 shadow-sm' 
                                      : isInRange
@@ -5989,7 +5989,7 @@ ${extractionFields}`
                                   tabIndex={isSelected ? 0 : -1}
                                   title={cellValidationErrors[`${rowIndex}-${column}`] || undefined}
                                >
-                                {row[column] || ''}
+                                <span className="block w-full break-words overflow-hidden text-sm leading-tight">{row[column] || ''}</span>
                               </div>
                          )}
                          </td>
