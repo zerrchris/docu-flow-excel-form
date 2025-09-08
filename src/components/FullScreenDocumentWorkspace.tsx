@@ -43,6 +43,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
   const [documentName, setDocumentName] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [documentRecord, setDocumentRecord] = useState<any | undefined>(undefined);
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
   const [isPdf, setIsPdf] = useState(false);
@@ -118,110 +119,25 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
     }
   }, [editableFields, focusedColumn, editingColumn]);
 
+  // Load document - simplified approach like SideBySideDocumentWorkspace
   useEffect(() => {
     const loadDocument = async () => {
+      setIsLoading(true);
+      setError(null);
+      
       try {
-        setIsLoading(true);
-        setError(null);
-        
-        console.log('🔧 FullScreenDocumentWorkspace: Loading document for runsheet:', runsheetId, 'row:', rowIndex);
-        console.log('🔧 FullScreenDocumentWorkspace: Current rowData:', rowData);
-        
-        // Try to load from database first
         const document = await DocumentService.getDocumentForRow(runsheetId, rowIndex);
-        console.log('🔧 FullScreenDocumentWorkspace: Document from database:', document);
-        
         if (document) {
+          setDocumentRecord(document);
           const url = DocumentService.getDocumentUrl(document.file_path);
-          console.log('🔧 FullScreenDocumentWorkspace: Document URL:', url);
           setDocumentUrl(url);
           setDocumentName(document.original_filename);
           setIsPdf(document.content_type === 'application/pdf' || document.original_filename.toLowerCase().endsWith('.pdf'));
         } else {
-          console.log('🔧 FullScreenDocumentWorkspace: No document found in database, checking session storage...');
-          
-          // Check for pending documents in session storage
-          const pendingDocs = JSON.parse(sessionStorage.getItem('pendingDocuments') || '[]');
-          console.log('🔧 FullScreenDocumentWorkspace: Pending documents:', pendingDocs);
-          
-          const pendingDoc = pendingDocs.find((doc: any) => doc.rowIndex === rowIndex);
-          console.log('🔧 FullScreenDocumentWorkspace: Found pending document for row:', pendingDoc);
-          
-          if (pendingDoc) {
-            // If we have a storage path, try to construct the document URL
-            if (pendingDoc.storagePath) {
-              const url = DocumentService.getDocumentUrl(pendingDoc.storagePath);
-              setDocumentUrl(url);
-              setDocumentName(pendingDoc.fileName);
-              setIsPdf(pendingDoc.fileName.toLowerCase().endsWith('.pdf'));
-            } else if (pendingDoc.fileData) {
-              // Fallback to fileData if available (blob URL)
-              setDocumentUrl(pendingDoc.fileData);
-              setDocumentName(pendingDoc.fileName);
-              setIsPdf(pendingDoc.fileType === 'application/pdf' || pendingDoc.fileName.toLowerCase().endsWith('.pdf'));
-            } else {
-              console.error('🔧 FullScreenDocumentWorkspace: Pending document found but no valid data');
-              setError(`Document data not available for row ${rowIndex}`);
-            }
-          } else {
-            console.log('🔧 FullScreenDocumentWorkspace: No pending document in session, checking rowData Storage Path...');
-            
-            // Check if the row data has a Storage Path (from batch processing)
-            const storagePath = rowData['Storage Path'];
-            const documentFileName = rowData['Document File Name'];
-            
-            console.log('🔧 FullScreenDocumentWorkspace: Storage Path:', storagePath);
-            console.log('🔧 FullScreenDocumentWorkspace: Document File Name:', documentFileName);
-            console.log('🔧 FullScreenDocumentWorkspace: Row data keys:', Object.keys(rowData));
-            
-            if (storagePath) {
-              console.log('🔧 FullScreenDocumentWorkspace: Found Storage Path in rowData, constructing document URL');
-              const url = DocumentService.getDocumentUrl(storagePath);
-              console.log('🔧 FullScreenDocumentWorkspace: Constructed URL from Storage Path:', url);
-              setDocumentUrl(url);
-              setDocumentName(documentFileName || 'Document');
-              setIsPdf(documentFileName?.toLowerCase().endsWith('.pdf') || false);
-              console.log('🔧 FullScreenDocumentWorkspace: Document loaded from Storage Path successfully');
-            } else {
-              // Storage Path not in row data, try querying database directly
-              console.log('🔧 FullScreenDocumentWorkspace: No Storage Path in rowData, querying database for document at row:', rowIndex);
-              
-              try {
-                const { data: documents, error } = await supabase
-                  .from('documents')
-                  .select('file_path, original_filename')
-                  .eq('runsheet_id', runsheetId)
-                  .eq('row_index', rowIndex)
-                  .limit(1);
-                
-                if (error) {
-                  console.error('🔧 FullScreenDocumentWorkspace: Database query error:', error);
-                  throw error;
-                }
-                
-                if (documents && documents.length > 0) {
-                  const doc = documents[0];
-                  console.log('🔧 FullScreenDocumentWorkspace: Found document in database:', doc);
-                  const url = DocumentService.getDocumentUrl(doc.file_path);
-                  console.log('🔧 FullScreenDocumentWorkspace: Constructed URL from database:', url);
-                  setDocumentUrl(url);
-                  setDocumentName(doc.original_filename || 'Document');
-                  setIsPdf(doc.original_filename?.toLowerCase().endsWith('.pdf') || false);
-                  console.log('🔧 FullScreenDocumentWorkspace: Document loaded from database successfully');
-                } else {
-                  console.error('🔧 FullScreenDocumentWorkspace: No document found in database, session storage, or rowData Storage Path');
-                  console.log('🔧 FullScreenDocumentWorkspace: Available rowData:', rowData);
-                  setError(`No document found for row ${rowIndex} in runsheet ${runsheetId}`);
-                }
-              } catch (dbError) {
-                console.error('🔧 FullScreenDocumentWorkspace: Error querying database for document:', dbError);
-                setError(`No document found for row ${rowIndex} in runsheet ${runsheetId}`);
-              }
-            }
-          }
+          setError(`No document found for row ${rowIndex}`);
         }
       } catch (error) {
-        console.error('🔧 FullScreenDocumentWorkspace: Error loading document:', error);
+        console.error('Error loading document:', error);
         setError('Failed to load document');
       } finally {
         setIsLoading(false);
