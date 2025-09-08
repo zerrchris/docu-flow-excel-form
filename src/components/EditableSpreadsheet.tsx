@@ -3645,16 +3645,10 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   };
 
   // Cell editing functions
-  const selectCell = (rowIndex: number, column: string, shouldStartEditing: boolean = false) => {
+  const selectCell = async (rowIndex: number, column: string, shouldStartEditing: boolean = false) => {
     // Save any current editing before switching cells
     if (editingCell) {
-      const newData = [...data];
-      newData[editingCell.rowIndex] = {
-        ...newData[editingCell.rowIndex],
-        [editingCell.column]: cellValue
-      };
-      setData(newData);
-      onDataChange?.(newData);
+      await saveEdit(); // Use the proper save function instead of manual save
     }
     
     setSelectedCell({ rowIndex, column });
