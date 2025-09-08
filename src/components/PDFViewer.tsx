@@ -36,7 +36,7 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ file, previewUrl }) => {
 
   // Reset states when file/previewUrl changes
   useEffect(() => {
-    if (previewUrl && file?.type.includes('pdf')) {
+    if (previewUrl || (file && file.type.includes('pdf'))) {
       setLoading(true);
       setError(null);
     }
@@ -94,15 +94,16 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ file, previewUrl }) => {
 
   // Download function
   const handleDownload = () => {
-    if (previewUrl && file) {
+    if (previewUrl) {
       const link = document.createElement('a');
       link.href = previewUrl;
-      link.download = file.name || 'document.pdf';
+      link.download = file?.name || 'document.pdf';
       link.click();
     }
   };
 
-  if (!file || !file.type.includes('pdf')) {
+  // Check if we have either a file or previewUrl for a PDF
+  if (!previewUrl && (!file || !file.type.includes('pdf'))) {
     return null;
   }
 
