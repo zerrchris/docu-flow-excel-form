@@ -731,13 +731,6 @@ const DocumentProcessor: React.FC = () => {
       });
       window.dispatchEvent(loadEvent);
     }
-    
-    // If no runsheet ID in URL and no active runsheet, redirect to dashboard
-    // This prevents the "untitled runsheet" issue when opening new tabs
-    if (!runsheetId && !action && !activeRunsheet?.id) {
-      console.log('No runsheet context - redirecting to dashboard to prevent empty state');
-      navigate('/app', { replace: true });
-    }
   }, [searchParams, loadedRunsheetRef, activeRunsheet?.id, navigate]);
 
   // Update URL when active runsheet changes to ensure proper tab behavior
