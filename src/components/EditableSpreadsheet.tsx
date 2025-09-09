@@ -50,7 +50,6 @@ import { ColumnWidthPreferencesService } from '@/services/columnWidthPreferences
 import DocumentNamingSettings from './DocumentNamingSettings';
 import InlineDocumentViewer from './InlineDocumentViewer';
 import ColumnPreferencesDialog from './ColumnPreferencesDialog';
-import ReExtractDialog from './ReExtractDialog';
 import FullScreenDocumentWorkspace from './FullScreenDocumentWorkspace';
 import SideBySideDocumentWorkspace from './SideBySideDocumentWorkspace';
 import { BatchDocumentAnalysisDialog } from './BatchDocumentAnalysisDialog';
@@ -305,21 +304,6 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   const [showBatchAnalysisDialog, setShowBatchAnalysisDialog] = useState(false);
   const [showBatchRenameDialog, setShowBatchRenameDialog] = useState(false);
    const [showDocumentFileNameColumn, setShowDocumentFileNameColumn] = useState(true);
-  
-  // Re-extract dialog state for hover-based re-analysis
-  const [reExtractDialog, setReExtractDialog] = useState<{
-    isOpen: boolean;
-    fieldName: string;
-    currentValue: string;
-    rowIndex: number;
-  }>({
-    isOpen: false,
-    fieldName: '',
-    currentValue: '',
-    rowIndex: -1
-  });
-  const [isReExtracting, setIsReExtracting] = useState(false);
-  const [hoveredCell, setHoveredCell] = useState<{rowIndex: number, column: string} | null>(null);
   
   // Helper functions to manage workspace state and URL parameters
   const openFullScreenWorkspace = useCallback((rowIndex: number) => {
@@ -3503,9 +3487,6 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     scrollTimeoutRef.current = setTimeout(() => {
       setIsScrolling(false);
     }, 150);
-    
-    // Clear any hovered cell state during scrolling to prevent hover buttons from appearing
-    setHoveredCell(null);
   }, []);
 
   // Column resizing functions
@@ -3978,99 +3959,6 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     setEditingCell(null);
     setCellValue('');
   }, []);
-
-  // Handle re-extracting a field with user feedback
-  const handleReExtractWithNotes = async (notes: string) => {
-    if (!reExtractDialog.fieldName || reExtractDialog.rowIndex === -1) return;
-    
-    const rowIndex = reExtractDialog.rowIndex;
-    const fieldName = reExtractDialog.fieldName;
-    const documentRecord = documentMap.get(rowIndex);
-    
-    if (!documentRecord) {
-      toast({
-        title: "Error",
-        description: "No document linked to this row.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      setIsReExtracting(true);
-      console.log('🔧 EditableSpreadsheet: Starting re-extraction for field:', fieldName);
-
-      const documentUrl = await DocumentService.getDocumentUrl(documentRecord.file_path);
-      let imageData: string;
-      
-      // Convert the document URL to base64 for analysis
-      const response = await fetch(documentUrl);
-      const blob = await response.blob();
-      const reader = new FileReader();
-      imageData = await new Promise((resolve) => {
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.readAsDataURL(blob);
-      });
-
-      console.log('🔍 EditableSpreadsheet: Calling re-extract-field function');
-      const { data: result, error } = await supabase.functions.invoke('re-extract-field', {
-        body: {
-          imageData,
-          fileName: documentRecord.stored_filename,
-          fieldName: fieldName,
-          fieldInstructions: columnInstructions[fieldName] || `Extract the ${fieldName} field accurately`,
-          userNotes: notes,
-          currentValue: reExtractDialog.currentValue
-        }
-      });
-
-      console.log('🔍 EditableSpreadsheet: Function response:', { data: result, error });
-
-      if (error) {
-        console.error('🔍 EditableSpreadsheet: Error from function:', error);
-        throw error;
-      }
-
-      if (result?.extractedValue) {
-        // Update the specific field with the re-extracted value
-        const updatedData = [...data];
-        updatedData[rowIndex] = { ...updatedData[rowIndex], [fieldName]: result.extractedValue };
-        setData(updatedData);
-        onDataChange?.(updatedData);
-        
-        // Also save to database immediately
-        await saveToDatabase(updatedData, columns, runsheetName, columnInstructions, true); // Silent save
-        
-        toast({
-          title: "Field re-extracted",
-          description: `Successfully re-extracted "${fieldName}" with your feedback.`,
-        });
-
-        // Close the dialog
-        setReExtractDialog(prev => ({ ...prev, isOpen: false }));
-      }
-    } catch (error) {
-      console.error('🔍 EditableSpreadsheet: Re-extraction error:', error);
-      toast({
-        title: "Error",
-        description: `Failed to re-analyze ${fieldName}: ${error.message}`,
-        variant: "destructive",
-      });
-    } finally {
-      setIsReExtracting(false);
-    }
-  };
-
-  // Handle opening re-extract dialog from hover
-  const handleReanalyzeField = (rowIndex: number, fieldName: string) => {
-    const currentValue = data[rowIndex]?.[fieldName] || '';
-    setReExtractDialog({
-      isOpen: true,
-      fieldName,
-      currentValue,
-      rowIndex
-    });
-  };
 
   // Keyboard navigation
   const handleKeyDown = useCallback((e: React.KeyboardEvent, rowIndex: number, column: string) => {
@@ -6258,10 +6146,10 @@ ${extractionFields}`
                                     // Keep the height fixed to fill the cell
                                   }}
                               />
-                          ) : (
+                         ) : (
                               <div
                                 data-cell={`${rowIndex}-${column}`}
-                                 className={`w-full h-full min-h-[2rem] py-2 px-3 flex items-start transition-all duration-200 break-words overflow-hidden select-none rounded-sm relative group
+                                 className={`w-full h-full min-h-[2rem] py-2 px-3 flex items-start transition-all duration-200 break-words overflow-hidden select-none rounded-sm
                                    ${isSelected 
                                      ? 'bg-primary/25 border-2 border-primary ring-2 ring-primary/20 shadow-sm' 
                                      : isInRange
@@ -6277,39 +6165,13 @@ ${extractionFields}`
                                    ${cellValidationErrors[`${rowIndex}-${column}`] ? 'border-red-400 bg-red-50 dark:bg-red-900/20' : ''}
                                  `}
                                   onMouseDown={(e) => handleCellMouseDown(e, rowIndex, column)}
-                                  onMouseEnter={() => {
-                                    handleMouseEnter(rowIndex, column);
-                                    // Only set hovered cell if not currently scrolling
-                                    if (!isScrolling) {
-                                      setHoveredCell({ rowIndex, column });
-                                    }
-                                  }}
-                                  onMouseLeave={() => setHoveredCell(null)}
+                                  onMouseEnter={() => handleMouseEnter(rowIndex, column)}
                                   onMouseUp={handleMouseUp}
                                   onKeyDown={(e) => handleKeyDown(e, rowIndex, column)}
                                   tabIndex={isSelected ? 0 : -1}
                                   title={cellValidationErrors[`${rowIndex}-${column}`] || undefined}
                                >
                                 <span className="block w-full break-words overflow-hidden text-sm leading-tight whitespace-pre-wrap">{row[column] || ''}</span>
-                                
-                                {/* Re-analyze button - show on hover if row has linked document */}
-                                {hoveredCell?.rowIndex === rowIndex && hoveredCell?.column === column && 
-                                 documentMap.get(rowIndex) && 
-                                 !isEditing && 
-                                 row[column] && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleReanalyzeField(rowIndex, column);
-                                    }}
-                                    className="absolute top-1 right-1 h-6 w-6 p-0 bg-background/80 backdrop-blur-sm hover:bg-purple-100 dark:hover:bg-purple-900/20 text-purple-600 dark:text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm border border-border/50"
-                                    title={`Re-analyze ${column} with AI`}
-                                  >
-                                    <Sparkles className="h-3 w-3" />
-                                  </Button>
-                                )}
                               </div>
                          )}
                          </td>
@@ -7120,16 +6982,6 @@ ${extractionFields}`
           documentMap={documentMap}
           currentData={data}
           onDocumentMapUpdate={updateDocumentMap}
-        />
-
-        {/* Re-extract Dialog for hover-based field re-analysis */}
-        <ReExtractDialog
-          isOpen={reExtractDialog.isOpen}
-          onClose={() => setReExtractDialog(prev => ({ ...prev, isOpen: false }))}
-          fieldName={reExtractDialog.fieldName}
-          currentValue={reExtractDialog.currentValue}
-          onReExtract={handleReExtractWithNotes}
-          isLoading={isReExtracting}
         />
 
     );
