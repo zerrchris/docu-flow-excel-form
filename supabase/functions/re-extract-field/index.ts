@@ -46,16 +46,28 @@ serve(async (req) => {
   try {
     console.log('=== STARTING FUNCTION LOGIC ===');
     
-    // Test if we have the API key
+    // Test if we have the required API keys
     const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY');
+    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
     console.log('Anthropic API key exists:', !!anthropicApiKey);
-    console.log('API key format check:', anthropicApiKey ? `${anthropicApiKey.substring(0, 12)}...` : 'Missing');
+    console.log('OpenAI API key exists:', !!openaiApiKey);
     
     if (!anthropicApiKey) {
       console.error('❌ ANTHROPIC_API_KEY not configured');
       await logFunction(supabase, null, 're-extract-field', null, null, 'ANTHROPIC_API_KEY not configured', 500, Date.now() - startTime);
       return new Response(JSON.stringify({ 
         error: 'ANTHROPIC_API_KEY not configured' 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (!openaiApiKey) {
+      console.error('❌ OPENAI_API_KEY not configured');
+      await logFunction(supabase, null, 're-extract-field', null, null, 'OPENAI_API_KEY not configured', 500, Date.now() - startTime);
+      return new Response(JSON.stringify({ 
+        error: 'OPENAI_API_KEY not configured' 
       }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -101,8 +113,17 @@ serve(async (req) => {
 
     console.log(`Re-extracting field "${fieldName}" with user notes:`, userNotes);
 
-    // Create a focused prompt for the specific field with user feedback
-    const prompt = `Re-extract the "${fieldName}" field from this document using these instructions: ${fieldInstructions}. 
+    // Detect if this is a PDF or image based on the imageData or fileName
+    const isPdf = fileName?.toLowerCase().endsWith('.pdf') || imageData?.includes('application/pdf');
+    console.log('Document type detected:', isPdf ? 'PDF' : 'Image');
+
+    let extractedValue: string;
+
+    if (isPdf) {
+      // Use Claude API for PDFs
+      console.log('Using Claude API for PDF re-extraction');
+      
+      const prompt = `Re-extract the "${fieldName}" field from this document using these instructions: ${fieldInstructions}. 
 
 Current value: ${currentValue || 'None'}
 User notes: ${userNotes || 'None'}
@@ -115,70 +136,143 @@ Important guidelines:
 - Return only the extracted value as a string, not explanations or additional text
 - Be precise and accurate based on what you can see in the document`;
 
-    // Use the latest Claude model (Claude 4 Sonnet for best performance)
-    const model = 'claude-sonnet-4-20250514';
-    console.log('Calling Claude API with model:', model);
+      const model = 'claude-sonnet-4-20250514';
+      console.log('Calling Claude API with model:', model);
 
-    // Call Claude API with the document using fetch
-    const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${anthropicApiKey}`,
-        'anthropic-version': '2024-04-01'
-      },
-      body: JSON.stringify({
-        model,
-        max_tokens: 200,
-        messages: [{
-          role: 'user',
-          content: [
-            {
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: 'image/png',
-                data: imageData.replace(/^data:image\/[^;]+;base64,/, '') // Remove data URL prefix if present
+      const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${anthropicApiKey}`,
+          'anthropic-version': '2024-04-01'
+        },
+        body: JSON.stringify({
+          model,
+          max_tokens: 200,
+          messages: [{
+            role: 'user',
+            content: [
+              {
+                type: 'image',
+                source: {
+                  type: 'base64',
+                  media_type: 'application/pdf',
+                  data: imageData.replace(/^data:[^;]+;base64,/, '') // Remove data URL prefix if present
+                }
+              },
+              {
+                type: 'text',
+                text: prompt
               }
-            },
+            ]
+          }]
+        })
+      });
+
+      console.log('Claude API response status:', claudeResponse.status);
+
+      if (!claudeResponse.ok) {
+        const errorText = await claudeResponse.text();
+        const errorMsg = `Claude API error: ${claudeResponse.status} - ${errorText}`;
+        console.error('❌ Claude API error:', errorMsg);
+        await logFunction(supabase, null, 're-extract-field', requestBody, null, errorMsg, 500, Date.now() - startTime);
+        return new Response(JSON.stringify({ 
+          error: errorMsg
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const claudeData = await claudeResponse.json();
+      
+      if (!claudeData.content || !claudeData.content[0]) {
+        console.error('No content returned from Claude:', claudeData);
+        return new Response(JSON.stringify({ 
+          error: 'No content returned from Claude' 
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      extractedValue = claudeData.content[0].text.trim();
+      
+    } else {
+      // Use OpenAI API for images
+      console.log('Using OpenAI API for image re-extraction');
+      
+      const prompt = `Re-extract the "${fieldName}" field from this document using these instructions: ${fieldInstructions}. 
+
+Current value: ${currentValue || 'None'}
+User notes: ${userNotes || 'None'}
+
+Important guidelines:
+- Focus only on extracting the "${fieldName}" field
+- Consider the user's feedback to correct any previous extraction errors
+- If the user indicates the information is not present, respond with "Not found"
+- If the user indicates a specific location or correction, prioritize that information
+- Return only the extracted value as a string, not explanations or additional text
+- Be precise and accurate based on what you can see in the document`;
+
+      const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${openaiApiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o',
+          max_tokens: 200,
+          messages: [
             {
-              type: 'text',
-              text: prompt
+              role: 'user',
+              content: [
+                {
+                  type: 'text',
+                  text: prompt
+                },
+                {
+                  type: 'image_url',
+                  image_url: {
+                    url: imageData
+                  }
+                }
+              ]
             }
           ]
-        }]
-      })
-    });
-
-    console.log('Claude API response status:', claudeResponse.status);
-
-    if (!claudeResponse.ok) {
-      const errorText = await claudeResponse.text();
-      const errorMsg = `Claude API error: ${claudeResponse.status} - ${errorText}`;
-      console.error('❌ Claude API error:', errorMsg);
-      await logFunction(supabase, null, 're-extract-field', requestBody, null, errorMsg, 500, Date.now() - startTime);
-      return new Response(JSON.stringify({ 
-        error: errorMsg
-      }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
       });
+
+      console.log('OpenAI API response status:', openaiResponse.status);
+
+      if (!openaiResponse.ok) {
+        const errorText = await openaiResponse.text();
+        const errorMsg = `OpenAI API error: ${openaiResponse.status} - ${errorText}`;
+        console.error('❌ OpenAI API error:', errorMsg);
+        await logFunction(supabase, null, 're-extract-field', requestBody, null, errorMsg, 500, Date.now() - startTime);
+        return new Response(JSON.stringify({ 
+          error: errorMsg
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const openaiData = await openaiResponse.json();
+      
+      if (!openaiData.choices || !openaiData.choices[0] || !openaiData.choices[0].message) {
+        console.error('No content returned from OpenAI:', openaiData);
+        return new Response(JSON.stringify({ 
+          error: 'No content returned from OpenAI' 
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      extractedValue = openaiData.choices[0].message.content.trim();
     }
-
-    const claudeData = await claudeResponse.json();
-    console.log('Claude response received successfully');
-
-    if (!claudeData.content || !claudeData.content[0]) {
-      console.error('No content returned from Claude:', claudeData);
-      return new Response(JSON.stringify({ 
-        error: 'No content returned from Claude' 
-      }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const extractedValue = claudeData.content[0].text.trim();
     
     // Clean up markdown formatting (remove code blocks, backticks, quotes)
     let cleanedValue = extractedValue
@@ -196,7 +290,8 @@ Important guidelines:
       success: true, 
       fieldName,
       extractedValue: cleanedValue,
-      userNotes
+      userNotes,
+      apiUsed: isPdf ? 'Claude' : 'OpenAI'
     };
     
     console.log('✅ Re-extraction completed successfully');
