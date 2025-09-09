@@ -48,6 +48,18 @@ serve(async (req) => {
     // Test if we have the API key
     const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY')
     console.log('Anthropic API key exists:', !!anthropicApiKey)
+    console.log('API key format check:', anthropicApiKey ? `${anthropicApiKey.substring(0, 12)}...` : 'Missing')
+    
+    if (!anthropicApiKey) {
+      console.error('❌ ANTHROPIC_API_KEY not configured')
+      await logFunction(supabase, null, 'analyze-document-claude', null, null, 'ANTHROPIC_API_KEY not configured', 500, Date.now() - startTime)
+      return new Response(JSON.stringify({ 
+        error: 'ANTHROPIC_API_KEY not configured' 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
     
     // Parse request body first for logging
     let requestBody
@@ -193,8 +205,8 @@ serve(async (req) => {
     let mediaType = contentType || 'application/pdf'
     console.log('Using media type:', mediaType)
 
-    // Use the latest Claude model
-    const model = 'claude-3-5-sonnet-20241022'
+    // Use the latest Claude model (Claude 4 Sonnet for best performance)
+    const model = 'claude-sonnet-4-20250514'
     console.log('Calling Claude API with model:', model)
 
     // Call Claude API with the document using fetch
@@ -203,7 +215,7 @@ serve(async (req) => {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${anthropicApiKey}`,
-        'anthropic-version': '2023-06-01'
+        'anthropic-version': '2024-04-01'
       },
       body: JSON.stringify({
         model,
