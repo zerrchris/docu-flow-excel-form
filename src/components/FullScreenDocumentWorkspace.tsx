@@ -5,13 +5,12 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
-import { X, ZoomIn, ZoomOut, RotateCcw, ExternalLink, ArrowLeft, Brain, AlertTriangle, Sparkles, RefreshCw } from 'lucide-react';
+import { X, ZoomIn, ZoomOut, RotateCcw, ExternalLink, ArrowLeft, Brain, AlertTriangle, Sparkles } from 'lucide-react';
 import { DocumentService } from '@/services/documentService';
 import { ExtractionPreferencesService } from '@/services/extractionPreferences';
 import { ColumnWidthPreferencesService } from '@/services/columnWidthPreferences';
 import { useActiveRunsheet } from '@/hooks/useActiveRunsheet';
 import PDFViewerWithFallback from './PDFViewerWithFallback';
-import EnhancedImageViewer from './EnhancedImageViewer';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -630,7 +629,40 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
               ) : isPdf ? (
                 <PDFViewerWithFallback file={null} previewUrl={documentUrl} />
               ) : (
-                <EnhancedImageViewer file={null} previewUrl={documentUrl} />
+                <ScrollArea className="h-full overscroll-contain">
+                  <div className="min-h-full bg-muted/10 flex items-center justify-center p-4" onWheel={handleImageWheel}>
+                    <img
+                      src={documentUrl}
+                      alt={documentName}
+                      className={`max-w-full object-contain transition-transform duration-300 ease-in-out select-none cursor-grab active:cursor-grabbing ${
+                        fitToWidth ? 'w-full h-auto' : ''
+                      }`}
+                      style={{
+                        transform: fitToWidth ? 'none' : `translate(${panX / zoom}px, ${panY / zoom}px) scale(${zoom}) rotate(${rotation}deg)`,
+                        transformOrigin: 'center',
+                        willChange: 'transform'
+                      }}
+                      draggable={false}
+                      onMouseDown={handleImageMouseDown}
+                      onMouseMove={handleImageMouseMove}
+                      onMouseUp={handleImageMouseUp}
+                      onMouseEnter={(e) => {
+                        if (!fitToWidth && zoom === 1) {
+                          const img = e.target as HTMLImageElement;
+                          img.style.transform = `translate(${panX / zoom}px, ${panY / zoom}px) scale(${zoom * 1.2}) rotate(${rotation}deg)`;
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        handleImageMouseUp();
+                        if (!fitToWidth && zoom === 1) {
+                          const img = e.target as HTMLImageElement;
+                          img.style.transform = `translate(${panX / zoom}px, ${panY / zoom}px) scale(${zoom}) rotate(${rotation}deg)`;
+                        }
+                      }}
+                      onError={() => setError('Failed to load image')}
+                    />
+                  </div>
+                </ScrollArea>
               )}
             </div>
           </ResizablePanel>

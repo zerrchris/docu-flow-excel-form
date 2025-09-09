@@ -8,12 +8,11 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
-import { ArrowLeft, Sparkles, RotateCcw, FileText, Wand2, AlertTriangle, Settings, Edit3, ZoomIn, ZoomOut, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Sparkles, RotateCcw, FileText, Wand2, AlertTriangle, Settings, Edit3 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import PDFViewerWithFallback from './PDFViewerWithFallback';
-import EnhancedImageViewer from './EnhancedImageViewer';
 import ReExtractDialog from './ReExtractDialog';
 import ColumnPreferencesDialog from './ColumnPreferencesDialog';
 import { DocumentService, type DocumentRecord } from '@/services/documentService';
@@ -697,10 +696,28 @@ Return only the filename, nothing else.`,
                       previewUrl={DocumentService.getDocumentUrlSync(documentRecord.file_path)}
                     />
                   ) : (
-                    <EnhancedImageViewer 
-                      file={null}
-                      previewUrl={DocumentService.getDocumentUrlSync(documentRecord.file_path)}
-                    />
+                    <div className="h-full w-full overflow-auto bg-muted relative">
+                      <img 
+                        src={DocumentService.getDocumentUrlSync(documentRecord.file_path)}
+                        alt={documentRecord.stored_filename}
+                        className="w-full h-auto object-contain transition-transform duration-300 ease-in-out"
+                        style={{ 
+                          minHeight: '100%',
+                          transformOrigin: 'center',
+                          cursor: 'zoom-in'
+                        }}
+                        onMouseEnter={(e) => {
+                          const img = e.target as HTMLImageElement;
+                          img.style.transform = 'scale(1.5)';
+                          img.style.cursor = 'zoom-out';
+                        }}
+                        onMouseLeave={(e) => {
+                          const img = e.target as HTMLImageElement;
+                          img.style.transform = 'scale(1)';
+                          img.style.cursor = 'zoom-in';
+                        }}
+                      />
+                    </div>
                   )}
                 </div>
               ) : (
