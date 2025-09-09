@@ -101,7 +101,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   } = props;
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { setActiveRunsheet, clearActiveRunsheet, currentRunsheet, updateRunsheet, setCurrentRunsheet } = useActiveRunsheet();
   const [user, setUser] = useState<User | null>(null);
   
@@ -293,6 +293,55 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   const [inlineViewerRow, setInlineViewerRow] = useState<number | null>(null);
    const [fullScreenWorkspace, setFullScreenWorkspace] = useState<{ runsheetId: string; rowIndex: number } | null>(null);
    const [sideBySideWorkspace, setSideBySideWorkspace] = useState<{ runsheetId: string; rowIndex: number } | null>(null);
+
+  // Enhanced fullscreen workspace setter that updates URL
+  const setFullScreenWorkspaceWithURL = useCallback((workspace: { runsheetId: string; rowIndex: number } | null) => {
+    setFullScreenWorkspace(workspace);
+    
+    const newParams = new URLSearchParams(searchParams);
+    if (workspace) {
+      newParams.set('expandedRow', workspace.rowIndex.toString());
+      newParams.set('view', 'expanded');
+    } else {
+      newParams.delete('expandedRow');
+      newParams.delete('view');
+    }
+    setSearchParams(newParams, { replace: true });
+  }, [searchParams, setSearchParams]);
+
+  // Enhanced side-by-side workspace setter that updates URL  
+  const setSideBySideWorkspaceWithURL = useCallback((workspace: { runsheetId: string; rowIndex: number } | null) => {
+    setSideBySideWorkspace(workspace);
+    
+    const newParams = new URLSearchParams(searchParams);
+    if (workspace) {
+      newParams.set('expandedRow', workspace.rowIndex.toString());
+      newParams.set('view', 'sideBySide');
+    } else {
+      newParams.delete('expandedRow');
+      newParams.delete('view');
+    }
+    setSearchParams(newParams, { replace: true });
+  }, [searchParams, setSearchParams]);
+
+  // Effect to restore expanded view state from URL params on page load
+  useEffect(() => {
+    const view = searchParams.get('view');
+    const expandedRow = searchParams.get('expandedRow');
+    
+    if (view && expandedRow && currentRunsheetId && data.length > 0) {
+      const rowIndex = parseInt(expandedRow, 10);
+      
+      // Validate row index is within bounds
+      if (rowIndex >= 0 && rowIndex < data.length) {
+        if (view === 'expanded') {
+          setFullScreenWorkspace({ runsheetId: currentRunsheetId, rowIndex });
+        } else if (view === 'sideBySide') {
+          setSideBySideWorkspace({ runsheetId: currentRunsheetId, rowIndex });
+        }
+      }
+    }
+  }, [currentRunsheetId, data.length, searchParams]); // Only restore once data is loaded
   const [showBatchAnalysisDialog, setShowBatchAnalysisDialog] = useState(false);
   const [showBatchRenameDialog, setShowBatchRenameDialog] = useState(false);
    const [showDocumentFileNameColumn, setShowDocumentFileNameColumn] = useState(true);
@@ -6330,11 +6379,11 @@ ${extractionFields}`
                              console.log('🔧 EditableSpreadsheet: Opening full screen workspace for rowIndex:', rowIndex, '(display row:', rowIndex + 1, ')');
                              console.log('🔧 EditableSpreadsheet: Row data:', row);
                              console.log('🔧 EditableSpreadsheet: Document for this row:', documentMap.get(rowIndex));
-                              setFullScreenWorkspace({ runsheetId: currentRunsheetId || '', rowIndex });
+                              setFullScreenWorkspaceWithURL({ runsheetId: currentRunsheetId || '', rowIndex });
                              }}
                             onOpenSideBySide={() => {
                               console.log('🔧 EditableSpreadsheet: Opening side-by-side workspace for rowIndex:', rowIndex);
-                              setSideBySideWorkspace({ runsheetId: currentRunsheetId || '', rowIndex });
+                              setSideBySideWorkspaceWithURL({ runsheetId: currentRunsheetId || '', rowIndex });
                             }}
                            isSpreadsheetUpload={true}
                            autoAnalyze={false}
@@ -6814,7 +6863,7 @@ ${extractionFields}`
               rowIndex={fullScreenWorkspace.rowIndex}
               rowData={data[fullScreenWorkspace.rowIndex] || {}}
               fields={columns}
-              onClose={() => setFullScreenWorkspace(null)}
+              onClose={() => setFullScreenWorkspaceWithURL(null)}
               onUpdateRow={(rowIndex, rowData) => {
                 const newData = [...data];
                 newData[rowIndex] = rowData;
@@ -6855,7 +6904,7 @@ ${extractionFields}`
               setData(newData);
               onDataChange?.(newData);
             }}
-            onClose={() => setSideBySideWorkspace(null)}
+            onClose={() => setSideBySideWorkspaceWithURL(null)}
           />
         )}
 
