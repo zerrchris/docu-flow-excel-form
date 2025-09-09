@@ -103,42 +103,9 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
     }
   };
 
-  // Process PDFs to images if needed
+  // Allow PDFs as-is for Claude analysis - no conversion needed
   const processPDFFiles = async (fileArray: File[]): Promise<File[]> => {
-    const processedFiles: File[] = [];
-    
-    for (const file of fileArray) {
-      if (isPDF(file)) {
-        try {
-          console.log('🔧 Converting PDF to images:', file.name);
-          const pages = await convertPDFToImages(file);
-          
-          // Create separate files for each page
-          pages.forEach((page, index) => {
-            const imageName = file.name.replace(/\.pdf$/i, `_page_${page.pageNumber}.png`);
-            const imageFile = createFileFromBlob(page.blob, imageName);
-            processedFiles.push(imageFile);
-          });
-          
-          toast({
-            title: "PDF Converted",
-            description: `${file.name} converted to ${pages.length} image(s) for processing.`,
-          });
-        } catch (error) {
-          console.error('PDF conversion error:', error);
-          toast({
-            title: "PDF Conversion Failed",
-            description: `Could not convert ${file.name}. Uploading as-is.`,
-            variant: "destructive",
-          });
-          processedFiles.push(file); // Keep original PDF if conversion fails
-        }
-      } else {
-        processedFiles.push(file);
-      }
-    }
-    
-    return processedFiles;
+    return fileArray; // Return files as-is, including PDFs
   };
 
   const handleFileSelect = useCallback(async (selectedFiles: FileList) => {
