@@ -6171,7 +6171,7 @@ ${extractionFields}`
                                   tabIndex={isSelected ? 0 : -1}
                                   title={cellValidationErrors[`${rowIndex}-${column}`] || undefined}
                                >
-                                <span className="block w-full break-words overflow-hidden text-sm leading-tight">{row[column] || ''}</span>
+                                <span className="block w-full break-words overflow-hidden text-sm leading-tight whitespace-pre-wrap">{row[column] || ''}</span>
                               </div>
                          )}
                          </td>
