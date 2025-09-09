@@ -8,7 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
-import { ArrowLeft, Sparkles, RotateCcw, FileText, Wand2, AlertTriangle, Settings, Edit3, ZoomIn } from 'lucide-react';
+import { ArrowLeft, Sparkles, RotateCcw, FileText, Wand2, AlertTriangle, Settings, Edit3, ZoomIn, ZoomOut, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -707,26 +707,61 @@ Return only the filename, nothing else.`,
                         }}
                       />
                       
-                      {/* Magnifying glass overlay on hover */}
+                      {/* Document toolbar overlay on hover */}
                       <div 
-                        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none flex items-center justify-center"
-                        style={{ background: 'rgba(0, 0, 0, 0.1)' }}
+                        className="absolute bottom-2 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
                       >
-                        <div className="bg-black/70 text-white rounded-full p-3 pointer-events-auto cursor-pointer hover:bg-black/80 transition-colors">
-                          <ZoomIn 
-                            className="h-6 w-6" 
+                        <div className="bg-black/80 backdrop-blur-sm text-white rounded-lg px-2 py-1 flex items-center space-x-1 pointer-events-auto shadow-lg">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-white hover:bg-white/20 h-7 w-7 p-0"
                             onClick={() => {
-                              // Simple zoom implementation - open in a larger view or toggle scale
                               const img = document.querySelector('img[alt="' + documentRecord.stored_filename + '"]') as HTMLImageElement;
                               if (img) {
-                                if (img.style.transform === 'scale(1.5)') {
-                                  img.style.transform = 'scale(1)';
-                                } else {
-                                  img.style.transform = 'scale(1.5)';
-                                }
+                                const currentScale = img.style.transform.includes('scale') ? 
+                                  parseFloat(img.style.transform.match(/scale\(([^)]+)\)/)?.[1] || '1') : 1;
+                                const newScale = Math.max(0.5, currentScale - 0.25);
+                                img.style.transform = `scale(${newScale})`;
                               }
                             }}
-                          />
+                          >
+                            <ZoomOut className="h-3 w-3" />
+                          </Button>
+                          
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-white hover:bg-white/20 h-7 w-7 p-0"
+                            onClick={() => {
+                              const img = document.querySelector('img[alt="' + documentRecord.stored_filename + '"]') as HTMLImageElement;
+                              if (img) {
+                                const currentScale = img.style.transform.includes('scale') ? 
+                                  parseFloat(img.style.transform.match(/scale\(([^)]+)\)/)?.[1] || '1') : 1;
+                                const newScale = Math.min(3, currentScale + 0.25);
+                                img.style.transform = `scale(${newScale})`;
+                              }
+                            }}
+                          >
+                            <ZoomIn className="h-3 w-3" />
+                          </Button>
+                          
+                          <div className="w-px h-4 bg-white/30 mx-1" />
+                          
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-white hover:bg-white/20 h-7 w-7 p-0"
+                            onClick={() => {
+                              const img = document.querySelector('img[alt="' + documentRecord.stored_filename + '"]') as HTMLImageElement;
+                              if (img) {
+                                img.style.transform = 'scale(1)';
+                              }
+                            }}
+                            title="Reset zoom"
+                          >
+                            <RefreshCw className="h-3 w-3" />
+                          </Button>
                         </div>
                       </div>
                     </div>

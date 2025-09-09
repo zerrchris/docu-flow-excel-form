@@ -5,7 +5,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
-import { X, ZoomIn, ZoomOut, RotateCcw, ExternalLink, ArrowLeft, Brain, AlertTriangle, Sparkles } from 'lucide-react';
+import { X, ZoomIn, ZoomOut, RotateCcw, ExternalLink, ArrowLeft, Brain, AlertTriangle, Sparkles, RefreshCw } from 'lucide-react';
 import { DocumentService } from '@/services/documentService';
 import { ExtractionPreferencesService } from '@/services/extractionPreferences';
 import { ColumnWidthPreferencesService } from '@/services/columnWidthPreferences';
@@ -649,23 +649,56 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                       onError={() => setError('Failed to load image')}
                     />
                     
-                    {/* Magnifying glass overlay on hover */}
+                    {/* Document toolbar overlay on hover */}
                     <div 
-                      className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none flex items-center justify-center"
-                      style={{ background: 'rgba(0, 0, 0, 0.1)' }}
+                      className="absolute bottom-4 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
                     >
-                      <div className="bg-black/70 text-white rounded-full p-3 pointer-events-auto cursor-pointer hover:bg-black/80 transition-colors">
-                        {zoom < 2 ? (
-                          <ZoomIn 
-                            className="h-6 w-6" 
-                            onClick={handleZoomIn}
-                          />
-                        ) : (
-                          <ZoomOut 
-                            className="h-6 w-6" 
-                            onClick={handleZoomOut}
-                          />
-                        )}
+                      <div className="bg-black/80 backdrop-blur-sm text-white rounded-lg px-3 py-2 flex items-center space-x-2 pointer-events-auto shadow-lg">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-white hover:bg-white/20 h-8 w-8 p-0"
+                          onClick={handleZoomOut}
+                          disabled={zoom <= 0.25}
+                        >
+                          <ZoomOut className="h-4 w-4" />
+                        </Button>
+                        
+                        <span className="text-xs font-medium min-w-[3rem] text-center">
+                          {Math.round(zoom * 100)}%
+                        </span>
+                        
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-white hover:bg-white/20 h-8 w-8 p-0"
+                          onClick={handleZoomIn}
+                          disabled={zoom >= 3}
+                        >
+                          <ZoomIn className="h-4 w-4" />
+                        </Button>
+                        
+                        <div className="w-px h-6 bg-white/30 mx-1" />
+                        
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-white hover:bg-white/20 h-8 w-8 p-0"
+                          onClick={handleZoomReset}
+                          title="Reset zoom"
+                        >
+                          <RefreshCw className="h-3 w-3" />
+                        </Button>
+                        
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-white hover:bg-white/20 h-8 w-8 p-0"
+                          onClick={handleRotate}
+                          title="Rotate 90°"
+                        >
+                          <RotateCcw className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
                   </div>
