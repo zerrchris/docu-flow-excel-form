@@ -8,7 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
-import { ArrowLeft, Sparkles, RotateCcw, FileText, Wand2, AlertTriangle, Settings, Edit3 } from 'lucide-react';
+import { ArrowLeft, Sparkles, RotateCcw, FileText, Wand2, AlertTriangle, Settings, Edit3, ZoomIn } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -696,27 +696,39 @@ Return only the filename, nothing else.`,
                       previewUrl={DocumentService.getDocumentUrlSync(documentRecord.file_path)}
                     />
                   ) : (
-                    <div className="h-full w-full overflow-auto bg-muted relative">
+                    <div className="h-full w-full overflow-auto bg-muted relative group">
                       <img 
                         src={DocumentService.getDocumentUrlSync(documentRecord.file_path)}
                         alt={documentRecord.stored_filename}
-                        className="w-full h-auto object-contain transition-transform duration-300 ease-in-out"
+                        className="w-full h-auto object-contain"
                         style={{ 
                           minHeight: '100%',
-                          transformOrigin: 'center',
-                          cursor: 'zoom-in'
-                        }}
-                        onMouseEnter={(e) => {
-                          const img = e.target as HTMLImageElement;
-                          img.style.transform = 'scale(1.5)';
-                          img.style.cursor = 'zoom-out';
-                        }}
-                        onMouseLeave={(e) => {
-                          const img = e.target as HTMLImageElement;
-                          img.style.transform = 'scale(1)';
-                          img.style.cursor = 'zoom-in';
+                          transformOrigin: 'center'
                         }}
                       />
+                      
+                      {/* Magnifying glass overlay on hover */}
+                      <div 
+                        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none flex items-center justify-center"
+                        style={{ background: 'rgba(0, 0, 0, 0.1)' }}
+                      >
+                        <div className="bg-black/70 text-white rounded-full p-3 pointer-events-auto cursor-pointer hover:bg-black/80 transition-colors">
+                          <ZoomIn 
+                            className="h-6 w-6" 
+                            onClick={() => {
+                              // Simple zoom implementation - open in a larger view or toggle scale
+                              const img = document.querySelector('img[alt="' + documentRecord.stored_filename + '"]') as HTMLImageElement;
+                              if (img) {
+                                if (img.style.transform === 'scale(1.5)') {
+                                  img.style.transform = 'scale(1)';
+                                } else {
+                                  img.style.transform = 'scale(1.5)';
+                                }
+                              }
+                            }}
+                          />
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>

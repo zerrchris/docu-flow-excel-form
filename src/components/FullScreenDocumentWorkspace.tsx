@@ -630,11 +630,11 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                 <PDFViewerWithFallback file={null} previewUrl={documentUrl} />
               ) : (
                 <ScrollArea className="h-full overscroll-contain">
-                  <div className="min-h-full bg-muted/10 flex items-center justify-center p-4" onWheel={handleImageWheel}>
+                  <div className="min-h-full bg-muted/10 flex items-center justify-center p-4 relative group" onWheel={handleImageWheel}>
                     <img
                       src={documentUrl}
                       alt={documentName}
-                      className={`max-w-full object-contain transition-transform duration-300 ease-in-out select-none cursor-grab active:cursor-grabbing ${
+                      className={`max-w-full object-contain transition-transform duration-200 select-none cursor-grab active:cursor-grabbing ${
                         fitToWidth ? 'w-full h-auto' : ''
                       }`}
                       style={{
@@ -646,21 +646,28 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                       onMouseDown={handleImageMouseDown}
                       onMouseMove={handleImageMouseMove}
                       onMouseUp={handleImageMouseUp}
-                      onMouseEnter={(e) => {
-                        if (!fitToWidth && zoom === 1) {
-                          const img = e.target as HTMLImageElement;
-                          img.style.transform = `translate(${panX / zoom}px, ${panY / zoom}px) scale(${zoom * 1.2}) rotate(${rotation}deg)`;
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        handleImageMouseUp();
-                        if (!fitToWidth && zoom === 1) {
-                          const img = e.target as HTMLImageElement;
-                          img.style.transform = `translate(${panX / zoom}px, ${panY / zoom}px) scale(${zoom}) rotate(${rotation}deg)`;
-                        }
-                      }}
                       onError={() => setError('Failed to load image')}
                     />
+                    
+                    {/* Magnifying glass overlay on hover */}
+                    <div 
+                      className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none flex items-center justify-center"
+                      style={{ background: 'rgba(0, 0, 0, 0.1)' }}
+                    >
+                      <div className="bg-black/70 text-white rounded-full p-3 pointer-events-auto cursor-pointer hover:bg-black/80 transition-colors">
+                        {zoom < 2 ? (
+                          <ZoomIn 
+                            className="h-6 w-6" 
+                            onClick={handleZoomIn}
+                          />
+                        ) : (
+                          <ZoomOut 
+                            className="h-6 w-6" 
+                            onClick={handleZoomOut}
+                          />
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </ScrollArea>
               )}
