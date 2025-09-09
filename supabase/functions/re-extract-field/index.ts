@@ -61,51 +61,6 @@ serve(async (req) => {
       });
     }
 
-    const { fileUrl, fileName, fieldName, fieldInstructions, userNotes, currentValue, imageData } = await req.json();
-
-    if ((!fileUrl && !imageData) || !fieldName || !userNotes) {
-      return new Response(
-        JSON.stringify({ error: 'Missing required parameters: (fileUrl or imageData), fieldName, and userNotes are required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    console.log(`Re-extracting field "${fieldName}" with user notes:`, userNotes);
-
-    // Create a focused prompt for the specific field with user feedback
-    const systemPrompt = `You are a document analysis expert specializing in extracting specific information from documents.
-
-Your task is to re-extract the "${fieldName}" field from the document based on the user's feedback.
-
-Field Instructions: ${fieldInstructions || `Extract the ${fieldName} field accurately`}
-
-Current Extracted Value: ${currentValue || 'None'}
-
-User Feedback: ${userNotes}
-
-Important guidelines:
-- Focus only on extracting the "${fieldName}" field
-- Consider the user's feedback to correct any previous extraction errors
-- If the user indicates the information is not present, respond with "Not found"
-- If the user indicates a specific location or correction, prioritize that information
-- Return only the corrected value, not explanations or additional text
-- Be precise and accurate based on what you can see in the document`;
-
-    // Call OpenAI API with vision model to re-analyze the specific field
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o',  // Using vision-capable model
-        messages: [
-          {
-            role: 'system',
-            content: systemPrompt
-          },
-          {
     // Parse request body first for logging
     let requestBody;
     try {
