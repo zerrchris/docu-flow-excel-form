@@ -104,9 +104,10 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
     }
   };
 
-  // Allow PDFs as-is for Claude analysis - no conversion needed
+  // No processing needed - PDFs are now supported directly for Claude analysis
   const processPDFFiles = async (fileArray: File[]): Promise<File[]> => {
-    return fileArray; // Return files as-is, including PDFs
+    console.log('🔧 Processing files (no conversion needed):', fileArray.map(f => f.name));
+    return fileArray; // Return all files as-is, including PDFs
   };
 
   const handleFileSelect = useCallback(async (selectedFiles: FileList) => {
