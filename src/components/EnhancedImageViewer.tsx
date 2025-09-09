@@ -48,6 +48,8 @@ const EnhancedImageViewer: React.FC<EnhancedImageViewerProps> = ({ file, preview
       setPanX(0);
       setPanY(0);
       setRotation(0);
+      setScale(1);
+      setZoomMode('fit-screen');
     }
   }, [previewUrl, file]);
 
@@ -283,7 +285,11 @@ const EnhancedImageViewer: React.FC<EnhancedImageViewerProps> = ({ file, preview
   };
 
   if (!previewUrl && !file) {
-    return null;
+    return (
+      <div className="h-full flex items-center justify-center bg-muted/20 rounded-r-lg">
+        <div className="text-muted-foreground">No image available</div>
+      </div>
+    );
   }
 
   const displayUrl = previewUrl || (file ? URL.createObjectURL(file) : '');
