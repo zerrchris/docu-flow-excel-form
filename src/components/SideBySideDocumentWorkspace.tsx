@@ -137,7 +137,7 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
       const extractionFields = extractionPrefs?.columns?.map(col => `${col}: ${extractionPrefs.column_instructions?.[col] || 'Extract this field'}`).join('\n') || 
         columns.map(col => `${col}: Extract this field`).join('\n');
 
-      const documentUrl = DocumentService.getDocumentUrl(documentRecord.file_path);
+      const documentUrl = await DocumentService.getDocumentUrl(documentRecord.file_path);
       const isPdf = documentRecord.content_type === 'application/pdf' || documentRecord.stored_filename.toLowerCase().endsWith('.pdf');
       
       let analysisResult;
@@ -299,7 +299,7 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
       setIsReExtracting(true);
       console.log('🔧 SideBySideWorkspace: Starting re-extraction for field:', reExtractDialog.fieldName);
 
-      const documentUrl = DocumentService.getDocumentUrl(documentRecord.file_path);
+      const documentUrl = await DocumentService.getDocumentUrl(documentRecord.file_path);
       let imageData: string;
       
       // Convert the document URL to base64 for analysis
@@ -693,12 +693,12 @@ Return only the filename, nothing else.`,
                   {documentRecord.content_type?.includes('pdf') ? (
                     <PDFViewerWithFallback 
                       file={null}
-                      previewUrl={DocumentService.getDocumentUrl(documentRecord.file_path)}
+                      previewUrl={DocumentService.getDocumentUrlSync(documentRecord.file_path)}
                     />
                   ) : (
                     <div className="h-full w-full overflow-auto bg-muted">
                       <img 
-                        src={DocumentService.getDocumentUrl(documentRecord.file_path)}
+                        src={DocumentService.getDocumentUrlSync(documentRecord.file_path)}
                         alt={documentRecord.stored_filename}
                         className="w-full h-auto object-contain cursor-zoom-in"
                         style={{ minHeight: '100%' }}

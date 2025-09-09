@@ -56,15 +56,59 @@ export class DocumentService {
   }
 
   /**
-   * Get public URL for a document
+   * Get public URL for a document with error handling
    */
-  static getDocumentUrl(filePath: string): string {
+  static async getDocumentUrl(filePath: string): Promise<string> {
     // If the path is already a full URL, return it as-is
     if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
       return filePath;
     }
     
-    // Otherwise, generate the public URL from the storage path
+    try {
+      // First, check if the file exists
+      const { data: fileData, error: fileError } = await supabase.storage
+        .from('documents')
+        .list(filePath.substring(0, filePath.lastIndexOf('/')), {
+          search: filePath.substring(filePath.lastIndexOf('/') + 1)
+        });
+
+      if (fileError || !fileData || fileData.length === 0) {
+        console.error('File not found:', filePath, fileError);
+        throw new Error(`File not found: ${filePath}`);
+      }
+
+      // Generate signed URL for better security and reliability
+      const { data, error } = await supabase.storage
+        .from('documents')
+        .createSignedUrl(filePath, 3600); // 1 hour expiry
+
+      if (error || !data?.signedUrl) {
+        console.error('Failed to generate signed URL:', error);
+        throw new Error(`Failed to generate signed URL: ${error?.message || 'Unknown error'}`);
+      }
+
+      return data.signedUrl;
+    } catch (error) {
+      console.error('Error generating document URL:', error);
+      // Fallback to public URL if signed URL fails
+      const { data } = supabase.storage
+        .from('documents')
+        .getPublicUrl(filePath);
+      
+      return data.publicUrl;
+    }
+  }
+
+  /**
+   * Get public URL for a document (synchronous version for compatibility)
+   */
+  static getDocumentUrlSync(filePath: string): string {
+    // If the path is already a full URL, return it as-is
+    if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
+      return filePath;
+    }
+    
+    // Generate public URL from the storage path
     const { data } = supabase.storage
       .from('documents')
       .getPublicUrl(filePath);
@@ -323,7 +367,7 @@ export class DocumentService {
   ): Promise<{ success: boolean; data?: any; error?: string }> {
     try {
       // Get the public URL for the document
-      const fileUrl = this.getDocumentUrl(filePath);
+      const fileUrl = await this.getDocumentUrl(filePath);
       
       const { data } = await supabase.functions.invoke('analyze-document-advanced', {
         body: {

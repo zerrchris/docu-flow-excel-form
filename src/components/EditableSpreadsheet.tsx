@@ -2697,7 +2697,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       // Add document URL column if document exists for this row
       const document = documentMap.get(index);
       if (document) {
-        const publicUrl = DocumentService.getDocumentUrl(document.file_path);
+        const publicUrl = DocumentService.getDocumentUrlSync(document.file_path);
         orderedRow['Document Link'] = publicUrl;
       } else {
         orderedRow['Document Link'] = '';
@@ -2752,7 +2752,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         // Add document URL column if document exists for this row
         const document = documentMap.get(index);
         if (document) {
-          const publicUrl = DocumentService.getDocumentUrl(document.file_path);
+          const publicUrl = DocumentService.getDocumentUrlSync(document.file_path);
           orderedRow['Document Link'] = publicUrl;
         } else {
           orderedRow['Document Link'] = '';

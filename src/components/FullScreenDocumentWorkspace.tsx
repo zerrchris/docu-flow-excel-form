@@ -129,7 +129,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
         const document = await DocumentService.getDocumentForRow(runsheetId, rowIndex);
         if (document) {
           setDocumentRecord(document);
-          const url = DocumentService.getDocumentUrl(document.file_path);
+          const url = await DocumentService.getDocumentUrl(document.file_path);
           setDocumentUrl(url);
           setDocumentName(document.original_filename);
           setIsPdf(document.content_type === 'application/pdf' || document.original_filename.toLowerCase().endsWith('.pdf'));

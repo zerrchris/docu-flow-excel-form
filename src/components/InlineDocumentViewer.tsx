@@ -47,7 +47,7 @@ const InlineDocumentViewer: React.FC<InlineDocumentViewerProps> = ({
       console.log('🔧 InlineDocumentViewer: Document found:', document);
       
       if (document) {
-        const url = DocumentService.getDocumentUrl(document.file_path);
+        const url = await DocumentService.getDocumentUrl(document.file_path);
         console.log('🔧 InlineDocumentViewer: Generated URL:', url);
         console.log('🔧 InlineDocumentViewer: File path from document:', document.file_path);
         

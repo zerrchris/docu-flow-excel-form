@@ -64,7 +64,7 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
   }, [isOpen, documentMap]);
 
   const analyzeDocument = async (document: DocumentRecord, rowIndex: number): Promise<Record<string, string> | null> => {
-    const documentUrl = DocumentService.getDocumentUrl(document.file_path);
+    const documentUrl = await DocumentService.getDocumentUrl(document.file_path);
     const isPdf = document.content_type === 'application/pdf' || document.stored_filename.toLowerCase().endsWith('.pdf');
     
     // Get extraction fields
