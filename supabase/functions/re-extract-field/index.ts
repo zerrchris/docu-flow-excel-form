@@ -49,6 +49,7 @@ serve(async (req) => {
     // Test if we have the API key
     const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY');
     console.log('Anthropic API key exists:', !!anthropicApiKey);
+    console.log('API key format check:', anthropicApiKey ? `${anthropicApiKey.substring(0, 12)}...` : 'Missing');
     
     if (!anthropicApiKey) {
       console.error('❌ ANTHROPIC_API_KEY not configured');
@@ -114,8 +115,8 @@ Important guidelines:
 - Return only the extracted value as a string, not explanations or additional text
 - Be precise and accurate based on what you can see in the document`;
 
-    // Use the latest Claude model
-    const model = 'claude-3-5-sonnet-20241022';
+    // Use the latest Claude model (Claude 4 Sonnet for best performance)
+    const model = 'claude-sonnet-4-20250514';
     console.log('Calling Claude API with model:', model);
 
     // Call Claude API with the document using fetch
@@ -124,7 +125,7 @@ Important guidelines:
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${anthropicApiKey}`,
-        'anthropic-version': '2023-06-01'
+        'anthropic-version': '2024-04-01'
       },
       body: JSON.stringify({
         model,
