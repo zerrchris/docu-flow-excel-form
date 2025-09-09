@@ -28,6 +28,7 @@ const PDFViewerWithFallback: React.FC<PDFViewerWithFallbackProps> = ({ file, pre
   const [error, setError] = useState<string | null>(null);
   const [pageInput, setPageInput] = useState('');
   const [useFallback, setUseFallback] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   
   const documentSource = previewUrl || file;
 
@@ -35,6 +36,7 @@ const PDFViewerWithFallback: React.FC<PDFViewerWithFallbackProps> = ({ file, pre
   useEffect(() => {
     if (documentSource) {
       console.log('PDFViewerWithFallback: Loading PDF', { previewUrl, file: file?.name });
+      console.log('PDFViewerWithFallback: Worker source:', pdfjs.GlobalWorkerOptions.workerSrc);
       setLoading(true);
       setError(null);
       setCurrentPage(1);
@@ -43,15 +45,15 @@ const PDFViewerWithFallback: React.FC<PDFViewerWithFallbackProps> = ({ file, pre
     }
   }, [previewUrl, file, documentSource]);
 
-  // Auto-fallback timeout
+  // Auto-fallback timeout - increased timeout for better reliability
   useEffect(() => {
     if (loading && documentSource && !useFallback) {
       const timeout = setTimeout(() => {
-        console.warn('PDFViewerWithFallback: react-pdf timeout, switching to iframe fallback');
+        console.warn('PDFViewerWithFallback: react-pdf timeout after 8 seconds, switching to iframe fallback');
         setUseFallback(true);
         setLoading(false);
         setError(null);
-      }, 2000);
+      }, 8000); // Increased from 2 seconds to 8 seconds
 
       return () => clearTimeout(timeout);
     }
@@ -101,6 +103,14 @@ const PDFViewerWithFallback: React.FC<PDFViewerWithFallbackProps> = ({ file, pre
       link.download = file?.name || 'document.pdf';
       link.click();
     }
+  };
+
+  const retryPdfLoad = () => {
+    console.log('PDFViewerWithFallback: Retrying PDF load, attempt:', retryCount + 1);
+    setRetryCount(prev => prev + 1);
+    setUseFallback(false);
+    setLoading(true);
+    setError(null);
   };
 
   const switchToFallback = () => {
@@ -178,6 +188,13 @@ const PDFViewerWithFallback: React.FC<PDFViewerWithFallbackProps> = ({ file, pre
             {!useFallback && !loading && (
               <Button variant="outline" size="sm" onClick={switchToFallback} title="Switch to iframe viewer">
                 <AlertTriangle className="h-4 w-4" />
+              </Button>
+            )}
+
+            {/* Retry button for fallback mode */}
+            {useFallback && retryCount < 3 && (
+              <Button variant="outline" size="sm" onClick={retryPdfLoad} title="Retry PDF viewer">
+                <RefreshCw className="h-4 w-4" />
               </Button>
             )}
 
