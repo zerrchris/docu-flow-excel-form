@@ -120,10 +120,11 @@ serve(async (req) => {
 
     // Validate required inputs
     if (!prompt || !fileUrl) {
-      console.error('❌ Missing required parameters:', { hasPrompt: !!prompt, hasFileUrl: !!fileUrl })
-      await logFunction(supabase, user.id, 'analyze-document-claude', requestBody, null, 'Missing required parameters: prompt and fileUrl', 400, Date.now() - startTime)
+      const errorMsg = 'Missing required parameters: prompt and fileUrl'
+      console.error('❌', errorMsg)
+      await logFunction(supabase, user.id, 'analyze-document-claude', requestBody, null, errorMsg, 400, Date.now() - startTime)
       return new Response(JSON.stringify({ 
-        error: 'Missing required parameters: prompt and fileUrl' 
+        error: errorMsg
       }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -135,12 +136,17 @@ serve(async (req) => {
 
     // Extract file path from URL for storage download
     let filePath = fileUrl
+    
+    // Handle different URL formats
     if (fileUrl.includes('/storage/v1/object/sign/documents/')) {
       // Extract the file path from signed URL
       const urlParts = fileUrl.split('/storage/v1/object/sign/documents/')[1]
       if (urlParts) {
         filePath = urlParts.split('?')[0] // Remove query parameters
       }
+    } else if (fileUrl.includes('/documents/')) {
+      // Direct storage path
+      filePath = fileUrl.split('/documents/')[1]
     }
     
     console.log('📥 Downloading document from storage:', filePath)
