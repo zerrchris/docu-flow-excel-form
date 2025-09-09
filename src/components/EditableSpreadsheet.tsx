@@ -3503,6 +3503,9 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     scrollTimeoutRef.current = setTimeout(() => {
       setIsScrolling(false);
     }, 150);
+    
+    // Clear any hovered cell state during scrolling to prevent hover buttons from appearing
+    setHoveredCell(null);
   }, []);
 
   // Column resizing functions
@@ -6276,7 +6279,10 @@ ${extractionFields}`
                                   onMouseDown={(e) => handleCellMouseDown(e, rowIndex, column)}
                                   onMouseEnter={() => {
                                     handleMouseEnter(rowIndex, column);
-                                    setHoveredCell({ rowIndex, column });
+                                    // Only set hovered cell if not currently scrolling
+                                    if (!isScrolling) {
+                                      setHoveredCell({ rowIndex, column });
+                                    }
                                   }}
                                   onMouseLeave={() => setHoveredCell(null)}
                                   onMouseUp={handleMouseUp}
