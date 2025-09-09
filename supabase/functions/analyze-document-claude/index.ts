@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import Anthropic from 'https://deno.land/x/anthropic_sdk/mod.ts'
 
 // Helper function to log function calls
 async function logFunction(supabase: any, userId: string | null, functionName: string, input: any, output: any, errorMessage: string | null, statusCode: number, executionTimeMs: number) {
@@ -198,14 +197,15 @@ serve(async (req) => {
     const model = 'claude-3-5-sonnet-20241022'
     console.log('Calling Claude API with model:', model)
 
-    // Initialize Anthropic client
-    const anthropic = new Anthropic({
-      apiKey: anthropicApiKey
-    })
-
-    try {
-      // Call Claude API with the document
-      const claudeResponse = await anthropic.messages.create({
+    // Call Claude API with the document using fetch
+    const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${anthropicApiKey}`,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
         model,
         max_tokens: 4000,
         messages: [{
@@ -226,33 +226,14 @@ serve(async (req) => {
           ]
         }]
       })
+    })
 
-      console.log('Claude response received successfully')
+    console.log('Claude API response status:', claudeResponse.status)
 
-      if (!claudeResponse.content || !claudeResponse.content[0]) {
-        console.error('No content returned from Claude:', claudeResponse)
-        return new Response(JSON.stringify({ 
-          error: 'No content returned from Claude' 
-        }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        })
-      }
-
-      const generatedText = claudeResponse.content[0].text
-      const usage = claudeResponse.usage || {}
-      
-      // Extract token usage
-      const inputTokens = usage.input_tokens || 0
-      const outputTokens = usage.output_tokens || 0
-      const totalTokens = inputTokens + outputTokens
-      
-      // Calculate cost (Claude 3.5 Sonnet pricing)
-      const cost = (inputTokens * 0.000003) + (outputTokens * 0.000015)
-    
-    } catch (claudeError) {
-      const errorMsg = `Claude API error: ${claudeError.message}`
-      console.error('❌ Claude API error:', claudeError)
+    if (!claudeResponse.ok) {
+      const errorText = await claudeResponse.text()
+      const errorMsg = `Claude API error: ${claudeResponse.status} - ${errorText}`
+      console.error('❌ Claude API error:', errorMsg)
       await logFunction(supabase, user.id, 'analyze-document-claude', requestBody, null, errorMsg, 500, Date.now() - startTime)
       return new Response(JSON.stringify({ 
         error: errorMsg
@@ -261,6 +242,30 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
+
+    const claudeData = await claudeResponse.json()
+    console.log('Claude response received successfully')
+
+    if (!claudeData.content || !claudeData.content[0]) {
+      console.error('No content returned from Claude:', claudeData)
+      return new Response(JSON.stringify({ 
+        error: 'No content returned from Claude' 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const generatedText = claudeData.content[0].text
+    const usage = claudeData.usage || {}
+    
+    // Extract token usage
+    const inputTokens = usage.input_tokens || 0
+    const outputTokens = usage.output_tokens || 0
+    const totalTokens = inputTokens + outputTokens
+    
+    // Calculate cost (Claude 3.5 Sonnet pricing)
+    const cost = (inputTokens * 0.000003) + (outputTokens * 0.000015)
     
       console.log('Usage tracking:', { inputTokens, outputTokens, totalTokens, cost })
 
