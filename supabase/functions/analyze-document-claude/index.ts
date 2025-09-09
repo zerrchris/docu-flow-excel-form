@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import Anthropic from 'https://deno.land/x/anthropic_sdk/mod.ts'
 
 // Helper function to log function calls
 async function logFunction(supabase: any, userId: string | null, functionName: string, input: any, output: any, errorMessage: string | null, statusCode: number, executionTimeMs: number) {
@@ -117,6 +118,7 @@ serve(async (req) => {
 
     const { prompt, fileUrl, fileName, contentType } = requestBody
 
+    // Validate required inputs
     if (!prompt || !fileUrl) {
       console.error('❌ Missing required parameters:', { hasPrompt: !!prompt, hasFileUrl: !!fileUrl })
       await logFunction(supabase, user.id, 'analyze-document-claude', requestBody, null, 'Missing required parameters: prompt and fileUrl', 400, Date.now() - startTime)
@@ -131,24 +133,36 @@ serve(async (req) => {
     console.log('All validation passed, starting document analysis')
     console.log('Analyzing document with Claude:', { fileName, contentType, userId: user.id })
 
-    // Fetch the document
-    console.log('📥 Fetching document from URL:', fileUrl)
-    const docResponse = await fetch(fileUrl)
-    console.log('📥 Document fetch response:', { status: docResponse.status, ok: docResponse.ok })
+    // Extract file path from URL for storage download
+    let filePath = fileUrl
+    if (fileUrl.includes('/storage/v1/object/sign/documents/')) {
+      // Extract the file path from signed URL
+      const urlParts = fileUrl.split('/storage/v1/object/sign/documents/')[1]
+      if (urlParts) {
+        filePath = urlParts.split('?')[0] // Remove query parameters
+      }
+    }
     
-    if (!docResponse.ok) {
-      const errorMsg = `Failed to fetch document: ${docResponse.status} ${docResponse.statusText}`
+    console.log('📥 Downloading document from storage:', filePath)
+    
+    // Use Supabase storage to download the file directly
+    const { data: fileData, error: storageError } = await supabase.storage
+      .from('documents')
+      .download(filePath)
+    
+    if (storageError || !fileData) {
+      const errorMsg = `Storage error: ${storageError?.message || 'File not found'}`
       console.error('❌', errorMsg)
-      await logFunction(supabase, user.id, 'analyze-document-claude', requestBody, null, errorMsg, docResponse.status, Date.now() - startTime)
+      await logFunction(supabase, user.id, 'analyze-document-claude', requestBody, null, errorMsg, 404, Date.now() - startTime)
       return new Response(JSON.stringify({ 
         error: errorMsg
       }), {
-        status: docResponse.status >= 400 && docResponse.status < 500 ? docResponse.status : 400,
+        status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    const documentBytes = await docResponse.arrayBuffer()
+    const documentBytes = await fileData.arrayBuffer()
     console.log('Document size:', documentBytes.byteLength, 'bytes')
     
     // Convert to base64 safely
@@ -174,18 +188,18 @@ serve(async (req) => {
     let mediaType = contentType || 'application/pdf'
     console.log('Using media type:', mediaType)
 
-    const model = 'claude-3-5-haiku-20241022'
+    // Use the latest Claude model
+    const model = 'claude-3-5-sonnet-20241022'
     console.log('Calling Claude API with model:', model)
 
-    // Call Claude API with the document
-    const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${anthropicApiKey}`,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
+    // Initialize Anthropic client
+    const anthropic = new Anthropic({
+      apiKey: anthropicApiKey
+    })
+
+    try {
+      // Call Claude API with the document
+      const claudeResponse = await anthropic.messages.create({
         model,
         max_tokens: 4000,
         messages: [{
@@ -206,19 +220,34 @@ serve(async (req) => {
           ]
         }]
       })
-    })
 
-    console.log('Claude API response status:', claudeResponse.status)
+      console.log('Claude response received successfully')
 
-    if (!claudeResponse.ok) {
-      const errorText = await claudeResponse.text()
-      const errorMsg = `Claude API error: ${claudeResponse.status} - ${errorText}`
-      console.error('❌ Claude API error response:', {
-        status: claudeResponse.status,
-        statusText: claudeResponse.statusText,
-        body: errorText
-      })
-      await logFunction(supabase, user.id, 'analyze-document-claude', requestBody, null, errorMsg, claudeResponse.status, Date.now() - startTime)
+      if (!claudeResponse.content || !claudeResponse.content[0]) {
+        console.error('No content returned from Claude:', claudeResponse)
+        return new Response(JSON.stringify({ 
+          error: 'No content returned from Claude' 
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+
+      const generatedText = claudeResponse.content[0].text
+      const usage = claudeResponse.usage || {}
+      
+      // Extract token usage
+      const inputTokens = usage.input_tokens || 0
+      const outputTokens = usage.output_tokens || 0
+      const totalTokens = inputTokens + outputTokens
+      
+      // Calculate cost (Claude 3.5 Sonnet pricing)
+      const cost = (inputTokens * 0.000003) + (outputTokens * 0.000015)
+    
+    } catch (claudeError) {
+      const errorMsg = `Claude API error: ${claudeError.message}`
+      console.error('❌ Claude API error:', claudeError)
+      await logFunction(supabase, user.id, 'analyze-document-claude', requestBody, null, errorMsg, 500, Date.now() - startTime)
       return new Response(JSON.stringify({ 
         error: errorMsg
       }), {
@@ -226,70 +255,47 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
-
-    const claudeData = await claudeResponse.json()
-    console.log('Claude response received successfully')
-
-    if (!claudeData.content || !claudeData.content[0] || !claudeData.content[0].text) {
-      console.error('No content returned from Claude:', claudeData)
-      return new Response(JSON.stringify({ 
-        error: 'No content returned from Claude' 
-      }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
-
-    const generatedText = claudeData.content[0].text
-    const usage = claudeData.usage || {}
     
-    // Extract token usage
-    const inputTokens = usage.input_tokens || 0
-    const outputTokens = usage.output_tokens || 0
-    const totalTokens = inputTokens + outputTokens
-    
-    // Calculate cost (Claude Haiku pricing)
-    const cost = (inputTokens * 0.00000025) + (outputTokens * 0.00000125)
-    
-    console.log('Usage tracking:', { inputTokens, outputTokens, totalTokens, cost })
+      console.log('Usage tracking:', { inputTokens, outputTokens, totalTokens, cost })
 
-    // Track usage in background
-    try {
-      await supabase
-        .from('ai_usage_logs')
-        .insert({
-          user_id: user.id,
-          model: model,
+      // Track usage in background
+      try {
+        await supabase
+          .from('ai_usage_logs')
+          .insert({
+            user_id: user.id,
+            model: model,
+            input_tokens: inputTokens,
+            output_tokens: outputTokens,
+            total_tokens: totalTokens,
+            cost: cost,
+            provider: 'anthropic',
+            timestamp: new Date().toISOString()
+          });
+        console.log('AI usage tracked successfully');
+      } catch (usageError) {
+        console.error('Failed to track AI usage:', usageError);
+      }
+
+      const result = { 
+        generatedText,
+        usage: {
           input_tokens: inputTokens,
           output_tokens: outputTokens,
           total_tokens: totalTokens,
           cost: cost,
-          provider: 'anthropic',
-          timestamp: new Date().toISOString()
-        });
-      console.log('AI usage tracked successfully');
-    } catch (usageError) {
-      console.error('Failed to track AI usage:', usageError);
-    }
-
-    const result = { 
-      generatedText,
-      usage: {
-        input_tokens: inputTokens,
-        output_tokens: outputTokens,
-        total_tokens: totalTokens,
-        cost: cost,
-        model: model,
-        provider: 'anthropic'
+          model: model,
+          provider: 'anthropic'
+        }
       }
-    }
-    
-    console.log('✅ Analysis completed successfully')
-    await logFunction(supabase, user.id, 'analyze-document-claude', requestBody, result, null, 200, Date.now() - startTime)
-    
-    return new Response(JSON.stringify(result), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+      
+      console.log('✅ Analysis completed successfully')
+      await logFunction(supabase, user.id, 'analyze-document-claude', requestBody, result, null, 200, Date.now() - startTime)
+      
+      return new Response(JSON.stringify(result), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
 
   } catch (error) {
     const errorMsg = error.message || 'Unknown error occurred'
