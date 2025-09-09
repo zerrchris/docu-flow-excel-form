@@ -89,18 +89,46 @@ export function useImmediateSave({
       let result;
       
       if (runsheetId && !runsheetId.startsWith('temp-')) {
-        // Update existing runsheet
+        // Update existing runsheet - use the provided runsheet ID
         const { data: updateResult, error } = await supabase
           .from('runsheets')
-          .update(runsheetData)
+          .update({
+            columns,
+            data,
+            column_instructions: columnInstructions,
+            updated_at: new Date().toISOString(),
+          })
           .eq('id', runsheetId)
           .eq('user_id', userId)
           .select('*')
           .single();
 
-        if (error) throw error;
-        result = updateResult;
-        if (!silent) console.log('✅ Updated existing runsheet');
+        if (error) {
+          // If name conflict, try updating without changing the name
+          if (error.code === '23505' && error.message.includes('runsheets_user_id_name_key')) {
+            const { data: retryResult, error: retryError } = await supabase
+              .from('runsheets')
+              .update({
+                columns,
+                data,
+                column_instructions: columnInstructions,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', runsheetId)
+              .eq('user_id', userId)
+              .select('*')
+              .single();
+            
+            if (retryError) throw retryError;
+            result = retryResult;
+            if (!silent) console.log('✅ Updated existing runsheet (without name change)');
+          } else {
+            throw error;
+          }
+        } else {
+          result = updateResult;
+          if (!silent) console.log('✅ Updated existing runsheet');
+        }
       } else {
         // Check for existing runsheet with same name
         const { data: existingRunsheet, error: checkError } = await supabase
