@@ -634,19 +634,31 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                     <img
                       src={documentUrl}
                       alt={documentName}
-                       className={`max-w-full object-contain transition-transform duration-200 select-none cursor-grab active:cursor-grabbing ${
-                         fitToWidth ? 'w-full h-auto' : ''
-                       }`}
-                       style={{
-                         transform: fitToWidth ? 'none' : `translate(${panX / zoom}px, ${panY / zoom}px) scale(${zoom}) rotate(${rotation}deg)`,
-                         transformOrigin: 'center',
-                         willChange: 'transform'
+                      className={`max-w-full object-contain transition-transform duration-300 ease-in-out select-none cursor-grab active:cursor-grabbing ${
+                        fitToWidth ? 'w-full h-auto' : ''
+                      }`}
+                      style={{
+                        transform: fitToWidth ? 'none' : `translate(${panX / zoom}px, ${panY / zoom}px) scale(${zoom}) rotate(${rotation}deg)`,
+                        transformOrigin: 'center',
+                        willChange: 'transform'
                       }}
                       draggable={false}
                       onMouseDown={handleImageMouseDown}
                       onMouseMove={handleImageMouseMove}
                       onMouseUp={handleImageMouseUp}
-                      onMouseLeave={handleImageMouseUp}
+                      onMouseEnter={(e) => {
+                        if (!fitToWidth && zoom === 1) {
+                          const img = e.target as HTMLImageElement;
+                          img.style.transform = `translate(${panX / zoom}px, ${panY / zoom}px) scale(${zoom * 1.2}) rotate(${rotation}deg)`;
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        handleImageMouseUp();
+                        if (!fitToWidth && zoom === 1) {
+                          const img = e.target as HTMLImageElement;
+                          img.style.transform = `translate(${panX / zoom}px, ${panY / zoom}px) scale(${zoom}) rotate(${rotation}deg)`;
+                        }
+                      }}
                       onError={() => setError('Failed to load image')}
                     />
                   </div>

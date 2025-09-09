@@ -696,21 +696,25 @@ Return only the filename, nothing else.`,
                       previewUrl={DocumentService.getDocumentUrlSync(documentRecord.file_path)}
                     />
                   ) : (
-                    <div className="h-full w-full overflow-auto bg-muted">
+                    <div className="h-full w-full overflow-auto bg-muted relative">
                       <img 
                         src={DocumentService.getDocumentUrlSync(documentRecord.file_path)}
                         alt={documentRecord.stored_filename}
-                        className="w-full h-auto object-contain cursor-zoom-in"
-                        style={{ minHeight: '100%' }}
-                        onClick={(e) => {
+                        className="w-full h-auto object-contain transition-transform duration-300 ease-in-out"
+                        style={{ 
+                          minHeight: '100%',
+                          transformOrigin: 'center',
+                          cursor: 'zoom-in'
+                        }}
+                        onMouseEnter={(e) => {
                           const img = e.target as HTMLImageElement;
-                          if (img.style.transform === 'scale(1.5)') {
-                            img.style.transform = 'scale(1)';
-                            img.style.cursor = 'zoom-in';
-                          } else {
-                            img.style.transform = 'scale(1.5)';
-                            img.style.cursor = 'zoom-out';
-                          }
+                          img.style.transform = 'scale(1.5)';
+                          img.style.cursor = 'zoom-out';
+                        }}
+                        onMouseLeave={(e) => {
+                          const img = e.target as HTMLImageElement;
+                          img.style.transform = 'scale(1)';
+                          img.style.cursor = 'zoom-in';
                         }}
                       />
                     </div>
