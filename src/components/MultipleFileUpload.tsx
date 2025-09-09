@@ -10,6 +10,7 @@ import { DocumentService } from '@/services/documentService';
 import { useActiveRunsheet } from '@/hooks/useActiveRunsheet';
 import { supabase } from '@/integrations/supabase/client';
 import { convertPDFToImages, isPDF, createFileFromBlob } from '@/utils/pdfToImage';
+import { validateMultipleFiles } from '@/utils/fileValidation';
 
 interface FileUploadStatus {
   file: File;
@@ -120,12 +121,43 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
       return;
     }
 
-    // Convert FileList to array and process PDFs
+    // Convert FileList to array
     const fileArray = Array.from(selectedFiles);
     console.log('🔧 Converting FileList to array:', fileArray.length, 'files');
     
-    // Process PDFs to images
-    const processedFiles = await processPDFFiles(fileArray);
+    // Validate files first
+    const { validFiles, invalidFiles, warnings } = validateMultipleFiles(fileArray);
+    
+    if (invalidFiles.length > 0) {
+      invalidFiles.forEach(({ file, error }) => {
+        toast({
+          title: "Invalid file",
+          description: `${file.name}: ${error}`,
+          variant: "destructive"
+        });
+      });
+    }
+    
+    if (warnings.length > 0) {
+      warnings.forEach(({ file, warning }) => {
+        toast({
+          title: "File warning",
+          description: `${file.name}: ${warning}`,
+        });
+      });
+    }
+    
+    if (validFiles.length === 0) {
+      toast({
+        title: "No valid files",
+        description: "Please select valid image or document files.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Process PDFs if needed (currently just returns files as-is)
+    const processedFiles = await processPDFFiles(validFiles);
     console.log('🔧 After PDF processing:', processedFiles.length, 'files');
     
     const newFiles = processedFiles.map((file, index) => {
