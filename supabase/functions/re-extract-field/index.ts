@@ -119,7 +119,7 @@ Important guidelines:
       });
     } catch (parseError) {
       console.error('❌ Failed to parse request body:', parseError);
-      await logFunction(supabase, null, 're-extract-field', requestBody, null, 'Invalid JSON in request body', 400, Date.now() - startTime);
+      await logFunction(supabase, null, 're-extract-field', null, null, 'Invalid JSON in request body', 400, Date.now() - startTime);
       return new Response(JSON.stringify({ 
         error: 'Invalid JSON in request body' 
       }), {
