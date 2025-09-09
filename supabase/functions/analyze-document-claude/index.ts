@@ -1,14 +1,35 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
+// Helper function to log function calls
+async function logFunction(supabase: any, userId: string | null, functionName: string, input: any, output: any, errorMessage: string | null, statusCode: number, executionTimeMs: number) {
+  try {
+    await supabase
+      .from('function_logs')
+      .insert({
+        user_id: userId,
+        function_name: functionName,
+        input: input,
+        output: output,
+        error_message: errorMessage,
+        status_code: statusCode,
+        execution_time_ms: executionTimeMs
+      });
+  } catch (logError) {
+    console.error('Failed to log function call:', logError);
+  }
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
 serve(async (req) => {
+  const startTime = Date.now()
   console.log('=== CLAUDE FUNCTION STARTED ===')
   console.log('Method:', req.method)
+  console.log('Timestamp:', new Date().toISOString())
   
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -28,8 +49,31 @@ serve(async (req) => {
     const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY')
     console.log('Anthropic API key exists:', !!anthropicApiKey)
     
+    // Parse request body first for logging
+    let requestBody
+    try {
+      requestBody = await req.json()
+      console.log('📝 Input received:', {
+        hasFileUrl: !!requestBody.fileUrl,
+        hasPrompt: !!requestBody.prompt,
+        fileName: requestBody.fileName,
+        contentType: requestBody.contentType,
+        fileUrlLength: requestBody.fileUrl?.length || 0
+      })
+    } catch (parseError) {
+      console.error('❌ Failed to parse request body:', parseError)
+      await logFunction(supabase, null, 'analyze-document-claude', requestBody, null, 'Invalid JSON in request body', 400, Date.now() - startTime)
+      return new Response(JSON.stringify({ 
+        error: 'Invalid JSON in request body' 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+    
     if (!anthropicApiKey) {
-      console.error('ANTHROPIC_API_KEY not configured')
+      console.error('❌ ANTHROPIC_API_KEY not configured')
+      await logFunction(supabase, null, 'analyze-document-claude', requestBody, null, 'ANTHROPIC_API_KEY not configured', 500, Date.now() - startTime)
       return new Response(JSON.stringify({ 
         error: 'ANTHROPIC_API_KEY not configured' 
       }), {
@@ -59,7 +103,8 @@ serve(async (req) => {
     console.log('Auth result:', { userId: user?.id, error: authError?.message })
     
     if (authError || !user) {
-      console.error('Authentication failed:', authError)
+      console.error('❌ Authentication failed:', authError)
+      await logFunction(supabase, null, 'analyze-document-claude', requestBody, null, `Authentication failed: ${authError?.message || 'No user'}`, 401, Date.now() - startTime)
       return new Response(JSON.stringify({ 
         error: 'Invalid authentication token' 
       }), {
@@ -68,27 +113,13 @@ serve(async (req) => {
       })
     }
 
-    console.log('User authenticated successfully:', user.id)
-
-    // Parse request body
-    let requestBody
-    try {
-      requestBody = await req.json()
-      console.log('Request body parsed:', Object.keys(requestBody))
-    } catch (parseError) {
-      console.error('Failed to parse request body:', parseError)
-      return new Response(JSON.stringify({ 
-        error: 'Invalid JSON in request body' 
-      }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
+    console.log('✅ User authenticated successfully:', user.id)
 
     const { prompt, fileUrl, fileName, contentType } = requestBody
 
     if (!prompt || !fileUrl) {
-      console.error('Missing required parameters:', { hasPrompt: !!prompt, hasFileUrl: !!fileUrl })
+      console.error('❌ Missing required parameters:', { hasPrompt: !!prompt, hasFileUrl: !!fileUrl })
+      await logFunction(supabase, user.id, 'analyze-document-claude', requestBody, null, 'Missing required parameters: prompt and fileUrl', 400, Date.now() - startTime)
       return new Response(JSON.stringify({ 
         error: 'Missing required parameters: prompt and fileUrl' 
       }), {
@@ -101,16 +132,18 @@ serve(async (req) => {
     console.log('Analyzing document with Claude:', { fileName, contentType, userId: user.id })
 
     // Fetch the document
-    console.log('Fetching document from URL:', fileUrl)
+    console.log('📥 Fetching document from URL:', fileUrl)
     const docResponse = await fetch(fileUrl)
-    console.log('Document fetch response:', { status: docResponse.status, ok: docResponse.ok })
+    console.log('📥 Document fetch response:', { status: docResponse.status, ok: docResponse.ok })
     
     if (!docResponse.ok) {
-      console.error('Failed to fetch document:', { status: docResponse.status, statusText: docResponse.statusText })
+      const errorMsg = `Failed to fetch document: ${docResponse.status} ${docResponse.statusText}`
+      console.error('❌', errorMsg)
+      await logFunction(supabase, user.id, 'analyze-document-claude', requestBody, null, errorMsg, docResponse.status, Date.now() - startTime)
       return new Response(JSON.stringify({ 
-        error: `Failed to fetch document: ${docResponse.status} ${docResponse.statusText}` 
+        error: errorMsg
       }), {
-        status: 400,
+        status: docResponse.status >= 400 && docResponse.status < 500 ? docResponse.status : 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
@@ -179,13 +212,15 @@ serve(async (req) => {
 
     if (!claudeResponse.ok) {
       const errorText = await claudeResponse.text()
-      console.error('Claude API error response:', {
+      const errorMsg = `Claude API error: ${claudeResponse.status} - ${errorText}`
+      console.error('❌ Claude API error response:', {
         status: claudeResponse.status,
         statusText: claudeResponse.statusText,
         body: errorText
       })
+      await logFunction(supabase, user.id, 'analyze-document-claude', requestBody, null, errorMsg, claudeResponse.status, Date.now() - startTime)
       return new Response(JSON.stringify({ 
-        error: `Claude API error: ${claudeResponse.status} - ${errorText}` 
+        error: errorMsg
       }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -237,8 +272,7 @@ serve(async (req) => {
       console.error('Failed to track AI usage:', usageError);
     }
 
-    console.log('Analysis completed successfully')
-    return new Response(JSON.stringify({ 
+    const result = { 
       generatedText,
       usage: {
         input_tokens: inputTokens,
@@ -248,18 +282,31 @@ serve(async (req) => {
         model: model,
         provider: 'anthropic'
       }
-    }), {
+    }
+    
+    console.log('✅ Analysis completed successfully')
+    await logFunction(supabase, user.id, 'analyze-document-claude', requestBody, result, null, 200, Date.now() - startTime)
+    
+    return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
 
   } catch (error) {
+    const errorMsg = error.message || 'Unknown error occurred'
     console.error('=== FUNCTION ERROR ===')
-    console.error('Error:', error)
-    console.error('Error message:', error.message)
-    console.error('Error stack:', error.stack)
+    console.error('❌ Error:', error)
+    console.error('❌ Error message:', errorMsg)
+    console.error('❌ Error stack:', error.stack)
+    
+    // Try to log the error (but don't fail if logging fails)
+    try {
+      await logFunction(supabase, null, 'analyze-document-claude', null, null, errorMsg, 500, Date.now() - startTime)
+    } catch (logError) {
+      console.error('Failed to log error:', logError)
+    }
     
     return new Response(JSON.stringify({ 
-      error: error.message || 'Unknown error occurred',
+      error: errorMsg,
       stack: error.stack
     }), {
       status: 500,
