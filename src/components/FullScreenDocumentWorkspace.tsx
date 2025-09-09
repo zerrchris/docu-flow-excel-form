@@ -11,6 +11,7 @@ import { ExtractionPreferencesService } from '@/services/extractionPreferences';
 import { ColumnWidthPreferencesService } from '@/services/columnWidthPreferences';
 import { useActiveRunsheet } from '@/hooks/useActiveRunsheet';
 import PDFViewerWithFallback from './PDFViewerWithFallback';
+import EnhancedImageViewer from './EnhancedImageViewer';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -629,80 +630,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
               ) : isPdf ? (
                 <PDFViewerWithFallback file={null} previewUrl={documentUrl} />
               ) : (
-                <ScrollArea className="h-full overscroll-contain">
-                  <div className="min-h-full bg-muted/10 flex items-center justify-center p-4 relative group" onWheel={handleImageWheel}>
-                    <img
-                      src={documentUrl}
-                      alt={documentName}
-                      className={`max-w-full object-contain transition-transform duration-200 select-none cursor-grab active:cursor-grabbing ${
-                        fitToWidth ? 'w-full h-auto' : ''
-                      }`}
-                      style={{
-                        transform: fitToWidth ? 'none' : `translate(${panX / zoom}px, ${panY / zoom}px) scale(${zoom}) rotate(${rotation}deg)`,
-                        transformOrigin: 'center',
-                        willChange: 'transform'
-                      }}
-                      draggable={false}
-                      onMouseDown={handleImageMouseDown}
-                      onMouseMove={handleImageMouseMove}
-                      onMouseUp={handleImageMouseUp}
-                      onError={() => setError('Failed to load image')}
-                    />
-                    
-                    {/* Document toolbar overlay on hover */}
-                    <div 
-                      className="absolute bottom-4 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-                    >
-                      <div className="bg-black/80 backdrop-blur-sm text-white rounded-lg px-3 py-2 flex items-center space-x-2 pointer-events-auto shadow-lg">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-white hover:bg-white/20 h-8 w-8 p-0"
-                          onClick={handleZoomOut}
-                          disabled={zoom <= 0.25}
-                        >
-                          <ZoomOut className="h-4 w-4" />
-                        </Button>
-                        
-                        <span className="text-xs font-medium min-w-[3rem] text-center">
-                          {Math.round(zoom * 100)}%
-                        </span>
-                        
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-white hover:bg-white/20 h-8 w-8 p-0"
-                          onClick={handleZoomIn}
-                          disabled={zoom >= 3}
-                        >
-                          <ZoomIn className="h-4 w-4" />
-                        </Button>
-                        
-                        <div className="w-px h-6 bg-white/30 mx-1" />
-                        
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-white hover:bg-white/20 h-8 w-8 p-0"
-                          onClick={handleZoomReset}
-                          title="Reset zoom"
-                        >
-                          <RefreshCw className="h-3 w-3" />
-                        </Button>
-                        
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-white hover:bg-white/20 h-8 w-8 p-0"
-                          onClick={handleRotate}
-                          title="Rotate 90°"
-                        >
-                          <RotateCcw className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </ScrollArea>
+                <EnhancedImageViewer file={null} previewUrl={documentUrl} />
               )}
             </div>
           </ResizablePanel>

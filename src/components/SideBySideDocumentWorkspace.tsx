@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import PDFViewerWithFallback from './PDFViewerWithFallback';
+import EnhancedImageViewer from './EnhancedImageViewer';
 import ReExtractDialog from './ReExtractDialog';
 import ColumnPreferencesDialog from './ColumnPreferencesDialog';
 import { DocumentService, type DocumentRecord } from '@/services/documentService';
@@ -696,75 +697,10 @@ Return only the filename, nothing else.`,
                       previewUrl={DocumentService.getDocumentUrlSync(documentRecord.file_path)}
                     />
                   ) : (
-                    <div className="h-full w-full overflow-auto bg-muted relative group">
-                      <img 
-                        src={DocumentService.getDocumentUrlSync(documentRecord.file_path)}
-                        alt={documentRecord.stored_filename}
-                        className="w-full h-auto object-contain"
-                        style={{ 
-                          minHeight: '100%',
-                          transformOrigin: 'center'
-                        }}
-                      />
-                      
-                      {/* Document toolbar overlay on hover */}
-                      <div 
-                        className="absolute bottom-2 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-                      >
-                        <div className="bg-black/80 backdrop-blur-sm text-white rounded-lg px-2 py-1 flex items-center space-x-1 pointer-events-auto shadow-lg">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-white hover:bg-white/20 h-7 w-7 p-0"
-                            onClick={() => {
-                              const img = document.querySelector('img[alt="' + documentRecord.stored_filename + '"]') as HTMLImageElement;
-                              if (img) {
-                                const currentScale = img.style.transform.includes('scale') ? 
-                                  parseFloat(img.style.transform.match(/scale\(([^)]+)\)/)?.[1] || '1') : 1;
-                                const newScale = Math.max(0.5, currentScale - 0.25);
-                                img.style.transform = `scale(${newScale})`;
-                              }
-                            }}
-                          >
-                            <ZoomOut className="h-3 w-3" />
-                          </Button>
-                          
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-white hover:bg-white/20 h-7 w-7 p-0"
-                            onClick={() => {
-                              const img = document.querySelector('img[alt="' + documentRecord.stored_filename + '"]') as HTMLImageElement;
-                              if (img) {
-                                const currentScale = img.style.transform.includes('scale') ? 
-                                  parseFloat(img.style.transform.match(/scale\(([^)]+)\)/)?.[1] || '1') : 1;
-                                const newScale = Math.min(3, currentScale + 0.25);
-                                img.style.transform = `scale(${newScale})`;
-                              }
-                            }}
-                          >
-                            <ZoomIn className="h-3 w-3" />
-                          </Button>
-                          
-                          <div className="w-px h-4 bg-white/30 mx-1" />
-                          
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-white hover:bg-white/20 h-7 w-7 p-0"
-                            onClick={() => {
-                              const img = document.querySelector('img[alt="' + documentRecord.stored_filename + '"]') as HTMLImageElement;
-                              if (img) {
-                                img.style.transform = 'scale(1)';
-                              }
-                            }}
-                            title="Reset zoom"
-                          >
-                            <RefreshCw className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
+                    <EnhancedImageViewer 
+                      file={null}
+                      previewUrl={DocumentService.getDocumentUrlSync(documentRecord.file_path)}
+                    />
                   )}
                 </div>
               ) : (
