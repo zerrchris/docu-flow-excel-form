@@ -645,21 +645,8 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                       draggable={false}
                       onMouseDown={handleImageMouseDown}
                       onMouseMove={handleImageMouseMove}
-                      onMouseUp={handleImageMouseUp}
-                      onMouseEnter={(e) => {
-                        if (!fitToWidth && zoom === 1) {
-                          const img = e.target as HTMLImageElement;
-                          img.style.transform = `translate(${panX / zoom}px, ${panY / zoom}px) scale(${zoom * 1.2}) rotate(${rotation}deg)`;
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        handleImageMouseUp();
-                        if (!fitToWidth && zoom === 1) {
-                          const img = e.target as HTMLImageElement;
-                          img.style.transform = `translate(${panX / zoom}px, ${panY / zoom}px) scale(${zoom}) rotate(${rotation}deg)`;
-                        }
-                      }}
-                      onError={() => setError('Failed to load image')}
+                       onMouseUp={handleImageMouseUp}
+                       onError={() => setError('Failed to load image')}
                     />
                   </div>
                 </ScrollArea>

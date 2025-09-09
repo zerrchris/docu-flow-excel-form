@@ -54,6 +54,7 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
   const [lastAnalyzedData, setLastAnalyzedData] = useState<Record<string, string>>({});
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showAnalyzeWarning, setShowAnalyzeWarning] = useState(false);
+  const [imageFitToWidth, setImageFitToWidth] = useState(false);
   
   // Re-extract dialog state
   const [reExtractDialog, setReExtractDialog] = useState<{
@@ -695,29 +696,43 @@ Return only the filename, nothing else.`,
                       file={null}
                       previewUrl={DocumentService.getDocumentUrlSync(documentRecord.file_path)}
                     />
-                  ) : (
-                    <div className="h-full w-full overflow-auto bg-muted relative">
-                      <img 
-                        src={DocumentService.getDocumentUrlSync(documentRecord.file_path)}
-                        alt={documentRecord.stored_filename}
-                        className="w-full h-auto object-contain transition-transform duration-300 ease-in-out"
-                        style={{ 
-                          minHeight: '100%',
-                          transformOrigin: 'center',
-                          cursor: 'zoom-in'
-                        }}
-                        onMouseEnter={(e) => {
-                          const img = e.target as HTMLImageElement;
-                          img.style.transform = 'scale(1.5)';
-                          img.style.cursor = 'zoom-out';
-                        }}
-                        onMouseLeave={(e) => {
-                          const img = e.target as HTMLImageElement;
-                          img.style.transform = 'scale(1)';
-                          img.style.cursor = 'zoom-in';
-                        }}
-                      />
-                    </div>
+                   ) : (
+                     <div className="h-full w-full relative">
+                       {/* Image Controls */}
+                       <div className="absolute top-2 right-2 z-10 flex items-center gap-1 bg-background/80 backdrop-blur-sm rounded-md p-2 border">
+                         <Button
+                           variant="outline"
+                           size="sm"
+                           onClick={() => setImageFitToWidth(!imageFitToWidth)}
+                           className="h-8 w-8"
+                           title={imageFitToWidth ? "Fit to container" : "Fit to width"}
+                         >
+                           {imageFitToWidth ? (
+                             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                             </svg>
+                           ) : (
+                             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
+                             </svg>
+                           )}
+                         </Button>
+                       </div>
+                       
+                       <div className="h-full w-full overflow-auto bg-muted">
+                         <img 
+                           src={DocumentService.getDocumentUrlSync(documentRecord.file_path)}
+                           alt={documentRecord.stored_filename}
+                           className={`object-contain transition-all duration-300 ease-in-out ${
+                             imageFitToWidth ? 'w-full h-auto' : 'max-w-full max-h-full'
+                           }`}
+                           style={{ 
+                             minHeight: imageFitToWidth ? 'auto' : '100%',
+                             transformOrigin: 'center'
+                           }}
+                         />
+                       </div>
+                     </div>
                   )}
                 </div>
               ) : (
