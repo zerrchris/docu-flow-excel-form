@@ -62,7 +62,7 @@ serve(async (req) => {
     }
     
     // Parse request body first for logging
-    let requestBody
+    let requestBody: any;
     try {
       requestBody = await req.json()
       console.log('📝 Input received:', {
@@ -111,7 +111,8 @@ serve(async (req) => {
     const token = authHeader.replace('Bearer ', '')
     console.log('Attempting user authentication...')
     
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token)
+    user = authUser;
     console.log('Auth result:', { userId: user?.id, error: authError?.message })
     
     if (authError || !user) {
@@ -148,16 +149,25 @@ serve(async (req) => {
     // Extract file path from URL for storage download
     let filePath = fileUrl
     
-    // Handle different URL formats
-    if (fileUrl.includes('/storage/v1/object/sign/documents/')) {
-      // Extract the file path from signed URL
-      const urlParts = fileUrl.split('/storage/v1/object/sign/documents/')[1]
-      if (urlParts) {
-        filePath = urlParts.split('?')[0] // Remove query parameters
+    // Improved file path extraction
+    try {
+      if (fileUrl.includes('/storage/v1/object/sign/documents/')) {
+        const urlParts = fileUrl.split('/storage/v1/object/sign/documents/')[1]
+        if (urlParts) {
+          filePath = decodeURIComponent(urlParts.split('?')[0])
+        }
+      } else if (fileUrl.includes('/documents/')) {
+        filePath = decodeURIComponent(fileUrl.split('/documents/')[1])
       }
-    } else if (fileUrl.includes('/documents/')) {
-      // Direct storage path
-      filePath = fileUrl.split('/documents/')[1]
+    } catch (pathError) {
+      console.error('❌ Error extracting file path:', pathError)
+      await logFunction(supabase, user.id, 'analyze-document-claude', requestBody, null, `File path extraction error: ${pathError.message}`, 400, Date.now() - startTime)
+      return new Response(JSON.stringify({ 
+        error: 'Invalid file URL format' 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
     }
     
     console.log('📥 Downloading document from storage:', filePath)
@@ -201,12 +211,48 @@ serve(async (req) => {
       })
     }
 
-    // Determine media type for Claude
-    let mediaType = contentType || 'application/pdf'
-    console.log('Using media type:', mediaType)
+    // Determine how to handle the document based on content type
+    let messageContent: any[];
 
-    // Use the latest Claude model (Claude 4 Sonnet for best performance)
-    const model = 'claude-sonnet-4-20250514'
+    if (contentType === 'application/pdf') {
+      // For PDFs, we need to extract text first or convert to images
+      // Claude API doesn't support PDF directly
+      const errorMsg = 'PDF analysis not yet supported. Please convert to image format (PNG/JPEG) first.'
+      console.error('❌', errorMsg)
+      await logFunction(supabase, user.id, 'analyze-document-claude', requestBody, null, errorMsg, 400, Date.now() - startTime)
+      return new Response(JSON.stringify({ 
+        error: errorMsg
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    } else if (contentType?.startsWith('image/')) {
+      // Handle images
+      messageContent = [
+        {
+          type: 'image',
+          source: {
+            type: 'base64',
+            media_type: contentType,
+            data: base64Document
+          }
+        },
+        {
+          type: 'text',
+          text: prompt
+        }
+      ];
+    } else {
+      // For other text-based formats, convert to text
+      const textContent = new TextDecoder().decode(documentBytes);
+      messageContent = [
+        {
+          type: 'text',
+          text: `Document content:\n${textContent}\n\nAnalysis request: ${prompt}`
+        }
+      ];
+    }
+
     console.log('Calling Claude API with model:', model)
 
     // Call Claude API with the document using fetch
@@ -214,28 +260,15 @@ serve(async (req) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${anthropicApiKey}`,
-        'anthropic-version': '2024-04-01'
+        'x-api-key': anthropicApiKey, // Changed from Authorization to x-api-key
+        'anthropic-version': '2023-06-01' // Updated version
       },
       body: JSON.stringify({
         model,
         max_tokens: 4000,
         messages: [{
           role: 'user',
-          content: [
-            {
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: mediaType,
-                data: base64Document
-              }
-            },
-            {
-              type: 'text',
-              text: prompt
-            }
-          ]
+          content: messageContent
         }]
       })
     })
@@ -329,7 +362,7 @@ serve(async (req) => {
     
     // Try to log the error (but don't fail if logging fails)
     try {
-      await logFunction(supabase, null, 'analyze-document-claude', null, null, errorMsg, 500, Date.now() - startTime)
+      await logFunction(supabase, user?.id || null, 'analyze-document-claude', requestBody, null, errorMsg, 500, Date.now() - startTime)
     } catch (logError) {
       console.error('Failed to log error:', logError)
     }
