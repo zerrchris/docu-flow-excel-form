@@ -453,7 +453,7 @@ const EnhancedPDFViewer: React.FC<EnhancedPDFViewerProps> = ({ file, previewUrl 
           {!loading && !error && (
             <div 
               ref={scrollRef} 
-              className="w-full h-full overflow-auto overscroll-contain"
+              className="w-full h-full overflow-auto overscroll-contain will-change-scroll"
             >
               <div className="flex flex-col items-center p-4 space-y-4">
                 <Document
@@ -476,9 +476,9 @@ const EnhancedPDFViewer: React.FC<EnhancedPDFViewerProps> = ({ file, previewUrl 
                         <Page 
                           pageNumber={index + 1}
                           scale={scale}
-                          className="shadow-lg border border-border bg-white"
-                          renderAnnotationLayer={true}
-                          renderTextLayer={true}
+                          className="shadow-lg border border-border bg-white will-change-transform"
+                          renderAnnotationLayer={scale <= 1.5}
+                          renderTextLayer={scale <= 1.5}
                           rotate={rotation}
                           onLoadSuccess={index === 0 ? onPageLoadSuccess : undefined}
                         />
@@ -489,9 +489,9 @@ const EnhancedPDFViewer: React.FC<EnhancedPDFViewerProps> = ({ file, previewUrl 
                     <Page 
                       pageNumber={currentPage}
                       scale={scale}
-                      className="shadow-lg border border-border bg-white"
-                      renderAnnotationLayer={true}
-                      renderTextLayer={true}
+                      className="shadow-lg border border-border bg-white will-change-transform"
+                      renderAnnotationLayer={scale <= 1.5}
+                      renderTextLayer={scale <= 1.5}
                       rotate={rotation}
                       onLoadSuccess={onPageLoadSuccess}
                     />

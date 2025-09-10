@@ -232,7 +232,7 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ file, previewUrl }) => {
           )}
           
           {!loading && !error && (
-            <div ref={scrollRef} className="w-full h-full overflow-auto overscroll-contain pdf-scrollable" onWheelCapture={(e) => e.stopPropagation()}>
+            <div ref={scrollRef} className="w-full h-full overflow-auto overscroll-contain pdf-scrollable will-change-scroll" onWheelCapture={(e) => e.stopPropagation()}>
               <div className="flex justify-center items-start p-4">
                 <Document
                   file={previewUrl || file}
@@ -244,9 +244,9 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ file, previewUrl }) => {
                   <Page 
                     pageNumber={currentPage}
                     scale={scale}
-                    className="shadow-lg border border-border bg-white"
-                    renderAnnotationLayer={false}
-                    renderTextLayer={false}
+                    className="shadow-lg border border-border bg-white will-change-transform"
+                    renderAnnotationLayer={scale <= 1.5}
+                    renderTextLayer={scale <= 1.5}
                   />
                 </Document>
               </div>
