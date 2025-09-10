@@ -392,6 +392,15 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   // Hover state for re-analyze functionality
   const [hoveredCell, setHoveredCell] = useState<{rowIndex: number, column: string} | null>(null);
   const [showReExtractDialog, setShowReExtractDialog] = useState(false);
+  const [showOverwriteDialog, setShowOverwriteDialog] = useState(false);
+  const [overwriteDialogData, setOverwriteDialogData] = useState<{
+    rowIndex: number;
+    rowSummary: string;
+    error: string;
+    file: File;
+    onConfirm: () => void;
+    onCancel: () => void;
+  } | null>(null);
   const [reExtractField, setReExtractField] = useState<{rowIndex: number, column: string, currentValue: string} | null>(null);
   const [isReExtracting, setIsReExtracting] = useState(false);
   const [lastEditedCell, setLastEditedCell] = useState<{rowIndex: number, column: string} | null>(null);
@@ -5381,33 +5390,64 @@ ${extractionFields}`
 
       // Validate the target row unless overwrite is forced
       const currentRow = data[targetRowIndex];
-      const rowValidation = validateRowForInsertion(currentRow, targetRowIndex, forceOverwrite);
+      const hasLinkedDocument = documentMap.get(targetRowIndex) ? true : false;
+      const rowValidation = validateRowForInsertion(currentRow, targetRowIndex, forceOverwrite, hasLinkedDocument);
       
       if (!rowValidation.isValid && !forceOverwrite) {
-        // Show confirmation dialog for overwriting existing data
-        const userConfirmed = window.confirm(
-          `${rowValidation.error}\n\nCurrent row contains: ${getRowDataSummary(currentRow)}\n\nDo you want to overwrite this data?`
-        );
-        
-        if (!userConfirmed) {
-          // Find the next empty row and suggest it
-          const nextEmptyRowIndex = findFirstEmptyRow(data);
-          if (nextEmptyRowIndex !== -1) {
-            const useEmptyRow = window.confirm(
-              `Would you like to add the data to the first empty row (row ${nextEmptyRowIndex + 1}) instead?`
-            );
-            if (useEmptyRow) {
-              return analyzeDocumentAndPopulateRow(file, nextEmptyRowIndex, false);
+        // Show proper confirmation dialog for overwriting existing data
+        return new Promise<void>((resolve, reject) => {
+          setOverwriteDialogData({
+            rowIndex: targetRowIndex,
+            rowSummary: getRowDataSummary(currentRow),
+            error: rowValidation.error || '',
+            file,
+            onConfirm: () => {
+              setShowOverwriteDialog(false);
+              setOverwriteDialogData(null);
+              // Continue with overwrite
+              analyzeDocumentAndPopulateRow(file, targetRowIndex, true).then(resolve).catch(reject);
+            },
+            onCancel: () => {
+              setShowOverwriteDialog(false);
+              setOverwriteDialogData(null);
+              
+              // Find the next empty row and suggest it
+              const nextEmptyRowIndex = findFirstEmptyRow(data);
+              if (nextEmptyRowIndex !== -1) {
+                // Ask if they want to use empty row instead
+                const useEmptyRowDialog = () => {
+                  return new Promise<boolean>((resolveEmpty) => {
+                    const confirmUseEmpty = window.confirm(
+                      `Would you like to add the data to the first empty row (row ${nextEmptyRowIndex + 1}) instead?`
+                    );
+                    resolveEmpty(confirmUseEmpty);
+                  });
+                };
+                
+                useEmptyRowDialog().then((useEmpty) => {
+                  if (useEmpty) {
+                    analyzeDocumentAndPopulateRow(file, nextEmptyRowIndex, false).then(resolve).catch(reject);
+                  } else {
+                    toast({
+                      title: "Operation cancelled",
+                      description: "Data insertion was cancelled to prevent overwriting existing information.",
+                      variant: "default"
+                    });
+                    reject(new Error('Operation cancelled'));
+                  }
+                });
+              } else {
+                toast({
+                  title: "Operation cancelled",
+                  description: "Data insertion was cancelled to prevent overwriting existing information.",
+                  variant: "default"
+                });
+                reject(new Error('Operation cancelled'));
+              }
             }
-          }
-          
-          toast({
-            title: "Operation cancelled",
-            description: "Data insertion was cancelled to prevent overwriting existing information.",
-            variant: "default"
           });
-          return;
-        }
+          setShowOverwriteDialog(true);
+        });
       }
 
       // Clean the data for insertion
@@ -7240,6 +7280,36 @@ ${extractionFields}`
           }}
           isLoading={isReExtracting}
         />
+
+        {/* Data Overwrite Confirmation Dialog */}
+        <AlertDialog open={showOverwriteDialog} onOpenChange={setShowOverwriteDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-amber-500" />
+                Row Already Contains Data
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {overwriteDialogData?.error}
+                <br /><br />
+                <strong>Current row contains:</strong> {overwriteDialogData?.rowSummary}
+                <br /><br />
+                Do you want to overwrite this data with the new extracted information?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={overwriteDialogData?.onCancel}>
+                Cancel / Use Empty Row
+              </AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={overwriteDialogData?.onConfirm}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Overwrite Data
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
     );
       </div>
