@@ -466,7 +466,13 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
     console.log('🔧 fileInputRef.current:', fileInputRef.current);
     if (fileInputRef.current) {
       console.log('🔧 Triggering file input click');
-      fileInputRef.current.click();
+      // Use setTimeout to ensure the click happens in the next event loop
+      // This can help with browser security restrictions
+      setTimeout(() => {
+        if (fileInputRef.current) {
+          fileInputRef.current.click();
+        }
+      }, 0);
     } else {
       console.error('🔧 fileInputRef.current is null');
     }
@@ -1009,7 +1015,8 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
               console.log('🔧 isUploading:', isUploading);
               console.log('🔧 Button disabled:', isUploading);
               e.stopPropagation();
-              e.preventDefault();
+              // Don't prevent default - let the browser handle the click naturally
+              // e.preventDefault();
               openFileSelector();
             }}
             disabled={isUploading}
