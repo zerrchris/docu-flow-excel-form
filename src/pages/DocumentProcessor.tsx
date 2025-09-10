@@ -717,8 +717,8 @@ const DocumentProcessor: React.FC = () => {
       return; // Don't process other actions
     }
     
-    // Load specific runsheet if ID is provided and no action is specified
-    if (runsheetId && !loadedRunsheetRef.current && !action) {
+    // Load specific runsheet if ID is provided, no action is specified, and we're not creating a new runsheet
+    if (runsheetId && !loadedRunsheetRef.current && !action && sessionStorage.getItem('creating_new_runsheet') !== 'true') {
       console.log('Loading runsheet from URL parameter:', runsheetId);
       loadedRunsheetRef.current = runsheetId;
       
@@ -2621,7 +2621,12 @@ Image: [base64 image data]`;
               onUnsavedChanges={setHasUnsavedChanges}
               missingColumns={highlightMissingColumns ? missingColumns : []}
               initialRunsheetName={location.state?.runsheet?.name}
-              initialRunsheetId={location.state?.runsheetId || searchParams.get('id') || searchParams.get('runsheet')}
+              initialRunsheetId={
+                // Don't load old runsheet ID if we're creating a new one
+                sessionStorage.getItem('creating_new_runsheet') === 'true' 
+                  ? null 
+                  : (location.state?.runsheetId || searchParams.get('id') || searchParams.get('runsheet'))
+              }
               onShowMultipleUpload={() => setShowMultipleFileUpload(true)}
               onDocumentMapChange={handleDocumentMapChange}
             />

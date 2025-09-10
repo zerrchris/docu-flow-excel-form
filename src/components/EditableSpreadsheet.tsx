@@ -863,6 +863,25 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     };
   }, [currentRunsheetId, runsheetName, data, columns, columnInstructions]);
   
+  // Handle new runsheet creation flag
+  useEffect(() => {
+    const isCreatingNewRunsheet = sessionStorage.getItem('creating_new_runsheet') === 'true';
+    const newRunsheetName = sessionStorage.getItem('new_runsheet_name');
+    
+    if (isCreatingNewRunsheet && newRunsheetName && !currentRunsheetId) {
+      console.log('🆕 Finalizing new runsheet creation:', newRunsheetName);
+      
+      // Clear the flags
+      sessionStorage.removeItem('creating_new_runsheet');
+      sessionStorage.removeItem('new_runsheet_name');
+      
+      // Set the runsheet name if it hasn't been set already
+      if (runsheetName !== newRunsheetName) {
+        setRunsheetName(newRunsheetName);
+      }
+    }
+  }, [currentRunsheetId, runsheetName]);
+  
   // Listen for external add-row events (from DocumentProcessor)
   useEffect(() => {
     console.log('🔧 DEBUG: Setting up externalAddRow event listener in EditableSpreadsheet');
@@ -5898,16 +5917,20 @@ ${extractionFields}`
                              onColumnChange(DEFAULT_COLUMNS);
                              onColumnInstructionsChange?.(DEFAULT_EXTRACTION_INSTRUCTIONS);
                              
-                              setShowNameNewRunsheetDialog(false);
-                              setNewRunsheetName('');
-                              
-                              // Navigate to a clean runsheet URL without ID
-                              navigate('/runsheet', { replace: true });
-                              
-                              toast({
-                                title: "New runsheet created",
-                                description: `"${finalName}" is ready for your data.`,
-                              });
+                               setShowNameNewRunsheetDialog(false);
+                               setNewRunsheetName('');
+                               
+                               // Set a flag to prevent loading any old runsheet data
+                               sessionStorage.setItem('creating_new_runsheet', 'true');
+                               sessionStorage.setItem('new_runsheet_name', finalName);
+                               
+                               // Navigate to a clean runsheet URL without any parameters
+                               navigate('/runsheet', { replace: true, state: {} });
+                               
+                               toast({
+                                 title: "New runsheet created",
+                                 description: `"${finalName}" is ready for your data.`,
+                               });
                           }
                         }}
                         autoFocus
