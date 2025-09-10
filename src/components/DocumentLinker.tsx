@@ -982,7 +982,7 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
           </div>
         )}
         <Card 
-          className={`p-3 border-dashed transition-colors ${
+          className={`p-3 border-dashed transition-colors h-full min-h-[60px] ${
             dragActive ? 'border-primary bg-primary/5' : 'border-muted-foreground/25'
           }`}
           onDrop={handleDrop}
@@ -993,7 +993,7 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
             e.preventDefault(); // Prevent default behavior
           }}
         >
-        <div className="flex items-center justify-center gap-2">
+        <div className="flex items-center justify-center gap-2 h-full">
           <Button
             variant="outline"
             size="sm"
