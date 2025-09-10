@@ -1275,17 +1275,7 @@ const DocumentProcessor: React.FC = () => {
     setAnalysisAbortController(abortController);
     
     try {
-      // Check if the file is a PDF and handle appropriately
-      if (targetFile.type === 'application/pdf') {
-        toast({
-          title: "❌ Unsupported File Format",
-          description: "PDF analysis is not supported. Please convert your PDF to an image format (PNG, JPEG) first, or take a screenshot of the document.",
-          variant: "destructive"
-        });
-        setIsAnalyzing(false);
-        setAnalysisAbortController(null);
-        return;
-      }
+      // PDFs are now supported via Claude - let the analysis proceed
 
       // Verify the file is a supported image format - with fallback for corrupted file types
       const supportedImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
