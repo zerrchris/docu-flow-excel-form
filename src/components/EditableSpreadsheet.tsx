@@ -7262,7 +7262,6 @@ ${extractionFields}`
             }
           }}
           isLoading={isReExtracting}
-          columns={columns}
         />
 
         {/* Data Overwrite Confirmation Dialog */}
