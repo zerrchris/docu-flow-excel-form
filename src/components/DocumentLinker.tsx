@@ -999,7 +999,11 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
             variant="outline"
             size="sm"
             tabIndex={-1}
-            onClick={openFileSelector}
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              openFileSelector();
+            }}
             disabled={isUploading}
             className="h-8 text-xs flex-1"
           >
