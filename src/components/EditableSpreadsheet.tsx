@@ -4110,7 +4110,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
      setIsReExtracting(true);
      try {
        const currentValue = data[rowIndex]?.[column] || '';
-       const fieldInstructions = columnInstructions[column] || `Extract the ${column} field accurately from the document`;
+       const fieldInstructions = columnInstructions[column] || '';
 
        // Get signed URL for the document
        const { data: signedUrlData } = await supabase.storage
