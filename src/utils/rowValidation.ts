@@ -126,6 +126,16 @@ export const validateRowForInsertion = (
   // Check if row has actual data (not just a linked document)
   const rowHasData = hasRowData(row, false); // Don't consider linked document for data check
   
+  console.log('🔍 validateRowForInsertion:', {
+    rowIndex,
+    row,
+    rowHasData,
+    hasLinkedDocument,
+    allowOverwrite,
+    filteredRow: getDataColumns(row),
+    nonEmptyValues: Object.entries(getDataColumns(row)).filter(([_, value]) => value && value.trim() !== '')
+  });
+  
   if (!allowOverwrite && rowHasData) {
     const documentInfo = hasLinkedDocument ? ' and has a linked document' : '';
     return {
