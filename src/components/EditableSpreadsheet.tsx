@@ -3236,6 +3236,11 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     // Update all spreadsheet state atomically to prevent flash
     console.log('📊 Updating spreadsheet data atomically:', { headers: finalHeaders.length, data: newData.length });
     
+    // Clear document map when uploading new data
+    setDocumentMap(new Map());
+    updateDocumentMap(new Map());
+    console.log('🧹 Cleared document map for uploaded runsheet');
+    
     // Update state in one batch to prevent flashing
     setColumns(finalHeaders);
     setData(newData);
