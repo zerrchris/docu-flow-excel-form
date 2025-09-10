@@ -5391,18 +5391,7 @@ ${extractionFields}`
       // Validate the target row unless overwrite is forced
       const currentRow = data[targetRowIndex];
       const hasLinkedDocument = documentMap.get(targetRowIndex) ? true : false;
-      
-      console.log('🔍 Row validation check:', {
-        targetRowIndex,
-        currentRow,
-        hasLinkedDocument,
-        rowData: Object.entries(currentRow).filter(([key, value]) => value && value.trim() !== ''),
-        forceOverwrite
-      });
-      
       const rowValidation = validateRowForInsertion(currentRow, targetRowIndex, forceOverwrite, hasLinkedDocument);
-      
-      console.log('🔍 Validation result:', rowValidation);
       
       if (!rowValidation.isValid && !forceOverwrite) {
         // Show proper confirmation dialog for overwriting existing data
