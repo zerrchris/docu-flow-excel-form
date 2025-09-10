@@ -23,8 +23,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-// Configure PDF.js worker for react-pdf
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+// Configure PDF.js worker - use CDN worker for better compatibility
+pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 interface EnhancedPDFViewerProps {
   file: File | null;
