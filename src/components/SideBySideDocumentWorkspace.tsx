@@ -14,6 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import PDFViewerWithFallback from './PDFViewerWithFallback';
 import ReExtractDialog from './ReExtractDialog';
+import { ExtractionPreferencesService } from '@/services/extractionPreferences';
 import ColumnPreferencesDialog from './ColumnPreferencesDialog';
 import { DocumentService, type DocumentRecord } from '@/services/documentService';
 
@@ -280,7 +281,7 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
     });
   };
 
-  const handleReExtractWithNotes = async (notes: string) => {
+  const handleReExtractWithNotes = async (notes: string, saveToPreferences?: boolean) => {
     console.log('🔍 SIDE-BY-SIDE RE-EXTRACT: Starting re-extraction');
     console.log('🔍 SIDE-BY-SIDE RE-EXTRACT: documentRecord:', documentRecord);
     console.log('🔍 SIDE-BY-SIDE RE-EXTRACT: fieldName:', reExtractDialog.fieldName);
@@ -340,9 +341,23 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
         // Immediately sync changes back to parent component
         onDataUpdate(rowIndex, updatedRowData);
         
+        // Save feedback to extraction preferences if requested
+        if (saveToPreferences) {
+          const success = await ExtractionPreferencesService.appendToColumnInstructions(
+            reExtractDialog.fieldName,
+            notes
+          );
+          
+          if (success) {
+            console.log(`✅ Saved feedback to extraction preferences for "${reExtractDialog.fieldName}"`);
+          } else {
+            console.error(`❌ Failed to save feedback to extraction preferences for "${reExtractDialog.fieldName}"`);
+          }
+        }
+        
         toast({
           title: "Field re-extracted",
-          description: `Successfully re-extracted "${reExtractDialog.fieldName}" with your feedback.`,
+          description: `Successfully re-extracted "${reExtractDialog.fieldName}" with your feedback.${saveToPreferences ? ' Feedback saved for future extractions.' : ''}`,
         });
 
         // Close the dialog

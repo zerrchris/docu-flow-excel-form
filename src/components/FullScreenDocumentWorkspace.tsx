@@ -495,7 +495,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
     });
   };
 
-  const handleReExtractWithNotes = async (notes: string) => {
+  const handleReExtractWithNotes = async (notes: string, saveToPreferences?: boolean) => {
     setIsReExtracting(true);
     
     try {
@@ -550,9 +550,23 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
       setLocalRowData(updatedData);
       onUpdateRow(rowIndex, updatedData);
       
+      // Save feedback to extraction preferences if requested
+      if (saveToPreferences) {
+        const success = await ExtractionPreferencesService.appendToColumnInstructions(
+          reExtractDialog.fieldName,
+          notes
+        );
+        
+        if (success) {
+          console.log(`✅ Saved feedback to extraction preferences for "${reExtractDialog.fieldName}"`);
+        } else {
+          console.error(`❌ Failed to save feedback to extraction preferences for "${reExtractDialog.fieldName}"`);
+        }
+      }
+      
       toast({
         title: "Field re-extracted",
-        description: `Successfully re-extracted "${reExtractDialog.fieldName}" with your feedback.`,
+        description: `Successfully re-extracted "${reExtractDialog.fieldName}" with your feedback.${saveToPreferences ? ' Feedback saved for future extractions.' : ''}`,
       });
 
       // Close the dialog

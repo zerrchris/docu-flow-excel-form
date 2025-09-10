@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { RotateCw, CheckCircle, Plus, Settings, ChevronDown, ChevronUp, Upload, Wand2, Trash2, Sparkles, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import ReExtractDialog from '@/components/ReExtractDialog';
+import { ExtractionPreferencesService } from '@/services/extractionPreferences';
 import { toast } from '@/hooks/use-toast';
 
 interface DataFormProps {
@@ -267,7 +268,7 @@ const DataForm: React.FC<DataFormProps> = ({
     });
   };
 
-  const handleReExtractWithNotes = async (notes: string) => {
+  const handleReExtractWithNotes = async (notes: string, saveToPreferences?: boolean) => {
     setIsReExtracting(true);
     
     try {
@@ -342,9 +343,23 @@ const DataForm: React.FC<DataFormProps> = ({
       // Update the specific field with the re-extracted value
       onChange(reExtractDialog.fieldName, extractedValue);
       
+      // Save feedback to extraction preferences if requested
+      if (saveToPreferences) {
+        const success = await ExtractionPreferencesService.appendToColumnInstructions(
+          reExtractDialog.fieldName,
+          notes
+        );
+        
+        if (success) {
+          console.log(`✅ Saved feedback to extraction preferences for "${reExtractDialog.fieldName}"`);
+        } else {
+          console.error(`❌ Failed to save feedback to extraction preferences for "${reExtractDialog.fieldName}"`);
+        }
+      }
+      
       toast({
         title: "Field re-extracted",
-        description: `Successfully re-extracted "${reExtractDialog.fieldName}" with your feedback.`,
+        description: `Successfully re-extracted "${reExtractDialog.fieldName}" with your feedback.${saveToPreferences ? ' Feedback saved for future extractions.' : ''}`,
       });
 
     } catch (error) {

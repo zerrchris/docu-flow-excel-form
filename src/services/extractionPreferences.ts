@@ -185,6 +185,55 @@ export class ExtractionPreferencesService {
   }
 
   /**
+   * Append feedback to a specific column's extraction instructions
+   */
+  static async appendToColumnInstructions(
+    columnName: string, 
+    feedback: string
+  ): Promise<boolean> {
+    try {
+      const preferences = await this.getDefaultPreferences();
+      
+      if (!preferences) {
+        // Create new preferences with just this column instruction
+        const columnInstructions: ColumnInstructions = {
+          [columnName]: feedback
+        };
+        return await this.saveDefaultPreferences([columnName], columnInstructions);
+      }
+
+      const columnInstructions = preferences.column_instructions as ColumnInstructions;
+      const existingInstruction = columnInstructions[columnName] || '';
+      
+      // Append the feedback to existing instructions
+      const updatedInstruction = existingInstruction 
+        ? `${existingInstruction}\n\nAdditional feedback: ${feedback}`
+        : feedback;
+      
+      const updatedInstructions = {
+        ...columnInstructions,
+        [columnName]: updatedInstruction
+      };
+
+      // Ensure the column is in the columns array
+      const updatedColumns = preferences.columns.includes(columnName) 
+        ? preferences.columns 
+        : [...preferences.columns, columnName];
+
+      const success = await this.saveDefaultPreferences(updatedColumns, updatedInstructions);
+      
+      if (success) {
+        console.log(`✅ Appended feedback to column "${columnName}" instructions`);
+      }
+      
+      return success;
+    } catch (error) {
+      console.error('Error appending to column instructions:', error);
+      return false;
+    }
+  }
+
+  /**
    * Clean up extraction preferences by removing columns not in the provided list
    */
   static async cleanupPreferences(validColumns: string[]): Promise<boolean> {

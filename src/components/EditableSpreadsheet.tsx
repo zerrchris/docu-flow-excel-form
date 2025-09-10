@@ -4105,7 +4105,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
    }, [editingCell, cellValue, data, onDataChange, currentRunsheetId, user, documentMap, setDocumentMap, onDocumentMapChange, toast, runsheetName, columns, columnInstructions, saveToDatabase]);
 
    // Handle re-extract functionality
-   const handleReExtract = useCallback(async (rowIndex: number, column: string, notes: string) => {
+   const handleReExtract = useCallback(async (rowIndex: number, column: string, notes: string, saveToPreferences?: boolean) => {
      const document = documentMap.get(rowIndex);
      if (!document) {
        toast({
@@ -4158,15 +4158,29 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
        onDataChange?.(newData);
        setHasUnsavedChanges(true);
 
-       // Save to database
-       if (runsheetName && runsheetName !== 'Untitled Runsheet' && user) {
-         await saveToDatabase(newData, columns, runsheetName, columnInstructions, true);
-       }
+        // Save to database
+        if (runsheetName && runsheetName !== 'Untitled Runsheet' && user) {
+          await saveToDatabase(newData, columns, runsheetName, columnInstructions, true);
+        }
 
-       toast({
-         title: "Field re-extracted",
-         description: `Updated ${column} with new value`,
-       });
+        // Save feedback to extraction preferences if requested
+        if (saveToPreferences) {
+          const success = await ExtractionPreferencesService.appendToColumnInstructions(
+            column,
+            notes
+          );
+          
+          if (success) {
+            console.log(`✅ Saved feedback to extraction preferences for "${column}"`);
+          } else {
+            console.error(`❌ Failed to save feedback to extraction preferences for "${column}"`);
+          }
+        }
+
+        toast({
+          title: "Field re-extracted",
+          description: `Updated ${column} with new value${saveToPreferences ? '. Feedback saved for future extractions.' : ''}`,
+        });
      } catch (error) {
        console.error('Error re-extracting field:', error);
        toast({
@@ -7256,9 +7270,9 @@ ${extractionFields}`
           }}
           fieldName={reExtractField?.column || ''}
           currentValue={reExtractField?.currentValue || ''}
-          onReExtract={async (notes) => {
+          onReExtract={async (notes, saveToPreferences) => {
             if (reExtractField) {
-              await handleReExtract(reExtractField.rowIndex, reExtractField.column, notes);
+              await handleReExtract(reExtractField.rowIndex, reExtractField.column, notes, saveToPreferences);
             }
           }}
           isLoading={isReExtracting}

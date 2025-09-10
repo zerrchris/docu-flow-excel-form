@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { RotateCw, Sparkles } from 'lucide-react';
 
 interface ReExtractDialogProps {
@@ -10,7 +11,7 @@ interface ReExtractDialogProps {
   onClose: () => void;
   fieldName: string;
   currentValue: string;
-  onReExtract: (notes: string) => Promise<void>;
+  onReExtract: (notes: string, saveToPreferences?: boolean) => Promise<void>;
   isLoading?: boolean;
 }
 
@@ -23,19 +24,22 @@ const ReExtractDialog: React.FC<ReExtractDialogProps> = ({
   isLoading = false
 }) => {
   const [notes, setNotes] = useState('');
+  const [saveToPreferences, setSaveToPreferences] = useState(false);
 
   const handleSubmit = async () => {
     if (!notes.trim()) {
       return;
     }
     
-    await onReExtract(notes.trim());
+    await onReExtract(notes.trim(), saveToPreferences);
     setNotes('');
+    setSaveToPreferences(false);
     onClose();
   };
 
   const handleClose = () => {
     setNotes('');
+    setSaveToPreferences(false);
     onClose();
   };
 
@@ -80,6 +84,26 @@ const ReExtractDialog: React.FC<ReExtractDialogProps> = ({
               className="mt-1 min-h-[80px]"
               disabled={isLoading}
             />
+          </div>
+          
+          <div className="flex items-start space-x-2">
+            <Checkbox
+              id="save-preferences"
+              checked={saveToPreferences}
+              onCheckedChange={(checked) => setSaveToPreferences(checked === true)}
+              disabled={isLoading}
+            />
+            <div className="grid gap-1.5 leading-none">
+              <Label 
+                htmlFor="save-preferences"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Save as extraction instruction
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Add this feedback to the column's extraction instructions for future use
+              </p>
+            </div>
           </div>
           
           <div className="text-xs text-muted-foreground">
