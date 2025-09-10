@@ -194,6 +194,7 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
         });
         
         if (skipRowsWithData && hasExistingData) {
+          console.log(`⏭️ Skipping row ${rowIndex} - has existing data`);
           setResults(prev => prev.map(result => 
             result.rowIndex === rowIndex 
               ? { ...result, status: 'success', extractedData: {}, error: 'Skipped - row has existing data' }
@@ -203,6 +204,8 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
           setProgress((completedCount / totalDocuments) * 100);
           continue;
         }
+
+        console.log(`🔍 Starting analysis for row ${rowIndex}: ${document.stored_filename}`);
 
         // Update status to analyzing
         setResults(prev => prev.map(result => 
@@ -261,7 +264,10 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
                 ? { ...result, status: 'success', extractedData }
                 : result
             ));
+            
+            console.log(`✅ Successfully analyzed document at row ${rowIndex}, extracted ${Object.keys(extractedData).length} fields`);
           } else {
+            console.log(`⚠️ No data extracted from document at row ${rowIndex}`);
             throw new Error('No data extracted from document');
           }
         } catch (error) {
@@ -276,18 +282,44 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
         completedCount++;
         setProgress((completedCount / totalDocuments) * 100);
         
+        console.log(`📊 Progress: ${completedCount}/${totalDocuments} documents processed`);
+        
         // Update parent component with current progress
         onDataUpdate([...updatedData]);
       }
 
-      if (!controller.signal.aborted) {        
-        const successCount = results.filter(r => r.status === 'success').length;
-        const errorCount = results.filter(r => r.status === 'error').length;
+      if (!controller.signal.aborted) {
+        // Calculate success count from the actual analysis results, not from state
+        let actualSuccessCount = 0;
+        let actualErrorCount = 0;
         
-        toast({
-          title: "Batch analysis completed",
-          description: `Successfully analyzed ${successCount} documents. ${errorCount > 0 ? `${errorCount} failed.` : ''}`,
+        // Check the final results by iterating through what we actually processed
+        setResults(prev => {
+          const finalResults = [...prev];
+          finalResults.forEach(result => {
+            if (result.status === 'success' && (!result.error || !result.error.includes('Skipped'))) {
+              actualSuccessCount++;
+            } else if (result.status === 'error') {
+              actualErrorCount++;
+            }
+          });
+          return finalResults;
         });
+        
+        // Wait a bit for state to update, then get the actual counts
+        setTimeout(() => {
+          setResults(prev => {
+            const successCount = prev.filter(r => r.status === 'success' && (!r.error || !r.error.includes('Skipped'))).length;
+            const errorCount = prev.filter(r => r.status === 'error').length;
+            const skippedCount = prev.filter(r => r.error && r.error.includes('Skipped')).length;
+            
+            toast({
+              title: "Batch analysis completed",
+              description: `Successfully analyzed ${successCount} documents.${errorCount > 0 ? ` ${errorCount} failed.` : ''}${skippedCount > 0 ? ` ${skippedCount} skipped.` : ''}`,
+            });
+            return prev;
+          });
+        }, 100);
       }
     } catch (error) {
       console.error('Batch analysis error:', error);
