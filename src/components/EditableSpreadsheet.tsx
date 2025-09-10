@@ -6507,10 +6507,12 @@ ${extractionFields}`
                         style={{ 
                           width: "650px", 
                           minWidth: "650px",
-                          maxWidth: "650px"
+                          maxWidth: "650px",
+                          height: `${getRowHeight(rowIndex)}px`,
+                          minHeight: `${getRowHeight(rowIndex)}px`
                         }}
                      >
-                         <div className="bg-background border border-border rounded-md p-2 h-full min-h-[60px] flex gap-2 overflow-visible">
+                          <div className="bg-background border border-border rounded-md p-2 h-full min-h-[60px] flex gap-2 overflow-visible">
                             {/* Row Actions (Move buttons only) */}
                              <div className="flex gap-1 items-center min-w-[50px]">
                                  <Button
