@@ -194,9 +194,6 @@ const Dashboard: React.FC = () => {
             <h2 className="text-3xl font-bold tracking-tight mb-4">
               Welcome to RunsheetPro
             </h2>
-            <p className="text-xl text-muted-foreground">
-              Choose your workflow to get started with document processing
-            </p>
           </div>
 
           {/* Continue Working Section */}
