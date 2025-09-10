@@ -123,10 +123,14 @@ export const validateRowForInsertion = (
   allowOverwrite: boolean = false,
   hasLinkedDocument?: boolean
 ): ValidationResult => {
-  if (!allowOverwrite && hasRowData(row, hasLinkedDocument)) {
+  // Check if row has actual data (not just a linked document)
+  const rowHasData = hasRowData(row, false); // Don't consider linked document for data check
+  
+  if (!allowOverwrite && rowHasData) {
+    const documentInfo = hasLinkedDocument ? ' and has a linked document' : '';
     return {
       isValid: false,
-      error: `Row ${rowIndex + 1} already contains data${hasLinkedDocument ? ' and has a linked document' : ''}. To prevent overwriting, please select an empty row or explicitly allow overwriting.`
+      error: `Row ${rowIndex + 1} already contains data${documentInfo}. To prevent overwriting, please select an empty row or explicitly allow overwriting.`
     };
   }
 
