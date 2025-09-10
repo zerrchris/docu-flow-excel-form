@@ -3301,7 +3301,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   useEffect(() => {
     if (editingCell && textareaRef.current) {
       textareaRef.current.focus();
-      textareaRef.current.select();
+      // Don't auto-select text to allow cursor positioning from click events
       
       // Auto-resize textarea to fit content
       textareaRef.current.style.height = 'auto';
@@ -3798,7 +3798,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     setCellValue(value);
     setSelectedCell({ rowIndex, column });
     
-    // Focus the textarea after it's rendered
+    // Focus the textarea after it's rendered and position cursor
     setTimeout(() => {
       if (textareaRef.current) {
         textareaRef.current.focus();
@@ -3857,7 +3857,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
           textareaRef.current.setSelectionRange(length, length);
         }
       }
-    }, 10);
+    }, 50); // Increased timeout to ensure it runs after useEffect
   }, []);
 
   const saveEdit = useCallback(async () => {
