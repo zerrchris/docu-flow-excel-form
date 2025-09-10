@@ -281,6 +281,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   const [showGoogleDrivePicker, setShowGoogleDrivePicker] = useState(false);
   const [showGoogleFileUpload, setShowGoogleFileUpload] = useState(false);
   const [googleSelectedFile, setGoogleSelectedFile] = useState<File | null>(null);
+  const [showFileUpload, setShowFileUpload] = useState(false);
   const [isSavingAsDefault, setIsSavingAsDefault] = useState(false);
   const [hasManuallyResizedColumns, setHasManuallyResizedColumns] = useState(false);
   const [documentMap, setDocumentMap] = useState<Map<number, DocumentRecord>>(new Map());
@@ -5729,51 +5730,22 @@ ${extractionFields}`
                  </DialogHeader>
                  
                  <div className="grid gap-4 py-6">
-                    <Button
-                       onClick={() => {
-                         // Trigger runsheet file upload using the same mechanism as dashboard
-                         const fileInput = document.createElement('input');
-                         fileInput.type = 'file';
-                         fileInput.accept = '.xlsx,.xls,.csv';
-                         fileInput.multiple = false;
-                         fileInput.style.display = 'none';
-                         
-                          fileInput.onchange = (e) => {
-                            const files = (e.target as HTMLInputElement).files;
-                            if (files && files.length > 0) {
-                              const importEvent = new CustomEvent('importRunsheetFile', {
-                                detail: { file: files[0] }
-                              });
-                              window.dispatchEvent(importEvent);
-                              setShowNewRunsheetDialog(false);
-                            }
-                            // Clean up immediately after handling
-                            if (document.body.contains(fileInput)) {
-                              document.body.removeChild(fileInput);
-                            }
-                          };
-                         
-                         // Add event listener for cancel case
-                         fileInput.oncancel = () => {
-                           if (document.body.contains(fileInput)) {
-                             document.body.removeChild(fileInput);
-                           }
-                         };
-                         
-                         document.body.appendChild(fileInput);
-                         fileInput.click();
-                       }}
-                     className="h-16 flex flex-col gap-2 text-left"
-                     variant="outline"
-                   >
-                     <div className="flex items-center gap-3 w-full">
-                       <Upload className="h-6 w-6" />
-                       <div className="flex flex-col text-left">
-                          <span className="font-semibold">Upload Runsheet</span>
-                          <span className="text-sm text-muted-foreground">Upload Excel (.xlsx, .xls) or CSV files from your device</span>
-                       </div>
-                     </div>
-                   </Button>
+                     <Button
+                        onClick={() => {
+                          setShowNewRunsheetDialog(false);
+                          setShowFileUpload(true);
+                        }}
+                        className="h-16 flex flex-col gap-2 text-left"
+                        variant="outline"
+                      >
+                        <div className="flex items-center gap-3 w-full">
+                          <Upload className="h-6 w-6" />
+                          <div className="flex flex-col text-left">
+                             <span className="font-semibold">Upload Runsheet</span>
+                             <span className="text-sm text-muted-foreground">Upload Excel (.xlsx, .xls) or CSV files from your device</span>
+                          </div>
+                        </div>
+                      </Button>
                    
                      <Button
                        onClick={async () => {
@@ -7068,6 +7040,32 @@ ${extractionFields}`
                   onCancel={() => {
                     setShowGoogleFileUpload(false);
                     setGoogleSelectedFile(null);
+                  }}
+                />
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
+
+        {/* Regular File Upload Dialog */}
+        {showFileUpload && (
+          <Dialog open={showFileUpload} onOpenChange={setShowFileUpload}>
+            <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-auto">
+              <DialogHeader>
+                <DialogTitle>Upload Runsheet</DialogTitle>
+                <DialogDescription>
+                  Choose which row contains your column headers, then upload the file.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="py-4">
+                <RunsheetFileUpload 
+                  onFileSelected={async (runsheetData) => {
+                    console.log('📥 Regular file processed:', runsheetData);
+                    await updateSpreadsheetData(runsheetData.columns, runsheetData.rows, runsheetData.name);
+                    setShowFileUpload(false);
+                  }}
+                  onCancel={() => {
+                    setShowFileUpload(false);
                   }}
                 />
               </div>
