@@ -6535,8 +6535,8 @@ ${extractionFields}`
                                  </Button>
                              </div>
                            
-                           {/* Document Section */}
-                           <div className="flex-1">
+                            {/* Document Section */}
+                            <div className="flex-1 h-full flex flex-col">
                           <DocumentLinker
                             key={`${rowIndex}-${row['Document File Name']}`}
                             runsheetId={effectiveRunsheetId}

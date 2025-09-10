@@ -982,9 +982,10 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
           </div>
         )}
         <Card 
-          className={`p-3 border-dashed transition-colors h-full flex flex-col ${
+          className={`p-3 border-dashed transition-colors flex flex-col ${
             dragActive ? 'border-primary bg-primary/5' : 'border-muted-foreground/25'
           }`}
+          style={{ height: '100%' }}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
