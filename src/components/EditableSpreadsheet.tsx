@@ -3877,39 +3877,18 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
           
           document.body.removeChild(tempSpan);
           
-          // Find word boundaries around the position
-          const wordRegex = /\b/g;
-          const matches = Array.from(value.matchAll(wordRegex));
-          let wordStart = 0;
-          let wordEnd = value.length;
+          // Find word boundaries around the clicked position
+          let wordStart = position;
+          let wordEnd = position;
           
-          // Find the word boundaries that contain our position
-          for (let i = 0; i < matches.length - 1; i++) {
-            const currentMatch = matches[i];
-            const nextMatch = matches[i + 1];
-            
-            if (currentMatch.index! <= position && position <= nextMatch.index!) {
-              wordStart = currentMatch.index!;
-              wordEnd = nextMatch.index!;
-              break;
-            }
+          // Expand backward to find word start
+          while (wordStart > 0 && /\w/.test(value[wordStart - 1])) {
+            wordStart--;
           }
           
-          // If no word boundaries found or position is at the end, select from position to end of text
-          if (wordStart === wordEnd) {
-            // Find nearest space or punctuation boundaries
-            wordStart = position;
-            wordEnd = position;
-            
-            // Expand backward to find word start
-            while (wordStart > 0 && /\w/.test(value[wordStart - 1])) {
-              wordStart--;
-            }
-            
-            // Expand forward to find word end
-            while (wordEnd < value.length && /\w/.test(value[wordEnd])) {
-              wordEnd++;
-            }
+          // Expand forward to find word end
+          while (wordEnd < value.length && /\w/.test(value[wordEnd])) {
+            wordEnd++;
           }
           
           // Select the word
