@@ -863,24 +863,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     };
   }, [currentRunsheetId, runsheetName, data, columns, columnInstructions]);
   
-  // Handle new runsheet creation flag
-  useEffect(() => {
-    const isCreatingNewRunsheet = sessionStorage.getItem('creating_new_runsheet') === 'true';
-    const newRunsheetName = sessionStorage.getItem('new_runsheet_name');
-    
-    if (isCreatingNewRunsheet && newRunsheetName && !currentRunsheetId) {
-      console.log('🆕 Finalizing new runsheet creation:', newRunsheetName);
-      
-      // Clear the flags
-      sessionStorage.removeItem('creating_new_runsheet');
-      sessionStorage.removeItem('new_runsheet_name');
-      
-      // Set the runsheet name if it hasn't been set already
-      if (runsheetName !== newRunsheetName) {
-        setRunsheetName(newRunsheetName);
-      }
-    }
-  }, [currentRunsheetId, runsheetName]);
+  // Session storage cleanup is now handled in DocumentProcessor since we use the unified Dashboard approach
   
   // Listen for external add-row events (from DocumentProcessor)
   useEffect(() => {

@@ -7,6 +7,7 @@ import { FileText, Calendar, Loader2, Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
+import { RunsheetService } from '@/services/runsheetService';
 
 interface Runsheet {
   id: string;
@@ -75,8 +76,7 @@ const OpenRunsheetDialog: React.FC<OpenRunsheetDialogProps> = ({ open, onOpenCha
   };
 
   const handleSelectRunsheet = (runsheet: Runsheet) => {
-    // Navigate to runsheet page with the selected runsheet
-    navigate('/runsheet', { state: { runsheet } });
+    RunsheetService.openRunsheet({ runsheet }, navigate);
     onOpenChange(false);
   };
 

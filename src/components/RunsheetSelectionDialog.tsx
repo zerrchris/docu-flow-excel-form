@@ -8,6 +8,8 @@ import { FileText, Calendar, Loader2, Search, Plus, FolderOpen } from 'lucide-re
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
+import { RunsheetService } from '@/services/runsheetService';
 
 interface Runsheet {
   id: string;
@@ -40,6 +42,7 @@ const RunsheetSelectionDialog: React.FC<RunsheetSelectionDialogProps> = ({
   const [newRunsheetName, setNewRunsheetName] = useState('');
   const [creatingNew, setCreatingNew] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (open) {
@@ -97,42 +100,22 @@ const RunsheetSelectionDialog: React.FC<RunsheetSelectionDialogProps> = ({
     }
 
     setCreatingNew(true);
-    try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      
-      if (authError || !user) {
-        throw new Error('User not authenticated');
-      }
-
-      const { data, error } = await supabase
-        .from('runsheets')
-        .insert([{
-          name: newRunsheetName.trim(),
-          data: [],
-          columns: ['Document Name', 'Date', 'Notes'],
-          user_id: user.id
-        }])
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      toast({
-        title: "Runsheet Created",
-        description: `"${newRunsheetName}" has been created successfully.`,
-      });
-
-      onRunsheetSelected(data, true);
-    } catch (error: any) {
-      console.error('Error creating runsheet:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create runsheet. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setCreatingNew(false);
+    
+    // Use the unified service to create new runsheet
+    const success = await RunsheetService.createNewRunsheet(
+      { name: newRunsheetName.trim() },
+      navigate
+    );
+    
+    if (success) {
+      // Close dialog and notify parent
+      onRunsheetSelected(null, true); // Signal new runsheet creation
+      setShowCreateNew(false);
+      setNewRunsheetName('');
+      onOpenChange(false);
     }
+    
+    setCreatingNew(false);
   };
 
   const handleSkipRunsheet = () => {
