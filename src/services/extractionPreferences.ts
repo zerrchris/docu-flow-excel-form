@@ -81,42 +81,27 @@ export class ExtractionPreferencesService {
     }
 
     try {
-      // First, check if default preferences already exist
-      const existing = await this.getDefaultPreferences();
+      // Use upsert to handle both insert and update cases
+      const { error } = await supabase
+        .from('user_extraction_preferences')
+        .upsert({
+          user_id: user.id,
+          name: 'Default',
+          columns,
+          column_instructions: columnInstructions,
+          is_default: true,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id,is_default',
+          ignoreDuplicates: false
+        });
 
-      if (existing) {
-        // Update existing default preferences
-        const { error } = await supabase
-          .from('user_extraction_preferences')
-          .update({
-            columns,
-            column_instructions: columnInstructions,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', existing.id);
-
-        if (error) {
-          console.error('Error updating default preferences:', error);
-          return false;
-        }
-      } else {
-        // Create new default preferences
-        const { error } = await supabase
-          .from('user_extraction_preferences')
-          .insert({
-            user_id: user.id,
-            name: 'Default',
-            columns,
-            column_instructions: columnInstructions,
-            is_default: true
-          });
-
-        if (error) {
-          console.error('Error creating default preferences:', error);
-          return false;
-        }
+      if (error) {
+        console.error('Error saving default preferences:', error);
+        return false;
       }
 
+      console.log('✅ Successfully saved default extraction preferences');
       return true;
     } catch (error) {
       console.error('Error saving preferences:', error);
