@@ -241,6 +241,11 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       return [...prev, ...newRows];
     });
   }, [columns]);
+  
+  // Triple-click detection
+  const [lastClickTime, setLastClickTime] = useState<number>(0);
+  const [clickCount, setClickCount] = useState<number>(0);
+  const [lastClickedCell, setLastClickedCell] = useState<{rowIndex: number, column: string} | null>(null);
   const [editingCell, setEditingCell] = useState<{rowIndex: number, column: string} | null>(null);
   const [cellValue, setCellValue] = useState<string>('');
   const [selectedCell, setSelectedCell] = useState<{rowIndex: number, column: string} | null>(null);
@@ -3473,7 +3478,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         }
         // Handle letter keys for editing
         else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
-          startEditing(selectedCell.rowIndex, selectedCell.column, e.key, undefined, false);
+          startEditing(selectedCell.rowIndex, selectedCell.column, e.key, undefined, 'none');
           e.preventDefault();
         }
       };
@@ -3771,48 +3776,74 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     
     // Only start editing if explicitly requested (for double-click or typing)
     if (shouldStartEditing) {
-      startEditing(rowIndex, column, data[rowIndex]?.[column] || '', undefined, false);
+      startEditing(rowIndex, column, data[rowIndex]?.[column] || '', undefined, 'none');
     }
   };
 
   const handleCellClick = (rowIndex: number, column: string, event: React.MouseEvent) => {
+    const now = Date.now();
+    const timeDiff = now - lastClickTime;
+    const isSameCell = lastClickedCell?.rowIndex === rowIndex && lastClickedCell?.column === column;
+    
+    if (isSameCell && timeDiff < 500) { // 500ms window for multiple clicks
+      setClickCount(prev => prev + 1);
+    } else {
+      setClickCount(1);
+      setLastClickedCell({ rowIndex, column });
+    }
+    
+    setLastClickTime(now);
+    
+    // Handle triple click
+    if (clickCount === 2 && isSameCell && timeDiff < 500) {
+      event.preventDefault();
+      handleCellTripleClick(rowIndex, column);
+      return;
+    }
+    
     // Single click behavior - if cell is already being edited, allow cursor positioning
     if (editingCell && editingCell.rowIndex === rowIndex && editingCell.column === column) {
       // Already editing this cell, allow normal click behavior for cursor positioning
       return;
     }
     
-    // Make single click act exactly like double click
-    handleCellDoubleClick(rowIndex, column);
+    // For single clicks on non-editing cells, just select the cell
+    selectCell(rowIndex, column, false);
   };
 
   const handleCellDoubleClick = (rowIndex: number, column: string, event?: React.MouseEvent) => {
-    // Double click should enter edit mode and allow native text selection
+    // Double click should enter edit mode and select the word at cursor position
     const cellValue = data[rowIndex]?.[column] || '';
-    startEditing(rowIndex, column, cellValue, undefined, true); // Pass true for double-click
+    startEditing(rowIndex, column, cellValue, event, 'word'); // Select word for double-click
   };
 
-  const startEditing = useCallback((rowIndex: number, column: string, value: string, clickEvent?: React.MouseEvent, isDoubleClick: boolean = false) => {
+  const handleCellTripleClick = (rowIndex: number, column: string) => {
+    // Triple click should select all text
+    const cellValue = data[rowIndex]?.[column] || '';
+    startEditing(rowIndex, column, cellValue, undefined, 'all'); // Select all for triple-click
+  };
+
+  const startEditing = useCallback((rowIndex: number, column: string, value: string, clickEvent?: React.MouseEvent, selectionType: 'none' | 'word' | 'all' = 'none') => {
     setEditingCell({ rowIndex, column });
     setCellValue(value);
     setSelectedCell({ rowIndex, column });
     
-    // Focus the textarea after it's rendered and position cursor
+    // Focus the textarea after it's rendered and handle selection
     setTimeout(() => {
       if (textareaRef.current) {
         textareaRef.current.focus();
         
-        if (isDoubleClick) {
-          // For double-click, select all text to allow easy replacement
+        if (selectionType === 'all') {
+          // Triple-click: select all text
           textareaRef.current.select();
-        } else if (clickEvent && value) {
-          // Calculate cursor position based on click coordinates for single clicks
+        } else if (selectionType === 'word' && clickEvent && value) {
+          // Double-click: select word at cursor position
           const textarea = textareaRef.current;
           const rect = textarea.getBoundingClientRect();
           const x = clickEvent.clientX - rect.left;
           const y = clickEvent.clientY - rect.top;
           
-          // Create a temporary element to measure text
+          // Calculate cursor position first
           const tempSpan = document.createElement('span');
           tempSpan.style.font = window.getComputedStyle(textarea).font;
           tempSpan.style.visibility = 'hidden';
@@ -3821,7 +3852,6 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
           tempSpan.style.lineHeight = window.getComputedStyle(textarea).lineHeight;
           document.body.appendChild(tempSpan);
           
-          // Find the approximate character position
           let position = 0;
           const lines = value.split('\n');
           const lineHeight = parseInt(window.getComputedStyle(textarea).lineHeight) || 20;
@@ -3829,29 +3859,98 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
           
           // Add characters from previous lines
           for (let i = 0; i < Math.min(targetLine, lines.length - 1); i++) {
-            position += lines[i].length + 1; // +1 for the newline character
+            position += lines[i].length + 1;
           }
           
           // Find position within the target line
           if (targetLine < lines.length) {
             const currentLine = lines[targetLine];
-            let charPosition = 0;
-            
             for (let i = 0; i <= currentLine.length; i++) {
               tempSpan.textContent = currentLine.substring(0, i);
               if (tempSpan.offsetWidth >= x) {
-                charPosition = i;
+                position += i;
                 break;
               }
-              charPosition = i;
+              if (i === currentLine.length) position += i;
             }
-            
-            position += charPosition;
           }
           
           document.body.removeChild(tempSpan);
           
-          // Position cursor at calculated position
+          // Find word boundaries around the position
+          const wordRegex = /\b/g;
+          const matches = Array.from(value.matchAll(wordRegex));
+          let wordStart = 0;
+          let wordEnd = value.length;
+          
+          // Find the word boundaries that contain our position
+          for (let i = 0; i < matches.length - 1; i++) {
+            const currentMatch = matches[i];
+            const nextMatch = matches[i + 1];
+            
+            if (currentMatch.index! <= position && position <= nextMatch.index!) {
+              wordStart = currentMatch.index!;
+              wordEnd = nextMatch.index!;
+              break;
+            }
+          }
+          
+          // If no word boundaries found or position is at the end, select from position to end of text
+          if (wordStart === wordEnd) {
+            // Find nearest space or punctuation boundaries
+            wordStart = position;
+            wordEnd = position;
+            
+            // Expand backward to find word start
+            while (wordStart > 0 && /\w/.test(value[wordStart - 1])) {
+              wordStart--;
+            }
+            
+            // Expand forward to find word end
+            while (wordEnd < value.length && /\w/.test(value[wordEnd])) {
+              wordEnd++;
+            }
+          }
+          
+          // Select the word
+          textarea.setSelectionRange(wordStart, wordEnd);
+        } else if (clickEvent && value) {
+          // Single click: position cursor at click location
+          const textarea = textareaRef.current;
+          const rect = textarea.getBoundingClientRect();
+          const x = clickEvent.clientX - rect.left;
+          const y = clickEvent.clientY - rect.top;
+          
+          const tempSpan = document.createElement('span');
+          tempSpan.style.font = window.getComputedStyle(textarea).font;
+          tempSpan.style.visibility = 'hidden';
+          tempSpan.style.position = 'absolute';
+          tempSpan.style.whiteSpace = 'pre-wrap';
+          tempSpan.style.lineHeight = window.getComputedStyle(textarea).lineHeight;
+          document.body.appendChild(tempSpan);
+          
+          let position = 0;
+          const lines = value.split('\n');
+          const lineHeight = parseInt(window.getComputedStyle(textarea).lineHeight) || 20;
+          const targetLine = Math.floor(y / lineHeight);
+          
+          for (let i = 0; i < Math.min(targetLine, lines.length - 1); i++) {
+            position += lines[i].length + 1;
+          }
+          
+          if (targetLine < lines.length) {
+            const currentLine = lines[targetLine];
+            for (let i = 0; i <= currentLine.length; i++) {
+              tempSpan.textContent = currentLine.substring(0, i);
+              if (tempSpan.offsetWidth >= x) {
+                position += i;
+                break;
+              }
+              if (i === currentLine.length) position += i;
+            }
+          }
+          
+          document.body.removeChild(tempSpan);
           textarea.setSelectionRange(position, position);
         } else {
           // Default behavior: position cursor at the end of the text
@@ -4083,7 +4182,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
           }
         } else {
           // Enter should start editing mode
-          startEditing(rowIndex, column, data[rowIndex]?.[column] || '', undefined, false);
+          startEditing(rowIndex, column, data[rowIndex]?.[column] || '', undefined, 'none');
         }
         e.preventDefault();
         break;
@@ -4135,7 +4234,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         if (nextColumn && nextRowIndex >= 0 && nextRowIndex < data.length) {
           // Start editing the next cell and select all text
           setTimeout(() => {
-            startEditing(nextRowIndex, nextColumn, data[nextRowIndex]?.[nextColumn] || '', undefined, true); // Select all for Tab navigation
+            startEditing(nextRowIndex, nextColumn, data[nextRowIndex]?.[nextColumn] || '', undefined, 'all'); // Select all for Tab navigation
           }, 0);
         }
         break;
@@ -4216,7 +4315,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         
       default:
         if (!editingCell && e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
-          startEditing(rowIndex, column, e.key, undefined, false);
+          startEditing(rowIndex, column, e.key, undefined, 'none');
           e.preventDefault();
         }
         break;
@@ -4317,7 +4416,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
           
           // Then start editing after a delay to ensure cell is in view
           setTimeout(() => {
-            startEditing(nextRowIndex, nextColumn, data[nextRowIndex]?.[nextColumn] || '', undefined, false);
+            startEditing(nextRowIndex, nextColumn, data[nextRowIndex]?.[nextColumn] || '', undefined, 'none');
           }, 100); // Reduced delay to match improved scrolling timing
         }
       }
@@ -6330,7 +6429,7 @@ ${extractionFields}`
                                          setTimeout(() => {
                                            const nextRowData = data[nextRowIndex];
                                            const nextCellValue = nextDocument.stored_filename || nextRowData['Document File Name'] || '';
-                                           startEditing(nextRowIndex, 'Document File Name', nextCellValue, undefined, false);
+                                           startEditing(nextRowIndex, 'Document File Name', nextCellValue, undefined, 'none');
                                          }, 10);
                                        }, 10);
                                      }
