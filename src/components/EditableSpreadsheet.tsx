@@ -5395,59 +5395,42 @@ ${extractionFields}`
       
       if (!rowValidation.isValid && !forceOverwrite) {
         // Show proper confirmation dialog for overwriting existing data
-        return new Promise<void>((resolve, reject) => {
-          setOverwriteDialogData({
-            rowIndex: targetRowIndex,
-            rowSummary: getRowDataSummary(currentRow),
-            error: rowValidation.error || '',
-            file,
-            onConfirm: () => {
-              setShowOverwriteDialog(false);
-              setOverwriteDialogData(null);
-              // Continue with overwrite
-              analyzeDocumentAndPopulateRow(file, targetRowIndex, true).then(resolve).catch(reject);
-            },
-            onCancel: () => {
-              setShowOverwriteDialog(false);
-              setOverwriteDialogData(null);
-              
-              // Find the next empty row and suggest it
-              const nextEmptyRowIndex = findFirstEmptyRow(data);
-              if (nextEmptyRowIndex !== -1) {
-                // Ask if they want to use empty row instead
-                const useEmptyRowDialog = () => {
-                  return new Promise<boolean>((resolveEmpty) => {
-                    const confirmUseEmpty = window.confirm(
-                      `Would you like to add the data to the first empty row (row ${nextEmptyRowIndex + 1}) instead?`
-                    );
-                    resolveEmpty(confirmUseEmpty);
-                  });
-                };
-                
-                useEmptyRowDialog().then((useEmpty) => {
-                  if (useEmpty) {
-                    analyzeDocumentAndPopulateRow(file, nextEmptyRowIndex, false).then(resolve).catch(reject);
-                  } else {
-                    toast({
-                      title: "Operation cancelled",
-                      description: "Data insertion was cancelled to prevent overwriting existing information.",
-                      variant: "default"
-                    });
-                    reject(new Error('Operation cancelled'));
-                  }
-                });
-              } else {
-                toast({
-                  title: "Operation cancelled",
-                  description: "Data insertion was cancelled to prevent overwriting existing information.",
-                  variant: "default"
-                });
-                reject(new Error('Operation cancelled'));
+        setOverwriteDialogData({
+          rowIndex: targetRowIndex,
+          rowSummary: getRowDataSummary(currentRow),
+          error: rowValidation.error || '',
+          file,
+          onConfirm: () => {
+            setShowOverwriteDialog(false);
+            setOverwriteDialogData(null);
+            // Continue with overwrite
+            analyzeDocumentAndPopulateRow(file, targetRowIndex, true);
+          },
+          onCancel: () => {
+            setShowOverwriteDialog(false);
+            setOverwriteDialogData(null);
+            
+            // Find the next empty row and suggest it
+            const nextEmptyRowIndex = findFirstEmptyRow(data, documentMap);
+            if (nextEmptyRowIndex !== -1) {
+              // Ask if they want to use empty row instead
+              const useEmptyRow = window.confirm(
+                `Would you like to add the data to the first empty row (row ${nextEmptyRowIndex + 1}) instead?`
+              );
+              if (useEmptyRow) {
+                analyzeDocumentAndPopulateRow(file, nextEmptyRowIndex, false);
               }
+            } else {
+              toast({
+                title: "Operation cancelled",
+                description: "Data insertion was cancelled to prevent overwriting existing information.",
+                variant: "default"
+              });
             }
-          });
-          setShowOverwriteDialog(true);
+          }
         });
+        setShowOverwriteDialog(true);
+        return;
       }
 
       // Clean the data for insertion
