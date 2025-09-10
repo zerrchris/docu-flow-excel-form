@@ -3301,7 +3301,6 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   useEffect(() => {
     if (editingCell && textareaRef.current) {
       textareaRef.current.focus();
-      // Don't auto-select text to allow cursor positioning from click events
       
       // Auto-resize textarea to fit content
       textareaRef.current.style.height = 'auto';
@@ -3474,7 +3473,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         }
         // Handle letter keys for editing
         else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
-          startEditing(selectedCell.rowIndex, selectedCell.column, e.key, undefined);
+          startEditing(selectedCell.rowIndex, selectedCell.column, e.key, undefined, false);
           e.preventDefault();
         }
       };
@@ -3772,7 +3771,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     
     // Only start editing if explicitly requested (for double-click or typing)
     if (shouldStartEditing) {
-      startEditing(rowIndex, column, data[rowIndex]?.[column] || '', undefined);
+      startEditing(rowIndex, column, data[rowIndex]?.[column] || '', undefined, false);
     }
   };
 
@@ -3788,12 +3787,12 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   };
 
   const handleCellDoubleClick = (rowIndex: number, column: string, event?: React.MouseEvent) => {
-    // Double click should enter edit mode and position cursor where clicked
+    // Double click should enter edit mode and allow native text selection
     const cellValue = data[rowIndex]?.[column] || '';
-    startEditing(rowIndex, column, cellValue, event);
+    startEditing(rowIndex, column, cellValue, undefined, true); // Pass true for double-click
   };
 
-  const startEditing = useCallback((rowIndex: number, column: string, value: string, clickEvent?: React.MouseEvent) => {
+  const startEditing = useCallback((rowIndex: number, column: string, value: string, clickEvent?: React.MouseEvent, isDoubleClick: boolean = false) => {
     setEditingCell({ rowIndex, column });
     setCellValue(value);
     setSelectedCell({ rowIndex, column });
@@ -3803,8 +3802,11 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       if (textareaRef.current) {
         textareaRef.current.focus();
         
-        if (clickEvent && value) {
-          // Calculate cursor position based on click coordinates
+        if (isDoubleClick) {
+          // For double-click, select all text to allow easy replacement
+          textareaRef.current.select();
+        } else if (clickEvent && value) {
+          // Calculate cursor position based on click coordinates for single clicks
           const textarea = textareaRef.current;
           const rect = textarea.getBoundingClientRect();
           const x = clickEvent.clientX - rect.left;
@@ -4081,7 +4083,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
           }
         } else {
           // Enter should start editing mode
-          startEditing(rowIndex, column, data[rowIndex]?.[column] || '', undefined);
+          startEditing(rowIndex, column, data[rowIndex]?.[column] || '', undefined, false);
         }
         e.preventDefault();
         break;
@@ -4133,13 +4135,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         if (nextColumn && nextRowIndex >= 0 && nextRowIndex < data.length) {
           // Start editing the next cell and select all text
           setTimeout(() => {
-            startEditing(nextRowIndex, nextColumn, data[nextRowIndex]?.[nextColumn] || '', undefined);
-            // Select all text in the next cell for easy deletion/replacement
-            setTimeout(() => {
-              if (textareaRef.current) {
-                textareaRef.current.select();
-              }
-            }, 20);
+            startEditing(nextRowIndex, nextColumn, data[nextRowIndex]?.[nextColumn] || '', undefined, true); // Select all for Tab navigation
           }, 0);
         }
         break;
@@ -4220,7 +4216,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         
       default:
         if (!editingCell && e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
-          startEditing(rowIndex, column, e.key, undefined);
+          startEditing(rowIndex, column, e.key, undefined, false);
           e.preventDefault();
         }
         break;
@@ -4321,7 +4317,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
           
           // Then start editing after a delay to ensure cell is in view
           setTimeout(() => {
-            startEditing(nextRowIndex, nextColumn, data[nextRowIndex]?.[nextColumn] || '', undefined);
+            startEditing(nextRowIndex, nextColumn, data[nextRowIndex]?.[nextColumn] || '', undefined, false);
           }, 100); // Reduced delay to match improved scrolling timing
         }
       }
@@ -6334,7 +6330,7 @@ ${extractionFields}`
                                          setTimeout(() => {
                                            const nextRowData = data[nextRowIndex];
                                            const nextCellValue = nextDocument.stored_filename || nextRowData['Document File Name'] || '';
-                                           startEditing(nextRowIndex, 'Document File Name', nextCellValue, undefined);
+                                           startEditing(nextRowIndex, 'Document File Name', nextCellValue, undefined, false);
                                          }, 10);
                                        }, 10);
                                      }
