@@ -1006,6 +1006,8 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
             tabIndex={-1}
             onClick={(e) => {
               console.log('🔧 Add File button clicked');
+              console.log('🔧 isUploading:', isUploading);
+              console.log('🔧 Button disabled:', isUploading);
               e.stopPropagation();
               e.preventDefault();
               openFileSelector();
