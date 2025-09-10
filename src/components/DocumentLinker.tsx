@@ -462,8 +462,13 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
   };
 
   const openFileSelector = () => {
+    console.log('🔧 openFileSelector called');
+    console.log('🔧 fileInputRef.current:', fileInputRef.current);
     if (fileInputRef.current) {
+      console.log('🔧 Triggering file input click');
       fileInputRef.current.click();
+    } else {
+      console.error('🔧 fileInputRef.current is null');
     }
   };
 
@@ -1000,6 +1005,7 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
             size="sm"
             tabIndex={-1}
             onClick={(e) => {
+              console.log('🔧 Add File button clicked');
               e.stopPropagation();
               e.preventDefault();
               openFileSelector();
