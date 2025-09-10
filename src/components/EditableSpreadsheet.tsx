@@ -3839,57 +3839,96 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         } else if (selectionType === 'word' && clickEvent && value) {
           // Double-click: select word at cursor position
           const textarea = textareaRef.current;
+          
+          // Use a more reliable method to get cursor position from click
           const rect = textarea.getBoundingClientRect();
           const x = clickEvent.clientX - rect.left;
           const y = clickEvent.clientY - rect.top;
           
-          // Calculate cursor position first
-          const tempSpan = document.createElement('span');
-          tempSpan.style.font = window.getComputedStyle(textarea).font;
-          tempSpan.style.visibility = 'hidden';
-          tempSpan.style.position = 'absolute';
-          tempSpan.style.whiteSpace = 'pre-wrap';
-          tempSpan.style.lineHeight = window.getComputedStyle(textarea).lineHeight;
-          document.body.appendChild(tempSpan);
+          // Get computed styles for accurate calculations
+          const style = window.getComputedStyle(textarea);
+          const paddingLeft = parseInt(style.paddingLeft) || 0;
+          const paddingTop = parseInt(style.paddingTop) || 0;
           
+          // Adjust coordinates for padding
+          const adjustedX = x - paddingLeft;
+          const adjustedY = y - paddingTop;
+          
+          // Use a simpler approach: split into lines and estimate position
           let position = 0;
           const lines = value.split('\n');
-          const lineHeight = parseInt(window.getComputedStyle(textarea).lineHeight) || 20;
-          const targetLine = Math.floor(y / lineHeight);
+          const lineHeight = parseInt(style.lineHeight) || 20;
+          const targetLineIndex = Math.max(0, Math.floor(adjustedY / lineHeight));
           
-          // Add characters from previous lines
-          for (let i = 0; i < Math.min(targetLine, lines.length - 1); i++) {
-            position += lines[i].length + 1;
+          // Add lengths of previous lines
+          for (let i = 0; i < Math.min(targetLineIndex, lines.length - 1); i++) {
+            position += lines[i].length + 1; // +1 for newline
           }
           
-          // Find position within the target line
-          if (targetLine < lines.length) {
-            const currentLine = lines[targetLine];
-            for (let i = 0; i <= currentLine.length; i++) {
-              tempSpan.textContent = currentLine.substring(0, i);
-              if (tempSpan.offsetWidth >= x) {
-                position += i;
-                break;
-              }
-              if (i === currentLine.length) position += i;
+          // Find position within current line using character width estimation
+          if (targetLineIndex < lines.length) {
+            const currentLine = lines[targetLineIndex];
+            const fontSize = parseInt(style.fontSize) || 14;
+            const charWidth = fontSize * 0.6; // Rough approximation for monospace-like behavior
+            const charPosition = Math.max(0, Math.min(Math.floor(adjustedX / charWidth), currentLine.length));
+            position += charPosition;
+          }
+          
+          // Ensure position is within bounds
+          position = Math.max(0, Math.min(position, value.length));
+          
+          console.log('Double-click debug:', {
+            clickCoords: [x, y],
+            adjustedCoords: [adjustedX, adjustedY],
+            targetLineIndex,
+            calculatedPosition: position,
+            textAroundPosition: value.substring(Math.max(0, position - 5), position + 5),
+            charAtPosition: value[position]
+          });
+          
+          // Find word boundaries around the calculated position
+          let wordStart = position;
+          let wordEnd = position;
+          
+          // If we're not on a word character, try to find the nearest word
+          if (position < value.length && !/\w/.test(value[position])) {
+            // Look backward for a word character
+            let backPos = position - 1;
+            while (backPos >= 0 && !/\w/.test(value[backPos])) {
+              backPos--;
+            }
+            // Look forward for a word character
+            let forwardPos = position + 1;
+            while (forwardPos < value.length && !/\w/.test(value[forwardPos])) {
+              forwardPos++;
+            }
+            
+            // Use the closest word character position
+            if (backPos >= 0 && (forwardPos >= value.length || position - backPos <= forwardPos - position)) {
+              position = backPos;
+            } else if (forwardPos < value.length) {
+              position = forwardPos;
             }
           }
           
-          document.body.removeChild(tempSpan);
-          
-          // Find word boundaries around the clicked position
-          let wordStart = position;
-          let wordEnd = position;
+          wordStart = position;
+          wordEnd = position;
           
           // Expand backward to find word start
           while (wordStart > 0 && /\w/.test(value[wordStart - 1])) {
             wordStart--;
           }
           
-          // Expand forward to find word end
+          // Expand forward to find word end  
           while (wordEnd < value.length && /\w/.test(value[wordEnd])) {
             wordEnd++;
           }
+          
+          console.log('Word selection:', {
+            finalPosition: position,
+            wordBoundaries: [wordStart, wordEnd],
+            selectedText: value.substring(wordStart, wordEnd)
+          });
           
           // Select the word
           textarea.setSelectionRange(wordStart, wordEnd);
