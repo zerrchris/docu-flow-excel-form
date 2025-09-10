@@ -3,7 +3,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { RotateCw, Sparkles } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { RotateCw, Sparkles, BookOpen } from 'lucide-react';
+import { ExtractionPreferencesService } from '@/services/extractionPreferences';
+import { toast } from '@/hooks/use-toast';
 
 interface ReExtractDialogProps {
   isOpen: boolean;
@@ -12,6 +15,7 @@ interface ReExtractDialogProps {
   currentValue: string;
   onReExtract: (notes: string) => Promise<void>;
   isLoading?: boolean;
+  columns?: string[];
 }
 
 const ReExtractDialog: React.FC<ReExtractDialogProps> = ({
@@ -20,22 +24,55 @@ const ReExtractDialog: React.FC<ReExtractDialogProps> = ({
   fieldName,
   currentValue,
   onReExtract,
-  isLoading = false
+  isLoading = false,
+  columns = []
 }) => {
   const [notes, setNotes] = useState('');
+  const [saveToPreferences, setSaveToPreferences] = useState(false);
 
   const handleSubmit = async () => {
     if (!notes.trim()) {
       return;
     }
     
-    await onReExtract(notes.trim());
-    setNotes('');
-    onClose();
+    try {
+      await onReExtract(notes.trim());
+      
+      // Save feedback to extraction preferences if requested
+      if (saveToPreferences && columns.includes(fieldName)) {
+        const currentPreferences = await ExtractionPreferencesService.getDefaultPreferences();
+        if (currentPreferences) {
+          const updatedInstructions = { 
+            ...currentPreferences.column_instructions as Record<string, string>,
+            [fieldName]: notes.trim()
+          };
+          
+          const success = await ExtractionPreferencesService.saveDefaultPreferences(
+            currentPreferences.columns,
+            updatedInstructions
+          );
+          
+          if (success) {
+            toast({
+              title: "Feedback saved",
+              description: `Extraction instructions for "${fieldName}" have been updated for future use.`,
+              variant: "default"
+            });
+          }
+        }
+      }
+      
+      setNotes('');
+      setSaveToPreferences(false);
+      onClose();
+    } catch (error) {
+      console.error('Error in re-extraction:', error);
+    }
   };
 
   const handleClose = () => {
     setNotes('');
+    setSaveToPreferences(false);
     onClose();
   };
 
@@ -81,6 +118,31 @@ const ReExtractDialog: React.FC<ReExtractDialogProps> = ({
               disabled={isLoading}
             />
           </div>
+          
+          {columns.includes(fieldName) && (
+            <div className="flex items-start space-x-2 p-3 bg-muted/20 rounded-md">
+              <Checkbox
+                id="save-to-preferences"
+                checked={saveToPreferences}
+                onCheckedChange={(checked) => setSaveToPreferences(checked === true)}
+                disabled={isLoading}
+              />
+              <div className="grid gap-1.5 leading-none">
+                <Label 
+                  htmlFor="save-to-preferences" 
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <BookOpen className="h-3.5 w-3.5" />
+                    Save as extraction instruction
+                  </div>
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Apply this feedback to all future extractions of "{fieldName}"
+                </p>
+              </div>
+            </div>
+          )}
           
           <div className="text-xs text-muted-foreground">
             The AI will re-analyze the document focusing on your feedback to correct this specific field.

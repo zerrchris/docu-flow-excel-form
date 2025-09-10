@@ -610,6 +610,7 @@ const DataForm: React.FC<DataFormProps> = ({
         onClose={() => setReExtractDialog(prev => ({ ...prev, isOpen: false }))}
         fieldName={reExtractDialog.fieldName}
         currentValue={reExtractDialog.currentValue}
+        columns={fields}
         onReExtract={handleReExtractWithNotes}
         isLoading={isReExtracting}
       />

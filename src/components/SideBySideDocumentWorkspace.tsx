@@ -787,6 +787,7 @@ Return only the filename, nothing else.`,
         onClose={() => setReExtractDialog(prev => ({ ...prev, isOpen: false }))}
         fieldName={reExtractDialog.fieldName}
         currentValue={reExtractDialog.currentValue}
+        columns={columns}
         onReExtract={handleReExtractWithNotes}
         isLoading={isReExtracting}
       />
