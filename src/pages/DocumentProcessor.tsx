@@ -1398,7 +1398,8 @@ Image: [base64 image data]`;
         }
       }
 
-      // Call company's OpenAI Edge Function for document analysis using Supabase client
+      // Use standard OpenAI analysis for all files (including PDFs converted to images)
+      console.log('🔍 Analyzing document with OpenAI...');
       const { data: analysisResult, error: edgeFunctionError } = await supabase.functions.invoke('analyze-document', {
         body: {
           prompt: extractionPrompt,
