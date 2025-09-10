@@ -219,6 +219,9 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       return updatedData;
     });
     
+    // Close the dropdown after adding rows
+    setAddRowsDropdownOpen(false);
+    
     toast({
       title: "Rows added",
       description: `Added ${count} new rows to the runsheet.`,
@@ -261,6 +264,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   const [resizingRow, setResizingRow] = useState<{rowIndex: number, startY: number, startHeight: number} | null>(null);
   const [showAddRowsDialog, setShowAddRowsDialog] = useState(false);
   const [rowsToAdd, setRowsToAdd] = useState<number>(1);
+  const [addRowsDropdownOpen, setAddRowsDropdownOpen] = useState(false);
   const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
   
@@ -5639,7 +5643,7 @@ ${extractionFields}`
             )}
             
             {/* Add Rows Button */}
-            <DropdownMenu>
+            <DropdownMenu open={addRowsDropdownOpen} onOpenChange={setAddRowsDropdownOpen}>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="outline"
@@ -5656,6 +5660,7 @@ ${extractionFields}`
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
+                    setAddRowsDropdownOpen(false);
                     setShowAddRowsDialog(true);
                   }}
                 >
