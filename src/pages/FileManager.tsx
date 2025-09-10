@@ -17,6 +17,7 @@ import { FilePreview } from '@/components/FilePreview';
 import { useActiveRunsheet } from '@/hooks/useActiveRunsheet';
 import LogoMark from '@/components/LogoMark';
 import { DocumentService } from '@/services/documentService';
+import { RunsheetService } from '@/services/runsheetService';
 
 interface StoredFile {
   id: string;
@@ -303,7 +304,7 @@ export const FileManager: React.FC = () => {
     }
   };
 
-  // Create new runsheet with proper naming
+  // Create new runsheet using unified service
   const createNewRunsheet = async () => {
     if (!newRunsheetName.trim()) {
       toast({
@@ -314,54 +315,14 @@ export const FileManager: React.FC = () => {
       return;
     }
 
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast({
-          title: "Authentication Required",
-          description: "Please sign in to create a runsheet.",
-          variant: "destructive",
-        });
-        return;
-      }
+    const success = await RunsheetService.createNewRunsheet(
+      { name: newRunsheetName.trim() },
+      navigate
+    );
 
-      // Navigate to runsheet page and create new runsheet with the specified name
-      navigate('/runsheet');
-      
-      // Dispatch event to create new runsheet with the name
-      setTimeout(() => {
-        const event = new CustomEvent('createNewRunsheetFromDashboard', {
-          detail: {
-            name: newRunsheetName.trim(),
-            columns: ['Recording Information', 'Instrument Type', 'Recorded', 'Grantor(s)', 'Grantee(s)', 'Description', 'Comments'],
-            instructions: {
-              'Recording Information': 'Extract the recording information as it appears in the document',
-              'Instrument Type': 'Extract the instrument type information as it appears in the document',
-              'Recorded': 'Extract the recorded information as it appears in the document',
-              'Grantor(s)': 'Extract the grantor(s) information as it appears in the document',
-              'Grantee(s)': 'Extract the grantee(s) information as it appears in the document',
-              'Description': 'Extract the description information as it appears in the document',
-              'Comments': 'Extract the comments information as it appears in the document'
-            }
-          }
-        });
-        window.dispatchEvent(event);
-      }, 100);
-
+    if (success) {
       setShowNewRunsheetDialog(false);
       setNewRunsheetName('');
-      
-      toast({
-        title: "New runsheet created",
-        description: `Created "${newRunsheetName.trim()}" runsheet.`,
-      });
-    } catch (error) {
-      console.error('Error creating new runsheet:', error);
-      toast({
-        title: "Error",
-        description: "Failed to create runsheet. Please try again.",
-        variant: "destructive",
-      });
     }
   };
 
@@ -633,7 +594,7 @@ export const FileManager: React.FC = () => {
                           size="sm"
                           onClick={(e) => {
                             e.stopPropagation();
-                            navigate(`/runsheet?id=${runsheet.id}`);
+                            RunsheetService.openRunsheet({ runsheet }, navigate);
                           }}
                           title="Edit runsheet"
                         >
@@ -717,7 +678,7 @@ export const FileManager: React.FC = () => {
           <p className="text-muted-foreground mb-4">
             No documents are linked to this runsheet yet
           </p>
-          <Button onClick={() => navigate(`/runsheet?id=${currentRunsheetId}`)} className="gap-2">
+          <Button onClick={() => RunsheetService.openRunsheet({ runsheetId: currentRunsheetId }, navigate)} className="gap-2">
             <Edit2 className="h-4 w-4" />
             Edit Runsheet
           </Button>

@@ -13,6 +13,12 @@ export interface OpenRunsheetParams {
   runsheet?: any;
 }
 
+export interface RunsheetUploadParams {
+  name: string;
+  columns: string[];
+  rows: Record<string, string>[];
+}
+
 export class RunsheetService {
   private static readonly DEFAULT_COLUMNS = [
     'Inst Number', 'Book/Page', 'Inst Type', 'Recording Date', 'Document Date', 
@@ -81,11 +87,97 @@ export class RunsheetService {
     const { runsheetId, runsheet } = params;
     
     if (runsheet) {
-      // Open specific runsheet with data
+      // Open specific runsheet with data (same as Dashboard)
       navigate('/runsheet', { state: { runsheet } });
     } else if (runsheetId) {
       // Open runsheet by ID
       navigate(`/runsheet?id=${runsheetId}`);
     }
+  }
+
+  /**
+   * Unified runsheet upload handling (same as Dashboard approach)
+   */
+  static async uploadRunsheet(params: RunsheetUploadParams, navigate: (path: string, options?: any) => void) {
+    const { name, columns, rows } = params;
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "Authentication Required",
+          description: "Please sign in to upload a runsheet.",
+          variant: "destructive"
+        });
+        return false;
+      }
+
+      // Create runsheet data with uploaded content
+      const runsheetData = {
+        name: name.trim(),
+        columns,
+        data: rows,
+        column_instructions: this.createDefaultInstructions(columns),
+        user_id: user.id
+      };
+
+      console.log('🔧 UNIFIED SERVICE: Uploading runsheet with data:', runsheetData);
+
+      // Save to database
+      const { data: savedRunsheet, error } = await supabase
+        .from('runsheets')
+        .insert(runsheetData)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      console.log('📊 Runsheet uploaded successfully:', savedRunsheet);
+
+      // Navigate to runsheet with the uploaded data
+      navigate('/runsheet', { state: { runsheet: savedRunsheet } });
+
+      toast({
+        title: "Upload Successful",
+        description: `"${name}" has been uploaded with ${rows.length} rows.`
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error uploading runsheet:', error);
+      toast({
+        title: "Upload Failed",
+        description: "Failed to upload runsheet. Please try again.",
+        variant: "destructive"
+      });
+      return false;
+    }
+  }
+
+  /**
+   * Handle file upload workflow (unified approach)
+   */
+  static handleFileUpload(navigate: (path: string, options?: any) => void) {
+    // Navigate with upload action (same as Dashboard)
+    navigate('/runsheet?action=upload');
+  }
+
+  /**
+   * Handle Google Drive workflow (unified approach)
+   */
+  static handleGoogleDrive(navigate: (path: string, options?: any) => void) {
+    // Navigate with Google Drive action (same as Dashboard)
+    navigate('/runsheet?action=google-drive');
+  }
+
+  /**
+   * Create default instructions for uploaded columns
+   */
+  private static createDefaultInstructions(columns: string[]): Record<string, string> {
+    const instructions: Record<string, string> = {};
+    columns.forEach(column => {
+      instructions[column] = `Extract the ${column.toLowerCase()} information as it appears in the document`;
+    });
+    return instructions;
   }
 }
