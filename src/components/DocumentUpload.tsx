@@ -198,16 +198,17 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
         type: 'vertical',
         maxWidth: 2000,
         quality: 0.95,
+        filename: `${originalName}.jpg` // Preserve original PDF name
       });
 
-      console.log('🔧 PDF_UPLOAD: Conversion successful, combined image file:', combinedImage.name, 'Size:', combinedImage.size);
-
+      // Step 3: Finalize
       setProcessingSteps(prev => prev.map(step => 
         step.id === 'convert' ? { ...step, status: 'completed' } : 
         step.id === 'process' ? { ...step, status: 'processing' } : step
       ));
 
-      // Step 3: Finalize
+      console.log('🔧 PDF_UPLOAD: Conversion successful, combined image file:', combinedImage.name, 'Size:', combinedImage.size);
+
       await new Promise(resolve => setTimeout(resolve, 500));
       setProcessingSteps(prev => prev.map(step => 
         step.id === 'process' ? { ...step, status: 'completed' } : step

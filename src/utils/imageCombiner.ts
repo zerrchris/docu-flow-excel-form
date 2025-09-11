@@ -4,6 +4,7 @@ export interface CombineOptions {
   type: 'pdf' | 'vertical' | 'grid';
   maxWidth?: number;
   quality?: number;
+  filename?: string; // Allow custom filename
 }
 
 export const combineImages = async (
@@ -136,7 +137,9 @@ const combineImagesVertically = async (
     canvas.toBlob(resolve as BlobCallback, 'image/jpeg', options.quality || 0.8);
   });
   
-  const combinedFile = new File([blob!], `combined-vertical-${Date.now()}.jpg`, {
+  // Use custom filename if provided, otherwise use default
+  const filename = options.filename || `combined-vertical-${Date.now()}.jpg`;
+  const combinedFile = new File([blob!], filename, {
     type: 'image/jpeg',
   });
   

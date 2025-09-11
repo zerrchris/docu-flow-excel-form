@@ -145,6 +145,7 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
             type: 'vertical',
             maxWidth: 2000,
             quality: 0.95,
+            filename: `${originalName}.jpg` // Preserve original PDF name
           });
 
           console.log('🔧 PDF converted to combined image:', combinedImage.name, 'Size:', combinedImage.size);
