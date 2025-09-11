@@ -617,27 +617,46 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
               ) : isPdf ? (
                 <PDFViewerWithFallback file={null} previewUrl={documentUrl} />
               ) : (
-                <ScrollArea className="h-full overscroll-contain">
-                  <div className="min-h-full bg-muted/10 flex items-center justify-center p-4" onWheel={handleImageWheel}>
+                <div className="h-full w-full relative overflow-hidden">
+                  <div 
+                    className="h-full w-full overflow-auto scrollbar-thin scrollbar-thumb-muted-foreground/30 scrollbar-track-transparent"
+                    onWheel={(e) => {
+                      if (!fitToWidth) {
+                        // Allow smooth wheel scrolling when not in fit-to-width mode
+                        const container = e.currentTarget;
+                        const deltaX = e.deltaX;
+                        const deltaY = e.deltaY;
+                        
+                        // Use native scroll with momentum
+                        container.scrollBy({
+                          left: deltaX,
+                          top: deltaY,
+                          behavior: 'auto'
+                        });
+                      }
+                    }}
+                  >
                     <img
                       src={documentUrl}
                       alt={documentName}
-                      className={`max-w-full object-contain transition-transform duration-300 ease-in-out select-none cursor-grab active:cursor-grabbing ${
-                        fitToWidth ? 'w-full h-auto' : ''
+                      className={`transition-all duration-200 ease-out select-none ${
+                        fitToWidth ? 'w-full h-auto object-contain' : 'object-contain cursor-grab active:cursor-grabbing'
                       }`}
                       style={{
-                        transform: fitToWidth ? 'none' : `translate(${panX / zoom}px, ${panY / zoom}px) scale(${zoom}) rotate(${rotation}deg)`,
+                        minHeight: fitToWidth ? 'auto' : '100%',
+                        minWidth: fitToWidth ? '100%' : 'auto',
+                        transform: fitToWidth ? 'none' : `scale(${zoom}) rotate(${rotation}deg)`,
                         transformOrigin: 'center',
-                        willChange: 'transform'
+                        willChange: fitToWidth ? 'auto' : 'transform'
                       }}
                       draggable={false}
-                      onMouseDown={handleImageMouseDown}
-                      onMouseMove={handleImageMouseMove}
-                       onMouseUp={handleImageMouseUp}
-                       onError={() => setError('Failed to load image')}
+                      onMouseDown={fitToWidth ? undefined : handleImageMouseDown}
+                      onMouseMove={fitToWidth ? undefined : handleImageMouseMove}
+                      onMouseUp={fitToWidth ? undefined : handleImageMouseUp}
+                      onError={() => setError('Failed to load image')}
                     />
                   </div>
-                </ScrollArea>
+                </div>
               )}
             </div>
           </ResizablePanel>

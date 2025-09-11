@@ -56,6 +56,7 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showAnalyzeWarning, setShowAnalyzeWarning] = useState(false);
   const [imageFitToWidth, setImageFitToWidth] = useState(false);
+  const [imageZoom, setImageZoom] = useState(1);
   
   // Re-extract dialog state
   const [reExtractDialog, setReExtractDialog] = useState<{
@@ -716,22 +717,35 @@ Return only the filename, nothing else.`,
                       file={null}
                       previewUrl={DocumentService.getDocumentUrlSync(documentRecord.file_path)}
                     />
-                    ) : (
-                     <div className="h-full w-full">
-                       <div className="h-full w-full overflow-auto bg-muted">
-                         <img 
-                           src={DocumentService.getDocumentUrlSync(documentRecord.file_path)}
-                           alt={documentRecord.stored_filename}
-                           className={`object-contain transition-all duration-300 ease-in-out ${
-                             imageFitToWidth ? 'w-full h-auto' : 'max-w-full max-h-full'
-                           }`}
-                           style={{ 
-                             minHeight: imageFitToWidth ? 'auto' : '100%',
-                             transformOrigin: 'center'
-                           }}
-                         />
-                       </div>
-                     </div>
+                     ) : (
+                      <div className="h-full w-full relative">
+                        <div className="h-full w-full overflow-auto scrollbar-thin scrollbar-thumb-muted-foreground/30 scrollbar-track-transparent">
+                          <img 
+                            src={DocumentService.getDocumentUrlSync(documentRecord.file_path)}
+                            alt={documentRecord.stored_filename}
+                            className={`transition-all duration-200 ease-out select-none ${
+                              imageFitToWidth ? 'w-full h-auto object-contain' : 'max-w-none object-contain cursor-zoom-in'
+                            }`}
+                            style={{ 
+                              minHeight: imageFitToWidth ? 'auto' : '100%',
+                              transformOrigin: 'center',
+                              transform: imageZoom !== 1 ? `scale(${imageZoom})` : 'none'
+                            }}
+                            onClick={() => {
+                              if (!imageFitToWidth) {
+                                setImageZoom(prev => prev === 1 ? 2 : prev === 2 ? 0.5 : 1);
+                              }
+                            }}
+                            onWheel={(e) => {
+                              if (!imageFitToWidth) {
+                                e.preventDefault();
+                                const delta = e.deltaY > 0 ? -0.1 : 0.1;
+                                setImageZoom(prev => Math.max(0.25, Math.min(4, prev + delta)));
+                              }
+                            }}
+                          />
+                        </div>
+                      </div>
                   )}
                 </div>
               ) : (
