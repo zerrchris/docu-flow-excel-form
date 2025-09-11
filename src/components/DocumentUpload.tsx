@@ -148,19 +148,19 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
     }
   };
 
-  // Handle PDF files with progress tracking
+  // Convert PDF files to images during upload for consistent processing
   const handlePDFConversion = async (file: File) => {
     if (!isPDF(file)) {
       return file; // Not a PDF, return as-is
     }
 
-    console.log('🔧 PDF_UPLOAD: PDF file detected:', file.name);
+    console.log('🔧 PDF_UPLOAD: PDF file detected, converting to image:', file.name);
     
     // Initialize progress steps
     setProcessingSteps([
       { id: 'validate', label: 'Validating PDF file', status: 'processing' },
-      { id: 'upload', label: 'Uploading file', status: 'pending' },
-      { id: 'process', label: 'Processing document', status: 'pending' }
+      { id: 'convert', label: 'Converting PDF to image', status: 'pending' },
+      { id: 'process', label: 'Finalizing document', status: 'pending' }
     ]);
 
     setIsProcessing(true);
@@ -170,40 +170,56 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
       await new Promise(resolve => setTimeout(resolve, 500));
       setProcessingSteps(prev => prev.map(step => 
         step.id === 'validate' ? { ...step, status: 'completed' } : 
-        step.id === 'upload' ? { ...step, status: 'processing' } : step
+        step.id === 'convert' ? { ...step, status: 'processing' } : step
       ));
 
-      // Step 2: Simulate upload progress
-      for (let i = 0; i <= 100; i += 10) {
-        setUploadProgress(i);
-        setProcessingSteps(prev => prev.map(step => 
-          step.id === 'upload' ? { ...step, progress: i } : step
-        ));
-        await new Promise(resolve => setTimeout(resolve, 100));
+      // Step 2: Convert PDF to high-resolution image
+      console.log('🔧 PDF_UPLOAD: Starting PDF to image conversion...');
+      const pdfPages = await convertPDFToImages(file, 4); // High resolution
+      
+      if (pdfPages.length === 0) {
+        throw new Error('PDF conversion failed - no pages extracted');
       }
 
+      // Use the first page and convert to a File object
+      const firstPage = pdfPages[0];
+      const originalName = file.name.replace(/\.pdf$/i, '');
+      const imageFileName = `${originalName}_converted.png`;
+      
+      const imageFile = createFileFromBlob(firstPage.blob, imageFileName);
+      
+      console.log('🔧 PDF_UPLOAD: Conversion successful, created image file:', imageFile.name, 'Size:', imageFile.size);
+
       setProcessingSteps(prev => prev.map(step => 
-        step.id === 'upload' ? { ...step, status: 'completed' } : 
+        step.id === 'convert' ? { ...step, status: 'completed' } : 
         step.id === 'process' ? { ...step, status: 'processing' } : step
       ));
 
-      // Step 3: Processing
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Step 3: Finalize
+      await new Promise(resolve => setTimeout(resolve, 500));
       setProcessingSteps(prev => prev.map(step => 
         step.id === 'process' ? { ...step, status: 'completed' } : step
       ));
 
       toast({
-        title: "PDF uploaded successfully",
-        description: "PDF is ready for analysis. Processing may take a moment.",
+        title: "PDF converted successfully",
+        description: "PDF has been converted to a high-resolution image for optimal analysis.",
         variant: "default",
       });
 
-      return file;
+      return imageFile;
     } catch (error) {
+      console.error('🔧 PDF_UPLOAD: Conversion failed:', error);
       setProcessingSteps(prev => prev.map(step => 
         step.status === 'processing' ? { ...step, status: 'error' } : step
       ));
+      
+      toast({
+        title: "PDF conversion failed",
+        description: error instanceof Error ? error.message : "Failed to convert PDF. Please try uploading as an image instead.",
+        variant: "destructive",
+      });
+      
       throw error;
     } finally {
       setIsProcessing(false);

@@ -333,83 +333,36 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
 
       let analysisResult;
       
-      if (isPdf) {
-        console.log('🔧 PDF detected, converting to high-res images for OpenAI analysis');
-        
-        try {
-          // Convert PDF to high-resolution images for better AI analysis
-          const response = await fetch(documentUrl);
-          const blob = await response.blob();
-          const file = new File([blob], documentRecord.stored_filename, { type: 'application/pdf' });
-          
-          const { convertPDFToImages } = await import('@/utils/pdfToImage');
-          const pdfPages = await convertPDFToImages(file, 4); // High resolution (300+ DPI equivalent)
-          
-          // Use the first page for analysis (could extend to analyze all pages)
-          const canvas = pdfPages[0].canvas;
-          const imageData = canvas.toDataURL('image/png');
-          
-          console.log('🔧 PDF converted to image, sending to OpenAI...');
-          const { data, error } = await supabase.functions.invoke('analyze-document', {
-            body: { 
-              imageData,
-              prompt: `Extract information from this document for the following fields and return as valid JSON:\n${extractionFields}\n\nReturn only a JSON object with field names as keys and extracted values as values. Do not include any markdown, explanations, or additional text.`
-            }
-          });
-          
-          if (error) {
-            throw new Error(error.message || 'Failed to analyze PDF with OpenAI');
-          }
-          
-          analysisResult = data;
-        } catch (conversionError) {
-          console.error('PDF conversion failed, falling back to Claude:', conversionError);
-          // Fallback to Claude if conversion fails
-          const { data, error } = await supabase.functions.invoke('analyze-document-claude', {
-            body: {
-              fileUrl: documentUrl,
-              fileName: documentRecord.stored_filename,
-              contentType: 'application/pdf',
-              prompt: `Extract information from this document for the following fields and return as valid JSON:\n${extractionFields}\n\nReturn only a JSON object with field names as keys and extracted values as values. Do not include any markdown, explanations, or additional text.`
-            }
-          });
-
-          if (error) {
-            throw new Error(error.message || 'Failed to analyze document with Claude');
-          }
-
-          analysisResult = data;
+      // Since PDFs are now converted to images at upload time, use OpenAI for all files
+      console.log('🔧 Analyzing document with OpenAI (PDFs are pre-converted to images)...');
+      
+      const { data, error } = await supabase.functions.invoke('analyze-document', {
+        body: {
+          fileUrl: documentUrl,
+          fileName: documentRecord.stored_filename,
+          contentType: documentRecord.content_type,
+          prompt: `Extract information from this document for the following fields and return as valid JSON:\n${extractionFields}\n\nReturn only a JSON object with field names as keys and extracted values as values. Do not include any markdown, explanations, or additional text.`
         }
-      } else {
-        console.log('🔧 Image detected, using OpenAI Vision for analysis');
-        
-        // For images, use the existing OpenAI approach
-        let imageData: string;
-        
-        // Check if documentUrl is already a base64 data URL (from pending documents)
-        if (documentUrl.startsWith('data:')) {
-          console.log('🔧 Using base64 data from pending document');
-          imageData = documentUrl;
-        } else {
-          console.log('🔧 Fetching document from storage URL for full screen analysis');
-          // Fetch document and convert to base64 for analysis
-          const response = await fetch(documentUrl);
-          const blob = await response.blob();
-          const reader = new FileReader();
-          imageData = await new Promise((resolve) => {
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.readAsDataURL(blob);
-          });
-        }
+      });
 
-        const { data, error } = await supabase.functions.invoke('analyze-document', {
+      if (error) {
+        console.error('OpenAI analysis failed, falling back to Claude:', error);
+        // Fallback to Claude
+        const { data: claudeData, error: claudeError } = await supabase.functions.invoke('analyze-document-claude', {
           body: {
-            prompt: `Extract information from this document for the following fields and return as valid JSON:\n${extractionFields}\n\nReturn only a JSON object with field names as keys and extracted values as values. Do not include any markdown, explanations, or additional text.`,
-            imageData
-          },
+            fileUrl: documentUrl,
+            fileName: documentRecord.stored_filename,
+            contentType: documentRecord.content_type,
+            prompt: `Extract information from this document for the following fields and return as valid JSON:\n${extractionFields}\n\nReturn only a JSON object with field names as keys and extracted values as values. Do not include any markdown, explanations, or additional text.`
+          }
         });
+
+        if (claudeError) {
+          throw new Error(claudeError.message || 'Both OpenAI and Claude analysis failed');
+        }
         
-        if (error) throw error;
+        analysisResult = claudeData;
+      } else {
         analysisResult = data;
       }
 

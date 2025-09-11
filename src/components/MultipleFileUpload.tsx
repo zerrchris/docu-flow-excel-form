@@ -104,10 +104,47 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
     }
   };
 
-  // No processing needed - PDFs are now supported directly for Claude analysis
+  // Convert PDFs to images during upload for consistent processing
   const processPDFFiles = async (fileArray: File[]): Promise<File[]> => {
-    console.log('🔧 Processing files (no conversion needed):', fileArray.map(f => f.name));
-    return fileArray; // Return all files as-is, including PDFs
+    console.log('🔧 Processing files, converting PDFs to images:', fileArray.map(f => f.name));
+    
+    const processedFiles: File[] = [];
+    
+    for (const file of fileArray) {
+      if (isPDF(file)) {
+        try {
+          console.log('🔧 Converting PDF to image:', file.name);
+          const pdfPages = await convertPDFToImages(file, 4); // High resolution
+          
+          if (pdfPages.length === 0) {
+            throw new Error('PDF conversion failed - no pages extracted');
+          }
+
+          // Use the first page and convert to a File object
+          const firstPage = pdfPages[0];
+          const originalName = file.name.replace(/\.pdf$/i, '');
+          const imageFileName = `${originalName}_converted.png`;
+          
+          const imageFile = createFileFromBlob(firstPage.blob, imageFileName);
+          console.log('🔧 PDF converted to image:', imageFile.name, 'Size:', imageFile.size);
+          
+          processedFiles.push(imageFile);
+        } catch (error) {
+          console.error('🔧 PDF conversion failed for', file.name, ':', error);
+          toast({
+            title: "PDF conversion failed",
+            description: `Failed to convert ${file.name}. Please try uploading as an image instead.`,
+            variant: "destructive"
+          });
+          // Skip this file - don't add it to processedFiles
+        }
+      } else {
+        // Non-PDF files are added as-is
+        processedFiles.push(file);
+      }
+    }
+    
+    return processedFiles;
   };
 
   const handleFileSelect = useCallback(async (selectedFiles: FileList) => {
