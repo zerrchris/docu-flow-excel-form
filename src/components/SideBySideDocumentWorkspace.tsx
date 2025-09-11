@@ -717,9 +717,51 @@ Return only the filename, nothing else.`,
                       file={null}
                       previewUrl={DocumentService.getDocumentUrlSync(documentRecord.file_path)}
                     />
-                     ) : (
-                      <div className="h-full w-full relative">
-                        <div className="h-full w-full overflow-auto scrollbar-thin scrollbar-thumb-muted-foreground/30 scrollbar-track-transparent">
+                      ) : (
+                      <div className="h-full w-full relative overflow-hidden">
+                        <div 
+                          className="h-full w-full overflow-auto scrollbar-thin scrollbar-thumb-muted-foreground/30 scrollbar-track-transparent"
+                          onWheel={(e) => {
+                            if (!imageFitToWidth) {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              
+                              const container = e.currentTarget;
+                              const img = container.querySelector('img');
+                              if (!img) return;
+                              
+                              // Calculate scaled dimensions and bounds
+                              const scaledWidth = img.naturalWidth * imageZoom;
+                              const scaledHeight = img.naturalHeight * imageZoom;
+                              const containerWidth = container.clientWidth;
+                              const containerHeight = container.clientHeight;
+                              
+                              // Only allow scroll if zoomed content is larger than container
+                              const canScrollX = scaledWidth > containerWidth;
+                              const canScrollY = scaledHeight > containerHeight;
+                              
+                              // For wheel events, handle zoom first
+                              if (e.ctrlKey || e.metaKey) {
+                                const delta = e.deltaY > 0 ? -0.1 : 0.1;
+                                setImageZoom(prev => Math.max(0.25, Math.min(4, prev + delta)));
+                                return;
+                              }
+                              
+                              // Handle pan/scroll with proper bounds
+                              if (canScrollY && Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+                                const newScrollTop = container.scrollTop + e.deltaY;
+                                const maxScrollTop = Math.max(0, scaledHeight - containerHeight);
+                                container.scrollTop = Math.max(0, Math.min(maxScrollTop, newScrollTop));
+                              }
+                              
+                              if (canScrollX && Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+                                const newScrollLeft = container.scrollLeft + e.deltaX;
+                                const maxScrollLeft = Math.max(0, scaledWidth - containerWidth);
+                                container.scrollLeft = Math.max(0, Math.min(maxScrollLeft, newScrollLeft));
+                              }
+                            }
+                          }}
+                        >
                           <img 
                             src={DocumentService.getDocumentUrlSync(documentRecord.file_path)}
                             alt={documentRecord.stored_filename}
@@ -734,13 +776,6 @@ Return only the filename, nothing else.`,
                             onClick={() => {
                               if (!imageFitToWidth) {
                                 setImageZoom(prev => prev === 1 ? 2 : prev === 2 ? 0.5 : 1);
-                              }
-                            }}
-                            onWheel={(e) => {
-                              if (!imageFitToWidth) {
-                                e.preventDefault();
-                                const delta = e.deltaY > 0 ? -0.1 : 0.1;
-                                setImageZoom(prev => Math.max(0.25, Math.min(4, prev + delta)));
                               }
                             }}
                           />

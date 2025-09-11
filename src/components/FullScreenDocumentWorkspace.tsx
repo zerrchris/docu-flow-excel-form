@@ -297,12 +297,28 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
     }
   };
 
-  // Image pan and wheel handlers for Mac trackpad scroll
+  // Image pan and wheel handlers with proper bounds
   const handleImageWheel = (e: React.WheelEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setPanX(prev => prev - e.deltaX);
-    setPanY(prev => prev - e.deltaY);
+    
+    const imageElement = e.currentTarget as HTMLElement;
+    const containerElement = imageElement.parentElement;
+    if (!containerElement) return;
+    
+    // Calculate scaled image dimensions
+    const scaledWidth = imageElement.offsetWidth * zoom;
+    const scaledHeight = imageElement.offsetHeight * zoom;
+    const containerWidth = containerElement.offsetWidth;
+    const containerHeight = containerElement.offsetHeight;
+    
+    // Calculate maximum pan values based on zoom
+    const maxPanX = Math.max(0, (scaledWidth - containerWidth) / 2);
+    const maxPanY = Math.max(0, (scaledHeight - containerHeight) / 2);
+    
+    // Apply constraints to prevent over-scrolling
+    setPanX(prev => Math.max(-maxPanX, Math.min(maxPanX, prev - e.deltaX)));
+    setPanY(prev => Math.max(-maxPanY, Math.min(maxPanY, prev - e.deltaY)));
   };
 
   const handleImageMouseDown = (e: React.MouseEvent) => {
@@ -313,8 +329,26 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
   const handleImageMouseMove = (e: React.MouseEvent) => {
     if (!isDraggingImage) return;
     e.preventDefault();
-    setPanX(e.clientX - dragStart.x);
-    setPanY(e.clientY - dragStart.y);
+    
+    const imageElement = e.currentTarget as HTMLElement;
+    const containerElement = imageElement.parentElement;
+    if (!containerElement) return;
+    
+    // Calculate scaled image dimensions
+    const scaledWidth = imageElement.offsetWidth * zoom;
+    const scaledHeight = imageElement.offsetHeight * zoom;
+    const containerWidth = containerElement.offsetWidth;
+    const containerHeight = containerElement.offsetHeight;
+    
+    // Calculate maximum pan values based on zoom
+    const maxPanX = Math.max(0, (scaledWidth - containerWidth) / 2);
+    const maxPanY = Math.max(0, (scaledHeight - containerHeight) / 2);
+    
+    // Apply constraints to prevent over-scrolling
+    const newPanX = e.clientX - dragStart.x;
+    const newPanY = e.clientY - dragStart.y;
+    setPanX(Math.max(-maxPanX, Math.min(maxPanX, newPanX)));
+    setPanY(Math.max(-maxPanY, Math.min(maxPanY, newPanY)));
   };
 
   const handleImageMouseUp = () => setIsDraggingImage(false);
