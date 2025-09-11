@@ -18,7 +18,7 @@ export interface PDFPage {
  * @param scale - Scale factor for the output images (default: 2 for high quality)
  * @returns Array of image blobs, one per page
  */
-export const convertPDFToImages = async (file: File, scale: number = 2): Promise<PDFPage[]> => {
+export const convertPDFToImages = async (file: File, scale: number = 4): Promise<PDFPage[]> => {
   try {
     console.log('🔧 PDF_CONVERSION: Starting PDF to image conversion...', {
       fileName: file.name,

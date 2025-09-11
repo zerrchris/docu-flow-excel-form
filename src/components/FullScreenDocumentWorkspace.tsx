@@ -334,23 +334,51 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
       let analysisResult;
       
       if (isPdf) {
-        console.log('🔧 PDF detected, using Claude for PDF analysis');
+        console.log('🔧 PDF detected, converting to high-res images for OpenAI analysis');
         
-        // For PDFs, use Claude function which handles PDFs natively
-        const { data, error } = await supabase.functions.invoke('analyze-document-claude', {
-          body: {
-            fileUrl: documentUrl,
-            fileName: documentRecord.stored_filename,
-            contentType: 'application/pdf',
-            prompt: `Extract information from this document for the following fields and return as valid JSON:\n${extractionFields}\n\nReturn only a JSON object with field names as keys and extracted values as values. Do not include any markdown, explanations, or additional text.`
+        try {
+          // Convert PDF to high-resolution images for better AI analysis
+          const response = await fetch(documentUrl);
+          const blob = await response.blob();
+          const file = new File([blob], documentRecord.stored_filename, { type: 'application/pdf' });
+          
+          const { convertPDFToImages } = await import('@/utils/pdfToImage');
+          const pdfPages = await convertPDFToImages(file, 4); // High resolution (300+ DPI equivalent)
+          
+          // Use the first page for analysis (could extend to analyze all pages)
+          const canvas = pdfPages[0].canvas;
+          const imageData = canvas.toDataURL('image/png');
+          
+          const { data, error } = await supabase.functions.invoke('analyze-document', {
+            body: { 
+              imageData,
+              prompt: `Extract information from this document for the following fields and return as valid JSON:\n${extractionFields}\n\nReturn only a JSON object with field names as keys and extracted values as values. Do not include any markdown, explanations, or additional text.`
+            }
+          });
+          
+          if (error) {
+            throw new Error(error.message || 'Failed to analyze PDF with OpenAI');
           }
-        });
+          
+          analysisResult = data;
+        } catch (conversionError) {
+          console.error('PDF conversion failed, falling back to Claude:', conversionError);
+          // Fallback to Claude if conversion fails
+          const { data, error } = await supabase.functions.invoke('analyze-document-claude', {
+            body: {
+              fileUrl: documentUrl,
+              fileName: documentRecord.stored_filename,
+              contentType: 'application/pdf',
+              prompt: `Extract information from this document for the following fields and return as valid JSON:\n${extractionFields}\n\nReturn only a JSON object with field names as keys and extracted values as values. Do not include any markdown, explanations, or additional text.`
+            }
+          });
 
-        if (error) {
-          throw new Error(error.message || 'Failed to analyze document with Claude');
+          if (error) {
+            throw new Error(error.message || 'Failed to analyze document with Claude');
+          }
+
+          analysisResult = data;
         }
-
-        analysisResult = data;
       } else {
         console.log('🔧 Image detected, using OpenAI Vision for analysis');
         
