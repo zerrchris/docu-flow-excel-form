@@ -534,27 +534,63 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Check if it's an image
-    if (!file.type.startsWith('image/')) {
-      toast({
-        title: "Invalid File",
-        description: "Please select an image file.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setIsUploading(true);
 
     try {
-      // Convert to data URL
+      // Convert PDF to high-resolution image if needed
+      let processedFile = file;
+      if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+        console.log('🔧 MobileCamera: PDF detected, converting to high-resolution image...');
+        
+        try {
+          const { convertPDFToImages, createFileFromBlob } = await import('@/utils/pdfToImage');
+          const pdfPages = await convertPDFToImages(file, 4); // High resolution (300+ DPI)
+          
+          if (pdfPages.length === 0) {
+            throw new Error('PDF conversion failed - no pages extracted');
+          }
+
+          // Use the first page and convert to a File object
+          const firstPage = pdfPages[0];
+          const originalName = file.name.replace(/\.pdf$/i, '');
+          const imageFileName = `${originalName}_converted.png`;
+          
+          processedFile = createFileFromBlob(firstPage.blob, imageFileName);
+          
+          console.log('🔧 MobileCamera: PDF converted to image:', processedFile.name, 'Size:', processedFile.size);
+          
+          toast({
+            title: "PDF converted",
+            description: "PDF has been converted to a high-resolution image for optimal processing.",
+            variant: "default",
+          });
+        } catch (conversionError) {
+          console.error('🔧 MobileCamera: PDF conversion failed:', conversionError);
+          toast({
+            title: "PDF conversion failed",
+            description: "Failed to convert PDF. Please try uploading as an image instead.",
+            variant: "destructive",
+          });
+          return;
+        }
+      } else if (!processedFile.type.startsWith('image/')) {
+        // Check if it's an image (after potential PDF conversion)
+        toast({
+          title: "Invalid File",
+          description: "Please select an image or PDF file.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Convert processed file to data URL
       const reader = new FileReader();
       reader.onload = async (e) => {
         if (e.target?.result) {
           await uploadPhoto(e.target.result as string);
         }
       };
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(processedFile);
     } catch (error) {
       console.error('Error processing file:', error);
       toast({
@@ -703,7 +739,7 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
               <input
                 id="file-upload"
                 type="file"
-                accept="image/*"
+                accept="image/*,application/pdf"
                 onChange={handleFileUpload}
                 className="hidden"
               />
