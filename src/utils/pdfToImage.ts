@@ -1,8 +1,8 @@
 import * as pdfjsLib from 'pdfjs-dist';
 import 'pdfjs-dist/web/pdf_viewer.css';
 
-// Configure PDF.js worker - use CDN worker for better compatibility
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+// Configure PDF.js worker - use CDN worker for better compatibility (v5 uses .mjs)
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 
 console.log('PDF.js configured with worker:', pdfjsLib.GlobalWorkerOptions.workerSrc);
 
@@ -49,13 +49,34 @@ export const convertPDFToImages = async (file: File, scale: number = 4): Promise
     
     console.log('🔧 PDF_CONVERSION: Loading PDF document...');
     
-    // Load the PDF document with timeout
+    // Helper to load PDF with fallback worker URL
+    const loadPdf = async () => {
+      try {
+        return await pdfjsLib.getDocument({
+          data: arrayBuffer,
+          useSystemFonts: true,
+          verbosity: 0, // Reduce console noise
+        }).promise;
+      } catch (e) {
+        console.warn('🔧 PDF_CONVERSION: Primary worker failed, trying fallback worker URL (.mjs on cdnjs)...', e);
+        try {
+          // Try alternate worker URL
+          pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+          return await pdfjsLib.getDocument({
+            data: arrayBuffer,
+            useSystemFonts: true,
+            verbosity: 0,
+          }).promise;
+        } catch (e2) {
+          console.error('🔧 PDF_CONVERSION: Fallback worker also failed.', e2);
+          throw e2;
+        }
+      }
+    };
+
+    // Load with timeout
     const pdf = await Promise.race([
-      pdfjsLib.getDocument({
-        data: arrayBuffer,
-        useSystemFonts: true,
-        verbosity: 0, // Reduce console noise
-      }).promise,
+      loadPdf(),
       new Promise<never>((_, reject) => 
         setTimeout(() => reject(new Error('PDF loading timeout')), 20000)
       )

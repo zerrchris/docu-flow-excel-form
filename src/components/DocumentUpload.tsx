@@ -235,6 +235,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
   };
   const handleDrop = useCallback(async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
+    if (isProcessing) return;
     
     const files = Array.from(e.dataTransfer.files);
     if (files.length === 0) return;
@@ -532,26 +533,27 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
                         Drag and drop your document{allowMultiple ? 's' : ''} here, or
                       </p>
                        <div className="flex gap-3 flex-wrap">
-                         <Button variant="outline" size="lg" asChild className="font-semibold">
+                         <Button variant="outline" size="lg" asChild className="font-semibold" disabled={isProcessing}>
                            <label htmlFor="document-upload-input" className="cursor-pointer">
-                             Browse Files
+                             {isProcessing ? 'Processing…' : 'Browse Files'}
                            </label>
                          </Button>
                          
-                         <ScreenshotCapture 
+                          <ScreenshotCapture 
                            onFileSelect={onFileSelect}
-                           className="font-semibold"
-                         />
+                           className={`font-semibold ${isProcessing ? 'pointer-events-none opacity-50' : ''}`}
+                          />
                          
-                         <Button 
+                          <Button 
                            variant="outline" 
                            size="lg" 
                            onClick={() => setShowMobileDocuments(!showMobileDocuments)}
                            className="font-semibold"
-                         >
-                           <Smartphone className="h-4 w-4 mr-2" />
-                           Mobile Photos
-                         </Button>
+                           disabled={isProcessing}
+                          >
+                            <Smartphone className="h-4 w-4 mr-2" />
+                            {isProcessing ? 'Processing…' : 'Mobile Photos'}
+                          </Button>
                        </div>
                       <input
                         id="document-upload-input"

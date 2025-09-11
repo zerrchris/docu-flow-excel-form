@@ -481,6 +481,7 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
+    if (isUploading) return;
     setDragActive(false);
     
     const files = Array.from(e.dataTransfer.files);
@@ -491,11 +492,13 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
+    if (isUploading) return;
     setDragActive(true);
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
+    if (isUploading) return;
     setDragActive(false);
   };
 
@@ -1064,11 +1067,12 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
                 }
               }}
               accept="image/*,.pdf,.doc,.docx,.txt"
+              disabled={isUploading}
             />
           </label>
           <ScreenshotCapture 
             onFileSelect={handleFileSelect}
-            className="h-8 text-xs"
+            className={`h-8 text-xs ${isUploading ? 'pointer-events-none opacity-50' : ''}`}
           />
         </div>
       </Card>
