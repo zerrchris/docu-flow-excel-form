@@ -58,6 +58,8 @@ import ViewportPortal from './ViewportPortal';
 import { AutoSaveIndicator } from './AutoSaveIndicator';
 import { useImmediateSave } from '@/hooks/useImmediateSave';
 import ReExtractDialog from './ReExtractDialog';
+import { convertPDFToImages, createFileFromBlob } from '@/utils/pdfToImage';
+import { combineImages } from '@/utils/imageCombiner';
 
 
 import type { User } from '@supabase/supabase-js';
@@ -5177,79 +5179,48 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       console.log('🔍 File analysis - name:', file.name, 'type:', file.type);
       let analysisResult, functionError;
       
-      if (file.name.toLowerCase().endsWith('.pdf')) {
-        console.log('🔍 PDF detected - using Claude function for PDF analysis');
-        
-        // For PDF files, we need to get the URL from storage
-        let fileUrl: string;
-        
-        // Check if we have a document record with file_path
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('User not authenticated');
+if (file.name.toLowerCase().endsWith('.pdf')) {
+        console.log('🔍 PDF detected - converting to images and analyzing with OpenAI');
 
-        const { data: documentRecord } = await supabase
-          .from('documents')
-          .select('file_path')
-          .eq('runsheet_id', currentRunsheetId)
-          .eq('row_index', targetRowIndex)
-          .eq('user_id', user.id)
-          .single();
-        
-        if (documentRecord?.file_path) {
-          // File exists in storage, get the public URL
-          console.log('🔍 Found existing document in storage:', documentRecord.file_path);
-          const { data } = supabase.storage
-            .from('documents')
-            .getPublicUrl(documentRecord.file_path);
-          fileUrl = data.publicUrl;
-          console.log('🔍 Generated public URL:', fileUrl);
-        } else {
-          // Upload the file first
-          console.log('🔍 Document not in storage, uploading PDF...');
+        // Ensure the PDF is available as a File (from local upload or fetched from storage)
+        let pdfFile: File = file;
+        if (!(file instanceof File)) {
+          // Fallback: fetch from storage URL if needed (rare)
           const { data: { user } } = await supabase.auth.getUser();
           if (!user) throw new Error('User not authenticated');
-          
-          const filePath = `${user.id}/${currentRunsheetId}/${targetRowIndex}/${file.name}`;
-          console.log('🔍 Uploading to path:', filePath);
-          
-          const { error: uploadError } = await supabase.storage
-            .from('documents')
-            .upload(filePath, file);
-            
-          if (uploadError) {
-            console.error('🔍 Upload error:', uploadError);
-            throw uploadError;
-          }
-          
-          console.log('🔍 File uploaded successfully, generating public URL...');
-          const { data } = supabase.storage
-            .from('documents')
-            .getPublicUrl(filePath);
-          fileUrl = data.publicUrl;
-          console.log('🔍 Generated public URL for new upload:', fileUrl);
+          const originalName = ((file as any)?.name as string) || 'document.pdf';
+          const filePath = `${user.id}/${currentRunsheetId}/${targetRowIndex}/${originalName}`;
+          const { data } = supabase.storage.from('documents').getPublicUrl(filePath);
+          const res = await fetch(data.publicUrl);
+          const blob = await res.blob();
+          pdfFile = new File([blob], originalName, { type: 'application/pdf' });
         }
-        
-        console.log('🔍 About to call analyze-document-claude with fileUrl:', fileUrl);
-        ({ data: analysisResult, error: functionError } = await supabase.functions.invoke('analyze-document-claude', {
+
+        // 1) Convert all pages to images
+        const pages = await convertPDFToImages(pdfFile, 4);
+        if (!pages.length) throw new Error('No pages found in PDF');
+
+        const basePdfName = (((file as any)?.name as string) || 'document.pdf');
+        const pageFiles = pages.map(p => createFileFromBlob(p.blob, `${basePdfName.replace(/\.pdf$/i, '')}_page-${p.pageNumber}.png`));
+
+        // 3) Combine pages vertically into one tall image for best OCR
+        const { file: combinedImage } = await combineImages(pageFiles, { type: 'vertical', maxWidth: undefined, quality: 0.9 });
+
+        // 4) Read combined image as base64 data URL for OpenAI vision
+        const reader = new FileReader();
+        const combinedImageData: string = await new Promise((resolve, reject) => {
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = () => reject(new Error('Failed to read combined image'));
+          reader.readAsDataURL(combinedImage);
+        });
+
+        // 5) Analyze with OpenAI
+        ({ data: analysisResult, error: functionError } = await supabase.functions.invoke('analyze-document', {
           body: {
-            fileUrl,
-            fileName: file.name,
-            contentType: 'application/pdf',
-            prompt: `Analyze this document and extract the following information.
-
-IMPORTANT INSTRUCTIONS:
-- "Instrument Number" should be the actual document number (like "2022-817"), NOT a date or time
-- "Book and Page" should be the book/page reference number
-- "Recording Date" should be the date when the document was recorded (may include time)
-- "Document Date" should be the date when the document was created/signed
-- Be very careful to distinguish between dates and document numbers
-
-Return the data as a JSON object with the exact field names specified:
-
-${extractionFields}`
+            imageData: combinedImageData,
+            prompt: `Analyze this document and extract the following information.\n\nIMPORTANT INSTRUCTIONS:\n- "Instrument Number" should be the actual document number (like "2022-817"), NOT a date or time\n- "Book and Page" should be the book/page reference number\n- "Recording Date" should be the date when the document was recorded (may include time)\n- "Document Date" should be the date when the document was created/signed\n- Be very careful to distinguish between dates and document numbers\n\nReturn the data as a JSON object with the exact field names specified:\n\n${extractionFields}`
           }
         }));
-        console.log('🔍 Claude function response:', { analysisResult, functionError });
       } else {
         console.log('🔍 Non-PDF file detected - using OpenAI vision function');
         console.log('🔍 Calling analyze-document edge function...');

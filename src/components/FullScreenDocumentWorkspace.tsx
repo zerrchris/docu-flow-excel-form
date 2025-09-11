@@ -336,35 +336,27 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
       // Since PDFs are now converted to images at upload time, use OpenAI for all files
       console.log('🔧 Analyzing document with OpenAI (PDFs are pre-converted to images)...');
       
+      // Fetch the document and convert to base64 image data URL
+      const response = await fetch(documentUrl);
+      const blob = await response.blob();
+      const reader = new FileReader();
+      const imageData: string = await new Promise((resolve) => {
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(blob);
+      });
+      
       const { data, error } = await supabase.functions.invoke('analyze-document', {
         body: {
-          fileUrl: documentUrl,
-          fileName: documentRecord.stored_filename,
-          contentType: documentRecord.content_type,
+          imageData,
           prompt: `Extract information from this document for the following fields and return as valid JSON:\n${extractionFields}\n\nReturn only a JSON object with field names as keys and extracted values as values. Do not include any markdown, explanations, or additional text.`
         }
       });
 
       if (error) {
-        console.error('OpenAI analysis failed, falling back to Claude:', error);
-        // Fallback to Claude
-        const { data: claudeData, error: claudeError } = await supabase.functions.invoke('analyze-document-claude', {
-          body: {
-            fileUrl: documentUrl,
-            fileName: documentRecord.stored_filename,
-            contentType: documentRecord.content_type,
-            prompt: `Extract information from this document for the following fields and return as valid JSON:\n${extractionFields}\n\nReturn only a JSON object with field names as keys and extracted values as values. Do not include any markdown, explanations, or additional text.`
-          }
-        });
-
-        if (claudeError) {
-          throw new Error(claudeError.message || 'Both OpenAI and Claude analysis failed');
-        }
-        
-        analysisResult = claudeData;
-      } else {
-        analysisResult = data;
+        throw new Error(error.message || 'OpenAI analysis failed');
       }
+      
+      analysisResult = data;
 
       console.log('📡 Analysis function response:', { data: analysisResult });
 

@@ -153,7 +153,6 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
         reader.readAsDataURL(blob);
       });
       
-      // Analyze with OpenAI vision (expects imageData)
       const { data, error } = await supabase.functions.invoke('analyze-document', {
         body: {
           prompt: `Extract information from this document for the following fields and return as valid JSON:\n${extractionFields}\n\nReturn only a JSON object with field names as keys and extracted values as values. Do not include any markdown, explanations, or additional text.`,
@@ -162,25 +161,10 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
       });
 
       if (error) {
-        console.error('OpenAI analysis failed, falling back to Claude:', error);
-        // Fallback to Claude
-        const { data: claudeData, error: claudeError } = await supabase.functions.invoke('analyze-document-claude', {
-          body: {
-            fileUrl: documentUrl,
-            fileName: documentRecord.stored_filename,
-            contentType: documentRecord.content_type,
-            prompt: `Extract information from this document for the following fields and return as valid JSON:\n${extractionFields}\n\nReturn only a JSON object with field names as keys and extracted values as values. Do not include any markdown, explanations, or additional text.`
-          }
-        });
-
-        if (claudeError) {
-          throw new Error(claudeError.message || 'Both OpenAI and Claude analysis failed');
-        }
-        
-        analysisResult = claudeData;
-      } else {
-        analysisResult = data;
+        throw new Error(error.message || 'OpenAI analysis failed');
       }
+      
+      analysisResult = data;
 
       console.log('📡 Analysis function response (side-by-side):', { data: analysisResult });
 
