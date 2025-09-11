@@ -11,6 +11,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { DocumentService, type DocumentRecord } from '@/services/documentService';
+import { ExtractionPreferencesService } from '@/services/extractionPreferences';
 
 interface BatchRenameResult {
   rowIndex: number;
@@ -47,34 +48,67 @@ export const BatchFileRenameDialog: React.FC<BatchFileRenameDialogProps> = ({
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
   const [maxParts, setMaxParts] = useState(2);
   const [showSettings, setShowSettings] = useState(false);
+  const [isLoadingPreferences, setIsLoadingPreferences] = useState(false);
   const [previewNames, setPreviewNames] = useState<Map<number, string>>(new Map());
 
-  // Initialize results and default settings when dialog opens
+  // Load user preferences and initialize results when dialog opens
   useEffect(() => {
     if (isOpen && documentMap.size > 0) {
-      const initialResults: BatchRenameResult[] = [];
-      documentMap.forEach((doc, rowIndex) => {
-        initialResults.push({
-          rowIndex,
-          originalName: doc.stored_filename,
-          status: 'pending'
+      const initializeDialog = async () => {
+        const initialResults: BatchRenameResult[] = [];
+        documentMap.forEach((doc, rowIndex) => {
+          initialResults.push({
+            rowIndex,
+            originalName: doc.stored_filename,
+            status: 'pending'
+          });
         });
-      });
-      setResults(initialResults.sort((a, b) => a.rowIndex - b.rowIndex));
-      setProgress(0);
+        setResults(initialResults.sort((a, b) => a.rowIndex - b.rowIndex));
+        setProgress(0);
+        
+        // Load user's default preferences if not already set
+        if (selectedColumns.length === 0) {
+          setIsLoadingPreferences(true);
+          try {
+            const preferences = await ExtractionPreferencesService.getDefaultPreferences();
+            
+            if (preferences?.columns && preferences.columns.length > 0) {
+              // Use user's preferred columns, filtered to those that exist in current runsheet
+              const availablePreferredColumns = preferences.columns.filter(col => columns.includes(col));
+              setSelectedColumns(availablePreferredColumns.slice(0, 3)); // Limit to 3 for filename
+            } else {
+              // Fallback to smart defaults if user has no preferences
+              const defaultColumns = columns.filter(col => 
+                ['name', 'title', 'invoice_number', 'document_number', 'reference'].includes(col.toLowerCase())
+              ).slice(0, 3);
+              setSelectedColumns(defaultColumns.length > 0 ? defaultColumns : columns.slice(0, 2));
+            }
+          } catch (error) {
+            console.error('Error loading user preferences:', error);
+            // Fallback to smart defaults
+            const defaultColumns = columns.filter(col => 
+              ['name', 'title', 'invoice_number', 'document_number', 'reference'].includes(col.toLowerCase())
+            ).slice(0, 3);
+            setSelectedColumns(defaultColumns.length > 0 ? defaultColumns : columns.slice(0, 2));
+          } finally {
+            setIsLoadingPreferences(false);
+          }
+        }
+        
+        // Generate preview names after a short delay to ensure state is updated
+        setTimeout(() => generatePreviewNames(), 100);
+      };
       
-      // Set default columns if not set
-      if (selectedColumns.length === 0) {
-        const defaultColumns = columns.filter(col => 
-          ['name', 'title', 'invoice_number', 'document_number', 'reference'].includes(col.toLowerCase())
-        ).slice(0, 3);
-        setSelectedColumns(defaultColumns.length > 0 ? defaultColumns : columns.slice(0, 2));
-      }
-      
-      // Generate preview names
+      initializeDialog();
+    }
+  }, [isOpen, documentMap]);
+
+  // Regenerate preview names when settings change
+  useEffect(() => {
+    if (selectedColumns.length > 0 && !isLoadingPreferences) {
       generatePreviewNames();
     }
-  }, [isOpen, documentMap, selectedColumns, maxParts]);
+  }, [selectedColumns, maxParts]);
 
   const generatePreviewNames = async () => {
     const newPreviewNames = new Map<number, string>();
@@ -307,11 +341,14 @@ export const BatchFileRenameDialog: React.FC<BatchFileRenameDialogProps> = ({
                   <CollapsibleTrigger asChild>
                     <Button variant="outline" size="sm" className="flex items-center gap-2">
                       <Settings className="w-4 h-4" />
-                      Naming Settings
+                      Customize Naming {isLoadingPreferences ? '(Loading preferences...)' : '(Using your defaults)'}
                     </Button>
                   </CollapsibleTrigger>
                   <CollapsibleContent className="mt-4 space-y-4 border rounded-lg p-4">
                     <div className="space-y-3">
+                      <div className="text-sm text-muted-foreground mb-3">
+                        These settings started with your default extraction preferences and can be customized for this batch rename.
+                      </div>
                       <div>
                         <Label className="text-sm font-medium">Columns to use for naming (in order):</Label>
                         <div className="mt-2 grid grid-cols-2 gap-2">
@@ -320,6 +357,7 @@ export const BatchFileRenameDialog: React.FC<BatchFileRenameDialogProps> = ({
                               <Checkbox
                                 id={`column-${column}`}
                                 checked={selectedColumns.includes(column)}
+                                disabled={isLoadingPreferences}
                                 onCheckedChange={(checked) => {
                                   if (checked) {
                                     setSelectedColumns(prev => [...prev, column]);
@@ -338,7 +376,11 @@ export const BatchFileRenameDialog: React.FC<BatchFileRenameDialogProps> = ({
                       
                       <div>
                         <Label className="text-sm font-medium">Maximum filename parts:</Label>
-                        <Select value={maxParts.toString()} onValueChange={(value) => setMaxParts(parseInt(value))}>
+                        <Select 
+                          value={maxParts.toString()} 
+                          onValueChange={(value) => setMaxParts(parseInt(value))}
+                          disabled={isLoadingPreferences}
+                        >
                           <SelectTrigger className="w-32 mt-1">
                             <SelectValue />
                           </SelectTrigger>
@@ -355,6 +397,7 @@ export const BatchFileRenameDialog: React.FC<BatchFileRenameDialogProps> = ({
                         variant="outline" 
                         size="sm" 
                         onClick={generatePreviewNames}
+                        disabled={isLoadingPreferences}
                         className="mt-2"
                       >
                         Update Preview
