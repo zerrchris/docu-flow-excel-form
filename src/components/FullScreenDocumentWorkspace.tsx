@@ -503,7 +503,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
     });
   };
 
-  const handleReExtractWithNotes = async (notes: string, saveToPreferences?: boolean) => {
+  const handleReExtractWithNotes = async (notes: string, saveToPreferences?: boolean, saveToRunsheet?: boolean) => {
     setIsReExtracting(true);
     
     try {
@@ -572,9 +572,25 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
         }
       }
       
+      // Save feedback to runsheet column instructions if requested
+      if (saveToRunsheet && runsheetId) {
+        const { RunsheetService } = await import('@/services/runsheetService');
+        const success = await RunsheetService.appendToRunsheetColumnInstructions(
+          runsheetId,
+          reExtractDialog.fieldName,
+          notes
+        );
+        
+        if (success) {
+          console.log(`✅ Saved feedback to runsheet column instructions for "${reExtractDialog.fieldName}"`);
+        } else {
+          console.error(`❌ Failed to save feedback to runsheet column instructions for "${reExtractDialog.fieldName}"`);
+        }
+      }
+      
       toast({
         title: "Field re-extracted",
-        description: `Successfully re-extracted "${reExtractDialog.fieldName}" with your feedback.${saveToPreferences ? ' Feedback saved for future extractions.' : ''}`,
+        description: `Successfully re-extracted "${reExtractDialog.fieldName}" with your feedback.${saveToPreferences || saveToRunsheet ? ' Feedback saved for future extractions.' : ''}`,
       });
 
       // Close the dialog

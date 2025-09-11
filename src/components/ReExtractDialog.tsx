@@ -11,7 +11,7 @@ interface ReExtractDialogProps {
   onClose: () => void;
   fieldName: string;
   currentValue: string;
-  onReExtract: (notes: string, saveToPreferences?: boolean) => Promise<void>;
+  onReExtract: (notes: string, saveToPreferences?: boolean, saveToRunsheet?: boolean) => Promise<void>;
   isLoading?: boolean;
 }
 
@@ -25,21 +25,24 @@ const ReExtractDialog: React.FC<ReExtractDialogProps> = ({
 }) => {
   const [notes, setNotes] = useState('');
   const [saveToPreferences, setSaveToPreferences] = useState(false);
+  const [saveToRunsheet, setSaveToRunsheet] = useState(false);
 
   const handleSubmit = async () => {
     if (!notes.trim()) {
       return;
     }
     
-    await onReExtract(notes.trim(), saveToPreferences);
+    await onReExtract(notes.trim(), saveToPreferences, saveToRunsheet);
     setNotes('');
     setSaveToPreferences(false);
+    setSaveToRunsheet(false);
     onClose();
   };
 
   const handleClose = () => {
     setNotes('');
     setSaveToPreferences(false);
+    setSaveToRunsheet(false);
     onClose();
   };
 
@@ -98,10 +101,30 @@ const ReExtractDialog: React.FC<ReExtractDialogProps> = ({
                 htmlFor="save-preferences"
                 className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
               >
-                Save as extraction instruction
+                Save to default extraction instructions
               </Label>
               <p className="text-xs text-muted-foreground">
-                Add this feedback to the column's extraction instructions for future use
+                Add this feedback to the default column instructions for all future runsheets
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-start space-x-2">
+            <Checkbox
+              id="save-runsheet"
+              checked={saveToRunsheet}
+              onCheckedChange={(checked) => setSaveToRunsheet(checked === true)}
+              disabled={isLoading}
+            />
+            <div className="grid gap-1.5 leading-none">
+              <Label 
+                htmlFor="save-runsheet"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Save to this runsheet's instructions
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Add this feedback to the column instructions for this specific runsheet only
               </p>
             </div>
           </div>

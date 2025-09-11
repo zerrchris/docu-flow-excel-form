@@ -180,4 +180,56 @@ export class RunsheetService {
     });
     return instructions;
   }
+
+  /**
+   * Append feedback to a specific column instruction for a runsheet
+   */
+  static async appendToRunsheetColumnInstructions(
+    runsheetId: string, 
+    columnName: string, 
+    feedback: string
+  ): Promise<boolean> {
+    try {
+      // First get the current runsheet data
+      const { data: runsheet, error: fetchError } = await supabase
+        .from('runsheets')
+        .select('column_instructions')
+        .eq('id', runsheetId)
+        .single();
+
+      if (fetchError) {
+        console.error('Error fetching runsheet for column instruction update:', fetchError);
+        return false;
+      }
+
+      const currentInstructions = runsheet.column_instructions || {};
+      const currentInstruction = currentInstructions[columnName] || `Extract the ${columnName.toLowerCase()} information as it appears in the document`;
+      
+      // Append the feedback to the existing instruction
+      const updatedInstruction = `${currentInstruction}. ${feedback}`;
+      
+      // Update the instructions
+      const updatedInstructions = {
+        ...(currentInstructions as Record<string, string>),
+        [columnName]: updatedInstruction
+      };
+
+      // Save back to database
+      const { error: updateError } = await supabase
+        .from('runsheets')
+        .update({ column_instructions: updatedInstructions })
+        .eq('id', runsheetId);
+
+      if (updateError) {
+        console.error('Error updating runsheet column instructions:', updateError);
+        return false;
+      }
+
+      console.log(`✅ Successfully appended feedback to runsheet column instruction for "${columnName}"`);
+      return true;
+    } catch (error) {
+      console.error('Error in appendToRunsheetColumnInstructions:', error);
+      return false;
+    }
+  }
 }
