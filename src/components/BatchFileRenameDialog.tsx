@@ -3,9 +3,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { CheckCircle, XCircle, FileText, FileEdit, RefreshCw } from 'lucide-react';
+import { CheckCircle, XCircle, FileText, FileEdit, RefreshCw, Settings } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { DocumentService, type DocumentRecord } from '@/services/documentService';
@@ -42,10 +44,12 @@ export const BatchFileRenameDialog: React.FC<BatchFileRenameDialogProps> = ({
   const [results, setResults] = useState<BatchRenameResult[]>([]);
   const [progress, setProgress] = useState(0);
   const [abortController, setAbortController] = useState<AbortController | null>(null);
-  const [useSmartNaming, setUseSmartNaming] = useState(true);
+  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+  const [maxParts, setMaxParts] = useState(2);
+  const [showSettings, setShowSettings] = useState(false);
   const [previewNames, setPreviewNames] = useState<Map<number, string>>(new Map());
 
-  // Initialize results when dialog opens
+  // Initialize results and default settings when dialog opens
   useEffect(() => {
     if (isOpen && documentMap.size > 0) {
       const initialResults: BatchRenameResult[] = [];
@@ -59,12 +63,18 @@ export const BatchFileRenameDialog: React.FC<BatchFileRenameDialogProps> = ({
       setResults(initialResults.sort((a, b) => a.rowIndex - b.rowIndex));
       setProgress(0);
       
-      // Generate preview names
-      if (useSmartNaming) {
-        generatePreviewNames();
+      // Set default columns if not set
+      if (selectedColumns.length === 0) {
+        const defaultColumns = columns.filter(col => 
+          ['name', 'title', 'invoice_number', 'document_number', 'reference'].includes(col.toLowerCase())
+        ).slice(0, 3);
+        setSelectedColumns(defaultColumns.length > 0 ? defaultColumns : columns.slice(0, 2));
       }
+      
+      // Generate preview names
+      generatePreviewNames();
     }
-  }, [isOpen, documentMap, useSmartNaming]);
+  }, [isOpen, documentMap, selectedColumns, maxParts]);
 
   const generatePreviewNames = async () => {
     const newPreviewNames = new Map<number, string>();
@@ -82,8 +92,6 @@ export const BatchFileRenameDialog: React.FC<BatchFileRenameDialogProps> = ({
   };
 
   const generateSmartFilename = (rowData: Record<string, string>, originalFilename: string): string => {
-    // Priority fields for filename generation
-    const priorityFields = ['name', 'title', 'invoice_number', 'document_number', 'reference', 'id'];
     const filenameParts: string[] = [];
     
     // Get file extension
@@ -91,9 +99,9 @@ export const BatchFileRenameDialog: React.FC<BatchFileRenameDialogProps> = ({
       ? '.' + originalFilename.split('.').pop() 
       : '';
     
-    // Find meaningful data from row
-    for (const field of priorityFields) {
-      const value = rowData[field];
+    // Use selected columns in order
+    for (const columnName of selectedColumns) {
+      const value = rowData[columnName];
       if (value && value.trim() !== '' && !value.toLowerCase().includes('screenshot')) {
         // Clean the value for filename
         const cleanValue = value
@@ -103,27 +111,7 @@ export const BatchFileRenameDialog: React.FC<BatchFileRenameDialogProps> = ({
         
         if (cleanValue.length > 2) {
           filenameParts.push(cleanValue);
-          if (filenameParts.length >= 2) break; // Limit to 2 meaningful parts
-        }
-      }
-    }
-    
-    // If no meaningful data found, try other columns
-    if (filenameParts.length === 0) {
-      for (const column of columns) {
-        if (!priorityFields.includes(column)) {
-          const value = rowData[column];
-          if (value && value.trim() !== '' && value.length > 3) {
-            const cleanValue = value
-              .replace(/[^a-zA-Z0-9\-_\s]/g, '')
-              .replace(/\s+/g, '_')
-              .substring(0, 20);
-            
-            if (cleanValue.length > 2) {
-              filenameParts.push(cleanValue);
-              break;
-            }
-          }
+          if (filenameParts.length >= maxParts) break;
         }
       }
     }
@@ -181,10 +169,8 @@ export const BatchFileRenameDialog: React.FC<BatchFileRenameDialogProps> = ({
       for (const [rowIndex, document] of documentsToRename) {
         if (controller.signal.aborted) break;
 
-        // Get the new filename
-        const newFilename = useSmartNaming 
-          ? previewNames.get(rowIndex) || document.stored_filename
-          : document.stored_filename;
+        // Get the new filename using selected columns
+        const newFilename = previewNames.get(rowIndex) || document.stored_filename;
 
         // Skip if name hasn't changed
         if (newFilename === document.stored_filename) {
@@ -317,16 +303,65 @@ export const BatchFileRenameDialog: React.FC<BatchFileRenameDialogProps> = ({
           ) : (
             <>
               <div className="space-y-4">
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="use-smart-naming" 
-                    checked={useSmartNaming}
-                    onCheckedChange={(checked) => setUseSmartNaming(checked === true)}
-                  />
-                  <Label htmlFor="use-smart-naming" className="text-sm">
-                    Use smart naming based on runsheet data
-                  </Label>
-                </div>
+                <Collapsible open={showSettings} onOpenChange={setShowSettings}>
+                  <CollapsibleTrigger asChild>
+                    <Button variant="outline" size="sm" className="flex items-center gap-2">
+                      <Settings className="w-4 h-4" />
+                      Naming Settings
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-4 space-y-4 border rounded-lg p-4">
+                    <div className="space-y-3">
+                      <div>
+                        <Label className="text-sm font-medium">Columns to use for naming (in order):</Label>
+                        <div className="mt-2 grid grid-cols-2 gap-2">
+                          {columns.map(column => (
+                            <div key={column} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`column-${column}`}
+                                checked={selectedColumns.includes(column)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setSelectedColumns(prev => [...prev, column]);
+                                  } else {
+                                    setSelectedColumns(prev => prev.filter(c => c !== column));
+                                  }
+                                }}
+                              />
+                              <Label htmlFor={`column-${column}`} className="text-sm">
+                                {column}
+                              </Label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <Label className="text-sm font-medium">Maximum filename parts:</Label>
+                        <Select value={maxParts.toString()} onValueChange={(value) => setMaxParts(parseInt(value))}>
+                          <SelectTrigger className="w-32 mt-1">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="1">1 part</SelectItem>
+                            <SelectItem value="2">2 parts</SelectItem>
+                            <SelectItem value="3">3 parts</SelectItem>
+                            <SelectItem value="4">4 parts</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={generatePreviewNames}
+                        className="mt-2"
+                      >
+                        Update Preview
+                      </Button>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
                 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
