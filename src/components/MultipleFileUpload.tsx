@@ -40,6 +40,7 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
 }) => {
   const [files, setFiles] = useState<FileUploadStatus[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [currentRunsheetData, setCurrentRunsheetData] = useState<{
     id: string;
@@ -108,13 +109,25 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
   const processPDFFiles = async (fileArray: File[]): Promise<File[]> => {
     console.log('🔧 Processing files, converting PDFs to images:', fileArray.map(f => f.name));
     
+    const hasPDFs = fileArray.some(file => isPDF(file));
+    if (hasPDFs) {
+      setIsProcessing(true);
+    }
+    
     const processedFiles: File[] = [];
     
     for (const file of fileArray) {
       if (isPDF(file)) {
         try {
           console.log('🔧 Converting PDF to image:', file.name);
-          const pdfPages = await convertPDFToImages(file, 4); // High resolution
+          
+          // Add timeout to prevent hanging
+          const conversionPromise = convertPDFToImages(file, 4); // High resolution
+          const timeoutPromise = new Promise<never>((_, reject) => 
+            setTimeout(() => reject(new Error('PDF conversion timeout after 30 seconds')), 30000)
+          );
+          
+          const pdfPages = await Promise.race([conversionPromise, timeoutPromise]);
           
           if (pdfPages.length === 0) {
             throw new Error('PDF conversion failed - no pages extracted');
@@ -144,6 +157,7 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
       }
     }
     
+    setIsProcessing(false);
     return processedFiles;
   };
 
@@ -674,9 +688,11 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
           <Button
             variant="outline"
             onClick={() => fileInputRef.current?.click()}
-            disabled={isUploading}
+            disabled={isUploading || isProcessing || files.some(f => f.status === 'uploading')}
           >
-            Browse Files
+            {isProcessing ? 'Processing PDFs...' : 
+             isUploading || files.some(f => f.status === 'uploading') ? 'Uploading...' : 
+             'Browse Files'}
           </Button>
           
           <input

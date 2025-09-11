@@ -173,9 +173,14 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
         step.id === 'convert' ? { ...step, status: 'processing' } : step
       ));
 
-      // Step 2: Convert PDF to high-resolution image
+      // Step 2: Convert PDF to high-resolution image with timeout
       console.log('🔧 PDF_UPLOAD: Starting PDF to image conversion...');
-      const pdfPages = await convertPDFToImages(file, 4); // High resolution
+      const conversionPromise = convertPDFToImages(file, 4); // High resolution
+      const timeoutPromise = new Promise<never>((_, reject) => 
+        setTimeout(() => reject(new Error('PDF conversion timeout after 30 seconds')), 30000)
+      );
+      
+      const pdfPages = await Promise.race([conversionPromise, timeoutPromise]);
       
       if (pdfPages.length === 0) {
         throw new Error('PDF conversion failed - no pages extracted');
