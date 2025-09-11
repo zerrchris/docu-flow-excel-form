@@ -111,8 +111,7 @@ serve(async (req) => {
     const token = authHeader.replace('Bearer ', '')
     console.log('Attempting user authentication...')
     
-    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token)
-    user = authUser;
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
     console.log('Auth result:', { userId: user?.id, error: authError?.message })
     
     if (authError || !user) {
@@ -253,7 +252,8 @@ serve(async (req) => {
       ];
     }
 
-    console.log('Calling Claude API with model:', model)
+    console.log('Calling Claude API with model: claude-3-5-sonnet-20241022')
+    const model = 'claude-3-5-sonnet-20241022'
 
     // Call Claude API with the document using fetch
     const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {

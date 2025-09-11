@@ -160,6 +160,7 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
           const canvas = pdfPages[0].canvas;
           const imageData = canvas.toDataURL('image/png');
           
+          console.log('🔧 PDF converted to image, sending to OpenAI...');
           const { data, error } = await supabase.functions.invoke('analyze-document', {
             body: { 
               imageData,
