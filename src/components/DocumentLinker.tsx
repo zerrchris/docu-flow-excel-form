@@ -146,24 +146,32 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
         
         try {
           const { convertPDFToImages, createFileFromBlob } = await import('@/utils/pdfToImage');
+          const { combineImages } = await import('@/utils/imageCombiner');
           const pdfPages = await convertPDFToImages(file, 4); // High resolution
           
           if (pdfPages.length === 0) {
             throw new Error('PDF conversion failed - no pages extracted');
           }
 
-          // Use the first page and convert to a File object
-          const firstPage = pdfPages[0];
+          // Convert all pages to image files
           const originalName = file.name.replace(/\.pdf$/i, '');
-          const imageFileName = `${originalName}_converted.png`;
+          const imageFiles: File[] = pdfPages.map((p, idx) => 
+            createFileFromBlob(p.blob, `${originalName}_p${idx + 1}.png`)
+          );
+
+          // Combine pages into a single tall image for consistent processing
+          const { file: combinedImage } = await combineImages(imageFiles, {
+            type: 'vertical',
+            maxWidth: 2000,
+            quality: 0.95,
+          });
+          processedFile = combinedImage;
           
-          processedFile = createFileFromBlob(firstPage.blob, imageFileName);
-          
-          console.log('🔧 DocumentLinker: PDF converted to image:', processedFile.name, 'Size:', processedFile.size);
+          console.log('🔧 DocumentLinker: PDF converted to combined image:', processedFile.name, 'Size:', processedFile.size);
           
           toast({
             title: "PDF converted",
-            description: "PDF has been converted to a high-resolution image for optimal analysis.",
+            description: `Converted ${pdfPages.length} page${pdfPages.length>1?'s':''} to a high-resolution image for optimal analysis.`,
             variant: "default",
           });
         } catch (conversionError) {
@@ -238,7 +246,7 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
       formData.append('file', processedFile);
       formData.append('runsheetId', actualRunsheetId.trim());
       formData.append('rowIndex', rowIndex.toString());
-      formData.append('originalFilename', file.name); // Keep original filename for reference
+      formData.append('originalFilename', processedFile.name); // Use processed filename to ensure correct extension
       formData.append('useSmartNaming', 'false'); // Disable auto smart naming on upload
 
       // Get auth token

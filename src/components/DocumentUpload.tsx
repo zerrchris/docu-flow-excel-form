@@ -186,14 +186,21 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
         throw new Error('PDF conversion failed - no pages extracted');
       }
 
-      // Use the first page and convert to a File object
-      const firstPage = pdfPages[0];
+      // Convert all pages to image files
       const originalName = file.name.replace(/\.pdf$/i, '');
-      const imageFileName = `${originalName}_converted.png`;
-      
-      const imageFile = createFileFromBlob(firstPage.blob, imageFileName);
-      
-      console.log('🔧 PDF_UPLOAD: Conversion successful, created image file:', imageFile.name, 'Size:', imageFile.size);
+      const imageFiles: File[] = pdfPages.map((p, idx) => 
+        createFileFromBlob(p.blob, `${originalName}_p${idx + 1}.png`)
+      );
+
+      // Combine into a single tall image for consistent processing
+      const { combineImages } = await import('@/utils/imageCombiner');
+      const { file: combinedImage } = await combineImages(imageFiles, {
+        type: 'vertical',
+        maxWidth: 2000,
+        quality: 0.95,
+      });
+
+      console.log('🔧 PDF_UPLOAD: Conversion successful, combined image file:', combinedImage.name, 'Size:', combinedImage.size);
 
       setProcessingSteps(prev => prev.map(step => 
         step.id === 'convert' ? { ...step, status: 'completed' } : 
@@ -208,11 +215,11 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
 
       toast({
         title: "PDF converted successfully",
-        description: "PDF has been converted to a high-resolution image for optimal analysis.",
+        description: `Converted ${pdfPages.length} page${pdfPages.length>1?'s':''} to a high-resolution image for optimal analysis.`,
         variant: "default",
       });
 
-      return imageFile;
+      return combinedImage;
     } catch (error) {
       console.error('🔧 PDF_UPLOAD: Conversion failed:', error);
       setProcessingSteps(prev => prev.map(step => 

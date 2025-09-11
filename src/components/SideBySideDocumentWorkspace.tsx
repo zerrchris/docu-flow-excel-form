@@ -144,15 +144,20 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
       
       let analysisResult;
       
-      // Since PDFs are now converted to images at upload time, use OpenAI for all files
-      console.log('🔧 Analyzing document with OpenAI (PDFs are pre-converted to images)...');
+      // Convert document to base64 image data for analysis API
+      const response = await fetch(documentUrl);
+      const blob = await response.blob();
+      const reader = new FileReader();
+      const imageData: string = await new Promise((resolve) => {
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(blob);
+      });
       
+      // Analyze with OpenAI vision (expects imageData)
       const { data, error } = await supabase.functions.invoke('analyze-document', {
         body: {
-          fileUrl: documentUrl,
-          fileName: documentRecord.stored_filename,
-          contentType: documentRecord.content_type,
-          prompt: `Extract information from this document for the following fields and return as valid JSON:\n${extractionFields}\n\nReturn only a JSON object with field names as keys and extracted values as values. Do not include any markdown, explanations, or additional text.`
+          prompt: `Extract information from this document for the following fields and return as valid JSON:\n${extractionFields}\n\nReturn only a JSON object with field names as keys and extracted values as values. Do not include any markdown, explanations, or additional text.`,
+          imageData,
         }
       });
 

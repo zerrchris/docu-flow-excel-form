@@ -133,15 +133,23 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
             throw new Error('PDF conversion failed - no pages extracted');
           }
 
-          // Use the first page and convert to a File object
-          const firstPage = pdfPages[0];
+          // Convert all pages to image files
           const originalName = file.name.replace(/\.pdf$/i, '');
-          const imageFileName = `${originalName}_converted.png`;
+          const imageFiles: File[] = pdfPages.map((p, idx) => 
+            createFileFromBlob(p.blob, `${originalName}_p${idx + 1}.png`)
+          );
+
+          // Combine into a single tall image for consistent processing
+          const { combineImages } = await import('@/utils/imageCombiner');
+          const { file: combinedImage } = await combineImages(imageFiles, {
+            type: 'vertical',
+            maxWidth: 2000,
+            quality: 0.95,
+          });
+
+          console.log('🔧 PDF converted to combined image:', combinedImage.name, 'Size:', combinedImage.size);
           
-          const imageFile = createFileFromBlob(firstPage.blob, imageFileName);
-          console.log('🔧 PDF converted to image:', imageFile.name, 'Size:', imageFile.size);
-          
-          processedFiles.push(imageFile);
+          processedFiles.push(combinedImage);
         } catch (error) {
           console.error('🔧 PDF conversion failed for', file.name, ':', error);
           toast({
