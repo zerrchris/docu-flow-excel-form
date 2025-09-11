@@ -365,7 +365,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
     if (file.type === 'image/gif' && file.size > 10 * 1024 * 1024) {
       warning = "Large GIF files may take longer to process and could impact performance.";
     } else if (file.type === 'application/pdf') {
-      warning = "PDF files will be processed, but converting to an image format (PNG/JPG) may provide better analysis results.";
+      warning = "PDF files will be converted to high-resolution images for optimal analysis.";
     } else if (file.type === 'image/svg+xml') {
       warning = "SVG files are supported but raster images (PNG, JPG) typically work better for document analysis.";
     }

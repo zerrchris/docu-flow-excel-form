@@ -139,6 +139,44 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
         return;
       }
 
+      // Convert PDF to image if needed
+      let processedFile = file;
+      if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+        console.log('🔧 DocumentLinker: PDF detected, converting to image...');
+        
+        try {
+          const { convertPDFToImages, createFileFromBlob } = await import('@/utils/pdfToImage');
+          const pdfPages = await convertPDFToImages(file, 4); // High resolution
+          
+          if (pdfPages.length === 0) {
+            throw new Error('PDF conversion failed - no pages extracted');
+          }
+
+          // Use the first page and convert to a File object
+          const firstPage = pdfPages[0];
+          const originalName = file.name.replace(/\.pdf$/i, '');
+          const imageFileName = `${originalName}_converted.png`;
+          
+          processedFile = createFileFromBlob(firstPage.blob, imageFileName);
+          
+          console.log('🔧 DocumentLinker: PDF converted to image:', processedFile.name, 'Size:', processedFile.size);
+          
+          toast({
+            title: "PDF converted",
+            description: "PDF has been converted to a high-resolution image for optimal analysis.",
+            variant: "default",
+          });
+        } catch (conversionError) {
+          console.error('🔧 DocumentLinker: PDF conversion failed:', conversionError);
+          toast({
+            title: "PDF conversion failed",
+            description: "Failed to convert PDF. Please try uploading as an image instead.",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
       // If no runsheet ID, we need to save the runsheet first and get the new ID
       let actualRunsheetId = runsheetId;
       if (!runsheetId || runsheetId.trim() === '') {
@@ -161,7 +199,7 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
           window.addEventListener('runsheetSaveResponse', handleSaveResponse as EventListener);
           
           const saveEvent = new CustomEvent('saveRunsheetBeforeUpload', {
-            detail: { rowIndex, fileName: file.name }
+            detail: { rowIndex, fileName: processedFile.name }
           });
           window.dispatchEvent(saveEvent);
           
@@ -195,12 +233,12 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
         throw new Error('Invalid row index');
       }
 
-      // Create FormData for the upload
+      // Create FormData for the upload using the processed file
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', processedFile);
       formData.append('runsheetId', actualRunsheetId.trim());
       formData.append('rowIndex', rowIndex.toString());
-      formData.append('originalFilename', file.name);
+      formData.append('originalFilename', file.name); // Keep original filename for reference
       formData.append('useSmartNaming', 'false'); // Disable auto smart naming on upload
 
       // Get auth token
@@ -229,22 +267,22 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
       const result = await response.json();
       
       // Use the stored filename returned by the edge function, not the original filename
-      const actualStoredFilename = result.storedFilename || file.name;
+      const actualStoredFilename = result.storedFilename || processedFile.name;
       onDocumentLinked(actualStoredFilename);
       
-      // Store file for potential analysis if this is a spreadsheet upload
+      // Store processed file for potential analysis if this is a spreadsheet upload
       if (isSpreadsheetUpload) {
-        setUploadedFile(file);
+        setUploadedFile(processedFile);
       }
       
       // Trigger automatic document analysis only if auto-analyze is enabled
       if (autoAnalyze && onAnalyzeDocument) {
-        onAnalyzeDocument(file, actualStoredFilename);
+        onAnalyzeDocument(processedFile, actualStoredFilename);
       }
       
       toast({
         title: "Document uploaded",
-        description: `${file.name} has been linked to this row.`,
+        description: `${processedFile.name} has been linked to this row.`,
       });
 
     } catch (error) {
