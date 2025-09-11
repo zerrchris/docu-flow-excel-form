@@ -397,9 +397,9 @@ export const BatchFileRenameDialog: React.FC<BatchFileRenameDialogProps> = ({
             {!isRenaming && documentMap.size > 0 && (
               <>
                 {results.length > 0 && results.every(r => r.status === 'success' || r.status === 'error') ? (
-                  <Button variant="outline" disabled className="flex items-center gap-2">
+                  <Button onClick={onClose} className="flex items-center gap-2">
                     <CheckCircle className="w-4 h-4" />
-                    Renaming Complete
+                    Close
                   </Button>
                 ) : (
                   <Button onClick={startBatchRename} className="flex items-center gap-2">
