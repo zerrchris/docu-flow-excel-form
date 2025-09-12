@@ -5556,17 +5556,41 @@ ${extractionFields}`
             )}
           </div>
           <div className="flex items-center gap-2">
-            {/* Save Button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={saveRunsheet}
-              disabled={isSaving || !user}
-              className="gap-2"
-            >
-              <Save className="h-4 w-4" />
-              {isSaving || immediateSaving ? 'Saving...' : 'Save'}
-            </Button>
+            {/* Save Button with Dropdown */}
+            <div className="flex">
+              <Button
+                variant="default"
+                size="sm"
+                onClick={saveRunsheet}
+                disabled={isSaving || !user}
+                className="gap-2 rounded-r-none border-r-0"
+              >
+                <Save className="h-4 w-4" />
+                {isSaving || immediateSaving ? 'Saving...' : 'Save'}
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    disabled={isSaving || !user}
+                    className="rounded-l-none px-2"
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-background border shadow-lg">
+                  <DropdownMenuItem
+                    onClick={saveAndCloseRunsheet}
+                    disabled={isSaving || !user}
+                    className="gap-2 cursor-pointer"
+                  >
+                    <Save className="h-4 w-4" />
+                    Save & Close
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
             
             {/* Auto-save status indicator */}
             <AutoSaveIndicator 
@@ -5575,18 +5599,6 @@ ${extractionFields}`
               lastSavedAt={lastAutoSaveTime}
               className="ml-2"
             />
-            
-            {/* Save and Close Button */}
-            <Button
-              variant="default"
-              size="sm"
-              onClick={saveAndCloseRunsheet}
-              disabled={isSaving || !user}
-              className="gap-2"
-            >
-              <Save className="h-4 w-4" />
-              {isSaving || immediateSaving ? 'Saving...' : 'Save & Close'}
-            </Button>
 
 
             {/* Download Button */}
