@@ -105,13 +105,8 @@ serve(async (req) => {
 
       storedFilename = generatedFilename || `document_${rowIndex}_${Date.now()}.${originalFilename.split('.').pop()}`;
     } else {
-      // Use original filename but make it unique to avoid conflicts
-      const timestamp = Date.now();
-      const extension = originalFilename.includes('.') ? `.${originalFilename.split('.').pop()}` : '';
-      const baseName = originalFilename.replace(/\.[^/.]+$/, ""); // Remove extension
-      // Clean filename: remove invalid characters and ensure uniqueness
-      const cleanBaseName = baseName.replace(/[^a-zA-Z0-9\-_\s]/g, '').replace(/\s+/g, '_');
-      storedFilename = `${cleanBaseName}_${timestamp}${extension}`;
+      // Use original filename exactly as uploaded
+      storedFilename = originalFilename;
     }
     const filePath = `${user.id}/${runsheetId}/${storedFilename}`;
 
