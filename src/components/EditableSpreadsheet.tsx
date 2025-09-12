@@ -5544,11 +5544,6 @@ ${extractionFields}`
                   </div>
                 )}
                 
-                {/* Row count indicator */}
-                <div className="flex items-center gap-1 ml-2 px-2 py-1 bg-muted rounded text-xs">
-                  <span>{data.length} rows</span>
-                </div>
-                
               </div>
             )}
           </div>
