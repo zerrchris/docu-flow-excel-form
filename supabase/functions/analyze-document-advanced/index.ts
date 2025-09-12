@@ -50,7 +50,7 @@ const REAL_ESTATE_SCHEMA = {
       },
       notes: { 
         type: "string", 
-        description: "Additional important information: conditions, restrictions, easements, mineral rights, attorney names, notary info, etc."
+        description: "Additional important information including: mineral reservations/exceptions, surface/subsurface rights, oil/gas/water rights, easements, restrictions, liens, conditions, attorney names, notary info, etc. CRITICAL: Always extract any mention of mineral rights, mineral reservations, or exceptions to mineral conveyance."
       },
       confidence_score: {
         type: "number",
