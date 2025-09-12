@@ -6569,22 +6569,25 @@ ${extractionFields}`
                              console.log('🔧 EditableSpreadsheet: New row data after update:', newData[rowIndex]);
                              setData(newData);
                              onDataChange?.(newData);
-                            
-                             // Immediately refresh document map to ensure consistency
-                             if (currentRunsheetId) {
-                               try {
-                                 console.log('🔧 EditableSpreadsheet: Immediately refreshing document map');
-                                 const updatedDocumentMap = await DocumentService.getDocumentMapForRunsheet(currentRunsheetId);
-                                 updateDocumentMap(updatedDocumentMap);
-                                 console.log('🔧 EditableSpreadsheet: Document map refreshed with', updatedDocumentMap.size, 'documents');
-                               } catch (error) {
-                                 console.error('Error refreshing document map:', error);
-                                 // Fallback to delayed refresh if immediate refresh fails
-                                 setTimeout(() => {
-                                   DocumentService.getDocumentMapForRunsheet(currentRunsheetId).then(updateDocumentMap);
-                                 }, 500);
-                               }
-                             }
+                             
+                              // Immediately refresh document map to ensure consistency
+                              if (currentRunsheetId) {
+                                try {
+                                  console.log('🔧 EditableSpreadsheet: Immediately refreshing document map');
+                                  // Small delay to ensure database write is complete
+                                  setTimeout(async () => {
+                                    try {
+                                      const updatedDocumentMap = await DocumentService.getDocumentMapForRunsheet(currentRunsheetId);
+                                      updateDocumentMap(updatedDocumentMap);
+                                      console.log('🔧 EditableSpreadsheet: Document map refreshed with', updatedDocumentMap.size, 'documents');
+                                    } catch (error) {
+                                      console.error('Error refreshing document map:', error);
+                                    }
+                                  }, 100);
+                                } catch (error) {
+                                  console.error('Error setting up document map refresh:', error);
+                                }
+                              }
                           }}
                          onDocumentRemoved={() => {
                            const newData = [...data];
