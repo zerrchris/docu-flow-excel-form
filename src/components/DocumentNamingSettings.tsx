@@ -44,8 +44,7 @@ const DocumentNamingSettings: React.FC<DocumentNamingSettingsProps> = ({ availab
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
-  const [showColumnSettings, setShowColumnSettings] = useState(false);
-  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -183,65 +182,67 @@ const DocumentNamingSettings: React.FC<DocumentNamingSettingsProps> = ({ availab
   }
 
   return (
-    <Card className="w-full max-w-4xl mx-auto">
+    <Card className="w-full max-w-3xl mx-auto">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Settings className="w-5 h-5" />
-          Smart Document Naming Settings
+          Smart Document Naming
         </CardTitle>
         <CardDescription>
-          Customize how documents are automatically named based on your spreadsheet data
+          Configure how documents are automatically named based on your spreadsheet data
         </CardDescription>
       </CardHeader>
       
       <CardContent className="space-y-6">
-        {/* Quick Summary */}
+        {/* Current Configuration Summary */}
         <div className="bg-muted/30 rounded-lg p-4">
           <div className="flex items-center justify-between">
             <div>
-              <h4 className="font-medium">Current Configuration</h4>
+              <h4 className="font-medium">Current naming pattern</h4>
               <p className="text-sm text-muted-foreground mt-1">
-                Using {preferences.priority_columns.slice(0, preferences.max_filename_parts).join(', ')} 
-                {preferences.priority_columns.length > preferences.max_filename_parts && ` (first ${preferences.max_filename_parts})`}
+                {preferences.priority_columns.slice(0, preferences.max_filename_parts).join(` ${preferences.separator} `)}
+                {preferences.include_extension ? ' + file extension' : ''}
               </p>
             </div>
-            <Badge variant="secondary" className="text-xs">
+            <Badge variant="secondary">
               {preferences.max_filename_parts} part{preferences.max_filename_parts !== 1 ? 's' : ''} max
             </Badge>
           </div>
         </div>
 
-        {/* Column Priority Settings */}
-        <Collapsible open={showColumnSettings} onOpenChange={setShowColumnSettings}>
+        {/* Settings */}
+        <Collapsible open={showSettings} onOpenChange={setShowSettings}>
           <CollapsibleTrigger asChild>
-            <Button variant="outline" size="sm" className="flex items-center gap-2 w-full justify-between">
-              <div className="flex items-center gap-2">
-                <Settings className="w-4 h-4" />
-                Column Priority Settings
-              </div>
-              {showColumnSettings ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            <Button variant="outline" size="sm" className="flex items-center gap-2">
+              <Settings className="w-4 h-4" />
+              Customize Naming {isLoading ? '(Loading...)' : '(Using your defaults)'}
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent className="mt-4 space-y-4 border rounded-lg p-4">
             <div className="space-y-3">
               <div className="text-sm text-muted-foreground">
-                Select which columns to use for naming, in order of priority. Higher priority columns are used first.
+                Select which columns to use for naming and in what order.
               </div>
               
               <div>
-                <Label className="text-sm font-medium">Available columns (select in order of preference):</Label>
+                <Label className="text-sm font-medium">
+                  Columns to use for naming (in order, max {preferences.max_filename_parts}):
+                </Label>
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   {availableColumns.length > 0 ? availableColumns.map(column => (
                     <div key={column} className="flex items-center space-x-2">
                       <Checkbox
                         id={`column-${column}`}
                         checked={preferences.priority_columns.includes(column)}
+                        disabled={!preferences.priority_columns.includes(column) && preferences.priority_columns.length >= preferences.max_filename_parts}
                         onCheckedChange={(checked) => {
                           if (checked) {
-                            setPreferences(prev => ({
-                              ...prev,
-                              priority_columns: [...prev.priority_columns, column]
-                            }));
+                            if (preferences.priority_columns.length < preferences.max_filename_parts) {
+                              setPreferences(prev => ({
+                                ...prev,
+                                priority_columns: [...prev.priority_columns, column]
+                              }));
+                            }
                           } else {
                             setPreferences(prev => ({
                               ...prev,
@@ -250,83 +251,37 @@ const DocumentNamingSettings: React.FC<DocumentNamingSettingsProps> = ({ availab
                           }
                         }}
                       />
-                      <Label htmlFor={`column-${column}`} className="text-sm">
+                      <Label 
+                        htmlFor={`column-${column}`} 
+                        className={`text-sm ${!preferences.priority_columns.includes(column) && preferences.priority_columns.length >= preferences.max_filename_parts ? 'text-muted-foreground' : ''}`}
+                      >
                         {column}
                       </Label>
                     </div>
                   )) : (
                     <p className="text-sm text-muted-foreground col-span-2">
-                      No columns available. Columns will appear here when you create or open a runsheet.
+                      No columns available. Open a runsheet to see column options.
                     </p>
                   )}
                 </div>
               </div>
-
-              {/* Current Priority Order */}
-              {preferences.priority_columns.length > 0 && (
+              
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-sm font-medium">Current priority order:</Label>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {preferences.priority_columns.map((column, index) => (
-                      <Badge key={column} variant="secondary" className="flex items-center gap-2">
-                        <span>{index + 1}. {column}</span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground"
-                          onClick={() => removePriorityColumn(column)}
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Add custom column */}
-              <div>
-                <Label className="text-sm font-medium">Add custom column:</Label>
-                <div className="flex gap-2 mt-1">
-                  <Input
-                    value={newColumn}
-                    onChange={(e) => setNewColumn(e.target.value)}
-                    placeholder="Enter column name..."
-                    className="flex-1"
-                  />
-                  <Button onClick={addPriorityColumn} size="sm" disabled={!newColumn.trim()}>
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
-
-        {/* Advanced Settings */}
-        <Collapsible open={showAdvancedSettings} onOpenChange={setShowAdvancedSettings}>
-          <CollapsibleTrigger asChild>
-            <Button variant="outline" size="sm" className="flex items-center gap-2 w-full justify-between">
-              <div className="flex items-center gap-2">
-                <Settings className="w-4 h-4" />
-                Advanced Settings
-              </div>
-              {showAdvancedSettings ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="mt-4 space-y-4 border rounded-lg p-4">
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="max-parts">Maximum filename parts:</Label>
+                  <Label className="text-sm font-medium">Maximum filename parts:</Label>
                   <Select 
                     value={preferences.max_filename_parts.toString()} 
-                    onValueChange={(value) => setPreferences(prev => ({
-                      ...prev,
-                      max_filename_parts: parseInt(value)
-                    }))}
+                    onValueChange={(value) => {
+                      const newMaxParts = parseInt(value);
+                      setPreferences(prev => ({
+                        ...prev,
+                        max_filename_parts: newMaxParts,
+                        // Trim selected columns if they exceed the new max
+                        priority_columns: prev.priority_columns.slice(0, newMaxParts)
+                      }));
+                    }}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="mt-1">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -334,40 +289,23 @@ const DocumentNamingSettings: React.FC<DocumentNamingSettingsProps> = ({ availab
                       <SelectItem value="2">2 parts</SelectItem>
                       <SelectItem value="3">3 parts</SelectItem>
                       <SelectItem value="4">4 parts</SelectItem>
-                      <SelectItem value="5">5 parts</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="separator">Separator character:</Label>
+                <div>
+                  <Label className="text-sm font-medium">Separator:</Label>
                   <Input
-                    id="separator"
                     value={preferences.separator}
                     onChange={(e) => setPreferences(prev => ({
                       ...prev,
                       separator: e.target.value || '_'
                     }))}
                     placeholder="_"
-                    maxLength={3}
+                    className="mt-1"
+                    maxLength={2}
                   />
                 </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="fallback">Fallback pattern:</Label>
-                <Input
-                  id="fallback"
-                  value={preferences.fallback_pattern}
-                  onChange={(e) => setPreferences(prev => ({
-                    ...prev,
-                    fallback_pattern: e.target.value
-                  }))}
-                  placeholder="document_{row_index}_{timestamp}"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Used when no data is available. Variables: {'{row_index}'}, {'{timestamp}'}
-                </p>
               </div>
 
               <div className="flex items-center space-x-2">
@@ -379,7 +317,7 @@ const DocumentNamingSettings: React.FC<DocumentNamingSettingsProps> = ({ availab
                     include_extension: checked
                   }))}
                 />
-                <Label htmlFor="include-extension">Include file extension</Label>
+                <Label htmlFor="include-extension" className="text-sm">Include file extension</Label>
               </div>
             </div>
           </CollapsibleContent>
@@ -390,22 +328,12 @@ const DocumentNamingSettings: React.FC<DocumentNamingSettingsProps> = ({ availab
           <Label className="text-sm font-semibold">Preview</Label>
           <div className="bg-muted/50 border rounded-lg p-4 space-y-3">
             <div>
-              <div className="text-xs font-medium text-muted-foreground mb-2">EXAMPLE 1: BUSINESS DATA</div>
-              <div className="text-xs text-muted-foreground mb-1">
-                If your data: name="Acme Corp", title="Invoice 2024", reference="REF-001"
+              <div className="text-xs font-medium text-muted-foreground mb-1">EXAMPLE</div>
+              <div className="text-xs text-muted-foreground mb-2">
+                With data: "Acme Corp", "Invoice 2024", "REF-001"
               </div>
               <code className="bg-background px-3 py-2 rounded text-sm inline-block border">
                 Acme_Corp{preferences.separator}Invoice_2024{preferences.max_filename_parts > 2 ? `${preferences.separator}REF-001` : ''}{preferences.include_extension ? '.pdf' : ''}
-              </code>
-            </div>
-            
-            <div className="pt-2 border-t">
-              <div className="text-xs font-medium text-muted-foreground mb-2">EXAMPLE 2: REAL ESTATE DATA</div>
-              <div className="text-xs text-muted-foreground mb-1">
-                If your data: instrument_number="202400123", book="150", page="75"
-              </div>
-              <code className="bg-background px-3 py-2 rounded text-sm inline-block border">
-                202400123{preferences.separator}150{preferences.max_filename_parts > 2 ? `${preferences.separator}75` : ''}{preferences.include_extension ? '.pdf' : ''}
               </code>
             </div>
           </div>
@@ -415,7 +343,7 @@ const DocumentNamingSettings: React.FC<DocumentNamingSettingsProps> = ({ availab
         <div className="flex gap-2 justify-between pt-4 border-t">
           <Button variant="outline" onClick={resetToDefaults}>
             <RotateCcw className="h-4 w-4 mr-2" />
-            Reset to Defaults
+            Reset Defaults
           </Button>
           
           <Button onClick={savePreferences} disabled={isSaving}>
