@@ -26,10 +26,9 @@ interface NamingPreferences {
 
 interface DocumentNamingSettingsProps {
   availableColumns?: string[];
-  onSave?: () => void; // Callback for when settings are saved
 }
 
-const DocumentNamingSettings: React.FC<DocumentNamingSettingsProps> = ({ availableColumns = [], onSave }) => {
+const DocumentNamingSettings: React.FC<DocumentNamingSettingsProps> = ({ availableColumns = [] }) => {
   console.log('🔧 DocumentNamingSettings: Component rendering, availableColumns:', availableColumns);
   
   const [preferences, setPreferences] = useState<NamingPreferences>({
@@ -126,11 +125,6 @@ const DocumentNamingSettings: React.FC<DocumentNamingSettingsProps> = ({ availab
         title: "Settings saved",
         description: "Your document naming preferences have been saved.",
       });
-
-      // Close the dialog after successful save
-      if (onSave) {
-        onSave();
-      }
     } catch (error) {
       console.error('Error saving preferences:', error);
       toast({

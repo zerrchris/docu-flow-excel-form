@@ -6808,10 +6808,7 @@ ${extractionFields}`
                 Configure how documents are automatically named when linked to this runsheet.
               </DialogDescription>
             </DialogHeader>
-            <DocumentNamingSettings 
-              availableColumns={columns} 
-              onSave={() => setShowNamingSettings(false)}
-            />
+            <DocumentNamingSettings availableColumns={columns} />
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowNamingSettings(false)}>
                 Close
