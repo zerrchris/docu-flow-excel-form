@@ -664,97 +664,95 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
   const errorFiles = files.filter(f => f.status === 'error').length;
 
   return (
-    <Card className="p-6 w-full max-w-2xl mx-auto max-h-[85vh] overflow-y-auto">
-      <div className="space-y-4 flex-shrink-0">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold">Upload Multiple Files</h3>
-        </div>
+    <div className="w-full max-w-2xl mx-auto max-h-[85vh] overflow-y-auto">
+      <Card className="p-6">
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold">Upload Multiple Files</h3>
+          </div>
 
-        <p className="text-sm text-muted-foreground">
-          Files will be automatically linked to the next available rows in your runsheet.
-        </p>
-      </div>
+          <p className="text-sm text-muted-foreground">
+            Files will be automatically linked to the next available rows in your runsheet.
+          </p>
 
-      <div className="space-y-4 mt-4">
-        <div
-          className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-            isDragOver 
-              ? 'border-primary bg-primary/5' 
-              : 'border-muted-foreground/25 hover:border-muted-foreground/50'
-          }`}
-          onDrop={handleDrop}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-        >
-          <Upload className="h-8 w-8 mx-auto mb-4 text-muted-foreground" />
-          <p className="text-sm font-medium mb-2">
-            Drop files here or click to browse
-          </p>
-          <p className="text-xs text-muted-foreground mb-4">
-            Supports: Images (JPG, PNG, GIF, WebP) and PDF files
-          </p>
-          
-          <Button
-            variant="outline"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isUploading || isProcessing || files.some(f => f.status === 'uploading')}
+          <div
+            className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+              isDragOver 
+                ? 'border-primary bg-primary/5' 
+                : 'border-muted-foreground/25 hover:border-muted-foreground/50'
+            }`}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
           >
-            {isProcessing ? 'Processing PDFs...' : 
-             isUploading || files.some(f => f.status === 'uploading') ? 'Uploading...' : 
-             'Browse Files'}
-          </Button>
-          
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            accept="image/*,application/pdf"
-            className="hidden"
-            onChange={(e) => {
-              console.log('🔧 File input onChange triggered');
-              if (e.target.files) {
-                console.log('🔧 Files in input:', e.target.files.length);
-                handleFileSelect(e.target.files);
-              }
-            }}
-          />
-        </div>
+            <Upload className="h-8 w-8 mx-auto mb-4 text-muted-foreground" />
+            <p className="text-sm font-medium mb-2">
+              Drop files here or click to browse
+            </p>
+            <p className="text-xs text-muted-foreground mb-4">
+              Supports: Images (JPG, PNG, GIF, WebP) and PDF files
+            </p>
+            
+            <Button
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading || isProcessing || files.some(f => f.status === 'uploading')}
+            >
+              {isProcessing ? 'Processing PDFs...' : 
+               isUploading || files.some(f => f.status === 'uploading') ? 'Uploading...' : 
+               'Browse Files'}
+            </Button>
+            
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*,application/pdf"
+              className="hidden"
+              onChange={(e) => {
+                console.log('🔧 File input onChange triggered');
+                if (e.target.files) {
+                  console.log('🔧 Files in input:', e.target.files.length);
+                  handleFileSelect(e.target.files);
+                }
+              }}
+            />
+          </div>
 
-        {/* File List */}
-        {files.length > 0 && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h4 className="font-medium">Selected Files ({files.length})</h4>
-              <div className="flex items-center space-x-2">
-                {successFiles > 0 && (
-                  <Badge variant="outline" className="text-green-600">
-                    {successFiles} Success
-                  </Badge>
-                )}
-                {errorFiles > 0 && (
-                  <Badge variant="outline" className="text-red-600">
-                    {errorFiles} Error
-                  </Badge>
-                )}
-                {pendingFiles > 0 && (
-                  <Badge variant="outline">
-                    {pendingFiles} Pending
-                  </Badge>
-                )}
-              </div>
-            </div>
-
-            {isUploading && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span>Overall Progress</span>
-                  <span>{Math.round(totalProgress)}%</span>
+          {/* File List */}
+          {files.length > 0 && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="font-medium">Selected Files ({files.length})</h4>
+                <div className="flex items-center space-x-2">
+                  {successFiles > 0 && (
+                    <Badge variant="outline" className="text-green-600">
+                      {successFiles} Success
+                    </Badge>
+                  )}
+                  {errorFiles > 0 && (
+                    <Badge variant="outline" className="text-red-600">
+                      {errorFiles} Error
+                    </Badge>
+                  )}
+                  {pendingFiles > 0 && (
+                    <Badge variant="outline">
+                      {pendingFiles} Pending
+                    </Badge>
+                  )}
                 </div>
-                <Progress value={totalProgress} className="h-2" />
               </div>
-            )}
 
-            <ScrollArea className="h-64">
+              {isUploading && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span>Overall Progress</span>
+                    <span>{Math.round(totalProgress)}%</span>
+                  </div>
+                  <Progress value={totalProgress} className="h-2" />
+                </div>
+              )}
+
               <div className="space-y-2">
                 {files.map((fileStatus, index) => (
                   <div
@@ -799,42 +797,42 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
                   </div>
                 ))}
               </div>
-            </ScrollArea>
-          </div>
-        )}
-
-        {/* Action Buttons */}
-        {files.length > 0 && (
-          <div className="flex items-center justify-between pt-4 border-t">
-            <Button
-              variant="outline"
-              onClick={() => setFiles([])}
-              disabled={isUploading}
-            >
-              Clear All
-            </Button>
-            
-            <div className="flex items-center space-x-2">
-              {files.every(f => f.status === 'success' || f.status === 'error') && files.some(f => f.status === 'success') ? (
-                <Button
-                  onClick={onClose}
-                  variant="default"
-                >
-                  Done
-                </Button>
-              ) : (
-                <Button
-                  onClick={uploadFiles}
-                  disabled={isUploading || files.every(f => f.status === 'success')}
-                >
-                  {isUploading ? 'Uploading...' : `Upload ${pendingFiles} Files`}
-                </Button>
-              )}
             </div>
-          </div>
-        )}
-      </div>
-    </Card>
+          )}
+
+          {/* Action Buttons */}
+          {files.length > 0 && (
+            <div className="flex items-center justify-between pt-4 border-t">
+              <Button
+                variant="outline"
+                onClick={() => setFiles([])}
+                disabled={isUploading}
+              >
+                Clear All
+              </Button>
+              
+              <div className="flex items-center space-x-2">
+                {files.every(f => f.status === 'success' || f.status === 'error') && files.some(f => f.status === 'success') ? (
+                  <Button
+                    onClick={onClose}
+                    variant="default"
+                  >
+                    Done
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={uploadFiles}
+                    disabled={isUploading || files.every(f => f.status === 'success')}
+                  >
+                    {isUploading ? 'Uploading...' : `Upload ${pendingFiles} Files`}
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </Card>
+    </div>
   );
 };
 
