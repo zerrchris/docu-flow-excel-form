@@ -55,7 +55,7 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
   const [lastAnalyzedData, setLastAnalyzedData] = useState<Record<string, string>>({});
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showAnalyzeWarning, setShowAnalyzeWarning] = useState(false);
-  const [imageFitToWidth, setImageFitToWidth] = useState(false);
+  const [imageFitToWidth, setImageFitToWidth] = useState(true); // Default to fit-to-width for images
   const [imageZoom, setImageZoom] = useState(1);
   
   // Re-extract dialog state
