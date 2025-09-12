@@ -34,48 +34,56 @@ export const ConfirmationEmail = ({
     <Preview>Confirm your Document Extractor account</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Section style={logoSection}>
-          <Img
-            src="https://xnpmrafjjqsissbtempj.supabase.co/storage/v1/object/public/assets/document-extractor-logo.png"
-            width="48"
-            height="48"
-            alt="Document Extractor"
-            style={logo}
-          />
+        {/* Header with gradient background */}
+        <Section style={headerSection}>
+          <Section style={logoSection}>
+            <Img
+              src="https://xnpmrafjjqsissbtempj.supabase.co/storage/v1/object/public/assets/document-extractor-logo.png"
+              width="48"
+              height="48"
+              alt="Document Extractor"
+              style={logo}
+            />
+          </Section>
+          <Heading style={h1}>Welcome to Document Extractor!</Heading>
         </Section>
         
-        <Heading style={h1}>Welcome to Document Extractor!</Heading>
-        
-        <Text style={text}>
-          Hi there! Thanks for signing up for Document Extractor. To get started, please confirm your email address by clicking the button below.
-        </Text>
-        
-        <Section style={buttonSection}>
-          <Link
-            href={`${supabase_url}/auth/v1/verify?token=${token_hash}&type=${email_action_type}&redirect_to=${redirect_to}`}
-            target="_blank"
-            style={button}
-          >
-            Confirm Email Address
-          </Link>
+        {/* Main content */}
+        <Section style={contentSection}>
+          <Text style={text}>
+            Hi there! Thanks for signing up for Document Extractor. To get started, please confirm your email address by clicking the button below.
+          </Text>
+          
+          <Section style={buttonSection}>
+            <Link
+              href={`${supabase_url}/auth/v1/verify?token=${token_hash}&type=${email_action_type}&redirect_to=${redirect_to}`}
+              target="_blank"
+              style={button}
+            >
+              Confirm Email Address
+            </Link>
+          </Section>
+          
+          <Text style={text}>
+            Or copy and paste this link into your browser:
+          </Text>
+          
+          <Text style={linkText}>
+            {`${supabase_url}/auth/v1/verify?token=${token_hash}&type=${email_action_type}&redirect_to=${redirect_to}`}
+          </Text>
         </Section>
         
-        <Text style={text}>
-          Or copy and paste this link into your browser:
-        </Text>
-        
-        <Text style={linkText}>
-          {`${supabase_url}/auth/v1/verify?token=${token_hash}&type=${email_action_type}&redirect_to=${redirect_to}`}
-        </Text>
-        
-        <Text style={footerText}>
-          If you didn't create an account with Document Extractor, you can safely ignore this email.
-        </Text>
-        
-        <Text style={footer}>
-          Best regards,<br />
-          The Document Extractor Team
-        </Text>
+        {/* Footer */}
+        <Section style={footerSection}>
+          <Text style={footerText}>
+            If you didn't create an account with Document Extractor, you can safely ignore this email.
+          </Text>
+          
+          <Text style={footer}>
+            Best regards,<br />
+            The Document Extractor Team
+          </Text>
+        </Section>
       </Container>
     </Body>
   </Html>
@@ -84,41 +92,57 @@ export const ConfirmationEmail = ({
 export default ConfirmationEmail
 
 const main = {
-  backgroundColor: '#f6f9fc',
+  backgroundColor: 'hsl(210, 40%, 98%)', // --background
   fontFamily: '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Ubuntu,sans-serif',
+  padding: '0',
+  margin: '0',
 }
 
 const container = {
-  backgroundColor: '#ffffff',
+  backgroundColor: 'hsl(0, 0%, 100%)', // --card
   margin: '0 auto',
-  padding: '20px 0 48px',
-  marginBottom: '64px',
+  maxWidth: '600px',
+  border: '1px solid hsl(214, 32%, 91%)', // --border
+  borderRadius: '12px',
+  overflow: 'hidden',
+  boxShadow: '0 10px 30px -10px hsl(215, 80%, 40%, 0.3)', // --shadow-primary
+}
+
+const headerSection = {
+  background: 'linear-gradient(135deg, hsl(215, 80%, 40%), hsl(230, 60%, 60%))', // --gradient-primary
+  padding: '32px 0 40px',
+  textAlign: 'center' as const,
 }
 
 const logoSection = {
-  padding: '32px 32px 0',
   textAlign: 'center' as const,
+  marginBottom: '24px',
 }
 
 const logo = {
   margin: '0 auto',
+  filter: 'brightness(0) invert(1)', // Make logo white on gradient background
 }
 
 const h1 = {
-  color: '#1f2937',
-  fontSize: '24px',
-  fontWeight: '600',
-  lineHeight: '1.25',
-  margin: '16px 32px',
+  color: 'hsl(210, 40%, 98%)', // --primary-foreground
+  fontSize: '28px',
+  fontWeight: '700',
+  lineHeight: '1.2',
+  margin: '0',
   padding: '0',
   textAlign: 'center' as const,
 }
 
+const contentSection = {
+  padding: '40px 32px',
+}
+
 const text = {
-  color: '#4b5563',
+  color: 'hsl(222, 47%, 11%)', // --foreground
   fontSize: '16px',
-  lineHeight: '1.5',
-  margin: '16px 32px',
+  lineHeight: '1.6',
+  margin: '0 0 24px 0',
 }
 
 const buttonSection = {
@@ -127,35 +151,49 @@ const buttonSection = {
 }
 
 const button = {
-  backgroundColor: '#3b82f6',
-  borderRadius: '8px',
-  color: '#ffffff',
+  background: 'linear-gradient(135deg, hsl(215, 80%, 40%), hsl(230, 60%, 60%))', // --gradient-primary
+  borderRadius: '12px',
+  color: 'hsl(210, 40%, 98%)', // --primary-foreground
   display: 'inline-block',
   fontSize: '16px',
   fontWeight: '600',
   lineHeight: '1',
-  padding: '12px 24px',
+  padding: '16px 32px',
   textDecoration: 'none',
+  border: 'none',
+  boxShadow: '0 4px 12px hsl(215, 80%, 40%, 0.3)',
+  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
 }
 
 const linkText = {
-  color: '#6b7280',
+  color: 'hsl(215, 16%, 47%)', // --muted-foreground
   fontSize: '14px',
   lineHeight: '1.5',
-  margin: '16px 32px',
+  margin: '24px 0',
   wordBreak: 'break-all' as const,
+  padding: '16px',
+  backgroundColor: 'hsl(210, 40%, 96%)', // --muted
+  borderRadius: '8px',
+  border: '1px solid hsl(214, 32%, 91%)', // --border
+}
+
+const footerSection = {
+  backgroundColor: 'hsl(210, 40%, 96%)', // --muted
+  padding: '32px',
+  borderTop: '1px solid hsl(214, 32%, 91%)', // --border
 }
 
 const footerText = {
-  color: '#6b7280',
+  color: 'hsl(215, 16%, 47%)', // --muted-foreground
   fontSize: '14px',
   lineHeight: '1.5',
-  margin: '32px 32px 16px',
+  margin: '0 0 16px 0',
 }
 
 const footer = {
-  color: '#9ca3af',
+  color: 'hsl(215, 16%, 47%)', // --muted-foreground
   fontSize: '14px',
   lineHeight: '1.5',
-  margin: '16px 32px',
+  margin: '0',
+  fontWeight: '500',
 }
