@@ -6747,13 +6747,6 @@ ${extractionFields}`
             </div>
             </div>
             
-            {/* Auto-save status */}
-            <AutoSaveIndicator 
-              status={autoSaveStatus} 
-              errorMessage={autoSaveError}
-              lastSavedAt={lastAutoSaveTime}
-              className="transition-all duration-200"
-            />
         </div>
 
         {/* Open Runsheet Dialog */}
