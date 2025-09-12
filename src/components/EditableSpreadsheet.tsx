@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { Plus, Trash2, Check, X, ArrowUp, ArrowDown, Save, FolderOpen, Download, Upload, AlignLeft, AlignCenter, AlignRight, Cloud, ChevronDown, FileText, Archive, ExternalLink, AlertTriangle, FileStack, Settings, Eye, EyeOff, Sparkles, Bug, AlertCircle, Brain, FileEdit } from 'lucide-react';
+import { Plus, Trash2, Check, X, ArrowUp, ArrowDown, Save, FolderOpen, Download, Upload, AlignLeft, AlignCenter, AlignRight, Cloud, ChevronDown, FileText, Archive, ExternalLink, AlertTriangle, FileStack, Settings, Eye, EyeOff, Sparkles, Bug, AlertCircle, Brain, FileEdit, Wand2 } from 'lucide-react';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -54,6 +54,7 @@ import FullScreenDocumentWorkspace from './FullScreenDocumentWorkspace';
 import SideBySideDocumentWorkspace from './SideBySideDocumentWorkspace';
 import { BatchDocumentAnalysisDialog } from './BatchDocumentAnalysisDialog';
 import { BatchFileRenameDialog } from './BatchFileRenameDialog';
+import { BatchDataTransformDialog } from './BatchDataTransformDialog';
 import ViewportPortal from './ViewportPortal';
 import { AutoSaveIndicator } from './AutoSaveIndicator';
 import { useImmediateSave } from '@/hooks/useImmediateSave';
@@ -316,6 +317,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   );
   const [showBatchAnalysisDialog, setShowBatchAnalysisDialog] = useState(false);
   const [showBatchRenameDialog, setShowBatchRenameDialog] = useState(false);
+  const [showBatchTransformDialog, setShowBatchTransformDialog] = useState(false);
    const [showDocumentFileNameColumn, setShowDocumentFileNameColumn] = useState(true);
   
   // Helper functions to manage workspace state and URL parameters
@@ -5650,6 +5652,19 @@ ${extractionFields}`
               </Button>
             )}
             
+            {/* Batch Data Transform Button */}
+            {data.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowBatchTransformDialog(true)}
+                className="gap-2"
+              >
+                <Wand2 className="h-4 w-4" />
+                Transform Data
+              </Button>
+            )}
+            
             {/* Add Rows Button */}
             <DropdownMenu open={addRowsDropdownOpen} onOpenChange={setAddRowsDropdownOpen}>
               <DropdownMenuTrigger asChild>
@@ -7235,6 +7250,17 @@ ${extractionFields}`
           onDocumentMapUpdate={updateDocumentMap}
         />
 
+        {/* Batch Data Transform Dialog */}
+        <BatchDataTransformDialog
+          isOpen={showBatchTransformDialog}
+          onClose={() => setShowBatchTransformDialog(false)}
+          columns={columns}
+          currentData={data}
+          onDataUpdate={(newData) => {
+            setData(newData);
+            onDataChange?.(newData);
+          }}
+        />
         {/* Re-Extract Field Dialog */}
         <ReExtractDialog
           isOpen={showReExtractDialog}
