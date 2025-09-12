@@ -91,6 +91,27 @@ serve(async (req) => {
       columnInstructions = {},
       useVision = false 
     } = await req.json()
+    
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const supabase = createClient(supabaseUrl, supabaseKey)
+    
+    // Fetch global extraction instructions from admin settings
+    let globalInstructions = ''
+    try {
+      const { data, error } = await supabase
+        .from('admin_settings')
+        .select('setting_value')
+        .eq('setting_key', 'global_extraction_instructions')
+        .maybeSingle()
+      
+      if (!error && data?.setting_value) {
+        globalInstructions = data.setting_value
+      }
+    } catch (error) {
+      console.error('Error fetching global instructions:', error)
+    }
 
     console.log('🔍 Starting advanced document analysis:', { fileName, contentType, useVision })
 
@@ -103,10 +124,6 @@ serve(async (req) => {
       throw new Error('OpenAI API key not configured')
     }
 
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const supabase = createClient(supabaseUrl, supabaseKey)
 
     let extractedData: any = null
     let method = 'unknown'
@@ -115,7 +132,7 @@ serve(async (req) => {
     if (contentType === 'application/pdf' && !useVision) {
       try {
         console.log('📄 Trying OpenAI File Search method for PDF')
-        extractedData = await extractWithFileSearch(fileUrl, fileName, openAIApiKey, columnInstructions)
+        extractedData = await extractWithFileSearch(fileUrl, fileName, openAIApiKey, columnInstructions, globalInstructions)
         method = 'file_search'
       } catch (error) {
         console.log('⚠️ File Search failed, will try vision fallback:', error.message)
@@ -125,7 +142,7 @@ serve(async (req) => {
     // Method 2: Vision model fallback (for images or when PDF fails)
     if (!extractedData) {
       console.log('👁️ Using Vision model approach')
-      extractedData = await extractWithVision(fileUrl, openAIApiKey, columnInstructions)
+      extractedData = await extractWithVision(fileUrl, openAIApiKey, columnInstructions, globalInstructions)
       method = 'vision'
     }
 
@@ -163,7 +180,7 @@ serve(async (req) => {
   }
 })
 
-async function extractWithFileSearch(fileUrl: string, fileName: string, apiKey: string, columnInstructions: any) {
+async function extractWithFileSearch(fileUrl: string, fileName: string, apiKey: string, columnInstructions: any, globalInstructions: string = '') {
   console.log('🔄 Creating vector store and uploading file')
   
   // Download file to upload to OpenAI
@@ -235,6 +252,7 @@ async function extractWithFileSearch(fileUrl: string, fileName: string, apiKey: 
   
   const prompt = `Extract real estate document information using the JSON schema provided. 
 ${instructionText ? `\nSpecial field instructions:\n${instructionText}\n` : ''}
+${globalInstructions ? `\nGlobal Admin Instructions: ${globalInstructions}\n` : ''}
 
 CRITICAL RULES:
 - Use file_search to find relevant text passages
@@ -296,7 +314,7 @@ CRITICAL RULES:
   return JSON.parse(completion.choices[0].message.content)
 }
 
-async function extractWithVision(fileUrl: string, apiKey: string, columnInstructions: any) {
+async function extractWithVision(fileUrl: string, apiKey: string, columnInstructions: any, globalInstructions: string = '') {
   console.log('👁️ Using vision model for extraction')
   
   const instructionText = Object.entries(columnInstructions)
@@ -305,6 +323,7 @@ async function extractWithVision(fileUrl: string, apiKey: string, columnInstruct
   
   const prompt = `Analyze this real estate document image and extract information using the JSON schema.
 ${instructionText ? `\nSpecial field instructions:\n${instructionText}\n` : ''}
+${globalInstructions ? `\nGlobal Admin Instructions: ${globalInstructions}\n` : ''}
 
 CRITICAL RULES:
 - Extract ONLY text that is clearly visible in the image

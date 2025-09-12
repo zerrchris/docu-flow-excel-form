@@ -18,6 +18,22 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
+    
+    // Fetch global extraction instructions from admin settings
+    let globalInstructions = '';
+    try {
+      const { data, error } = await supabaseClient
+        .from('admin_settings')
+        .select('setting_value')
+        .eq('setting_key', 'global_extraction_instructions')
+        .maybeSingle();
+      
+      if (!error && data?.setting_value) {
+        globalInstructions = data.setting_value;
+      }
+    } catch (error) {
+      console.error('Error fetching global instructions:', error);
+    }
 
     // Get user from request
     const authorization = req.headers.get('Authorization');
@@ -143,6 +159,8 @@ serve(async (req) => {
             - Phrases like "subject to mineral reservation" or "minerals reserved"
             
             Include ALL mineral-related information in your notes field, even if it seems minor.
+            
+            ${globalInstructions ? `\nGlobal Admin Instructions: ${globalInstructions}\n` : ''}
             
             Provide confidence scores (0-1) for each extracted field based on text clarity and extraction certainty.
             
