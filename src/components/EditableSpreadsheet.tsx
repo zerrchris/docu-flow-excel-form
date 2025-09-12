@@ -5607,17 +5607,19 @@ ${extractionFields}`
               variant="outline"
               size="sm"
               onClick={async () => {
+                let mapToCheck = documentMap;
                 // Refresh document map before opening dialog
                 if (currentRunsheetId) {
                   try {
                     const updatedDocumentMap = await DocumentService.getDocumentMapForRunsheet(currentRunsheetId);
                     updateDocumentMap(updatedDocumentMap);
+                    mapToCheck = updatedDocumentMap;
                   } catch (error) {
                     console.error('Error refreshing document map:', error);
                   }
                 }
                 
-                if (documentMap.size === 0) {
+                if (mapToCheck.size === 0) {
                   toast({
                     title: "Nothing to analyze",
                     description: "No documents are linked to this runsheet yet.",
@@ -5639,17 +5641,19 @@ ${extractionFields}`
               variant="outline"
               size="sm"
               onClick={async () => {
+                let mapToCheck = documentMap;
                 // Refresh document map before opening dialog
                 if (currentRunsheetId) {
                   try {
                     const updatedDocumentMap = await DocumentService.getDocumentMapForRunsheet(currentRunsheetId);
                     updateDocumentMap(updatedDocumentMap);
+                    mapToCheck = updatedDocumentMap;
                   } catch (error) {
                     console.error('Error refreshing document map:', error);
                   }
                 }
                 
-                if (documentMap.size === 0) {
+                if (mapToCheck.size === 0) {
                   toast({
                     title: "Nothing to rename",
                     description: "No documents are linked to this runsheet yet.",
