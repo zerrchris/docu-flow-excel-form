@@ -6,8 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
-import { Plus, X, Save, RotateCcw } from 'lucide-react';
+import { Plus, X, Save, RotateCcw, Settings, ChevronDown, ChevronUp } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -40,8 +42,10 @@ const DocumentNamingSettings: React.FC<DocumentNamingSettingsProps> = ({ availab
   });
   const [newColumn, setNewColumn] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-  const [isLoading, setIsLoading] = useState(false); // Start as false to prevent flash
-  const [hasLoadedOnce, setHasLoadedOnce] = useState(false); // Track if we've loaded preferences
+  const [isLoading, setIsLoading] = useState(false);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const [showColumnSettings, setShowColumnSettings] = useState(false);
+  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -179,154 +183,236 @@ const DocumentNamingSettings: React.FC<DocumentNamingSettingsProps> = ({ availab
   }
 
   return (
-    <Card className="w-full max-w-2xl mx-auto">
+    <Card className="w-full max-w-4xl mx-auto">
       <CardHeader>
-        <CardTitle>Smart Document Naming Settings</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <Settings className="w-5 h-5" />
+          Smart Document Naming Settings
+        </CardTitle>
         <CardDescription>
           Customize how documents are automatically named based on your spreadsheet data
         </CardDescription>
       </CardHeader>
       
       <CardContent className="space-y-6">
-        {/* Priority Columns */}
-        <div className="space-y-3">
-          <Label className="text-base font-semibold">Priority Columns</Label>
-          <p className="text-sm text-muted-foreground">
-            Columns to use for naming, in order of priority. When you click the sparkles button, documents will be named using data from these columns.
-          </p>
-          
-          <div className="flex flex-wrap gap-2">
-            {preferences.priority_columns.map((column, index) => (
-              <Badge key={column} variant="secondary" className="flex items-center gap-2">
-                <span>{index + 1}. {column}</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground"
-                  onClick={() => removePriorityColumn(column)}
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              </Badge>
-            ))}
+        {/* Quick Summary */}
+        <div className="bg-muted/30 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="font-medium">Current Configuration</h4>
+              <p className="text-sm text-muted-foreground mt-1">
+                Using {preferences.priority_columns.slice(0, preferences.max_filename_parts).join(', ')} 
+                {preferences.priority_columns.length > preferences.max_filename_parts && ` (first ${preferences.max_filename_parts})`}
+              </p>
+            </div>
+            <Badge variant="secondary" className="text-xs">
+              {preferences.max_filename_parts} part{preferences.max_filename_parts !== 1 ? 's' : ''} max
+            </Badge>
           </div>
-          
-          <div className="flex gap-2">
-            <Select value={newColumn} onValueChange={setNewColumn}>
-              <SelectTrigger className="flex-1">
-                <SelectValue placeholder="Select column to add..." />
-              </SelectTrigger>
-              <SelectContent>
-                {availableColumns
-                  .filter(col => col && col.trim() !== '' && !preferences.priority_columns.includes(col))
-                  .map(column => (
-                    <SelectItem key={column} value={column}>
-                      {column}
-                    </SelectItem>
-                  ))}
-                {availableColumns.filter(col => col && col.trim() !== '' && !preferences.priority_columns.includes(col)).length === 0 && (
-                  <SelectItem value="no-columns" disabled>
-                    No available columns
-                  </SelectItem>
-                )}
-              </SelectContent>
-            </Select>
-            <Button onClick={addPriorityColumn} size="sm" disabled={!newColumn}>
-              <Plus className="h-4 w-4" />
+        </div>
+
+        {/* Column Priority Settings */}
+        <Collapsible open={showColumnSettings} onOpenChange={setShowColumnSettings}>
+          <CollapsibleTrigger asChild>
+            <Button variant="outline" size="sm" className="flex items-center gap-2 w-full justify-between">
+              <div className="flex items-center gap-2">
+                <Settings className="w-4 h-4" />
+                Column Priority Settings
+              </div>
+              {showColumnSettings ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </Button>
-          </div>
-        </div>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-4 space-y-4 border rounded-lg p-4">
+            <div className="space-y-3">
+              <div className="text-sm text-muted-foreground">
+                Select which columns to use for naming, in order of priority. Higher priority columns are used first.
+              </div>
+              
+              <div>
+                <Label className="text-sm font-medium">Available columns (select in order of preference):</Label>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  {availableColumns.length > 0 ? availableColumns.map(column => (
+                    <div key={column} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`column-${column}`}
+                        checked={preferences.priority_columns.includes(column)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setPreferences(prev => ({
+                              ...prev,
+                              priority_columns: [...prev.priority_columns, column]
+                            }));
+                          } else {
+                            setPreferences(prev => ({
+                              ...prev,
+                              priority_columns: prev.priority_columns.filter(c => c !== column)
+                            }));
+                          }
+                        }}
+                      />
+                      <Label htmlFor={`column-${column}`} className="text-sm">
+                        {column}
+                      </Label>
+                    </div>
+                  )) : (
+                    <p className="text-sm text-muted-foreground col-span-2">
+                      No columns available. Columns will appear here when you create or open a runsheet.
+                    </p>
+                  )}
+                </div>
+              </div>
 
-        <Separator />
+              {/* Current Priority Order */}
+              {preferences.priority_columns.length > 0 && (
+                <div>
+                  <Label className="text-sm font-medium">Current priority order:</Label>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {preferences.priority_columns.map((column, index) => (
+                      <Badge key={column} variant="secondary" className="flex items-center gap-2">
+                        <span>{index + 1}. {column}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                          onClick={() => removePriorityColumn(column)}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-        {/* Settings */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="max-parts">Max Filename Parts</Label>
-            <Input
-              id="max-parts"
-              type="number"
-              min="1"
-              max="5"
-              value={preferences.max_filename_parts}
-              onChange={(e) => setPreferences(prev => ({
-                ...prev,
-                max_filename_parts: parseInt(e.target.value) || 3
-              }))}
-            />
-          </div>
+              {/* Add custom column */}
+              <div>
+                <Label className="text-sm font-medium">Add custom column:</Label>
+                <div className="flex gap-2 mt-1">
+                  <Input
+                    value={newColumn}
+                    onChange={(e) => setNewColumn(e.target.value)}
+                    placeholder="Enter column name..."
+                    className="flex-1"
+                  />
+                  <Button onClick={addPriorityColumn} size="sm" disabled={!newColumn.trim()}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
 
-          <div className="space-y-2">
-            <Label htmlFor="separator">Separator</Label>
-            <Input
-              id="separator"
-              value={preferences.separator}
-              onChange={(e) => setPreferences(prev => ({
-                ...prev,
-                separator: e.target.value || '_'
-              }))}
-              placeholder="_"
-            />
-          </div>
-        </div>
+        {/* Advanced Settings */}
+        <Collapsible open={showAdvancedSettings} onOpenChange={setShowAdvancedSettings}>
+          <CollapsibleTrigger asChild>
+            <Button variant="outline" size="sm" className="flex items-center gap-2 w-full justify-between">
+              <div className="flex items-center gap-2">
+                <Settings className="w-4 h-4" />
+                Advanced Settings
+              </div>
+              {showAdvancedSettings ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-4 space-y-4 border rounded-lg p-4">
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="max-parts">Maximum filename parts:</Label>
+                  <Select 
+                    value={preferences.max_filename_parts.toString()} 
+                    onValueChange={(value) => setPreferences(prev => ({
+                      ...prev,
+                      max_filename_parts: parseInt(value)
+                    }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1 part</SelectItem>
+                      <SelectItem value="2">2 parts</SelectItem>
+                      <SelectItem value="3">3 parts</SelectItem>
+                      <SelectItem value="4">4 parts</SelectItem>
+                      <SelectItem value="5">5 parts</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="fallback">Fallback Pattern</Label>
-          <Input
-            id="fallback"
-            value={preferences.fallback_pattern}
-            onChange={(e) => setPreferences(prev => ({
-              ...prev,
-              fallback_pattern: e.target.value
-            }))}
-            placeholder="document_{row_index}_{timestamp}"
-          />
-          <p className="text-sm text-muted-foreground">
-            Used when no data is available. Variables: {'{row_index}'}, {'{timestamp}'}
-          </p>
-        </div>
+                <div className="space-y-2">
+                  <Label htmlFor="separator">Separator character:</Label>
+                  <Input
+                    id="separator"
+                    value={preferences.separator}
+                    onChange={(e) => setPreferences(prev => ({
+                      ...prev,
+                      separator: e.target.value || '_'
+                    }))}
+                    placeholder="_"
+                    maxLength={3}
+                  />
+                </div>
+              </div>
 
-        <div className="flex items-center space-x-2">
-          <Switch
-            id="include-extension"
-            checked={preferences.include_extension}
-            onCheckedChange={(checked) => setPreferences(prev => ({
-              ...prev,
-              include_extension: checked
-            }))}
-          />
-          <Label htmlFor="include-extension">Include file extension</Label>
-        </div>
+              <div className="space-y-2">
+                <Label htmlFor="fallback">Fallback pattern:</Label>
+                <Input
+                  id="fallback"
+                  value={preferences.fallback_pattern}
+                  onChange={(e) => setPreferences(prev => ({
+                    ...prev,
+                    fallback_pattern: e.target.value
+                  }))}
+                  placeholder="document_{row_index}_{timestamp}"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Used when no data is available. Variables: {'{row_index}'}, {'{timestamp}'}
+                </p>
+              </div>
 
-        <Separator />
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="include-extension"
+                  checked={preferences.include_extension}
+                  onCheckedChange={(checked) => setPreferences(prev => ({
+                    ...prev,
+                    include_extension: checked
+                  }))}
+                />
+                <Label htmlFor="include-extension">Include file extension</Label>
+              </div>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
 
         {/* Preview */}
-        <div className="space-y-2">
+        <div className="space-y-3">
           <Label className="text-sm font-semibold">Preview</Label>
-          <div className="bg-muted p-3 rounded text-sm space-y-3">
+          <div className="bg-muted/50 border rounded-lg p-4 space-y-3">
             <div>
-              <strong>Basic Example:</strong> If your spreadsheet has data like "Acme Corp" in name column and "Invoice 2024" in title column:<br />
-              <code className="bg-background px-2 py-1 rounded mt-1 inline-block">
-                Acme_Corp{preferences.separator}Invoice_2024{preferences.separator}[third_column]{preferences.include_extension ? '.pdf' : ''}
+              <div className="text-xs font-medium text-muted-foreground mb-2">EXAMPLE 1: BUSINESS DATA</div>
+              <div className="text-xs text-muted-foreground mb-1">
+                If your data: name="Acme Corp", title="Invoice 2024", reference="REF-001"
+              </div>
+              <code className="bg-background px-3 py-2 rounded text-sm inline-block border">
+                Acme_Corp{preferences.separator}Invoice_2024{preferences.max_filename_parts > 2 ? `${preferences.separator}REF-001` : ''}{preferences.include_extension ? '.pdf' : ''}
               </code>
             </div>
             
             <div className="pt-2 border-t">
-              <strong>Real Estate Example:</strong> For instrument number, book, and page data:<br />
-              <div className="text-xs text-muted-foreground mt-1 mb-2">
-                Priority columns: instrument_number, book, page | Data: "202400123", "150", "75"
+              <div className="text-xs font-medium text-muted-foreground mb-2">EXAMPLE 2: REAL ESTATE DATA</div>
+              <div className="text-xs text-muted-foreground mb-1">
+                If your data: instrument_number="202400123", book="150", page="75"
               </div>
-              <code className="bg-background px-2 py-1 rounded inline-block">
-                202400123{preferences.separator}150{preferences.separator}75{preferences.include_extension ? '.pdf' : ''}
+              <code className="bg-background px-3 py-2 rounded text-sm inline-block border">
+                202400123{preferences.separator}150{preferences.max_filename_parts > 2 ? `${preferences.separator}75` : ''}{preferences.include_extension ? '.pdf' : ''}
               </code>
             </div>
           </div>
         </div>
 
-        <Separator />
-
         {/* Actions */}
-        <div className="flex gap-2 justify-between">
+        <div className="flex gap-2 justify-between pt-4 border-t">
           <Button variant="outline" onClick={resetToDefaults}>
             <RotateCcw className="h-4 w-4 mr-2" />
             Reset to Defaults
