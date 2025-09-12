@@ -350,23 +350,30 @@ export const BatchFileRenameDialog: React.FC<BatchFileRenameDialogProps> = ({
                         These settings started with your default extraction preferences and can be customized for this batch rename.
                       </div>
                       <div>
-                        <Label className="text-sm font-medium">Columns to use for naming (in order):</Label>
+                        <Label className="text-sm font-medium">
+                          Columns to use for naming (in order, max {maxParts}):
+                        </Label>
                         <div className="mt-2 grid grid-cols-2 gap-2">
                           {columns.map(column => (
                             <div key={column} className="flex items-center space-x-2">
                               <Checkbox
                                 id={`column-${column}`}
                                 checked={selectedColumns.includes(column)}
-                                disabled={isLoadingPreferences}
+                                disabled={isLoadingPreferences || (!selectedColumns.includes(column) && selectedColumns.length >= maxParts)}
                                 onCheckedChange={(checked) => {
                                   if (checked) {
-                                    setSelectedColumns(prev => [...prev, column]);
+                                    if (selectedColumns.length < maxParts) {
+                                      setSelectedColumns(prev => [...prev, column]);
+                                    }
                                   } else {
                                     setSelectedColumns(prev => prev.filter(c => c !== column));
                                   }
                                 }}
                               />
-                              <Label htmlFor={`column-${column}`} className="text-sm">
+                              <Label 
+                                htmlFor={`column-${column}`} 
+                                className={`text-sm ${!selectedColumns.includes(column) && selectedColumns.length >= maxParts ? 'text-muted-foreground' : ''}`}
+                              >
                                 {column}
                               </Label>
                             </div>
@@ -378,7 +385,14 @@ export const BatchFileRenameDialog: React.FC<BatchFileRenameDialogProps> = ({
                         <Label className="text-sm font-medium">Maximum filename parts:</Label>
                         <Select 
                           value={maxParts.toString()} 
-                          onValueChange={(value) => setMaxParts(parseInt(value))}
+                          onValueChange={(value) => {
+                            const newMaxParts = parseInt(value);
+                            setMaxParts(newMaxParts);
+                            // Automatically trim selected columns if they exceed the new max
+                            if (selectedColumns.length > newMaxParts) {
+                              setSelectedColumns(prev => prev.slice(0, newMaxParts));
+                            }
+                          }}
                           disabled={isLoadingPreferences}
                         >
                           <SelectTrigger className="w-32 mt-1">
