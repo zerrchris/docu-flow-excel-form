@@ -27,7 +27,7 @@ export const AutoSaveIndicator: React.FC<AutoSaveIndicatorProps> = ({
       case 'saved':
         return {
           icon: Check,
-          label: lastSavedAt ? `Saved ${formatTimeAgo(lastSavedAt)}` : 'Saved',
+          label: 'Auto-saved',
           variant: 'secondary' as const,
           className: 'text-green-600 border-green-200 bg-green-50'
         };

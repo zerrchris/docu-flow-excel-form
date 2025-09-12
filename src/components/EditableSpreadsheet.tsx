@@ -2035,10 +2035,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       setHasUnsavedChanges(false);
       setLastSaveTime(new Date());
       onUnsavedChanges?.(false);
-      toast({
-        title: "Runsheet saved",
-        description: `"${finalName}" has been saved successfully.`,
-      });
+      // Remove redundant toast since auto-save indicator shows save status
       
       // Return the saved runsheet data
       return savedRunsheet;
