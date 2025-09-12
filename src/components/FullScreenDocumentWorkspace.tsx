@@ -274,29 +274,20 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
   };
 
   const handleCellClick = (column: string) => {
-    if (editingColumn && editingColumn !== column) {
-      finishEditing();
-    }
+    if (editingColumn) return;
     setFocusedColumn(column);
-    const hasData = !!(localRowData[column] && localRowData[column].trim() !== '');
-    startEditing(column, hasData);
+    // Single click - start editing and select all text if there's existing data
+    if (localRowData[column] && localRowData[column].trim() !== '') {
+      startEditing(column, true); // Pass true to indicate we want to select all
+    } else {
+      startEditing(column, false); // No text to select, just start editing
+    }
   };
 
   const handleCellDoubleClick = (column: string) => {
-    if (editingColumn && editingColumn !== column) {
-      finishEditing();
-    }
     // Double click - start editing but don't select all (allow cursor positioning)
-    startEditing(column, false);
-  };
-
-  const handleCellFocus = (column: string) => {
-    if (editingColumn && editingColumn !== column) {
-      finishEditing();
-    }
-    setFocusedColumn(column);
-    const hasData = !!(localRowData[column] && localRowData[column].trim() !== '');
-    startEditing(column, hasData);
+    if (editingColumn) return;
+    startEditing(column, false); // Pass false to not select all text
   };
 
   const handleZoomIn = () => {
@@ -856,11 +847,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                                     ? (currentIndex - 1 + editableFields.length) % editableFields.length
                                     : (currentIndex + 1) % editableFields.length;
                                   const nextColumn = editableFields[nextIndex];
-                                  setTimeout(() => {
-                                    // When tabbing to next field, select all if it has data
-                                    const hasData = localRowData[nextColumn] && localRowData[nextColumn].trim() !== '';
-                                    startEditing(nextColumn, hasData);
-                                  }, 0);
+                                  setTimeout(() => startEditing(nextColumn, false), 0);
                                 }
                               }}
                               onBlur={finishEditing}
@@ -875,7 +862,6 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                                className={`w-full h-full transition-colors focus:outline-none relative
                                  ${isFocused ? 'bg-primary/20 border-2 border-primary ring-2 ring-primary/20' : 'hover:bg-muted/50 border-2 border-transparent'}`}
                                onKeyDown={(e) => handleKeyDown(e, column)}
-                               onFocus={() => handleCellFocus(column)}
                                tabIndex={0}
                              >
                                {/* Always scrollable content area */}
