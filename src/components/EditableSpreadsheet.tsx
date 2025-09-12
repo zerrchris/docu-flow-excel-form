@@ -4302,12 +4302,9 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         const nextColumn = columns[nextColumnIndex];
         
         if (nextColumn && nextRowIndex >= 0 && nextRowIndex < data.length) {
-          // Start editing the next cell and select all text, with proper scrolling
+          // Just select the next cell without starting edit mode
           setTimeout(() => {
             scrollToCellWithDelay(nextRowIndex, nextColumn, false);
-            setTimeout(() => {
-              startEditing(nextRowIndex, nextColumn, data[nextRowIndex]?.[nextColumn] || '', undefined, 'all'); // Select all for Tab navigation
-            }, 100);
           }, 0);
         }
         break;
@@ -4499,13 +4496,8 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         }
         
         if (nextColumn && nextRowIndex >= 0 && nextRowIndex < data.length) {
-          // First select the cell and ensure it's in view
+          // Just select the cell and ensure it's in view (no auto-edit)
           scrollToCellWithDelay(nextRowIndex, nextColumn, false);
-          
-          // Then start editing after a delay to ensure cell is in view
-          setTimeout(() => {
-            startEditing(nextRowIndex, nextColumn, data[nextRowIndex]?.[nextColumn] || '', undefined, 'none');
-          }, 100); // Reduced delay to match improved scrolling timing
         }
       }
     }
