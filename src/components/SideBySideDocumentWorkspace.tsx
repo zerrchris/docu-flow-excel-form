@@ -624,52 +624,64 @@ Return only the filename, nothing else.`,
                        
                        {/* Removed extraction instruction display - cleaner form */}
                       
-                       {value.length > 100 ? (
-                        <Textarea
-                          value={value}
-                          onChange={(e) => handleFieldChange(columnName, e.target.value)}
-                          className="min-h-[160px] resize-vertical"
-                          placeholder={`Enter ${columnName.toLowerCase()}...`}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Tab') {
-                              e.preventDefault();
-                              const currentIndex = columns.findIndex(col => col === columnName);
-                              const nextIndex = currentIndex + 1;
-                              if (nextIndex < columns.length) {
-                                const nextField = document.querySelector(`input[placeholder*="${columns[nextIndex].toLowerCase()}"], textarea[placeholder*="${columns[nextIndex].toLowerCase()}"]`) as HTMLElement;
-                                nextField?.focus();
-                              }
-                            }
-                            // Allow Enter to create new lines within the textarea
-                          }}
-                        />
+                        {value.length > 100 ? (
+                         <Textarea
+                           value={value}
+                           onChange={(e) => handleFieldChange(columnName, e.target.value)}
+                           className="min-h-[160px] resize-vertical"
+                           placeholder={`Enter ${columnName.toLowerCase()}...`}
+                           onClick={(e) => {
+                             // Single click - select all if there's existing data
+                             if (value && value.trim() !== '' && e.detail === 1) {
+                               setTimeout(() => (e.target as HTMLTextAreaElement).select(), 0);
+                             }
+                           }}
+                           onKeyDown={(e) => {
+                             if (e.key === 'Tab') {
+                               e.preventDefault();
+                               const currentIndex = columns.findIndex(col => col === columnName);
+                               const nextIndex = currentIndex + 1;
+                               if (nextIndex < columns.length) {
+                                 const nextField = document.querySelector(`input[placeholder*="${columns[nextIndex].toLowerCase()}"], textarea[placeholder*="${columns[nextIndex].toLowerCase()}"]`) as HTMLElement;
+                                 nextField?.focus();
+                               }
+                             }
+                             // Allow Enter to create new lines within the textarea
+                           }}
+                         />
                        ) : (
-                        <Input
-                          value={value}
-                          onChange={(e) => handleFieldChange(columnName, e.target.value)}
-                          placeholder={`Enter ${columnName.toLowerCase()}...`}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Tab') {
-                              e.preventDefault();
-                              const currentIndex = columns.findIndex(col => col === columnName);
-                              const nextIndex = currentIndex + 1;
-                              if (nextIndex < columns.length) {
-                                const nextField = document.querySelector(`input[placeholder*="${columns[nextIndex].toLowerCase()}"], textarea[placeholder*="${columns[nextIndex].toLowerCase()}"]`) as HTMLElement;
-                                nextField?.focus();
-                              }
-                            }
-                            // For Input fields, Enter still moves to next field since they're single-line
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              const currentIndex = columns.findIndex(col => col === columnName);
-                              const nextIndex = currentIndex + 1;
-                              if (nextIndex < columns.length) {
-                                const nextField = document.querySelector(`input[placeholder*="${columns[nextIndex].toLowerCase()}"], textarea[placeholder*="${columns[nextIndex].toLowerCase()}"]`) as HTMLElement;
-                                nextField?.focus();
-                              }
-                            }
-                          }}
-                        />
+                         <Input
+                           value={value}
+                           onChange={(e) => handleFieldChange(columnName, e.target.value)}
+                           placeholder={`Enter ${columnName.toLowerCase()}...`}
+                           onClick={(e) => {
+                             // Single click - select all if there's existing data
+                             if (value && value.trim() !== '' && e.detail === 1) {
+                               setTimeout(() => (e.target as HTMLInputElement).select(), 0);
+                             }
+                           }}
+                           onKeyDown={(e) => {
+                             if (e.key === 'Tab') {
+                               e.preventDefault();
+                               const currentIndex = columns.findIndex(col => col === columnName);
+                               const nextIndex = currentIndex + 1;
+                               if (nextIndex < columns.length) {
+                                 const nextField = document.querySelector(`input[placeholder*="${columns[nextIndex].toLowerCase()}"], textarea[placeholder*="${columns[nextIndex].toLowerCase()}"]`) as HTMLElement;
+                                 nextField?.focus();
+                               }
+                             }
+                             // For Input fields, Enter still moves to next field since they're single-line
+                             if (e.key === 'Enter') {
+                               e.preventDefault();
+                               const currentIndex = columns.findIndex(col => col === columnName);
+                               const nextIndex = currentIndex + 1;
+                               if (nextIndex < columns.length) {
+                                 const nextField = document.querySelector(`input[placeholder*="${columns[nextIndex].toLowerCase()}"], textarea[placeholder*="${columns[nextIndex].toLowerCase()}"]`) as HTMLElement;
+                                 nextField?.focus();
+                               }
+                             }
+                           }}
+                         />
                       )}
                     </div>
                   );

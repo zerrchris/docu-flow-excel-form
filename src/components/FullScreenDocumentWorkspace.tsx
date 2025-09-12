@@ -172,10 +172,21 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
     onClose();
   };
 
-  const startEditing = (column: string) => {
+  const startEditing = (column: string, selectAll: boolean = false) => {
     setEditingColumn(column);
     setEditingValue(localRowData[column] || '');
-    setFocusedColumn(null);
+    setFocusedColumn(column);
+    
+    // Use a timeout to ensure the textarea is rendered before focusing/selecting
+    setTimeout(() => {
+      const textarea = document.querySelector(`textarea[data-editing="${column}"]`) as HTMLTextAreaElement;
+      if (textarea) {
+        textarea.focus();
+        if (selectAll && textarea.value.length > 0) {
+          textarea.select(); // Select all text
+        }
+      }
+    }, 0);
   };
 
   const finishEditing = () => {
@@ -258,20 +269,25 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
       setFocusedColumn(nextColumn);
     } else if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      startEditing(column);
+      startEditing(column, false);
     }
   };
 
   const handleCellClick = (column: string) => {
     if (editingColumn) return;
     setFocusedColumn(column);
-    // Start editing immediately on single click
-    startEditing(column);
+    // Single click - start editing and select all text if there's existing data
+    if (localRowData[column] && localRowData[column].trim() !== '') {
+      startEditing(column, true); // Pass true to indicate we want to select all
+    } else {
+      startEditing(column, false); // No text to select, just start editing
+    }
   };
 
   const handleCellDoubleClick = (column: string) => {
-    // Double click also starts editing (redundant but ensures it works)
-    startEditing(column);
+    // Double click - start editing but don't select all (allow cursor positioning)
+    if (editingColumn) return;
+    startEditing(column, false); // Pass false to not select all text
   };
 
   const handleZoomIn = () => {
@@ -816,6 +832,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                         >
                           {isEditing ? (
                             <Textarea
+                              data-editing={column}
                               value={editingValue}
                               onChange={(e) => setEditingValue(e.target.value)}
                               onKeyDown={(e) => {
@@ -830,7 +847,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                                     ? (currentIndex - 1 + editableFields.length) % editableFields.length
                                     : (currentIndex + 1) % editableFields.length;
                                   const nextColumn = editableFields[nextIndex];
-                                  setTimeout(() => startEditing(nextColumn), 0);
+                                  setTimeout(() => startEditing(nextColumn, false), 0);
                                 }
                               }}
                               onBlur={finishEditing}
