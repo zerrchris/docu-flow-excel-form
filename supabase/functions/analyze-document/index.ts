@@ -131,12 +131,21 @@ serve(async (req) => {
       console.error('Error fetching global instructions:', error);
     }
     
-    // Build system message with global instructions
-    const defaultSystemMessage = "You are a precise document analysis assistant specializing in real estate and legal documents. Extract information that is clearly visible and readable in the document. Pay special attention to mineral rights, mineral reservations, mineral exceptions, surface vs subsurface rights, oil/gas/water rights, and any language about 'reserving' or 'excepting' minerals. Include ALL mineral-related information in your extraction, even if it seems minor. If information is not clearly present, use empty string ''. Return ONLY valid JSON with field names as keys and extracted text as values. No markdown, no explanations, no additional text - just clean JSON.";
-    
-    const finalSystemMessage = systemMessage || (globalInstructions ? 
-      `${defaultSystemMessage}\n\nAdditional Global Instructions: ${globalInstructions}` : 
-      defaultSystemMessage);
+    // Use the provided system message (which includes column instructions from frontend)
+    // or build a comprehensive one
+    let finalSystemMessage;
+    if (systemMessage) {
+      // If system message is provided, append global instructions to it
+      finalSystemMessage = globalInstructions ? 
+        `${systemMessage}\n\nAdditional Global Instructions: ${globalInstructions}` : 
+        systemMessage;
+    } else {
+      // Fallback system message with global instructions
+      const defaultSystemMessage = "You are a precise document analysis assistant specializing in real estate and legal documents. Extract information that is clearly visible and readable in the document. Pay special attention to mineral rights, mineral reservations, mineral exceptions, surface vs subsurface rights, oil/gas/water rights, and any language about 'reserving' or 'excepting' minerals. Include ALL mineral-related information in your extraction, even if it seems minor. If information is not clearly present, use empty string ''. Return ONLY valid JSON with field names as keys and extracted text as values. No markdown, no explanations, no additional text - just clean JSON.";
+      finalSystemMessage = globalInstructions ? 
+        `${defaultSystemMessage}\n\nAdditional Global Instructions: ${globalInstructions}` : 
+        defaultSystemMessage;
+    }
     
     // Extract user_id from auth header for usage tracking
     const authHeader = req.headers.get('authorization');
