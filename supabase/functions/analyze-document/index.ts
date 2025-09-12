@@ -112,7 +112,7 @@ serve(async (req) => {
   }
 
   try {
-    const { prompt, imageData, systemMessage = "You are a precise document analysis assistant. Extract information that is clearly visible and readable in the document. If information is not clearly present, use empty string ''. Return ONLY valid JSON with field names as keys and extracted text as values. No markdown, no explanations, no additional text - just clean JSON." } = await req.json();
+    const { prompt, imageData, systemMessage = "You are a precise document analysis assistant specializing in real estate and legal documents. Extract information that is clearly visible and readable in the document. Pay special attention to mineral rights, mineral reservations, mineral exceptions, surface vs subsurface rights, oil/gas/water rights, and any language about 'reserving' or 'excepting' minerals. Include ALL mineral-related information in your extraction, even if it seems minor. If information is not clearly present, use empty string ''. Return ONLY valid JSON with field names as keys and extracted text as values. No markdown, no explanations, no additional text - just clean JSON." } = await req.json();
     
     // Extract user_id from auth header for usage tracking
     const authHeader = req.headers.get('authorization');
