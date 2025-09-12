@@ -5583,14 +5583,6 @@ ${extractionFields}`
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-            
-            {/* Auto-save status indicator */}
-            <AutoSaveIndicator 
-              status={autoSaveStatus}
-              errorMessage={autoSaveError}
-              lastSavedAt={lastAutoSaveTime}
-              className="ml-2"
-            />
 
 
             {/* Download Button */}
