@@ -636,6 +636,12 @@ Return only the filename, nothing else.`,
                                setTimeout(() => (e.target as HTMLTextAreaElement).select(), 0);
                              }
                            }}
+                           onFocus={(e) => {
+                             // When focused via tab or any other method, select all if there's data
+                             if (value && value.trim() !== '') {
+                               setTimeout(() => (e.target as HTMLTextAreaElement).select(), 0);
+                             }
+                           }}
                            onKeyDown={(e) => {
                              if (e.key === 'Tab') {
                                e.preventDefault();
@@ -657,6 +663,12 @@ Return only the filename, nothing else.`,
                            onClick={(e) => {
                              // Single click - select all if there's existing data
                              if (value && value.trim() !== '' && e.detail === 1) {
+                               setTimeout(() => (e.target as HTMLInputElement).select(), 0);
+                             }
+                           }}
+                           onFocus={(e) => {
+                             // When focused via tab or any other method, select all if there's data
+                             if (value && value.trim() !== '') {
                                setTimeout(() => (e.target as HTMLInputElement).select(), 0);
                              }
                            }}

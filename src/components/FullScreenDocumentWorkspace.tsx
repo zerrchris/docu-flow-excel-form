@@ -847,7 +847,11 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                                     ? (currentIndex - 1 + editableFields.length) % editableFields.length
                                     : (currentIndex + 1) % editableFields.length;
                                   const nextColumn = editableFields[nextIndex];
-                                  setTimeout(() => startEditing(nextColumn, false), 0);
+                                  setTimeout(() => {
+                                    // When tabbing to next field, select all if it has data
+                                    const hasData = localRowData[nextColumn] && localRowData[nextColumn].trim() !== '';
+                                    startEditing(nextColumn, hasData);
+                                  }, 0);
                                 }
                               }}
                               onBlur={finishEditing}
