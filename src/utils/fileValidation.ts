@@ -184,7 +184,7 @@ export const validateFile = (file: File): FileValidationResult => {
     }
   } else if (fileType === 'document') {
     if (file.type === 'application/pdf') {
-      warning = "PDF files are supported, but converting to an image format (PNG/JPG) may provide better analysis results.";
+      warning = "PDF files are supported but will be converted to an image format (PNG/JPG) for analysis.";
     } else if (file.type === 'application/msword') {
       warning = "Older Word document format (.doc) detected. Consider using the newer .docx format for better compatibility.";
     }
