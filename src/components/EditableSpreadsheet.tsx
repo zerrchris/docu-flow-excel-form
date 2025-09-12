@@ -4206,6 +4206,21 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   const handleKeyDown = useCallback((e: React.KeyboardEvent, rowIndex: number, column: string) => {
     const columnIndex = columns.indexOf(column);
     
+    // Helper function to ensure cell is scrolled into view after navigation
+    const scrollToCellWithDelay = (targetRowIndex: number, targetColumn: string, startEdit = false) => {
+      selectCell(targetRowIndex, targetColumn, startEdit);
+      setTimeout(() => {
+        const cellElement = document.querySelector(`[data-cell="${targetRowIndex}-${targetColumn}"]`);
+        if (cellElement) {
+          cellElement.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+            inline: 'center'
+          });
+        }
+      }, 50);
+    };
+    
     switch (e.key) {
       case 'Enter':
         if (editingCell) {
@@ -4219,7 +4234,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
           const nextRowIndex = currentRowIndex + 1;
           if (nextRowIndex < data.length) {
             setTimeout(() => {
-              selectCell(nextRowIndex, currentColumn, false);
+              scrollToCellWithDelay(nextRowIndex, currentColumn, false);
             }, 0);
           } else {
             // If we're at the last row, create a new row and move to it
@@ -4232,7 +4247,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
             onDataChange?.(newData);
             
             setTimeout(() => {
-              selectCell(nextRowIndex, currentColumn, false);
+              scrollToCellWithDelay(nextRowIndex, currentColumn, false);
             }, 0);
           }
         } else {
@@ -4287,9 +4302,12 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         const nextColumn = columns[nextColumnIndex];
         
         if (nextColumn && nextRowIndex >= 0 && nextRowIndex < data.length) {
-          // Start editing the next cell and select all text
+          // Start editing the next cell and select all text, with proper scrolling
           setTimeout(() => {
-            startEditing(nextRowIndex, nextColumn, data[nextRowIndex]?.[nextColumn] || '', undefined, 'all'); // Select all for Tab navigation
+            scrollToCellWithDelay(nextRowIndex, nextColumn, false);
+            setTimeout(() => {
+              startEditing(nextRowIndex, nextColumn, data[nextRowIndex]?.[nextColumn] || '', undefined, 'all'); // Select all for Tab navigation
+            }, 100);
           }, 0);
         }
         break;
@@ -4298,7 +4316,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         e.preventDefault();
         if (editingCell) return;
         if (rowIndex > 0) {
-          selectCell(rowIndex - 1, column, false);
+          scrollToCellWithDelay(rowIndex - 1, column, false);
         }
         break;
         
@@ -4306,7 +4324,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         e.preventDefault();
         if (editingCell) return;
         if (rowIndex < data.length - 1) {
-          selectCell(rowIndex + 1, column, false);
+          scrollToCellWithDelay(rowIndex + 1, column, false);
         }
         break;
         
@@ -4320,7 +4338,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
             newColumnIndex--;
           }
           if (newColumnIndex >= 0) {
-            selectCell(rowIndex, columns[newColumnIndex], false);
+            scrollToCellWithDelay(rowIndex, columns[newColumnIndex], false);
           }
         }
         break;
@@ -4335,7 +4353,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
             newColumnIndex++;
           }
           if (newColumnIndex < columns.length) {
-            selectCell(rowIndex, columns[newColumnIndex], false);
+            scrollToCellWithDelay(rowIndex, columns[newColumnIndex], false);
           }
         }
         break;
@@ -4379,6 +4397,21 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
 
   // Handle input key events during editing
   const handleInputKeyDown = useCallback((e: React.KeyboardEvent) => {
+    // Helper function to ensure cell is scrolled into view after navigation
+    const scrollToCellWithDelay = (targetRowIndex: number, targetColumn: string, startEdit = false) => {
+      selectCell(targetRowIndex, targetColumn, startEdit);
+      setTimeout(() => {
+        const cellElement = document.querySelector(`[data-cell="${targetRowIndex}-${targetColumn}"]`);
+        if (cellElement) {
+          cellElement.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+            inline: 'center'
+          });
+        }
+      }, 50);
+    };
+
     if (e.key === 'Enter' && !e.altKey && !e.shiftKey) {
       // Capture the current editing cell info before saving (since saveEdit will clear editingCell)
       if (editingCell) {
@@ -4400,7 +4433,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         
         if (nextRowIndex < data.length || nextRowIndex === data.length) {
           setTimeout(() => {
-            selectCell(nextRowIndex, currentColumn, false);
+            scrollToCellWithDelay(nextRowIndex, currentColumn, false);
           }, 0);
         }
       }
@@ -4443,7 +4476,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         }
         
         setTimeout(() => {
-          selectCell(nextRowIndex, nextColumn);
+          scrollToCellWithDelay(nextRowIndex, nextColumn, false);
         }, 0);
       }
       e.preventDefault();
@@ -4466,8 +4499,8 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         }
         
         if (nextColumn && nextRowIndex >= 0 && nextRowIndex < data.length) {
-          // First select the cell and wait for scrolling
-          selectCell(nextRowIndex, nextColumn, false);
+          // First select the cell and ensure it's in view
+          scrollToCellWithDelay(nextRowIndex, nextColumn, false);
           
           // Then start editing after a delay to ensure cell is in view
           setTimeout(() => {
