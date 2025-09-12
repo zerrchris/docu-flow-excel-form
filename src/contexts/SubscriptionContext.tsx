@@ -92,8 +92,12 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
       if (error) throw error;
 
-      // Open Stripe checkout in a new tab
-      window.open(data.url, '_blank');
+      if (data?.url) {
+        // Redirect to Stripe checkout in same tab
+        window.location.href = data.url;
+      } else {
+        throw new Error('No checkout URL returned');
+      }
     } catch (error) {
       console.error('Error creating checkout:', error);
       throw error;
