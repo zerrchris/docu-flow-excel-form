@@ -32,11 +32,28 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     });
     return true; // Keep message channel open for async response
   }
-  
+
   if (message.action === 'openPopup') {
     // Handle popup opening requests
     chrome.action.openPopup();
     sendResponse({ success: true });
+  }
+
+  if (message.action === 'ensureContentScript') {
+    try {
+      if (sender.tab && sender.tab.id) {
+        chrome.scripting.executeScript({
+          target: { tabId: sender.tab.id },
+          files: ['content.js']
+        }).then(() => sendResponse({ success: true })).catch(err => {
+          console.warn('ensureContentScript failed:', err);
+          sendResponse({ success: false, error: err.message });
+        });
+        return true; // async
+      }
+    } catch (e) {
+      console.warn('ensureContentScript error:', e);
+    }
   }
 });
 
