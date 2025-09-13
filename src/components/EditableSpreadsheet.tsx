@@ -63,7 +63,6 @@ import ReExtractDialog from './ReExtractDialog';
 import RunsheetNameDialog from './RunsheetNameDialog';
 import { convertPDFToImages, createFileFromBlob } from '@/utils/pdfToImage';
 import { combineImages } from '@/utils/imageCombiner';
-import getCaretCoordinates from 'textarea-caret';
 
 
 import type { User } from '@supabase/supabase-js';
@@ -3971,109 +3970,159 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
           // Triple-click: select all text
           textareaRef.current.select();
         } else if (selectionType === 'word' && clickEvent && value) {
-          // Double-click: select word at cursor position using caret-coordinate search
+          // Double-click: select word at cursor position
           const textarea = textareaRef.current;
-
-          const rect = textarea.getBoundingClientRect();
-          const targetX = clickEvent.clientX - rect.left + textarea.scrollLeft;
-          const targetY = clickEvent.clientY - rect.top + textarea.scrollTop;
-
-          // Binary search caret index by minimizing distance to click coords
-          const text = value;
-          let lo = 0;
-          let hi = text.length;
-          let best = 0;
-          let bestDist = Number.POSITIVE_INFINITY;
-
-          let left = lo, right = hi;
-          const iterations = Math.ceil(Math.log2(Math.max(1, hi - lo + 1))) + 6;
-          for (let i = 0; i < iterations; i++) {
-            const mid = Math.floor((left + right) / 2);
-            const midCoords = getCaretCoordinates(textarea, mid);
-            const dy = midCoords.top - targetY;
-            const dx = midCoords.left - targetX;
-            const dist = Math.hypot(dx, dy);
-            if (dist < bestDist) {
-              bestDist = dist;
-              best = mid;
-            }
-            if (midCoords.top < targetY || (Math.abs(midCoords.top - targetY) < 2 && midCoords.left < targetX)) {
-              left = Math.min(hi, mid + 1);
-            } else {
-              right = Math.max(lo, mid - 1);
-            }
-          }
-
-          // Fine-tune around the best guess
-          const windowSize = 12;
-          for (let p = Math.max(0, best - windowSize); p <= Math.min(text.length, best + windowSize); p++) {
-            const c = getCaretCoordinates(textarea, p);
-            const d = Math.hypot(c.left - targetX, c.top - targetY);
-            if (d < bestDist) {
-              bestDist = d;
-              best = p;
-            }
-          }
-
-          let position = Math.max(0, Math.min(best, text.length));
-
-          // Expand to word boundaries around position
-          let wordStart = position;
-          let wordEnd = position;
-
-          if (position < text.length && !/\w/.test(text[position])) {
-            let backPos = position - 1;
-            while (backPos >= 0 && !/\w/.test(text[backPos])) backPos--;
-            let fwdPos = position + 1;
-            while (fwdPos < text.length && !/\w/.test(text[fwdPos])) fwdPos++;
-            if (backPos >= 0 && (fwdPos >= text.length || position - backPos <= fwdPos - position)) position = backPos; else if (fwdPos < text.length) position = fwdPos;
-            wordStart = position; wordEnd = position;
-          }
-
-          while (wordStart > 0 && /\w/.test(text[wordStart - 1])) wordStart--;
-          while (wordEnd < text.length && /\w/.test(text[wordEnd])) wordEnd++;
-
-          textarea.setSelectionRange(wordStart, wordEnd);
-        } else if (clickEvent && value) {
-          // Single click: position cursor at click location
-          const textarea = textareaRef.current;
-          const rect = textarea.getBoundingClientRect();
-          const x = clickEvent.clientX - rect.left;
-          const y = clickEvent.clientY - rect.top;
           
-          const tempSpan = document.createElement('span');
-          tempSpan.style.font = window.getComputedStyle(textarea).font;
-          tempSpan.style.visibility = 'hidden';
-          tempSpan.style.position = 'absolute';
-          tempSpan.style.whiteSpace = 'pre-wrap';
-          tempSpan.style.lineHeight = window.getComputedStyle(textarea).lineHeight;
-          document.body.appendChild(tempSpan);
-          
+          // Use the browser's native caretPositionFromPoint or caretRangeFromPoint
           let position = 0;
-          const lines = value.split('\n');
-          const lineHeight = parseInt(window.getComputedStyle(textarea).lineHeight) || 20;
-          const targetLine = Math.floor(y / lineHeight);
           
-          for (let i = 0; i < Math.min(targetLine, lines.length - 1); i++) {
-            position += lines[i].length + 1;
-          }
+          // Type assertion for browser APIs that might not be in standard types
+          const doc = document as any;
           
-          if (targetLine < lines.length) {
-            const currentLine = lines[targetLine];
-            for (let i = 0; i <= currentLine.length; i++) {
-              tempSpan.textContent = currentLine.substring(0, i);
-              if (tempSpan.offsetWidth >= x) {
-                position += i;
+          if (doc.caretPositionFromPoint) {
+            const caretPos = doc.caretPositionFromPoint(clickEvent.clientX, clickEvent.clientY);
+            if (caretPos && caretPos.offsetNode && caretPos.offsetNode.textContent) {
+              position = caretPos.offset;
+            }
+          } else if (doc.caretRangeFromPoint) {
+            const range = doc.caretRangeFromPoint(clickEvent.clientX, clickEvent.clientY);
+            if (range) {
+              position = range.startOffset;
+            }
+          } else {
+            // Fallback: use improved coordinate-based calculation
+            const rect = textarea.getBoundingClientRect();
+            const x = clickEvent.clientX - rect.left;
+            const y = clickEvent.clientY - rect.top;
+            
+            // Get computed styles for accurate calculations
+            const style = window.getComputedStyle(textarea);
+            const paddingLeft = parseInt(style.paddingLeft) || 0;
+            const paddingTop = parseInt(style.paddingTop) || 0;
+            
+            // Adjust coordinates for padding
+            const adjustedX = x - paddingLeft;
+            const adjustedY = y - paddingTop;
+            
+            // Create a temporary element to measure text more accurately
+            const tempDiv = document.createElement('div');
+            tempDiv.style.font = style.font;
+            tempDiv.style.lineHeight = style.lineHeight;
+            tempDiv.style.padding = `${paddingTop}px ${paddingLeft}px`;
+            tempDiv.style.border = 'none';
+            tempDiv.style.position = 'absolute';
+            tempDiv.style.visibility = 'hidden';
+            tempDiv.style.whiteSpace = 'pre-wrap';
+            tempDiv.style.wordWrap = 'break-word';
+            tempDiv.style.width = `${textarea.clientWidth}px`;
+            document.body.appendChild(tempDiv);
+            
+            const lines = value.split('\n');
+            let accumulatedHeight = 0;
+            let targetLineIndex = 0;
+            
+            // Find which line was clicked by measuring actual line heights
+            for (let i = 0; i < lines.length; i++) {
+              tempDiv.textContent = lines[i] || ' '; // Use space for empty lines
+              const lineHeight = tempDiv.offsetHeight;
+              
+              if (adjustedY <= accumulatedHeight + lineHeight) {
+                targetLineIndex = i;
                 break;
               }
-              if (i === currentLine.length) position += i;
+              accumulatedHeight += lineHeight;
+              if (i === lines.length - 1) targetLineIndex = i;
+            }
+            
+            // Calculate position up to the target line
+            position = 0;
+            for (let i = 0; i < targetLineIndex; i++) {
+              position += lines[i].length + 1; // +1 for newline
+            }
+            
+            // Find position within the clicked line
+            if (targetLineIndex < lines.length) {
+              const currentLine = lines[targetLineIndex];
+              tempDiv.textContent = '';
+              
+              // Binary search for the character position
+              let left = 0;
+              let right = currentLine.length;
+              
+              while (left < right) {
+                const mid = Math.floor((left + right) / 2);
+                tempDiv.textContent = currentLine.substring(0, mid);
+                
+                if (tempDiv.offsetWidth < adjustedX) {
+                  left = mid + 1;
+                } else {
+                  right = mid;
+                }
+              }
+              
+              position += Math.min(left, currentLine.length);
+            }
+            
+            document.body.removeChild(tempDiv);
+          }
+          
+          // Ensure position is within bounds
+          position = Math.max(0, Math.min(position, value.length));
+          
+          console.log('Double-click debug:', {
+            clickCoords: [clickEvent.clientX, clickEvent.clientY],
+            calculatedPosition: position,
+            textAroundPosition: value.substring(Math.max(0, position - 5), position + 5),
+            charAtPosition: value[position]
+          });
+          
+          // Find word boundaries around the calculated position
+          let wordStart = position;
+          let wordEnd = position;
+          
+          // If we're not on a word character, try to find the nearest word
+          if (position < value.length && !/\w/.test(value[position])) {
+            // Look backward for a word character
+            let backPos = position - 1;
+            while (backPos >= 0 && !/\w/.test(value[backPos])) {
+              backPos--;
+            }
+            // Look forward for a word character
+            let forwardPos = position + 1;
+            while (forwardPos < value.length && !/\w/.test(value[forwardPos])) {
+              forwardPos++;
+            }
+            
+            // Use the closest word character position
+            if (backPos >= 0 && (forwardPos >= value.length || position - backPos <= forwardPos - position)) {
+              position = backPos;
+            } else if (forwardPos < value.length) {
+              position = forwardPos;
             }
           }
           
-          document.body.removeChild(tempSpan);
+          wordStart = position;
+          wordEnd = position;
           
-          textarea.setSelectionRange(position, position);
-        }
+          // Expand backward to find word start
+          while (wordStart > 0 && /\w/.test(value[wordStart - 1])) {
+            wordStart--;
+          }
+          
+          // Expand forward to find word end  
+          while (wordEnd < value.length && /\w/.test(value[wordEnd])) {
+            wordEnd++;
+          }
+          
+          console.log('Word selection:', {
+            finalPosition: position,
+            wordBoundaries: [wordStart, wordEnd],
+            selectedText: value.substring(wordStart, wordEnd)
+          });
+          
+          // Select the word
+          textarea.setSelectionRange(wordStart, wordEnd);
+        } else if (clickEvent && value) {
           // Single click: position cursor at click location
           const textarea = textareaRef.current;
           const rect = textarea.getBoundingClientRect();
@@ -4118,7 +4167,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         }
       }
     }, 50); // Increased timeout to ensure it runs after useEffect
-  }, [setEditingCell, setCellValue, setSelectedCell]);
+  }, []);
 
   const saveEdit = useCallback(async () => {
     if (editingCell) {
