@@ -1126,8 +1126,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   // Ref for container width measurement
   const containerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  
+  const singleClickTimerRef = useRef<number | null>(null);
   // Calculate and distribute column widths when columns change
   useEffect(() => {
     if (containerRef.current && columns.length > 0) {
@@ -3930,21 +3929,36 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     // Handle triple click
     if (clickCount === 2 && isSameCell && timeDiff < 500) {
       event.preventDefault();
+      if (singleClickTimerRef.current) {
+        window.clearTimeout(singleClickTimerRef.current);
+        singleClickTimerRef.current = null;
+      }
       handleCellTripleClick(rowIndex, column);
       return;
     }
     
     // Single click behavior - if cell is already being edited, allow cursor positioning
     if (editingCell && editingCell.rowIndex === rowIndex && editingCell.column === column) {
-      // Already editing this cell, allow normal click behavior for cursor positioning
-      return;
+      return; // Do nothing; textarea handles caret
     }
     
-    // For single clicks on non-editing cells, just select the cell
-    selectCell(rowIndex, column, false);
+    // Defer single-click selection slightly to detect if a double-click happens
+    if (singleClickTimerRef.current) {
+      window.clearTimeout(singleClickTimerRef.current);
+      singleClickTimerRef.current = null;
+    }
+    singleClickTimerRef.current = window.setTimeout(() => {
+      selectCell(rowIndex, column, false);
+      singleClickTimerRef.current = null;
+    }, 220);
   };
 
   const handleCellDoubleClick = (rowIndex: number, column: string, event?: React.MouseEvent) => {
+    // Cancel pending single-click selection to avoid focus stealing
+    if (singleClickTimerRef.current) {
+      window.clearTimeout(singleClickTimerRef.current);
+      singleClickTimerRef.current = null;
+    }
     // Double click should enter edit mode and select the word at cursor position
     const cellValue = data[rowIndex]?.[column] || '';
     startEditing(rowIndex, column, cellValue, event, 'word'); // Select word for double-click
@@ -3973,98 +3987,81 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
           // Double-click: select word at cursor position
           const textarea = textareaRef.current;
           
-          // Use the browser's native caretPositionFromPoint or caretRangeFromPoint
+          // Compute caret position based on click coordinates within the textarea (reliable for textareas)
           let position = 0;
+          const rect = textarea.getBoundingClientRect();
+          const x = clickEvent.clientX - rect.left;
+          const y = clickEvent.clientY - rect.top;
           
-          // Type assertion for browser APIs that might not be in standard types
-          const doc = document as any;
+          // Get computed styles for accurate calculations
+          const style = window.getComputedStyle(textarea);
+          const paddingLeft = parseInt(style.paddingLeft) || 0;
+          const paddingTop = parseInt(style.paddingTop) || 0;
           
-          if (doc.caretPositionFromPoint) {
-            const caretPos = doc.caretPositionFromPoint(clickEvent.clientX, clickEvent.clientY);
-            if (caretPos && caretPos.offsetNode && caretPos.offsetNode.textContent) {
-              position = caretPos.offset;
+          // Adjust coordinates for padding
+          const adjustedX = x - paddingLeft;
+          const adjustedY = y - paddingTop;
+          
+          // Create a temporary element to measure text more accurately
+          const tempDiv = document.createElement('div');
+          tempDiv.style.font = style.font;
+          tempDiv.style.lineHeight = style.lineHeight;
+          tempDiv.style.padding = `${paddingTop}px ${paddingLeft}px`;
+          tempDiv.style.border = 'none';
+          tempDiv.style.position = 'absolute';
+          tempDiv.style.visibility = 'hidden';
+          tempDiv.style.whiteSpace = 'pre-wrap';
+          tempDiv.style.wordWrap = 'break-word';
+          tempDiv.style.width = `${textarea.clientWidth}px`;
+          document.body.appendChild(tempDiv);
+          
+          const lines = value.split('\n');
+          let accumulatedHeight = 0;
+          let targetLineIndex = 0;
+          
+          // Find which line was clicked by measuring actual line heights
+          for (let i = 0; i < lines.length; i++) {
+            tempDiv.textContent = lines[i] || ' '; // Use space for empty lines
+            const lineHeight = tempDiv.offsetHeight;
+            
+            if (adjustedY <= accumulatedHeight + lineHeight) {
+              targetLineIndex = i;
+              break;
             }
-          } else if (doc.caretRangeFromPoint) {
-            const range = doc.caretRangeFromPoint(clickEvent.clientX, clickEvent.clientY);
-            if (range) {
-              position = range.startOffset;
-            }
-          } else {
-            // Fallback: use improved coordinate-based calculation
-            const rect = textarea.getBoundingClientRect();
-            const x = clickEvent.clientX - rect.left;
-            const y = clickEvent.clientY - rect.top;
-            
-            // Get computed styles for accurate calculations
-            const style = window.getComputedStyle(textarea);
-            const paddingLeft = parseInt(style.paddingLeft) || 0;
-            const paddingTop = parseInt(style.paddingTop) || 0;
-            
-            // Adjust coordinates for padding
-            const adjustedX = x - paddingLeft;
-            const adjustedY = y - paddingTop;
-            
-            // Create a temporary element to measure text more accurately
-            const tempDiv = document.createElement('div');
-            tempDiv.style.font = style.font;
-            tempDiv.style.lineHeight = style.lineHeight;
-            tempDiv.style.padding = `${paddingTop}px ${paddingLeft}px`;
-            tempDiv.style.border = 'none';
-            tempDiv.style.position = 'absolute';
-            tempDiv.style.visibility = 'hidden';
-            tempDiv.style.whiteSpace = 'pre-wrap';
-            tempDiv.style.wordWrap = 'break-word';
-            tempDiv.style.width = `${textarea.clientWidth}px`;
-            document.body.appendChild(tempDiv);
-            
-            const lines = value.split('\n');
-            let accumulatedHeight = 0;
-            let targetLineIndex = 0;
-            
-            // Find which line was clicked by measuring actual line heights
-            for (let i = 0; i < lines.length; i++) {
-              tempDiv.textContent = lines[i] || ' '; // Use space for empty lines
-              const lineHeight = tempDiv.offsetHeight;
-              
-              if (adjustedY <= accumulatedHeight + lineHeight) {
-                targetLineIndex = i;
-                break;
-              }
-              accumulatedHeight += lineHeight;
-              if (i === lines.length - 1) targetLineIndex = i;
-            }
-            
-            // Calculate position up to the target line
-            position = 0;
-            for (let i = 0; i < targetLineIndex; i++) {
-              position += lines[i].length + 1; // +1 for newline
-            }
-            
-            // Find position within the clicked line
-            if (targetLineIndex < lines.length) {
-              const currentLine = lines[targetLineIndex];
-              tempDiv.textContent = '';
-              
-              // Binary search for the character position
-              let left = 0;
-              let right = currentLine.length;
-              
-              while (left < right) {
-                const mid = Math.floor((left + right) / 2);
-                tempDiv.textContent = currentLine.substring(0, mid);
-                
-                if (tempDiv.offsetWidth < adjustedX) {
-                  left = mid + 1;
-                } else {
-                  right = mid;
-                }
-              }
-              
-              position += Math.min(left, currentLine.length);
-            }
-            
-            document.body.removeChild(tempDiv);
+            accumulatedHeight += lineHeight;
+            if (i === lines.length - 1) targetLineIndex = i;
           }
+          
+          // Calculate position up to the target line
+          position = 0;
+          for (let i = 0; i < targetLineIndex; i++) {
+            position += lines[i].length + 1; // +1 for newline
+          }
+          
+          // Find position within the clicked line
+          if (targetLineIndex < lines.length) {
+            const currentLine = lines[targetLineIndex];
+            tempDiv.textContent = '';
+            
+            // Binary search for the character position
+            let left = 0;
+            let right = currentLine.length;
+            
+            while (left < right) {
+              const mid = Math.floor((left + right) / 2);
+              tempDiv.textContent = currentLine.substring(0, mid);
+              
+              if (tempDiv.offsetWidth < adjustedX) {
+                left = mid + 1;
+              } else {
+                right = mid;
+              }
+            }
+            
+            position += Math.min(left, currentLine.length);
+          }
+          
+          document.body.removeChild(tempDiv);
           
           // Ensure position is within bounds
           position = Math.max(0, Math.min(position, value.length));
