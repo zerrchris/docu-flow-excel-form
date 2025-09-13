@@ -5130,6 +5130,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
           e.clipboardData?.setData('text/plain', text);
           setCopiedData(matrix);
           setCopiedCell(null);
+          setCopiedRange(selectedRange); // ensure dashed border shows for copied range
           toast({ title: 'Copied', description: `${matrix.length} rows × ${matrix[0]?.length || 0} columns copied to clipboard` });
         } else if (selectedCell) {
           const { rowIndex, column } = selectedCell;
@@ -5138,6 +5139,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
           e.clipboardData?.setData('text/plain', value);
           setCopiedData([[value]]);
           setCopiedCell({ rowIndex, column });
+          setCopiedRange(null);
           toast({ title: 'Copied', description: `Cell value "${value}" copied to clipboard` });
         }
       } catch {
@@ -6918,6 +6920,11 @@ ${extractionFields}`
                        const isEditing = editingCell?.rowIndex === rowIndex && editingCell?.column === column;
                        const columnIndex = columns.length; // This column comes after all regular columns
                        const isInRange = isCellInRange(rowIndex, columnIndex);
+                       const isInCopiedRange = copiedRange && 
+                         rowIndex >= Math.min(copiedRange.start.rowIndex, copiedRange.end.rowIndex) &&
+                         rowIndex <= Math.max(copiedRange.start.rowIndex, copiedRange.end.rowIndex) &&
+                         columnIndex >= Math.min(copiedRange.start.columnIndex, copiedRange.end.columnIndex) &&
+                         columnIndex <= Math.max(copiedRange.start.columnIndex, copiedRange.end.columnIndex);
                        
                        return (
                           <td
@@ -6997,11 +7004,11 @@ ${extractionFields}`
                            ) : (
                                <div
                                  data-cell={`${rowIndex}-${column}`}
-                                  className={`w-full h-full min-h-[2rem] py-2 px-3 flex items-center transition-colors select-none overflow-hidden ${isInRange ? '' : 'rounded-sm'}
-                                    ${isSelected 
-                                      ? 'bg-primary/20 border-2 border-primary ring-2 ring-primary/20' 
-                                      : isInRange
+                                  className={`w-full h-full min-h-[2rem] py-2 px-3 flex items-center transition-colors select-none overflow-hidden ${(isInRange || isInCopiedRange) ? '' : 'rounded-sm'}
+                                    ${(isInRange || isInCopiedRange)
                                       ? `bg-primary/5 ${getRangeBorderStyle(rowIndex, columnIndex)}`
+                                      : isSelected && !selectedRange && !copiedRange
+                                      ? 'bg-primary/20 border-2 border-primary ring-2 ring-primary/20' 
                                       : 'hover:bg-muted/50 border-2 border-transparent'
                                     }`}
                                   onMouseDown={(e) => handleCellMouseDown(e, rowIndex, column)}
