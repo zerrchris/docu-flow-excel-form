@@ -269,7 +269,6 @@ function showSignInPopup() {
     }
   });
 }
-}
 
 // Show quick create dialog
 function showQuickCreateDialog() {
@@ -4179,16 +4178,19 @@ try {
   console.log('🔧 RunsheetPro Extension: Starting initialization...');
   console.log('🔧 RunsheetPro Extension: Document ready state:', document.readyState);
   
-  if (document.readyState === 'loading') {
-    console.log('🔧 RunsheetPro Extension: Adding DOMContentLoaded listener');
-    document.addEventListener('DOMContentLoaded', () => {
-      console.log('🔧 RunsheetPro Extension: DOMContentLoaded fired, calling init()');
+  // Force a small delay to ensure page is fully loaded
+  setTimeout(() => {
+    if (document.readyState === 'loading') {
+      console.log('🔧 RunsheetPro Extension: Adding DOMContentLoaded listener');
+      document.addEventListener('DOMContentLoaded', () => {
+        console.log('🔧 RunsheetPro Extension: DOMContentLoaded fired, calling init()');
+        setTimeout(init, 100); // Small delay to ensure DOM is ready
+      });
+    } else {
+      console.log('🔧 RunsheetPro Extension: Document ready, calling init() immediately');
       init();
-    });
-  } else {
-    console.log('🔧 RunsheetPro Extension: Document ready, calling init() immediately');
-    init();
-  }
+    }
+  }, 100);
 } catch (error) {
   console.error('🔧 RunsheetPro Extension: Critical initialization error:', error);
   console.error('🔧 RunsheetPro Extension: Error stack:', error.stack);
@@ -4298,6 +4300,17 @@ async function analyzeCurrentScreenshot() {
       fillFormWithExtractedData(result.extracted_data);
     } else {
       throw new Error(result.error || 'Analysis failed');
+    }
+  } catch (error) {
+    console.error('Screenshot analysis error:', error);
+    showNotification('Failed to analyze screenshot', 'error');
+    
+    const analyzeBtn = document.getElementById('analyze-screenshot-btn');
+    if (analyzeBtn) {
+      analyzeBtn.textContent = '🔍 Analyze';
+      analyzeBtn.disabled = false;
+    }
+  }
 }
 
 // View current screenshot
@@ -4431,17 +4444,6 @@ function viewCurrentScreenshot() {
   document.body.appendChild(modal);
 
   console.log('🔧 RunsheetPro Extension: Screenshot viewer opened');
-}
-  } catch (error) {
-    console.error('Screenshot analysis error:', error);
-    showNotification('Failed to analyze screenshot', 'error');
-    
-    const analyzeBtn = document.getElementById('analyze-screenshot-btn');
-    if (analyzeBtn) {
-      analyzeBtn.textContent = '🔍 Analyze';
-      analyzeBtn.disabled = false;
-    }
-  }
 }
 
 // Fill form fields with extracted data from AI analysis
@@ -4624,6 +4626,10 @@ function updateTableWidth() {
   rows.forEach(row => {
     row.style.width = `${totalWidth}px`;
     row.style.minWidth = `${totalWidth}px`;
+  });
+  
+  console.log('🔧 RunsheetPro Extension: Updated table width to', totalWidth, 'px');
+}
   });
   
   console.log('🔧 RunsheetPro Extension: Updated table width to', totalWidth, 'px');

@@ -109,10 +109,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   openAppBtn.addEventListener('click', async () => {
     // Check if we're in development by looking at the current tab
     const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-    const isLocalDevelopment = tabs[0] && tabs[0].url.includes('localhost');
+    const isLocalDevelopment = tabs[0] && (tabs[0].url.includes('localhost') || tabs[0].url.includes('8080'));
     
     let appUrl = isLocalDevelopment 
-      ? 'http://localhost:5173' 
+      ? 'http://localhost:8080' 
       : 'https://preview--docu-flow-excel-form.lovable.app';
     
     // Include auth data and active runsheet if available

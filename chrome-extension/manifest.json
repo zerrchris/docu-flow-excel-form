@@ -20,17 +20,19 @@
   ],
 
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   },
 
-    "content_scripts": [
-        {
-            "matches": ["<all_urls>"],
-            "js": ["persistent-state.js", "error-handler.js", "content.js"],
-            "css": ["content.css"],
-            "run_at": "document_idle"
-        }
-    ],
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["persistent-state.js", "error-handler.js", "content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
 
   "action": {
     "default_popup": "popup.html",
