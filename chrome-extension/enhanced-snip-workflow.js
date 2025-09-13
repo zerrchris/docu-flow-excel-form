@@ -10,6 +10,8 @@ window.EnhancedSnipWorkflow = {
   async processEnhancedSnip(blob, metadata = {}) {
     console.log('🔧 Processing enhanced snip with metadata:', metadata);
     
+    const processingIndicator = this.showProcessingIndicator();
+    
     try {
       // Convert blob to base64 for transmission
       const base64Data = await this.blobToBase64(blob);
@@ -28,24 +30,46 @@ window.EnhancedSnipWorkflow = {
         throw new Error('No active runsheet found');
       }
       
-      // Analyze document with enhanced AI
-      const analysisResult = await this.analyzeWithEnhancedAI(base64Data, {
-        runsheet_id: activeRunsheet.id,
-        document_name: metadata.filename || `capture_${Date.now()}.png`,
-        extraction_preferences: {
-          columns: activeRunsheet.columns || []
-        }
-      }, authData.supabase_session.access_token);
-      
-      // Link document to runsheet with extracted data
+      // First, link document to runsheet with extracted data (without analysis)
       const linkResult = await this.linkDocumentToRunsheet(
         base64Data,
         activeRunsheet.id,
         metadata.row_index || 0,
         metadata.filename || `capture_${Date.now()}.png`,
-        analysisResult.analysis?.extracted_data,
+        null, // No extracted data initially
         authData.supabase_session.access_token
       );
+      
+      // Then analyze document with enhanced AI if available
+      let analysisResult = { analysis: null };
+      try {
+        analysisResult = await this.analyzeWithEnhancedAI(base64Data, {
+          runsheet_id: activeRunsheet.id,
+          document_name: metadata.filename || `capture_${Date.now()}.png`,
+          extraction_preferences: {
+            columns: activeRunsheet.columns || []
+          }
+        }, authData.supabase_session.access_token);
+        
+        // If analysis successful, update runsheet with extracted data
+        if (analysisResult.analysis?.extracted_data) {
+          await this.populateRunsheetData(
+            activeRunsheet.id,
+            analysisResult.analysis.extracted_data,
+            {
+              document_id: linkResult.document.id,
+              filename: linkResult.document.filename,
+              url: linkResult.document.url
+            },
+            authData.supabase_session.access_token
+          );
+        }
+      } catch (analysisError) {
+        console.warn('Document analysis failed, but document was uploaded:', analysisError);
+        // Continue without analysis - document is still uploaded
+      }
+      
+      this.hideProcessingIndicator();
       
       return {
         success: true,
@@ -55,9 +79,34 @@ window.EnhancedSnipWorkflow = {
       };
       
     } catch (error) {
+      this.hideProcessingIndicator();
       console.error('Enhanced snip processing error:', error);
       throw error;
     }
+  },
+  
+  // Populate runsheet data after analysis
+  async populateRunsheetData(runsheetId, extractedData, documentInfo, accessToken) {
+    const response = await fetch('https://xnpmrafjjqsissbtempj.supabase.co/functions/v1/populate-runsheet-data', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhucG1yYWZqanFzaXNzYnRlbXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4NzMyNjcsImV4cCI6MjA2ODQ0OTI2N30.aQG15Ed8IOLJfM5p7XF_kEM5FUz8zJug1pxAi9rTTsg',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        runsheetId: runsheetId,
+        extractedData: extractedData,
+        documentInfo: documentInfo
+      })
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Runsheet population failed: ${response.status} - ${errorText}`);
+    }
+    
+    return await response.json();
   },
   
   // Analyze document with enhanced AI capabilities
@@ -91,7 +140,7 @@ window.EnhancedSnipWorkflow = {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
-        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhucG1yYWZqanFzaXNzYnRlbXBqIiwicm9sZUiYOiJhbm9uIiwiaWF0IjoxNzUyODczMjY3LCJleHAiOjIwNjg0NDkyNjd9.aQG15Ed8IOLJfM5p7XF_kEM5FUz8zJug1pxAi9rTTsg',
+        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhucG1yYWZqanFzaXNzYnRlbXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4NzMyNjcsImV4cCI6MjA2ODQ0OTI2N30.aQG15Ed8IOLJfM5p7XF_kEM5FUz8zJug1pxAi9rTTsg',
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
