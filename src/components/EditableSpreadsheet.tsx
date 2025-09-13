@@ -3967,6 +3967,10 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       window.clearTimeout(singleClickTimerRef.current);
       singleClickTimerRef.current = null;
     }
+    // Prevent browser default double-click selection conflicts
+    event?.preventDefault();
+    event?.stopPropagation();
+    
     // Double click should enter edit mode and select the word at cursor position
     const cellValue = data[rowIndex]?.[column] || '';
     startEditing(rowIndex, column, cellValue, event, 'word'); // Select word for double-click
@@ -4125,8 +4129,14 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
             selectedText: value.substring(wordStart, wordEnd)
           });
           
-          // Select the word
+          // Select the word and reinforce selection after potential browser adjustments
           textarea.setSelectionRange(wordStart, wordEnd);
+          requestAnimationFrame(() => textarea.setSelectionRange(wordStart, wordEnd));
+          setTimeout(() => {
+            if (document.activeElement === textarea) {
+              textarea.setSelectionRange(wordStart, wordEnd);
+            }
+          }, 60);
         } else if (clickEvent && value) {
           // Single click: position cursor at click location
           const textarea = textareaRef.current;
