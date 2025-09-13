@@ -2266,22 +2266,14 @@ Image: [base64 image data]`;
       // Clear the flag after use
       sessionStorage.removeItem('user_requested_new_runsheet');
       
-      // Use the same successful pattern as Dashboard
-      setTimeout(() => {
-        const event = new CustomEvent('createNewRunsheetFromDashboard', {
-          detail: {
-            name: 'New Runsheet ' + new Date().toLocaleDateString(), // More descriptive name
-            columns: initialColumns,
-            instructions: initialInstructions
-          }
-        });
-        window.dispatchEvent(event);
-        
-        toast({
-          title: "New runsheet started",
-          description: "You're now working on a fresh runsheet.",
-        });
-      }, 100); // Small delay to ensure navigation completes
+      // Show naming dialog instead of creating with default name
+      window.dispatchEvent(new CustomEvent('showRunsheetNameDialog', {
+        detail: {
+          columns: initialColumns,
+          instructions: initialInstructions,
+          required: true
+        }
+      }));
       
     } catch (error) {
       console.error('Error starting new runsheet:', error);

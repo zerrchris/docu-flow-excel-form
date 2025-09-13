@@ -60,6 +60,7 @@ import ViewportPortal from './ViewportPortal';
 import { AutoSaveIndicator } from './AutoSaveIndicator';
 import { useImmediateSave } from '@/hooks/useImmediateSave';
 import ReExtractDialog from './ReExtractDialog';
+import RunsheetNameDialog from './RunsheetNameDialog';
 import { convertPDFToImages, createFileFromBlob } from '@/utils/pdfToImage';
 import { combineImages } from '@/utils/imageCombiner';
 
@@ -320,6 +321,14 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   const [showBatchRenameDialog, setShowBatchRenameDialog] = useState(false);
   const [showImprovedAnalysis, setShowImprovedAnalysis] = useState(false);
   const [showDocumentFileNameColumn, setShowDocumentFileNameColumn] = useState(true);
+  
+  // Runsheet naming dialog state
+  const [showNameDialog, setShowNameDialog] = useState(false);
+  const [pendingRunsheetData, setPendingRunsheetData] = useState<{
+    columns: string[];
+    instructions: Record<string, string>;
+    required: boolean;
+  } | null>(null);
   
   // Helper functions to manage workspace state and URL parameters
   const openFullScreenWorkspace = useCallback((rowIndex: number) => {
@@ -869,14 +878,24 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       addMoreRows(rowsToAdd);
     };
     
+    // Handle naming dialog requests
+    const handleShowNameDialog = (event: CustomEvent) => {
+      const { columns, instructions, required } = event.detail;
+      setPendingRunsheetData({ columns, instructions, required });
+      setShowNameDialog(true);
+    };
+
     window.addEventListener('updateRunsheetName', handleUpdateRunsheetName as EventListener);
     window.addEventListener('addMoreRowsForDocument', handleAddMoreRowsForDocument as EventListener);
+    window.addEventListener('showRunsheetNameDialog', handleShowNameDialog as EventListener);
+    
     return () => {
       window.removeEventListener('saveRunsheetBeforeUpload', handleSaveRequest as EventListener);
       window.removeEventListener('createNewRunsheetFromDashboard', handleDashboardNewRunsheet as EventListener);
       window.removeEventListener('startNewRunsheet', handleStartNewRunsheet as EventListener);
       window.removeEventListener('updateRunsheetName', handleUpdateRunsheetName as EventListener);
       window.removeEventListener('addMoreRowsForDocument', handleAddMoreRowsForDocument as EventListener);
+      window.removeEventListener('showRunsheetNameDialog', handleShowNameDialog as EventListener);
       window.removeEventListener('saveRunsheet', handleSaveEvent);
       window.removeEventListener('forceSaveRunsheet', handleSaveEvent);
     };
@@ -5077,6 +5096,106 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     setRowsToAdd(1);
   };
 
+  // Handle runsheet naming confirmation
+  const handleConfirmNamedRunsheet = useCallback(async (name: string) => {
+    if (!pendingRunsheetData) return;
+
+    const { columns: newColumns, instructions } = pendingRunsheetData;
+    
+    console.log('🔧 EDITABLE_SPREADSHEET: Creating named runsheet:', name);
+    
+    // Clear any existing emergency draft when creating a new runsheet
+    try {
+      localStorage.removeItem('runsheet-emergency-draft');
+      console.log('🗑️ Cleared emergency draft for new runsheet creation');
+    } catch (error) {
+      console.error('Error clearing emergency draft:', error);
+    }
+    
+    // Clear current state first
+    console.log('🧹 Clearing current runsheet state for new runsheet:', name);
+    
+    // Clear localStorage immediately to prevent active runsheet restoration
+    localStorage.removeItem('currentRunsheetId');
+    localStorage.removeItem('activeRunsheet');
+    
+    setCurrentRunsheetId(null);
+    clearActiveRunsheet();
+    setSelectedCell(null);
+    setEditingCell(null);
+    setCellValue('');
+    setSelectedRange(null);
+    setHasUnsavedChanges(false);
+    setLastSavedState('');
+    
+    // Create new data with the columns
+    const newData = Array.from({ length: 100 }, () => {
+      const row: Record<string, string> = {};
+      newColumns.forEach((col: string) => row[col] = '');
+      return row;
+    });
+    
+    // Set all the new state
+    setRunsheetName(name);
+    setData(newData);
+    setColumns(newColumns);
+    setColumnInstructions(instructions);
+    onDataChange?.(newData);
+    onColumnChange(newColumns);
+    
+    // Set a flag to prevent any automatic runsheet loading for a few seconds
+    sessionStorage.setItem('creating_new_runsheet', Date.now().toString());
+    
+    // Save to database immediately
+    if (user) {
+      try {
+        const { data: newRunsheet, error } = await supabase
+          .from('runsheets')
+          .insert({
+            user_id: user.id,
+            name: name,
+            columns: newColumns,
+            data: newData,
+            column_instructions: instructions
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        // Set this as the active runsheet immediately
+        setCurrentRunsheet(newRunsheet.id);
+        setActiveRunsheet({
+          id: newRunsheet.id,
+          name: newRunsheet.name,
+          data: newData,
+          columns: newColumns,
+          columnInstructions: instructions
+        });
+        
+        console.log('✅ Named runsheet created and set as active:', newRunsheet.id);
+        
+        // Clear the creation flag
+        sessionStorage.removeItem('creating_new_runsheet');
+        
+        toast({
+          title: "Runsheet created",
+          description: `"${name}" is ready for your data.`,
+        });
+      } catch (error) {
+        console.error('Failed to create named runsheet:', error);
+        toast({
+          title: "Error creating runsheet",
+          description: "Failed to save runsheet. Please try again.",
+          variant: "destructive"
+        });
+      }
+    }
+    
+    // Clear pending data
+    setPendingRunsheetData(null);
+  }, [pendingRunsheetData, user, onDataChange, onColumnChange, clearActiveRunsheet, setCurrentRunsheet, setActiveRunsheet, toast]);
+
   const analyzeDocumentAndPopulateRow = async (file: File, targetRowIndex: number, forceOverwrite: boolean = false) => {
     try {
       console.log('🔍 Starting document analysis for:', file.name, 'type:', file.type, 'size:', file.size);
@@ -7402,7 +7521,17 @@ ${extractionFields}`
           </AlertDialogContent>
         </AlertDialog>
 
-    );
+        {/* Runsheet Naming Dialog */}
+        <RunsheetNameDialog
+          open={showNameDialog}
+          onOpenChange={setShowNameDialog}
+          onConfirm={handleConfirmNamedRunsheet}
+          title="Name Your Runsheet"
+          description="Choose a descriptive name for your runsheet. This will help you identify it later."
+          placeholder="Enter runsheet name..."
+          required={pendingRunsheetData?.required ?? true}
+        />
+
       </div>
     );
   });
