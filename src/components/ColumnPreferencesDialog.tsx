@@ -5,12 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { X, Plus, GripVertical, Save, RotateCcw, Sparkles, Wand2 } from 'lucide-react';
 import { ExtractionPreferencesService } from '@/services/extractionPreferences';
 import { supabase } from '@/integrations/supabase/client';
-import FormatTemplateSelector from './FormatTemplateSelector';
 
 interface ColumnPreferencesDialogProps {
   open: boolean;
@@ -475,32 +473,15 @@ const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
             
             {selectedColumn ? (
               <div className="flex-1 flex flex-col min-h-0">
-                <Tabs defaultValue="templates" className="w-full h-full flex flex-col">
-                  <TabsList className="grid w-full grid-cols-2 mb-4">
-                    <TabsTrigger value="templates">Format Templates</TabsTrigger>
-                    <TabsTrigger value="custom">Custom Instructions</TabsTrigger>
-                  </TabsList>
-                  
-                  <TabsContent value="templates" className="flex-1 mt-0">
-                    <FormatTemplateSelector
-                      currentInstruction={columnInstructions[selectedColumn] || ''}
-                      onInstructionChange={(instruction) => updateColumnInstruction(selectedColumn, instruction)}
-                      fieldName={selectedColumn}
-                    />
-                  </TabsContent>
-                  
-                  <TabsContent value="custom" className="flex-1 mt-0 flex flex-col">
-                    <Textarea
-                      value={columnInstructions[selectedColumn] || ''}
-                      onChange={(e) => updateColumnInstruction(selectedColumn, e.target.value)}
-                      placeholder={`Enter extraction instructions for ${selectedColumn}...`}
-                      className="flex-1 min-h-[250px] resize-none"
-                    />
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Provide detailed instructions to help the AI extract "{selectedColumn}" information accurately from documents.
-                    </p>
-                  </TabsContent>
-                </Tabs>
+                <Textarea
+                  value={columnInstructions[selectedColumn] || ''}
+                  onChange={(e) => updateColumnInstruction(selectedColumn, e.target.value)}
+                  placeholder={`Enter extraction instructions for ${selectedColumn}...`}
+                  className="flex-1 min-h-[300px] resize-none"
+                />
+                <p className="text-xs text-muted-foreground mt-2">
+                  Provide detailed instructions to help the AI extract "{selectedColumn}" information accurately from documents.
+                </p>
               </div>
             ) : (
               <div className="flex-1 flex items-center justify-center border rounded-lg border-dashed">
