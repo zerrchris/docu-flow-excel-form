@@ -4952,6 +4952,83 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     };
   }, [copySelection, pasteSelection, cutSelection, deleteSelectedCells, selectedCell, selectedRange]);
   
+  // Clipboard event handlers to better support Cmd/Ctrl+C/V inside iframes and restricted contexts
+  useEffect(() => {
+    const onCopy = (e: ClipboardEvent) => {
+      if (editingCell) return; // allow default when editing textarea
+      if (!selectedCell && !selectedRange) return;
+      try {
+        if (selectedRange) {
+          const { start, end } = selectedRange;
+          const minRow = Math.min(start.rowIndex, end.rowIndex);
+          const maxRow = Math.max(start.rowIndex, end.rowIndex);
+          const minCol = Math.min(start.columnIndex, end.columnIndex);
+          const maxCol = Math.max(start.columnIndex, end.columnIndex);
+          const matrix: string[][] = [];
+          for (let r = minRow; r <= maxRow; r++) {
+            const rowArr: string[] = [];
+            for (let c = minCol; c <= maxCol; c++) {
+              const colName = columns[c];
+              rowArr.push((data[r]?.[colName] ?? ''));
+            }
+            matrix.push(rowArr);
+          }
+          const text = matrix.map(r => r.join('\t')).join('\n');
+          e.preventDefault();
+          e.clipboardData?.setData('text/plain', text);
+          setCopiedData(matrix);
+          setCopiedCell(null);
+          toast({ title: 'Copied', description: `${matrix.length} rows × ${matrix[0]?.length || 0} columns copied to clipboard` });
+        } else if (selectedCell) {
+          const { rowIndex, column } = selectedCell;
+          const value = data[rowIndex]?.[column] || '';
+          e.preventDefault();
+          e.clipboardData?.setData('text/plain', value);
+          setCopiedData([[value]]);
+          setCopiedCell({ rowIndex, column });
+          toast({ title: 'Copied', description: `Cell value "${value}" copied to clipboard` });
+        }
+      } catch {
+        // no-op
+      }
+    };
+
+    const onCut = (e: ClipboardEvent) => {
+      if (editingCell) return;
+      if (!selectedCell && !selectedRange) return;
+      onCopy(e);
+      // Mark selection for cut (we clear original cells on paste, Excel-like)
+      if (selectedRange) {
+        setCutData({ range: selectedRange });
+      } else if (selectedCell) {
+        setCutData({ cell: selectedCell });
+      }
+    };
+
+    const onPaste = (e: ClipboardEvent) => {
+      if (editingCell) return; // let textarea handle its own paste
+      if (!selectedCell) return;
+      const text = e.clipboardData?.getData('text/plain') ?? '';
+      if (!text) return;
+      e.preventDefault();
+      const rows = text.split('\n').map(row => row.split('\t'));
+      setCopiedData(rows);
+      // Defer to existing pasteSelection which uses copiedData
+      setTimeout(() => {
+        pasteSelection();
+      }, 0);
+    };
+
+    document.addEventListener('copy', onCopy as any);
+    document.addEventListener('cut', onCut as any);
+    document.addEventListener('paste', onPaste as any);
+    return () => {
+      document.removeEventListener('copy', onCopy as any);
+      document.removeEventListener('cut', onCut as any);
+      document.removeEventListener('paste', onPaste as any);
+    };
+  }, [columns, data, selectedCell, selectedRange, editingCell, pasteSelection, toast]);
+  
   // Function to update document row_index in database
   const updateDocumentRowIndexes = useCallback(async (newDocumentMap: Map<number, DocumentRecord>) => {
     if (!currentRunsheet?.id || !user) return;
