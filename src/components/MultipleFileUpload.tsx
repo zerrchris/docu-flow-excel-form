@@ -664,9 +664,10 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
   const errorFiles = files.filter(f => f.status === 'error').length;
 
   return (
-    <div className="w-full max-w-2xl mx-auto max-h-[85vh] overflow-y-auto">
-      <Card className="p-6">
-        <div className="space-y-4">
+    <div className="w-full h-full flex flex-col">
+      <Card className="flex-1 flex flex-col overflow-hidden">
+        <ScrollArea className="flex-1 p-6">
+          <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold">Upload Multiple Files</h3>
           </div>
@@ -830,7 +831,8 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
               </div>
             </div>
           )}
-        </div>
+          </div>
+        </ScrollArea>
       </Card>
     </div>
   );
