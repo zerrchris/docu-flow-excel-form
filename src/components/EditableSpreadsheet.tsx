@@ -58,6 +58,8 @@ import ImprovedDocumentAnalysis from './ImprovedDocumentAnalysis';
 import AdvancedDataVerificationDialog from './AdvancedDataVerificationDialog';
 import ViewportPortal from './ViewportPortal';
 import { AutoSaveIndicator } from './AutoSaveIndicator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import FormatTemplateSelector from './FormatTemplateSelector';
 import { useImmediateSave } from '@/hooks/useImmediateSave';
 import ReExtractDialog from './ReExtractDialog';
 import RunsheetNameDialog from './RunsheetNameDialog';
@@ -7419,21 +7421,38 @@ ${extractionFields}`
                   placeholder="Enter column name..."
                 />
               </div>
-              <div>
+               <div>
                 <Label htmlFor="column-instructions" className="text-sm font-medium">
                   Extraction Instructions
                 </Label>
-                <Textarea
-                  id="column-instructions"
-                  placeholder="Example: Extract the Grantor's name as it appears on the document and include the address..."
-                  value={editingColumnInstructions}
-                  onChange={(e) => setEditingColumnInstructions(e.target.value)}
-                  className="mt-2 min-h-[120px]"
-                />
-                <p className="text-xs text-muted-foreground mt-2">
-                  Provide specific instructions for what information should be extracted for this column. Be as detailed as possible for better AI accuracy.
-                </p>
-              </div>
+                <Tabs defaultValue="templates" className="mt-2">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="templates">Format Templates</TabsTrigger>
+                    <TabsTrigger value="custom">Custom Instructions</TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="templates" className="mt-4">
+                    <FormatTemplateSelector
+                      currentInstruction={editingColumnInstructions}
+                      onInstructionChange={setEditingColumnInstructions}
+                      fieldName={editingColumnName}
+                    />
+                  </TabsContent>
+                  
+                  <TabsContent value="custom" className="mt-4">
+                    <Textarea
+                      id="column-instructions"
+                      placeholder="Example: Extract the Grantor's name as it appears on the document and include the address..."
+                      value={editingColumnInstructions}
+                      onChange={(e) => setEditingColumnInstructions(e.target.value)}
+                      className="min-h-[120px]"
+                    />
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Provide specific instructions for what information should be extracted for this column. Be as detailed as possible for better AI accuracy.
+                    </p>
+                  </TabsContent>
+                </Tabs>
+               </div>
               <div>
                 <Label htmlFor="column-alignment" className="text-sm font-medium">
                   Text Alignment
