@@ -298,7 +298,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   
 
   // Resolve a reliable runsheet ID for document operations (inline viewer, linking)
-  const effectiveRunsheetId = currentRunsheet?.id || '';
+  const effectiveRunsheetId = currentRunsheet?.id || currentRunsheetId || '';
 
   // Helper function to update document map and notify parent
   const updateDocumentMap = (newMap: Map<number, DocumentRecord>) => {
@@ -5798,15 +5798,38 @@ ${extractionFields}`
               variant="outline"
               size="sm"
               onClick={async () => {
+                console.log('🧠 Brain button clicked - Debug info:');
+                console.log('currentRunsheet:', currentRunsheet);
+                console.log('currentRunsheetId:', currentRunsheetId);
+                console.log('effectiveRunsheetId:', effectiveRunsheetId);
+                console.log('documentMap size:', documentMap.size);
+                
+                if (!effectiveRunsheetId) {
+                  toast({
+                    title: "No runsheet selected",
+                    description: "Please save your runsheet before analyzing documents.",
+                    variant: "destructive",
+                  });
+                  return;
+                }
+                
                 let mapToCheck = documentMap;
                 // Refresh document map before opening dialog
-                if (currentRunsheetId) {
+                if (effectiveRunsheetId) {
                   try {
-                    const updatedDocumentMap = await DocumentService.getDocumentMapForRunsheet(currentRunsheetId);
+                    console.log('🧠 Refreshing document map for runsheet:', effectiveRunsheetId);
+                    const updatedDocumentMap = await DocumentService.getDocumentMapForRunsheet(effectiveRunsheetId);
                     updateDocumentMap(updatedDocumentMap);
                     mapToCheck = updatedDocumentMap;
+                    console.log('🧠 Updated document map size:', mapToCheck.size);
                   } catch (error) {
                     console.error('Error refreshing document map:', error);
+                    toast({
+                      title: "Error loading documents",
+                      description: "Could not load linked documents. Please try again.",
+                      variant: "destructive",
+                    });
+                    return;
                   }
                 }
                 
