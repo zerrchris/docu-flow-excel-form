@@ -4912,7 +4912,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     return () => document.removeEventListener('mouseup', handleGlobalMouseUp);
   }, []);
 
-  // Fixed copy/paste keyboard shortcuts
+  // Fixed copy/paste keyboard shortcuts and Shift+Arrow selection
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.defaultPrevented) return;
@@ -4923,6 +4923,51 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       
       if (isInExternalFormField) {
         return; // Only block for external form fields, not our table cells
+      }
+      
+      // Handle Shift+Arrow keys for extending selection
+      if (e.shiftKey && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+        e.preventDefault();
+        
+        if (!selectedCell) return;
+        
+        const currentRowIndex = selectedCell.rowIndex;
+        const currentColumnIndex = columns.indexOf(selectedCell.column);
+        
+        let newRowIndex = currentRowIndex;
+        let newColumnIndex = currentColumnIndex;
+        
+        switch (e.key) {
+          case 'ArrowUp':
+            newRowIndex = Math.max(0, currentRowIndex - 1);
+            break;
+          case 'ArrowDown':
+            newRowIndex = Math.min(data.length - 1, currentRowIndex + 1);
+            break;
+          case 'ArrowLeft':
+            newColumnIndex = Math.max(0, currentColumnIndex - 1);
+            break;
+          case 'ArrowRight':
+            newColumnIndex = Math.min(columns.length - 1, currentColumnIndex + 1);
+            break;
+        }
+        
+        // Create or extend range
+        if (!selectedRange) {
+          // Start new range from current cell to new position
+          setSelectedRange({
+            start: { rowIndex: currentRowIndex, columnIndex: currentColumnIndex },
+            end: { rowIndex: newRowIndex, columnIndex: newColumnIndex }
+          });
+        } else {
+          // Extend existing range - keep start, update end
+          setSelectedRange({
+            start: selectedRange.start,
+            end: { rowIndex: newRowIndex, columnIndex: newColumnIndex }
+          });
+        }
+        
+        return;
       }
       
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
