@@ -268,18 +268,7 @@ function showSignInPopup() {
       submitBtn.disabled = false;
     }
   });
-  console.log('🔧 RunsheetPro Extension: All event listeners added, proceeding to DOM append');
-  console.log('🔧 RunsheetPro Extension: document.body exists:', !!document.body);
-  console.log('🔧 RunsheetPro Extension: document.readyState:', document.readyState);
-  
-  if (!document.body) {
-    console.error('🔧 RunsheetPro Extension: document.body is not available, cannot append button');
-    return;
-  }
-  
-  document.body.appendChild(runsheetButton);
-  console.log('🔧 RunsheetPro Extension: Runsheet button created and added to DOM');
-  console.log('🔧 RunsheetPro Extension: Button is in DOM:', document.body.contains(runsheetButton));
+}
 }
 
 // Show quick create dialog
