@@ -1139,7 +1139,8 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       if (!hasManuallyResizedColumns && !isLoadingColumnWidths) {
         const newWidths: Record<string, number> = {};
         columns.forEach(column => {
-          newWidths[column] = columnWidth;
+          const minWidth = getMinimumColumnWidth(column);
+          newWidths[column] = Math.max(columnWidth, minWidth);
         });
         setColumnWidths(newWidths);
       }
@@ -3646,6 +3647,15 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     return columnWidths[column] || 120; // default width
   };
 
+  // Helper function to calculate minimum width based on column header text
+  const getMinimumColumnWidth = (column: string) => {
+    // Base minimum to accommodate resize handle + some text
+    const baseMinimum = 100;
+    // Calculate approximate text width (rough estimate: 8px per character)
+    const textWidth = column.length * 8 + 40; // +40 for padding and resize handle
+    return Math.max(baseMinimum, Math.min(textWidth, 180)); // Cap at 180px
+  };
+
   // Row resizing functions
   const getRowHeight = (rowIndex: number) => {
     return rowHeights[rowIndex] || 60; // default height
@@ -3681,7 +3691,8 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     const handleMouseMove = (e: MouseEvent) => {
       if (resizing) {
         const deltaX = e.clientX - resizing.startX;
-        const newWidth = Math.max(80, resizing.startWidth + deltaX);
+        const minimumWidth = getMinimumColumnWidth(resizing.column);
+        const newWidth = Math.max(minimumWidth, resizing.startWidth + deltaX);
         setColumnWidths(prev => ({
           ...prev,
           [resizing.column]: newWidth
@@ -6651,17 +6662,25 @@ ${extractionFields}`
                                   openColumnDialog(column);
                                 }}
                               >
-                                <div className="flex flex-col items-center">
-                                  <span className="font-bold">{column}</span>
+                                <div className="flex flex-col items-center pr-6"> {/* Add right padding to make room for resize handle */}
+                                  <span 
+                                    className="font-bold truncate max-w-full" 
+                                    title={column}
+                                    style={{ 
+                                      maxWidth: `${getColumnWidth(column) - 30}px` // Reserve 30px for resize handle
+                                    }}
+                                  >
+                                    {column}
+                                  </span>
                                   {localMissingColumns.includes(column) && (
-                                    <span className="text-xs text-yellow-700 dark:text-yellow-300 mt-1 font-medium animate-pulse">
+                                    <span className="text-xs text-yellow-700 dark:text-yellow-300 mt-1 font-medium animate-pulse truncate max-w-full">
                                       Click to save
                                     </span>
                                   )}
                                 </div>
-                                {/* Enhanced resize handle */}
+                                {/* Enhanced resize handle positioned at right border */}
                                 <div
-                                  className="absolute -right-0.5 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/30 transition-all duration-200 z-10 group"
+                                  className="absolute -right-1 top-0 bottom-0 w-2 cursor-col-resize hover:bg-primary/30 transition-all duration-200 z-10 group flex items-center justify-center"
                                   onMouseDown={(e) => {
                                     e.stopPropagation();
                                     e.preventDefault();
@@ -6673,7 +6692,7 @@ ${extractionFields}`
                                   }}
                                   title="Drag to resize column"
                                 >
-                                  <div className="w-0.5 h-full bg-border/60 group-hover:bg-primary transition-colors duration-200 mx-auto"></div>
+                                  <div className="w-0.5 h-full bg-border/60 group-hover:bg-primary transition-colors duration-200"></div>
                                 </div>
                             </div>
                          </ContextMenuTrigger>
