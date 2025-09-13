@@ -4178,6 +4178,24 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   } else if (request.action === 'showSnipModeSelector') {
     // Show snip mode selection modal
     showSnipModeSelector();
+  } else if (request.action === 'openRunsheet') {
+    // Open the runsheet UI: if frame exists, toggle; else show selector/sign-in
+    (async () => {
+      try {
+        if (runsheetFrame) {
+          toggleRunsheetFrame();
+          return;
+        }
+        const isAuthenticated = await checkAuth();
+        if (isAuthenticated) {
+          showRunsheetSelector();
+        } else {
+          showSignInPopup();
+        }
+      } catch (e) {
+        console.error('openRunsheet action failed', e);
+      }
+    })();
   } else if (request.action === 'updateAuth') {
     // Refresh auth status
     checkAuth();

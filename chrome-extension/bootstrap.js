@@ -44,9 +44,7 @@
         btn.addEventListener('mouseenter', () => btn && (btn.style.transform = 'scale(1.1)'));
         btn.addEventListener('mouseleave', () => btn && (btn.style.transform = 'scale(1)'));
         btn.addEventListener('click', async () => {
-          // Try to open the popup first
-          try { chrome.runtime.sendMessage({ action: 'openPopup' }); } catch {}
-          // Also attempt to ask background to ensure full content script is injected
+          try { chrome.runtime.sendMessage({ action: 'openRunsheet' }); } catch {}
           try { chrome.runtime.sendMessage({ action: 'ensureContentScript' }); } catch {}
         });
         document.body.appendChild(btn);
