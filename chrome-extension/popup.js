@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const currentStatus = await checkStatus();
       const newStatus = !currentStatus;
       
-      await chrome.storage.local.set({ extensionEnabled: newStatus });
+      await chrome.storage.local.set({ extensionEnabled: newStatus, extension_enabled: newStatus, extension_disabled: !newStatus });
       
       // Send message to content scripts to update
       const tabs = await chrome.tabs.query({ active: true, currentWindow: true });

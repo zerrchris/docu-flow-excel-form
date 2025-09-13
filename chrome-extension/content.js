@@ -2741,9 +2741,15 @@ function debounce(func, wait) {
 function initializeExtension() {
   console.log('🔧 RunsheetPro Extension: Starting initializeExtension() function');
   
-  // Check if extension is disabled
-  chrome.storage.local.get(['extension_disabled']).then((settings) => {
-    if (settings.extension_disabled) {
+  // Check enable/disable flags (support both legacy and new keys)
+  chrome.storage.local.get(['extension_enabled', 'extensionEnabled', 'extension_disabled']).then((settings) => {
+    const enabledFlag = settings.extensionEnabled;
+    const legacyEnabled = settings.extension_enabled; // just in case
+    const disabledFlag = settings.extension_disabled;
+
+    const isEnabled = (enabledFlag !== false && legacyEnabled !== false) && disabledFlag !== true;
+
+    if (!isEnabled) {
       console.log('🔧 RunsheetPro Extension: Extension is disabled');
       return;
     }
@@ -2753,17 +2759,29 @@ function initializeExtension() {
     // Always create the runsheet button first
     createRunsheetButton();
     console.log('🔧 RunsheetPro Extension: Button creation attempted');
+  }).catch((err) => {
+    console.warn('🔧 RunsheetPro Extension: Could not read storage, defaulting to enabled:', err);
+    createRunsheetButton();
   });
 }
 
 async function init() {
   console.log('🔧 RunsheetPro Extension: Starting init() function');
   
-  // Check if extension is disabled
-  const settings = await chrome.storage.local.get(['extension_disabled']);
-  if (settings.extension_disabled) {
-    console.log('🔧 RunsheetPro Extension: Extension is disabled');
-    return;
+  try {
+    // Check enable/disable flags (support both legacy and new keys)
+    const settings = await chrome.storage.local.get(['extension_enabled', 'extensionEnabled', 'extension_disabled']);
+    const enabledFlag = settings.extensionEnabled;
+    const legacyEnabled = settings.extension_enabled;
+    const disabledFlag = settings.extension_disabled;
+    const isEnabled = (enabledFlag !== false && legacyEnabled !== false) && disabledFlag !== true;
+
+    if (!isEnabled) {
+      console.log('🔧 RunsheetPro Extension: Extension is disabled');
+      return;
+    }
+  } catch (e) {
+    console.warn('🔧 RunsheetPro Extension: Storage check failed, assuming enabled', e);
   }
   
   console.log('🔧 RunsheetPro Extension: Extension is enabled, continuing initialization');
@@ -4144,7 +4162,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   } else if (request.action === 'toggleExtension') {
     // Handle extension enable/disable from popup
     if (request.enabled) {
-      if (runsheetButton) runsheetButton.style.display = 'block';
+      if (!runsheetButton) {
+        createRunsheetButton();
+      } else {
+        runsheetButton.style.display = 'block';
+      }
     } else {
       if (runsheetButton) runsheetButton.style.display = 'none';
       if (runsheetFrame) runsheetFrame.style.display = 'none';
@@ -4172,6 +4194,28 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   
   sendResponse({ success: true });
 });
+
+// React to storage changes to enable/disable the UI in real time
+try {
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area !== 'local') return;
+    const enabledChange = changes.extensionEnabled || changes.extension_enabled || changes.extension_disabled;
+    if (enabledChange) {
+      const enabled = (changes.extensionEnabled ? changes.extensionEnabled.newValue !== false : true)
+        && (changes.extension_enabled ? changes.extension_enabled.newValue !== false : true)
+        && !(changes.extension_disabled ? changes.extension_disabled.newValue === true : false);
+      if (enabled) {
+        if (!runsheetButton) createRunsheetButton();
+        else runsheetButton.style.display = 'block';
+      } else {
+        if (runsheetButton) runsheetButton.style.display = 'none';
+        if (runsheetFrame) runsheetFrame.style.display = 'none';
+      }
+    }
+  });
+} catch (e) {
+  console.warn('🔧 RunsheetPro Extension: storage.onChanged listener failed', e);
+}
 
 // Initialize when page loads
 try {
