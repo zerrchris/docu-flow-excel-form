@@ -3992,13 +3992,86 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       window.clearTimeout(singleClickTimerRef.current);
       singleClickTimerRef.current = null;
     }
-    // Prevent browser default double-click selection conflicts
-    event?.preventDefault();
-    event?.stopPropagation();
     
-    // Double click should enter edit mode and select the word at cursor position
-    const cellValue = data[rowIndex]?.[column] || '';
-    startEditing(rowIndex, column, cellValue, event, 'word'); // Select word for double-click
+    // Check if we're already editing this cell
+    const isCurrentlyEditing = editingCell?.rowIndex === rowIndex && editingCell?.column === column;
+    
+    if (isCurrentlyEditing) {
+      // If already editing, handle word selection at double-click position
+      event?.preventDefault();
+      event?.stopPropagation();
+      
+      if (textareaRef.current && event) {
+        const textarea = textareaRef.current;
+        const rect = textarea.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+        
+        // Calculate cursor position at click location
+        const value = cellValue;
+        const style = window.getComputedStyle(textarea);
+        const paddingLeft = parseInt(style.paddingLeft) || 0;
+        const paddingTop = parseInt(style.paddingTop) || 0;
+        
+        const adjustedX = x - paddingLeft;
+        const adjustedY = y - paddingTop;
+        
+        // Simple position calculation for double-click
+        const lines = value.split('\n');
+        const lineHeight = parseInt(style.lineHeight) || 20;
+        const targetLine = Math.floor(adjustedY / lineHeight);
+        
+        let position = 0;
+        for (let i = 0; i < Math.min(targetLine, lines.length - 1); i++) {
+          position += lines[i].length + 1;
+        }
+        
+        if (targetLine < lines.length) {
+          const currentLine = lines[targetLine];
+          const charWidth = 8; // Approximate character width
+          const charIndex = Math.floor(adjustedX / charWidth);
+          position += Math.min(charIndex, currentLine.length);
+        }
+        
+        position = Math.max(0, Math.min(position, value.length));
+        
+        // Find word boundaries
+        let wordStart = position;
+        let wordEnd = position;
+        
+        // If not on a word character, find nearest word
+        if (position < value.length && !/\w/.test(value[position])) {
+          let backPos = position - 1;
+          while (backPos >= 0 && !/\w/.test(value[backPos])) backPos--;
+          let forwardPos = position + 1;
+          while (forwardPos < value.length && !/\w/.test(value[forwardPos])) forwardPos++;
+          
+          if (backPos >= 0 && (forwardPos >= value.length || position - backPos <= forwardPos - position)) {
+            position = backPos;
+          } else if (forwardPos < value.length) {
+            position = forwardPos;
+          }
+        }
+        
+        wordStart = position;
+        wordEnd = position;
+        
+        // Expand to word boundaries
+        while (wordStart > 0 && /\w/.test(value[wordStart - 1])) wordStart--;
+        while (wordEnd < value.length && /\w/.test(value[wordEnd])) wordEnd++;
+        
+        // Select the word
+        textarea.setSelectionRange(wordStart, wordEnd);
+      }
+    } else {
+      // Prevent browser default double-click selection conflicts
+      event?.preventDefault();
+      event?.stopPropagation();
+      
+      // Double click should enter edit mode and position cursor at click location
+      const cellValue = data[rowIndex]?.[column] || '';
+      startEditing(rowIndex, column, cellValue, event, 'none'); // Position cursor at click location
+    }
   };
 
   const handleCellTripleClick = (rowIndex: number, column: string) => {
@@ -4163,24 +4236,23 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
             }
           }, 60);
         } else if (clickEvent && value) {
-          // Single click: position cursor at click location
+          // Position cursor at click location (single click or double-click entry)
           const textarea = textareaRef.current;
           const rect = textarea.getBoundingClientRect();
           const x = clickEvent.clientX - rect.left;
           const y = clickEvent.clientY - rect.top;
           
-          const tempSpan = document.createElement('span');
-          tempSpan.style.font = window.getComputedStyle(textarea).font;
-          tempSpan.style.visibility = 'hidden';
-          tempSpan.style.position = 'absolute';
-          tempSpan.style.whiteSpace = 'pre-wrap';
-          tempSpan.style.lineHeight = window.getComputedStyle(textarea).lineHeight;
-          document.body.appendChild(tempSpan);
+          const style = window.getComputedStyle(textarea);
+          const paddingLeft = parseInt(style.paddingLeft) || 0;
+          const paddingTop = parseInt(style.paddingTop) || 0;
+          
+          const adjustedX = x - paddingLeft;
+          const adjustedY = y - paddingTop;
           
           let position = 0;
           const lines = value.split('\n');
-          const lineHeight = parseInt(window.getComputedStyle(textarea).lineHeight) || 20;
-          const targetLine = Math.floor(y / lineHeight);
+          const lineHeight = parseInt(style.lineHeight) || 20;
+          const targetLine = Math.floor(adjustedY / lineHeight);
           
           for (let i = 0; i < Math.min(targetLine, lines.length - 1); i++) {
             position += lines[i].length + 1;
@@ -4188,17 +4260,12 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
           
           if (targetLine < lines.length) {
             const currentLine = lines[targetLine];
-            for (let i = 0; i <= currentLine.length; i++) {
-              tempSpan.textContent = currentLine.substring(0, i);
-              if (tempSpan.offsetWidth >= x) {
-                position += i;
-                break;
-              }
-              if (i === currentLine.length) position += i;
-            }
+            const charWidth = 8; // Approximate character width
+            const charIndex = Math.floor(adjustedX / charWidth);
+            position += Math.min(charIndex, currentLine.length);
           }
           
-          document.body.removeChild(tempSpan);
+          position = Math.max(0, Math.min(position, value.length));
           textarea.setSelectionRange(position, position);
         } else {
           // Default behavior: position cursor at the end of the text
@@ -6893,17 +6960,18 @@ ${extractionFields}`
                            tabIndex={isSelected ? 0 : -1}
                         >
                            {isEditing ? (
-                              <Textarea
-                                ref={textareaRef}
-                                value={cellValue}
-                                onChange={(e) => setCellValue(e.target.value)}
-                                onKeyDown={(e) => {
-                                  // Allow Shift+Enter for line breaks, but handle Tab/Enter/Escape/Arrow keys
-                                  if ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Tab' || e.key === 'Escape' || 
-                                      ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
-                                    handleInputKeyDown(e);
-                                  }
-                                }}
+                               <Textarea
+                                 ref={textareaRef}
+                                 value={cellValue}
+                                 onChange={(e) => setCellValue(e.target.value)}
+                                 onKeyDown={(e) => {
+                                   // Allow Shift+Enter for line breaks, but handle Tab/Enter/Escape/Arrow keys
+                                   if ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Tab' || e.key === 'Escape' || 
+                                       ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                                     handleInputKeyDown(e);
+                                   }
+                                 }}
+                                 onDoubleClick={(e) => handleCellDoubleClick(rowIndex, column, e)}
                                 onBlur={() => {
                                   // Use setTimeout to ensure blur happens after any potential click events
                                   setTimeout(() => {
@@ -7006,14 +7074,15 @@ ${extractionFields}`
                            tabIndex={isSelected ? 0 : -1}
                          >
                            {isEditing ? (
-                              <Textarea
-                                ref={textareaRef}
-                                value={cellValue}
-                                onChange={(e) => setCellValue(e.target.value)}
-                                 onKeyDown={(e) => {
-                                   if (e.key === 'Enter' && !e.shiftKey) {
-                                     e.preventDefault();
-                                     saveEdit();
+                               <Textarea
+                                 ref={textareaRef}
+                                 value={cellValue}
+                                 onChange={(e) => setCellValue(e.target.value)}
+                                 onDoubleClick={(e) => handleCellDoubleClick(rowIndex, column, e)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                      e.preventDefault();
+                                      saveEdit();
                                      
                                      // For Document File Name column, only auto-advance if there are documents in both current and next row
                                      const currentDocument = documentMap.get(rowIndex);
