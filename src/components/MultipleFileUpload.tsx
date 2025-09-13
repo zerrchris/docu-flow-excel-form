@@ -23,6 +23,7 @@ interface FileUploadStatus {
 interface MultipleFileUploadProps {
   onUploadComplete?: (uploadedCount: number) => void;
   onClose?: () => void;
+  onFileCountChange?: (count: number) => void;
   runsheetData?: {
     id: string;
     name: string;
@@ -35,6 +36,7 @@ interface MultipleFileUploadProps {
 const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
   onUploadComplete,
   onClose,
+  onFileCountChange,
   runsheetData: propRunsheetData,
   onAutoSave
 }) => {
@@ -234,6 +236,12 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
     setFiles(prev => {
       const updated = [...prev, ...newFiles];
       console.log('🔧 Total files in queue:', updated.length);
+      
+      // Notify parent of file count change
+      if (onFileCountChange) {
+        onFileCountChange(updated.length);
+      }
+      
       return updated;
     });
   }, [currentRunsheet]);
@@ -261,7 +269,16 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
 
   const removeFile = (index: number) => {
     if (isUploading) return;
-    setFiles(prev => prev.filter((_, i) => i !== index));
+    setFiles(prev => {
+      const updated = prev.filter((_, i) => i !== index);
+      
+      // Notify parent of file count change
+      if (onFileCountChange) {
+        onFileCountChange(updated.length);
+      }
+      
+      return updated;
+    });
   };
 
   const uploadFiles = async () => {
@@ -665,16 +682,18 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
 
   return (
     <div className="w-full h-full min-h-0 flex flex-col">
-      <Card className="flex-1 min-h-0 flex flex-col overflow-hidden">
-        <ScrollArea className="h-full p-6">
+      <Card className={`flex-1 min-h-0 flex flex-col overflow-hidden ${files.length === 0 ? 'h-auto' : ''}`}>
+        <ScrollArea className={`${files.length === 0 ? 'h-auto' : 'h-full'} p-6`}>
           <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold">Upload Multiple Files</h3>
           </div>
 
-          <p className="text-sm text-muted-foreground">
-            Files will be automatically linked to the next available rows in your runsheet.
-          </p>
+          {files.length === 0 && (
+            <p className="text-sm text-muted-foreground">
+              Files will be automatically linked to the next available rows in your runsheet.
+            </p>
+          )}
 
           <div
             className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
@@ -806,7 +825,12 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
             <div className="flex items-center justify-between pt-4 border-t">
               <Button
                 variant="outline"
-                onClick={() => setFiles([])}
+                onClick={() => {
+                  setFiles([]);
+                  if (onFileCountChange) {
+                    onFileCountChange(0);
+                  }
+                }}
                 disabled={isUploading}
               >
                 Clear All

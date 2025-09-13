@@ -73,6 +73,7 @@ const DocumentProcessor: React.FC = () => {
   const [showNavigationDialog, setShowNavigationDialog] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<{path: string, state?: any} | null>(null);
   const [showMultipleFileUpload, setShowMultipleFileUpload] = useState(false);
+  const [multipleUploadFileCount, setMultipleUploadFileCount] = useState(0);
   const [missingDataDialog, setMissingDataDialog] = useState(false);
   const [confirmAddFileDialog, setConfirmAddFileDialog] = useState(false);
   const [hasAddedToSpreadsheet, setHasAddedToSpreadsheet] = useState(false);
@@ -2937,8 +2938,11 @@ Image: [base64 image data]`;
 
 
       {/* Multiple File Upload Dialog */}
-      <Dialog open={showMultipleFileUpload} onOpenChange={setShowMultipleFileUpload}>
-        <DialogContent className="max-w-4xl h-[90vh] min-h-0 overflow-hidden p-0">
+      <Dialog open={showMultipleFileUpload} onOpenChange={(open) => {
+        setShowMultipleFileUpload(open);
+        if (!open) setMultipleUploadFileCount(0);
+      }}>
+        <DialogContent className={`${multipleUploadFileCount > 0 ? 'max-w-4xl h-[90vh]' : 'max-w-lg h-auto'} min-h-0 overflow-hidden p-0 transition-all duration-300`}>
           <MultipleFileUpload
             runsheetData={{
               id: activeRunsheet?.id || location.state?.runsheetId || 'temp-id',
@@ -3094,7 +3098,11 @@ Image: [base64 image data]`;
                 setShowMultipleFileUpload(false);
               }, 1500); // Give enough time for all refresh events to process
             }}
-            onClose={() => setShowMultipleFileUpload(false)}
+            onClose={() => {
+              setShowMultipleFileUpload(false);
+              setMultipleUploadFileCount(0);
+            }}
+            onFileCountChange={setMultipleUploadFileCount}
           />
         </DialogContent>
       </Dialog>
