@@ -4968,29 +4968,35 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
 
   // Helper function to get range border styles for outer borders
   const getRangeBorderStyle = useCallback((rowIndex: number, columnIndex: number) => {
-    if (!selectedRange) return '';
+    // Check if cell is in selected range (for normal selection)
+    const inSelectedRange = selectedRange && isCellInRange(rowIndex, columnIndex);
     
-    const { start, end } = selectedRange;
+    // Check if cell is in copied range (for copied selection)
+    const inCopiedRange = copiedRange && 
+      rowIndex >= Math.min(copiedRange.start.rowIndex, copiedRange.end.rowIndex) &&
+      rowIndex <= Math.max(copiedRange.start.rowIndex, copiedRange.end.rowIndex) &&
+      columnIndex >= Math.min(copiedRange.start.columnIndex, copiedRange.end.columnIndex) &&
+      columnIndex <= Math.max(copiedRange.start.columnIndex, copiedRange.end.columnIndex);
+    
+    if (!inSelectedRange && !inCopiedRange) return '';
+    
+    // Use copied range dimensions if available, otherwise selected range
+    const activeRange = copiedRange || selectedRange;
+    if (!activeRange) return '';
+    
+    const { start, end } = activeRange;
     const minRow = Math.min(start.rowIndex, end.rowIndex);
     const maxRow = Math.max(start.rowIndex, end.rowIndex);
     const minCol = Math.min(start.columnIndex, end.columnIndex);
     const maxCol = Math.max(start.columnIndex, end.columnIndex);
-    
-    if (!isCellInRange(rowIndex, columnIndex)) return '';
     
     const isTopEdge = rowIndex === minRow;
     const isBottomEdge = rowIndex === maxRow;
     const isLeftEdge = columnIndex === minCol;
     const isRightEdge = columnIndex === maxCol;
     
-    const isCopied = copiedRange && 
-      copiedRange.start.rowIndex === minRow && 
-      copiedRange.end.rowIndex === maxRow && 
-      copiedRange.start.columnIndex === minCol && 
-      copiedRange.end.columnIndex === maxCol;
-    
     const borderColor = 'border-primary';
-    const borderStyle = isCopied ? 'border-dashed' : 'border-solid';
+    const borderStyle = inCopiedRange ? 'border-dashed' : 'border-solid';
     
     let borders = [];
     // Only add borders on the outer edges of the selection
@@ -6797,17 +6803,22 @@ ${extractionFields}`
                      
                      {columns.map((column) => {
                      const isSelected = selectedCell?.rowIndex === rowIndex && selectedCell?.column === column;
-                     const isEditing = editingCell?.rowIndex === rowIndex && editingCell?.column === column;
-                     const columnIndex = columns.indexOf(column);
-                     const isInRange = isCellInRange(rowIndex, columnIndex);
-                     
-                     return (
-                          <td
-                           key={`${rowIndex}-${column}`}
-                            className={`border-r border-b border-border last:border-r-0 relative cursor-text transition-all duration-200 group-hover:bg-muted/20
-                              ${isEditing ? 'p-0 z-20' : 'p-0'}
-                              ${cellValidationErrors[`${rowIndex}-${column}`] ? 'border-2 border-red-400 bg-red-50 dark:bg-red-900/20' : ''}
-                            `}
+                      const isEditing = editingCell?.rowIndex === rowIndex && editingCell?.column === column;
+                      const columnIndex = columns.indexOf(column);
+                      const isInRange = isCellInRange(rowIndex, columnIndex);
+                      const isInCopiedRange = copiedRange && 
+                        rowIndex >= Math.min(copiedRange.start.rowIndex, copiedRange.end.rowIndex) &&
+                        rowIndex <= Math.max(copiedRange.start.rowIndex, copiedRange.end.rowIndex) &&
+                        columnIndex >= Math.min(copiedRange.start.columnIndex, copiedRange.end.columnIndex) &&
+                        columnIndex <= Math.max(copiedRange.start.columnIndex, copiedRange.end.columnIndex);
+                      
+                      return (
+                           <td
+                            key={`${rowIndex}-${column}`}
+                             className={`border-r border-b border-border last:border-r-0 relative cursor-text transition-all duration-200 group-hover:bg-muted/20
+                               ${isEditing ? 'p-0 z-20' : 'p-0'}
+                               ${cellValidationErrors[`${rowIndex}-${column}`] ? 'border-2 border-red-400 bg-red-50 dark:bg-red-900/20' : ''}
+                             `}
                              style={{ 
                                width: `${getColumnWidth(column)}px`, 
                                minWidth: `${getColumnWidth(column)}px`,
@@ -6854,8 +6865,8 @@ ${extractionFields}`
                          ) : (
                                 <div
                                   data-cell={`${rowIndex}-${column}`}
-                                  className={`relative w-full h-full min-h-[2rem] py-2 px-3 flex items-start transition-all duration-200 break-words overflow-hidden select-none ${isInRange ? '' : 'rounded-sm'}
-                                     ${isInRange
+                                  className={`relative w-full h-full min-h-[2rem] py-2 px-3 flex items-start transition-all duration-200 break-words overflow-hidden select-none ${(isInRange || isInCopiedRange) ? '' : 'rounded-sm'}
+                                     ${isInRange || isInCopiedRange
                                        ? `bg-primary/5 ${getRangeBorderStyle(rowIndex, columnIndex)}`
                                        : isSelected 
                                        ? 'border-2 border-primary ring-2 ring-primary/40 bg-transparent' 
