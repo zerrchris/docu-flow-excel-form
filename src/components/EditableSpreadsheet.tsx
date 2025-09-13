@@ -3724,12 +3724,16 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     };
 
     const handleMouseUp = () => {
-      // Add a small delay to prevent click event from firing immediately after drag
-      if (isDraggingResize) {
-        setTimeout(() => setIsDraggingResize(false), 100);
-      }
+      const wasResizing = resizing !== null;
       setResizing(null);
       setResizingRow(null);
+      
+      // Clear drag state after a brief delay only if we were actually resizing
+      if (wasResizing && isDraggingResize) {
+        setTimeout(() => setIsDraggingResize(false), 150);
+      } else {
+        setIsDraggingResize(false);
+      }
     };
 
     if (resizing || resizingRow) {
@@ -6668,13 +6672,18 @@ ${extractionFields}`
                                     : 'hover:bg-primary/15 hover:shadow-sm'
                                   }`}
                                 onClick={(e) => {
-                                  // Prevent opening dialog if we just finished resizing
-                                  if (isDraggingResize) {
+                                  console.log('Header clicked - checking if sticky is working');
+                                  console.log('isDraggingResize:', isDraggingResize);
+                                  
+                                  // Only prevent dialog if we're currently in a resize operation
+                                  // This allows normal clicks while preventing accidental opens during resize
+                                  if (resizing || isDraggingResize) {
+                                    console.log('Preventing dialog - resize in progress');
                                     e.preventDefault();
                                     e.stopPropagation();
                                     return;
                                   }
-                                  console.log('Header clicked - checking if sticky is working');
+                                  
                                   openColumnDialog(column);
                                 }}
                               >
