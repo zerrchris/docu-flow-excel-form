@@ -3973,47 +3973,104 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
           // Double-click: select word at cursor position
           const textarea = textareaRef.current;
           
-          // Use a more reliable method to get cursor position from click
-          const rect = textarea.getBoundingClientRect();
-          const x = clickEvent.clientX - rect.left;
-          const y = clickEvent.clientY - rect.top;
-          
-          // Get computed styles for accurate calculations
-          const style = window.getComputedStyle(textarea);
-          const paddingLeft = parseInt(style.paddingLeft) || 0;
-          const paddingTop = parseInt(style.paddingTop) || 0;
-          
-          // Adjust coordinates for padding
-          const adjustedX = x - paddingLeft;
-          const adjustedY = y - paddingTop;
-          
-          // Use a simpler approach: split into lines and estimate position
+          // Use the browser's native caretPositionFromPoint or caretRangeFromPoint
           let position = 0;
-          const lines = value.split('\n');
-          const lineHeight = parseInt(style.lineHeight) || 20;
-          const targetLineIndex = Math.max(0, Math.floor(adjustedY / lineHeight));
           
-          // Add lengths of previous lines
-          for (let i = 0; i < Math.min(targetLineIndex, lines.length - 1); i++) {
-            position += lines[i].length + 1; // +1 for newline
-          }
+          // Type assertion for browser APIs that might not be in standard types
+          const doc = document as any;
           
-          // Find position within current line using character width estimation
-          if (targetLineIndex < lines.length) {
-            const currentLine = lines[targetLineIndex];
-            const fontSize = parseInt(style.fontSize) || 14;
-            const charWidth = fontSize * 0.6; // Rough approximation for monospace-like behavior
-            const charPosition = Math.max(0, Math.min(Math.floor(adjustedX / charWidth), currentLine.length));
-            position += charPosition;
+          if (doc.caretPositionFromPoint) {
+            const caretPos = doc.caretPositionFromPoint(clickEvent.clientX, clickEvent.clientY);
+            if (caretPos && caretPos.offsetNode && caretPos.offsetNode.textContent) {
+              position = caretPos.offset;
+            }
+          } else if (doc.caretRangeFromPoint) {
+            const range = doc.caretRangeFromPoint(clickEvent.clientX, clickEvent.clientY);
+            if (range) {
+              position = range.startOffset;
+            }
+          } else {
+            // Fallback: use improved coordinate-based calculation
+            const rect = textarea.getBoundingClientRect();
+            const x = clickEvent.clientX - rect.left;
+            const y = clickEvent.clientY - rect.top;
+            
+            // Get computed styles for accurate calculations
+            const style = window.getComputedStyle(textarea);
+            const paddingLeft = parseInt(style.paddingLeft) || 0;
+            const paddingTop = parseInt(style.paddingTop) || 0;
+            
+            // Adjust coordinates for padding
+            const adjustedX = x - paddingLeft;
+            const adjustedY = y - paddingTop;
+            
+            // Create a temporary element to measure text more accurately
+            const tempDiv = document.createElement('div');
+            tempDiv.style.font = style.font;
+            tempDiv.style.lineHeight = style.lineHeight;
+            tempDiv.style.padding = `${paddingTop}px ${paddingLeft}px`;
+            tempDiv.style.border = 'none';
+            tempDiv.style.position = 'absolute';
+            tempDiv.style.visibility = 'hidden';
+            tempDiv.style.whiteSpace = 'pre-wrap';
+            tempDiv.style.wordWrap = 'break-word';
+            tempDiv.style.width = `${textarea.clientWidth}px`;
+            document.body.appendChild(tempDiv);
+            
+            const lines = value.split('\n');
+            let accumulatedHeight = 0;
+            let targetLineIndex = 0;
+            
+            // Find which line was clicked by measuring actual line heights
+            for (let i = 0; i < lines.length; i++) {
+              tempDiv.textContent = lines[i] || ' '; // Use space for empty lines
+              const lineHeight = tempDiv.offsetHeight;
+              
+              if (adjustedY <= accumulatedHeight + lineHeight) {
+                targetLineIndex = i;
+                break;
+              }
+              accumulatedHeight += lineHeight;
+              if (i === lines.length - 1) targetLineIndex = i;
+            }
+            
+            // Calculate position up to the target line
+            position = 0;
+            for (let i = 0; i < targetLineIndex; i++) {
+              position += lines[i].length + 1; // +1 for newline
+            }
+            
+            // Find position within the clicked line
+            if (targetLineIndex < lines.length) {
+              const currentLine = lines[targetLineIndex];
+              tempDiv.textContent = '';
+              
+              // Binary search for the character position
+              let left = 0;
+              let right = currentLine.length;
+              
+              while (left < right) {
+                const mid = Math.floor((left + right) / 2);
+                tempDiv.textContent = currentLine.substring(0, mid);
+                
+                if (tempDiv.offsetWidth < adjustedX) {
+                  left = mid + 1;
+                } else {
+                  right = mid;
+                }
+              }
+              
+              position += Math.min(left, currentLine.length);
+            }
+            
+            document.body.removeChild(tempDiv);
           }
           
           // Ensure position is within bounds
           position = Math.max(0, Math.min(position, value.length));
           
           console.log('Double-click debug:', {
-            clickCoords: [x, y],
-            adjustedCoords: [adjustedX, adjustedY],
-            targetLineIndex,
+            clickCoords: [clickEvent.clientX, clickEvent.clientY],
             calculatedPosition: position,
             textAroundPosition: value.substring(Math.max(0, position - 5), position + 5),
             charAtPosition: value[position]
