@@ -91,6 +91,40 @@ interface SpreadsheetProps {
   onDocumentMapChange?: (documentMap: Map<number, DocumentRecord>) => void;
 }
 
+// Helper function to check if data changes are significant enough to notify user
+const checkForSignificantChanges = (
+  oldData: Record<string, string>[], 
+  newData: Record<string, string>[]
+): boolean => {
+  // Don't notify for small length differences (auto-save may add/remove empty rows)
+  if (Math.abs(oldData.length - newData.length) <= 2) {
+    // Check if there are actual content changes, not just empty row additions
+    const minLength = Math.min(oldData.length, newData.length);
+    let meaningfulChanges = 0;
+    
+    for (let i = 0; i < minLength; i++) {
+      const oldRow = oldData[i] || {};
+      const newRow = newData[i] || {};
+      
+      // Check if this row has non-empty content in either version
+      const oldHasContent = Object.values(oldRow).some(val => val && val.trim() !== '');
+      const newHasContent = Object.values(newRow).some(val => val && val.trim() !== '');
+      
+      if (oldHasContent || newHasContent) {
+        if (JSON.stringify(oldRow) !== JSON.stringify(newRow)) {
+          meaningfulChanges++;
+        }
+      }
+    }
+    
+    // Only notify if there are multiple meaningful changes (not just typing corrections)
+    return meaningfulChanges > 2;
+  }
+  
+  // Significant length difference - probably worth notifying
+  return true;
+};
+
 const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   const {
     initialColumns, 
@@ -1693,10 +1727,16 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
             setData(newData);
             onDataChange?.(newData);
             
-            toast({
-              title: "Data Updated",
-              description: "Runsheet was updated from another source",
-            });
+            // Show a subtle notification only if there are significant changes
+            const hasSignificantChanges = checkForSignificantChanges(data, newData);
+            if (hasSignificantChanges) {
+              // Use a brief, less intrusive notification
+              toast({
+                title: "Synced",
+                description: "Data updated from another source",
+                duration: 2000, // Shorter duration
+              });
+            }
           }
         }
       )
