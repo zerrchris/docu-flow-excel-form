@@ -2938,8 +2938,7 @@ Image: [base64 image data]`;
 
       {/* Multiple File Upload Dialog */}
       <Dialog open={showMultipleFileUpload} onOpenChange={setShowMultipleFileUpload}>
-        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0">
-          <div className="flex-1 overflow-y-auto">
+        <DialogContent className="max-w-4xl h-[90vh] p-0">
           <MultipleFileUpload
             runsheetData={{
               id: activeRunsheet?.id || location.state?.runsheetId || 'temp-id',
@@ -3097,7 +3096,6 @@ Image: [base64 image data]`;
             }}
             onClose={() => setShowMultipleFileUpload(false)}
           />
-          </div>
         </DialogContent>
       </Dialog>
 

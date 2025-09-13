@@ -665,8 +665,8 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
 
   return (
     <div className="w-full h-full flex flex-col">
-      <Card className="flex-1 flex flex-col overflow-hidden">
-        <ScrollArea className="flex-1 p-6">
+      <Card className="flex-1 min-h-0 flex flex-col overflow-hidden">
+        <ScrollArea className="h-full p-6">
           <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold">Upload Multiple Files</h3>
