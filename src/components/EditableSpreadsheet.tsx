@@ -4993,12 +4993,20 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     const borderStyle = isCopied ? 'border-dashed' : 'border-solid';
     
     let borders = [];
+    // Only add borders on the outer edges of the selection
     if (isTopEdge) borders.push('border-t-2');
     if (isBottomEdge) borders.push('border-b-2');
     if (isLeftEdge) borders.push('border-l-2');
     if (isRightEdge) borders.push('border-r-2');
     
-    return borders.length > 0 ? `${borders.join(' ')} ${borderColor} ${borderStyle}` : '';
+    // Remove default cell borders for cells in range
+    const removeBorders = [];
+    if (!isTopEdge) removeBorders.push('border-t-0');
+    if (!isBottomEdge) removeBorders.push('border-b-0');
+    if (!isLeftEdge) removeBorders.push('border-l-0');
+    if (!isRightEdge) removeBorders.push('border-r-0');
+    
+    return `${borders.join(' ')} ${removeBorders.join(' ')} ${borderColor} ${borderStyle}`;
   }, [selectedRange, copiedRange, isCellInRange]);
 
   // Global mouse up event listener
@@ -6844,13 +6852,13 @@ ${extractionFields}`
                                   }}
                               />
                          ) : (
-                              <div
-                                data-cell={`${rowIndex}-${column}`}
-                                 className={`relative w-full h-full min-h-[2rem] py-2 px-3 flex items-start transition-all duration-200 break-words overflow-hidden select-none rounded-sm
+                               <div
+                                 data-cell={`${rowIndex}-${column}`}
+                                 className={`relative w-full h-full min-h-[2rem] py-2 px-3 flex items-start transition-all duration-200 break-words overflow-hidden select-none ${isInRange ? '' : 'rounded-sm'}
                                     ${isSelected 
                                       ? 'border-2 border-primary ring-2 ring-primary/40 bg-transparent' 
                                       : isInRange
-                                      ? `bg-transparent ${getRangeBorderStyle(rowIndex, columnIndex)}`
+                                      ? `bg-primary/5 ${getRangeBorderStyle(rowIndex, columnIndex)}`
                                       : isCellCut(rowIndex, column)
                                       ? 'bg-orange-100 dark:bg-orange-900/30 border-2 border-orange-400 dark:border-orange-600 opacity-60 border-dashed'
                                        : lastEditedCell?.rowIndex === rowIndex && lastEditedCell?.column === column
@@ -6981,11 +6989,11 @@ ${extractionFields}`
                            ) : (
                                <div
                                  data-cell={`${rowIndex}-${column}`}
-                                  className={`w-full h-full min-h-[2rem] py-2 px-3 flex items-center transition-colors select-none overflow-hidden
+                                  className={`w-full h-full min-h-[2rem] py-2 px-3 flex items-center transition-colors select-none overflow-hidden ${isInRange ? '' : 'rounded-sm'}
                                     ${isSelected 
                                       ? 'bg-primary/20 border-2 border-primary ring-2 ring-primary/20' 
                                       : isInRange
-                                      ? `bg-transparent ${getRangeBorderStyle(rowIndex, columnIndex)}`
+                                      ? `bg-primary/5 ${getRangeBorderStyle(rowIndex, columnIndex)}`
                                       : 'hover:bg-muted/50 border-2 border-transparent'
                                     }`}
                                   onMouseDown={(e) => handleCellMouseDown(e, rowIndex, column)}
