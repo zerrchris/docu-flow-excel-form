@@ -4118,7 +4118,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         }
       }
     }, 50); // Increased timeout to ensure it runs after useEffect
-  }, []);
+  }, [setEditingCell, setCellValue, setSelectedCell]);
 
   const saveEdit = useCallback(async () => {
     if (editingCell) {
