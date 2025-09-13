@@ -46,6 +46,16 @@
         btn.addEventListener('click', async () => {
           try { chrome.runtime.sendMessage({ action: 'openRunsheet' }); } catch {}
           try { chrome.runtime.sendMessage({ action: 'ensureContentScript' }); } catch {}
+          
+          // Fallback: if UI didn't appear, open the popup
+          setTimeout(() => {
+            const frame = document.getElementById('runsheetpro-runsheet-frame');
+            const selector = document.getElementById('runsheetpro-runsheet-selector');
+            const signin = document.getElementById('runsheetpro-signin-popup');
+            if (!frame && !selector && !signin) {
+              try { chrome.action.openPopup(); } catch {}
+            }
+          }, 700);
         });
         document.body.appendChild(btn);
         console.log(LOG_PREFIX, 'button created');

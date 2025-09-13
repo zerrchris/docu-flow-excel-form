@@ -44,7 +44,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (sender.tab && sender.tab.id) {
         chrome.scripting.executeScript({
           target: { tabId: sender.tab.id },
-          files: ['content.js']
+          files: ['persistent-state.js', 'error-handler.js', 'content.js']
         }).then(() => sendResponse({ success: true })).catch(err => {
           console.warn('ensureContentScript failed:', err);
           sendResponse({ success: false, error: err.message });
