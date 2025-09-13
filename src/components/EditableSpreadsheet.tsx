@@ -54,6 +54,8 @@ import FullScreenDocumentWorkspace from './FullScreenDocumentWorkspace';
 import SideBySideDocumentWorkspace from './SideBySideDocumentWorkspace';
 import { BatchDocumentAnalysisDialog } from './BatchDocumentAnalysisDialog';
 import { BatchFileRenameDialog } from './BatchFileRenameDialog';
+import ImprovedDocumentAnalysis from './ImprovedDocumentAnalysis';
+import AdvancedDataVerificationDialog from './AdvancedDataVerificationDialog';
 import ViewportPortal from './ViewportPortal';
 import { AutoSaveIndicator } from './AutoSaveIndicator';
 import { useImmediateSave } from '@/hooks/useImmediateSave';
@@ -316,7 +318,8 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   );
   const [showBatchAnalysisDialog, setShowBatchAnalysisDialog] = useState(false);
   const [showBatchRenameDialog, setShowBatchRenameDialog] = useState(false);
-   const [showDocumentFileNameColumn, setShowDocumentFileNameColumn] = useState(true);
+  const [showImprovedAnalysis, setShowImprovedAnalysis] = useState(false);
+  const [showDocumentFileNameColumn, setShowDocumentFileNameColumn] = useState(true);
   
   // Helper functions to manage workspace state and URL parameters
   const openFullScreenWorkspace = useCallback((rowIndex: number) => {
@@ -1644,6 +1647,54 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       window.removeEventListener('updateDocumentFilename', handleUpdateDocumentFilename as EventListener);
     };
   }, [columns, currentRunsheetId]);
+
+  // Real-time synchronization for runsheet data changes
+  useEffect(() => {
+    if (!currentRunsheetId) return;
+
+    console.log('🔄 Setting up real-time subscription for runsheet:', currentRunsheetId);
+
+    const channel = supabase
+      .channel(`runsheet-changes-${currentRunsheetId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'runsheets',
+          filter: `id=eq.${currentRunsheetId}`
+        },
+        (payload) => {
+          console.log('🔄 Real-time runsheet update received:', payload);
+          
+          // Only update if the change came from a different source (e.g., extension or another tab)
+          const newData = payload.new?.data as Record<string, string>[];
+          if (newData && JSON.stringify(newData) !== JSON.stringify(data)) {
+            console.log('🔄 Applying real-time data update');
+            setData(newData);
+            onDataChange?.(newData);
+            
+            toast({
+              title: "Data Updated",
+              description: "Runsheet was updated from another source",
+            });
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('🔄 Real-time subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Successfully subscribed to real-time updates');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Error setting up real-time subscription');
+        }
+      });
+
+    return () => {
+      console.log('🔄 Cleaning up real-time subscription');
+      supabase.removeChannel(channel);
+    };
+  }, [currentRunsheetId, data, onDataChange, toast]);
 
 
   // Enhanced auto-save functionality with immediate saving
@@ -7285,6 +7336,41 @@ ${extractionFields}`
           }}
           isLoading={isReExtracting}
         />
+
+        {/* Improved Document Analysis Dialog */}
+        {showImprovedAnalysis && (
+          <Dialog open={showImprovedAnalysis} onOpenChange={setShowImprovedAnalysis}>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
+              <DialogHeader>
+                <DialogTitle>Smart Document Analysis</DialogTitle>
+                <DialogDescription>
+                  Upload and analyze documents with AI to automatically extract data for your runsheet.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="overflow-y-auto max-h-[70vh]">
+                <ImprovedDocumentAnalysis
+                  runsheetId={effectiveRunsheetId}
+                  availableColumns={columns}
+                  currentRunsheetData={data}
+                  onAnalysisComplete={(extractedData, targetRowIndex) => {
+                    console.log('Document analysis completed:', { extractedData, targetRowIndex });
+                    // The component handles data population internally
+                  }}
+                  onDataPopulated={() => {
+                    // Refresh the runsheet data after successful population
+                    // Trigger data change to refresh the interface
+                    onDataChange?.(data);
+                    setShowImprovedAnalysis(false);
+                    toast({
+                      title: "Success",
+                      description: "Document analysis completed and data added to runsheet",
+                    });
+                  }}
+                />
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
 
         {/* Data Overwrite Confirmation Dialog */}
         <AlertDialog open={showOverwriteDialog} onOpenChange={setShowOverwriteDialog}>
