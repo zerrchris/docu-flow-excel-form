@@ -70,16 +70,23 @@ serve(async (req) => {
     const currentData = runsheet.data as Record<string, string>[];
     let targetRowIndex = -1;
 
-    // Comprehensive check for truly empty rows
+    // Comprehensive check for truly empty rows with enhanced validation
     const isRowEmpty = (row: Record<string, string>): boolean => {
-      return Object.values(row).every(value => 
-        !value || 
-        value.toString().trim() === '' || 
-        value.toString().trim().toLowerCase() === 'n/a'
-      );
+      if (!row || typeof row !== 'object') return true;
+      
+      return Object.values(row).every(value => {
+        if (value === null || value === undefined) return true;
+        const stringValue = value.toString().trim();
+        return stringValue === '' || 
+               stringValue.toLowerCase() === 'n/a' ||
+               stringValue.toLowerCase() === 'na' ||
+               stringValue.toLowerCase() === 'null' ||
+               stringValue.toLowerCase() === 'undefined' ||
+               stringValue === '-';
+      });
     };
 
-    // Look for the first completely empty row
+    // Look for the first completely empty row with no associated documents
     for (let i = 0; i < currentData.length; i++) {
       const row = currentData[i];
       
@@ -95,7 +102,10 @@ serve(async (req) => {
           
         if (!existingDoc) {
           targetRowIndex = i;
+          console.log(`✅ Found verified empty row at index ${i} with no associated documents`);
           break;
+        } else {
+          console.log(`⚠️ Row ${i} appears empty but has associated document, skipping`);
         }
       }
     }
@@ -107,31 +117,55 @@ serve(async (req) => {
       currentData.push(newRow);
       targetRowIndex = currentData.length - 1;
       
-      console.log(`No empty row found, added new row at index ${targetRowIndex}`);
-    } else {
-      console.log(`Found empty row at index ${targetRowIndex}`);
+      console.log(`✅ No empty row found, created new row at index ${targetRowIndex}`);
     }
 
-    // Validate that target row is still empty before populating
-    if (!isRowEmpty(currentData[targetRowIndex])) {
-      return new Response(
-        JSON.stringify({ 
-          error: 'Target row is no longer empty. Data insertion cancelled to prevent overwriting.',
-          targetRowIndex,
-          currentRowData: currentData[targetRowIndex]
-        }),
-        { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Populate the target row with extracted data
+    // Final validation: Ensure target row is actually empty before populating
     const targetRow = currentData[targetRowIndex];
+    if (!isRowEmpty(targetRow)) {
+      console.error(`❌ Critical: Target row ${targetRowIndex} is not empty:`, targetRow);
+      
+      // Check if any field has significant data 
+      const hasSignificantData = Object.values(targetRow).some(value => {
+        if (!value) return false;
+        const stringValue = value.toString().trim();
+        return stringValue.length > 2 && 
+               !['n/a', 'na', 'null', 'undefined', '-', ''].includes(stringValue.toLowerCase());
+      });
+      
+      if (hasSignificantData) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Target row contains important data that would be overwritten. Operation cancelled for data safety.',
+            targetRowIndex,
+            existingData: targetRow,
+            suggestion: 'Please ensure the row is completely empty or manually select a different target row.'
+          }),
+          { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    // Safely populate the target row with extracted data
     const populatedFields: string[] = [];
+    const validColumns = new Set(runsheet.columns);
     
     Object.entries(extractedData).forEach(([column, value]) => {
-      if (runsheet.columns.includes(column) && value && value.toString().trim() !== '') {
-        targetRow[column] = value.toString().trim();
-        populatedFields.push(column);
+      if (validColumns.has(column) && value != null) {
+        const cleanValue = value.toString().trim();
+        if (cleanValue !== '' && cleanValue.toLowerCase() !== 'n/a') {
+          // Only populate if the current field is truly empty
+          const currentValue = targetRow[column];
+          if (!currentValue || 
+              currentValue.toString().trim() === '' || 
+              currentValue.toString().trim().toLowerCase() === 'n/a') {
+            targetRow[column] = cleanValue;
+            populatedFields.push(column);
+            console.log(`✅ Populated field '${column}' with value: '${cleanValue}'`);
+          } else {
+            console.log(`⚠️ Skipped field '${column}' - already contains: '${currentValue}'`);
+          }
+        }
       }
     });
 

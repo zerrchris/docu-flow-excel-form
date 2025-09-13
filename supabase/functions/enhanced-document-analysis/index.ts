@@ -147,36 +147,50 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are an expert document analyst specializing in real estate and legal documents. Analyze the provided document and extract structured data in JSON format. Focus on:
-            
-            ${extraction_preferences?.columns ? `Extract these specific fields: ${extraction_preferences.columns.join(', ')}` : 'Extract common document fields like dates, names, addresses, amounts, document types, etc.'}
-            
-            CRITICAL: Pay special attention to:
-            - Mineral rights, mineral reservations, or mineral exceptions
-            - Surface rights vs subsurface rights distinctions  
-            - Oil, gas, and water rights
-            - Any language about "reserving" or "excepting" minerals
-            - Phrases like "subject to mineral reservation" or "minerals reserved"
-            
-            Include ALL mineral-related information in your notes field, even if it seems minor.
-            
-            ${globalInstructions ? `\nGlobal Admin Instructions: ${globalInstructions}\n` : ''}
-            
-            Provide confidence scores (0-1) for each extracted field based on text clarity and extraction certainty.
-            
-            Return a JSON object with:
-            - extracted_data: object with field names as keys and extracted values
-            - confidence_scores: object with same field names and confidence values (0-1)
-            - document_type: detected document type
-            - extraction_summary: brief summary of what was extracted
-            - processing_notes: any notes about extraction quality or issues`
+            content: `You are an expert document analyst specializing in real estate and legal documents. Analyze the provided document and extract structured data in JSON format.
+
+EXTRACTION REQUIREMENTS:
+${extraction_preferences?.columns ? `- Extract these specific fields: ${extraction_preferences.columns.join(', ')}` : '- Extract common document fields like dates, names, addresses, amounts, document types, etc.'}
+
+CRITICAL FOCUS AREAS:
+- Mineral rights, mineral reservations, or mineral exceptions
+- Surface rights vs subsurface rights distinctions  
+- Oil, gas, and water rights
+- Any language about "reserving" or "excepting" minerals
+- Phrases like "subject to mineral reservation" or "minerals reserved"
+
+Include ALL mineral-related information in your notes field, even if it seems minor.
+
+${globalInstructions ? `\nGlobal Admin Instructions: ${globalInstructions}\n` : ''}
+
+RESPONSE FORMAT: Return ONLY a valid JSON object with:
+{
+  "extracted_data": {
+    "field_name": "extracted_value",
+    // ... more fields
+  },
+  "confidence_scores": {
+    "field_name": 0.95,
+    // confidence values from 0-1 for each field
+  },
+  "document_type": "detected document type",
+  "extraction_summary": "brief summary of what was extracted",
+  "processing_notes": "any notes about extraction quality, mineral rights found, or issues"
+}
+
+IMPORTANT: 
+- Only include fields that exist in the document
+- Use exact field names from the requirements
+- Confidence scores should reflect text clarity and extraction certainty
+- Be thorough with mineral rights detection
+- Include document type classification`
           },
           {
             role: "user",
             content: [
               {
                 type: "text",
-                text: "Please analyze this document and extract the relevant data."
+                text: "Please analyze this document and extract the relevant data according to the requirements."
               },
               {
                 type: "image_url",
@@ -187,7 +201,8 @@ serve(async (req) => {
             ]
           }
         ],
-        max_tokens: 1500
+        max_tokens: 2000,
+        temperature: 0.1
       }),
     });
 
