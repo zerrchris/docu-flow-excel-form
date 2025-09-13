@@ -6630,20 +6630,20 @@ ${extractionFields}`
                                 data-cell={`${rowIndex}-${column}`}
                                  className={`relative w-full h-full min-h-[2rem] py-2 px-3 flex items-start transition-all duration-200 break-words overflow-hidden select-none rounded-sm
                                    ${isSelected 
-                                     ? 'bg-primary/25 border-2 border-primary ring-2 ring-primary/20 shadow-sm' 
+                                     ? 'border-2 border-primary ring-2 ring-primary/40 bg-transparent' 
                                      : isInRange
-                                     ? 'bg-primary/15 border-2 border-primary/50'
+                                     ? 'border-2 border-primary/50 bg-transparent'
                                      : isCellCut(rowIndex, column)
                                      ? 'bg-orange-100 dark:bg-orange-900/30 border-2 border-orange-400 dark:border-orange-600 opacity-60 border-dashed'
                                       : lastEditedCell?.rowIndex === rowIndex && lastEditedCell?.column === column
                                       ? 'bg-green-100 dark:bg-green-900/30 border-2 border-green-400 dark:border-green-600'
-                                      : 'hover:bg-muted/60 border-2 border-transparent hover:shadow-sm'
+                                      : 'border-2 border-transparent hover:ring-1 hover:ring-primary/30'
                                     }
-                                    ${copiedCell && copiedCell.rowIndex === rowIndex && copiedCell.column === column ? ' border-2 border-primary border-dashed ring-1 ring-primary/30' : ''}
+                                    ${copiedCell && copiedCell.rowIndex === rowIndex && copiedCell.column === column ? ' border-2 border-primary border-dashed ring-1 ring-primary/30 bg-transparent' : ''}
                                     ${columnAlignments[column] === 'center' ? 'text-center justify-center' : 
                                      columnAlignments[column] === 'right' ? 'text-right justify-end' : 'text-left justify-start'}
-                                   ${cellValidationErrors[`${rowIndex}-${column}`] ? 'border-red-400 bg-red-50 dark:bg-red-900/20' : ''}
-                                 `}
+                                    ${cellValidationErrors[`${rowIndex}-${column}`] ? 'border-red-400 bg-red-50 dark:bg-red-900/20' : ''}
+                                  `}
                                   onMouseDown={(e) => handleCellMouseDown(e, rowIndex, column)}
                                    onMouseEnter={() => handleMouseEnter(rowIndex, column)}
                                    onMouseLeave={() => setHoveredCell(null)}
