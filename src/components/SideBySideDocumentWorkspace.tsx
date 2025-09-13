@@ -630,12 +630,36 @@ Return only the filename, nothing else.`,
                            onChange={(e) => handleFieldChange(columnName, e.target.value)}
                            className="min-h-[160px] resize-vertical"
                            placeholder={`Enter ${columnName.toLowerCase()}...`}
-                           onClick={(e) => {
-                             // Single click - select all if there's existing data
-                             if (value && value.trim() !== '' && e.detail === 1) {
-                               setTimeout(() => (e.target as HTMLTextAreaElement).select(), 0);
-                             }
-                           }}
+                            onClick={(e) => {
+                              const target = e.target as HTMLTextAreaElement;
+                              
+                              if (e.detail === 2) {
+                                // Double-click: select word at cursor
+                                e.preventDefault();
+                                const text = target.value;
+                                const position = target.selectionStart;
+                                
+                                // Find word boundaries
+                                let start = position;
+                                let end = position;
+                                
+                                // Move start back to beginning of word
+                                while (start > 0 && /\w/.test(text[start - 1])) {
+                                  start--;
+                                }
+                                
+                                // Move end forward to end of word
+                                while (end < text.length && /\w/.test(text[end])) {
+                                  end++;
+                                }
+                                
+                                target.setSelectionRange(start, end);
+                              } else if (e.detail === 3) {
+                                // Triple-click: select all text
+                                e.preventDefault();
+                                target.select();
+                              }
+                            }}
                            onKeyDown={(e) => {
                              if (e.key === 'Tab') {
                                e.preventDefault();
@@ -654,12 +678,36 @@ Return only the filename, nothing else.`,
                            value={value}
                            onChange={(e) => handleFieldChange(columnName, e.target.value)}
                            placeholder={`Enter ${columnName.toLowerCase()}...`}
-                           onClick={(e) => {
-                             // Single click - select all if there's existing data
-                             if (value && value.trim() !== '' && e.detail === 1) {
-                               setTimeout(() => (e.target as HTMLInputElement).select(), 0);
-                             }
-                           }}
+                            onClick={(e) => {
+                              const target = e.target as HTMLInputElement;
+                              
+                              if (e.detail === 2) {
+                                // Double-click: select word at cursor
+                                e.preventDefault();
+                                const text = target.value;
+                                const position = target.selectionStart;
+                                
+                                // Find word boundaries
+                                let start = position;
+                                let end = position;
+                                
+                                // Move start back to beginning of word
+                                while (start > 0 && /\w/.test(text[start - 1])) {
+                                  start--;
+                                }
+                                
+                                // Move end forward to end of word
+                                while (end < text.length && /\w/.test(text[end])) {
+                                  end++;
+                                }
+                                
+                                target.setSelectionRange(start, end);
+                              } else if (e.detail === 3) {
+                                // Triple-click: select all text
+                                e.preventDefault();
+                                target.select();
+                              }
+                            }}
                            onKeyDown={(e) => {
                              if (e.key === 'Tab') {
                                e.preventDefault();
