@@ -3648,13 +3648,13 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     return columnWidths[column] || 120; // default width
   };
 
-  // Helper function to calculate minimum width based on column header text
+  // Helper function to get consistent minimum width for all columns
   const getMinimumColumnWidth = (column: string) => {
-    // Base minimum to accommodate resize handle + some text
-    const baseMinimum = 100;
-    // Calculate approximate text width (rough estimate: 8px per character)
-    const textWidth = column.length * 8 + 40; // +40 for padding and resize handle
-    return Math.max(baseMinimum, Math.min(textWidth, 180)); // Cap at 180px
+    // Fixed minimum width that accommodates:
+    // - Resize handle (20px)
+    // - Text truncation with ellipsis (60px minimum)
+    // - Padding (20px)
+    return 100; // Consistent 100px minimum for all columns
   };
 
   // Row resizing functions
