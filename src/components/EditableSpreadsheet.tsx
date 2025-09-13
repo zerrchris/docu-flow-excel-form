@@ -1908,8 +1908,14 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     }, [hasUnsavedChanges, user, runsheetName, columns, data, columnInstructions, saveImmediately]);
 
   // Auto-save trigger when data changes (Google Sheets behavior)
+  // Disabled when user is viewing documents to prevent interruptions
   useEffect(() => {
-    if (hasUnsavedChanges && user?.id) {
+    // Don't auto-save if user is in document viewing mode (side-by-side or expanded)
+    const expandedRowParam = searchParams.get('expanded');
+    const sideBySideRowParam = searchParams.get('sidebyside');
+    const isViewingDocuments = expandedRowParam || sideBySideRowParam;
+    
+    if (hasUnsavedChanges && user?.id && !isViewingDocuments) {
       console.log('🔄 Changes detected, scheduling auto-save');
       const timeoutId = setTimeout(() => {
         console.log('🔄 Executing scheduled auto-save');
@@ -1920,8 +1926,10 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         console.log('🔄 Clearing auto-save timeout');
         clearTimeout(timeoutId);
       };
+    } else if (isViewingDocuments && hasUnsavedChanges) {
+      console.log('🔄 Auto-save paused while viewing documents');
     }
-  }, [hasUnsavedChanges, user?.id, saveImmediately]);
+  }, [hasUnsavedChanges, user?.id, saveImmediately, searchParams]);
 
   // Simple database sync - no real-time multi-user complexity needed
   // Data is saved immediately on every change, so no sync required
