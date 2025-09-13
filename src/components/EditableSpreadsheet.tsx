@@ -301,6 +301,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   const [rowHeights, setRowHeights] = useState<Record<number, number>>({});
   const [resizing, setResizing] = useState<{column: string, startX: number, startWidth: number} | null>(null);
   const [resizingRow, setResizingRow] = useState<{rowIndex: number, startY: number, startHeight: number} | null>(null);
+  const [copiedCell, setCopiedCell] = useState<{rowIndex: number, column: string} | null>(null);
   const [showAddRowsDialog, setShowAddRowsDialog] = useState(false);
   const [rowsToAdd, setRowsToAdd] = useState<number>(1);
   const [addRowsDropdownOpen, setAddRowsDropdownOpen] = useState(false);
@@ -4653,10 +4654,11 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       const copiedData = [[cellValue]];
       
       setCopiedData(copiedData);
-      navigator.clipboard.writeText(cellValue);
+      setCopiedCell({ rowIndex, column });
+      try { navigator.clipboard.writeText(cellValue); } catch {}
       
       toast({
-        title: "Copied",
+        title: 'Copied',
         description: `Cell value "${cellValue}" copied to clipboard`,
       });
       return;
@@ -4664,6 +4666,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     
     // Handle range copy
     if (!selectedRange) return;
+    setCopiedCell(null);
     
     const { start, end } = selectedRange;
     const minRow = Math.min(start.rowIndex, end.rowIndex);
@@ -4776,14 +4779,15 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     setData(newData);
     onDataChange?.(newData);
     
-    // Clear cut data after successful paste
+    // Clear cut/copy visuals after successful paste
+    setCopiedCell(null);
     if (isCutOperation) {
       setCutData(null);
       setCopiedData(null);
     }
     
     toast({
-      title: isCutOperation ? "Moved" : "Pasted",
+      title: isCutOperation ? 'Moved' : 'Pasted',
       description: `${dataToPaste.length} rows × ${dataToPaste[0]?.length || 0} columns ${isCutOperation ? 'moved' : 'pasted'}`,
     });
   }, [copiedData, cutData, selectedCell, columns, data, onDataChange, toast]);
@@ -4914,8 +4918,8 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       if (e.defaultPrevented) return;
       
       const target = e.target as HTMLElement | null;
-      // More specific form field detection - allow copy/paste in our table cells
-      const isInExternalFormField = target && target.closest('input:not([data-cell]), textarea:not([data-cell]), select, [contenteditable="true"]:not([data-cell])');
+      const insideOurCell = target && target.closest('[data-cell]');
+      const isInExternalFormField = !insideOurCell && target && target.closest('input, textarea, select, [contenteditable="true"]');
       
       if (isInExternalFormField) {
         return; // Only block for external form fields, not our table cells
@@ -6624,18 +6628,19 @@ ${extractionFields}`
                          ) : (
                               <div
                                 data-cell={`${rowIndex}-${column}`}
-                                 className={`w-full h-full min-h-[2rem] py-2 px-3 flex items-start transition-all duration-200 break-words overflow-hidden select-none rounded-sm
+                                 className={`relative w-full h-full min-h-[2rem] py-2 px-3 flex items-start transition-all duration-200 break-words overflow-hidden select-none rounded-sm
                                    ${isSelected 
                                      ? 'bg-primary/25 border-2 border-primary ring-2 ring-primary/20 shadow-sm' 
                                      : isInRange
                                      ? 'bg-primary/15 border-2 border-primary/50'
                                      : isCellCut(rowIndex, column)
                                      ? 'bg-orange-100 dark:bg-orange-900/30 border-2 border-orange-400 dark:border-orange-600 opacity-60 border-dashed'
-                                     : lastEditedCell?.rowIndex === rowIndex && lastEditedCell?.column === column
-                                     ? 'bg-green-100 dark:bg-green-900/30 border-2 border-green-400 dark:border-green-600'
-                                     : 'hover:bg-muted/60 border-2 border-transparent hover:shadow-sm'
-                                   }
-                                   ${columnAlignments[column] === 'center' ? 'text-center justify-center' : 
+                                      : lastEditedCell?.rowIndex === rowIndex && lastEditedCell?.column === column
+                                      ? 'bg-green-100 dark:bg-green-900/30 border-2 border-green-400 dark:border-green-600'
+                                      : 'hover:bg-muted/60 border-2 border-transparent hover:shadow-sm'
+                                    }
+                                    ${copiedCell && copiedCell.rowIndex === rowIndex && copiedCell.column === column ? ' border-2 border-primary border-dashed ring-1 ring-primary/30' : ''}
+                                    ${columnAlignments[column] === 'center' ? 'text-center justify-center' : 
                                      columnAlignments[column] === 'right' ? 'text-right justify-end' : 'text-left justify-start'}
                                    ${cellValidationErrors[`${rowIndex}-${column}`] ? 'border-red-400 bg-red-50 dark:bg-red-900/20' : ''}
                                  `}
