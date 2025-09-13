@@ -301,6 +301,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   const [rowHeights, setRowHeights] = useState<Record<number, number>>({});
   const [resizing, setResizing] = useState<{column: string, startX: number, startWidth: number} | null>(null);
   const [resizingRow, setResizingRow] = useState<{rowIndex: number, startY: number, startHeight: number} | null>(null);
+  const [isDraggingResize, setIsDraggingResize] = useState(false);
   const [copiedCell, setCopiedCell] = useState<{rowIndex: number, column: string} | null>(null);
   const [copiedRange, setCopiedRange] = useState<{start: {rowIndex: number, columnIndex: number}, end: {rowIndex: number, columnIndex: number}} | null>(null);
   const [showAddRowsDialog, setShowAddRowsDialog] = useState(false);
@@ -3673,9 +3674,11 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   // Column resize handlers
   const handleMouseDown = (e: React.MouseEvent, column: string) => {
     e.preventDefault();
+    e.stopPropagation();
     const startX = e.clientX;
     const startWidth = getColumnWidth(column);
     setResizing({ column, startX, startWidth });
+    setIsDraggingResize(false); // Will be set to true if mouse moves
   };
 
   // Row resize handlers
@@ -3690,6 +3693,9 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (resizing) {
+        // Mark that we're actually dragging, not just clicking
+        setIsDraggingResize(true);
+        
         const deltaX = e.clientX - resizing.startX;
         const minimumWidth = getMinimumColumnWidth(resizing.column);
         const newWidth = Math.max(minimumWidth, resizing.startWidth + deltaX);
@@ -3718,6 +3724,10 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     };
 
     const handleMouseUp = () => {
+      // Add a small delay to prevent click event from firing immediately after drag
+      if (isDraggingResize) {
+        setTimeout(() => setIsDraggingResize(false), 100);
+      }
       setResizing(null);
       setResizingRow(null);
     };
@@ -6657,7 +6667,13 @@ ${extractionFields}`
                                     ? 'hover:bg-yellow-200 dark:hover:bg-yellow-800/30 animate-pulse' 
                                     : 'hover:bg-primary/15 hover:shadow-sm'
                                   }`}
-                                onClick={() => {
+                                onClick={(e) => {
+                                  // Prevent opening dialog if we just finished resizing
+                                  if (isDraggingResize) {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    return;
+                                  }
                                   console.log('Header clicked - checking if sticky is working');
                                   openColumnDialog(column);
                                 }}
@@ -6689,6 +6705,8 @@ ${extractionFields}`
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     e.preventDefault();
+                                    // Ensure no events bubble up from resize handle
+                                    return false;
                                   }}
                                   title="Drag to resize column"
                                 >
