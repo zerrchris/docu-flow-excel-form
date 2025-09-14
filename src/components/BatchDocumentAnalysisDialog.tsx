@@ -3,13 +3,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { CheckCircle, XCircle, AlertCircle, FileText, Brain } from 'lucide-react';
+import { CheckCircle, XCircle, AlertCircle, FileText, Brain, Pause, Play, Square } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { DocumentService, type DocumentRecord } from '@/services/documentService';
 import { ExtractionPreferencesService } from '@/services/extractionPreferences';
+import { backgroundAnalyzer, type AnalysisProgress } from '@/utils/backgroundAnalyzer';
 
 interface BatchAnalysisResult {
   rowIndex: number;
@@ -46,108 +47,67 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
   const [progress, setProgress] = useState(0);
   const [abortController, setAbortController] = useState<AbortController | null>(null);
   const [skipRowsWithData, setSkipRowsWithData] = useState(true);
+  const [currentJobId, setCurrentJobId] = useState<string | null>(null);
+  const [isPaused, setIsPaused] = useState(false);
 
-  // Initialize results when dialog opens
+  // Initialize results when dialog opens and check for existing job
   useEffect(() => {
     if (isOpen && documentMap.size > 0) {
-      const initialResults: BatchAnalysisResult[] = [];
-      documentMap.forEach((doc, rowIndex) => {
-        initialResults.push({
-          rowIndex,
-          documentName: doc.stored_filename,
-          status: 'pending'
-        });
-      });
-      setResults(initialResults.sort((a, b) => a.rowIndex - b.rowIndex));
-      setProgress(0);
-    }
-  }, [isOpen, documentMap]);
-
-  const analyzeDocument = async (document: DocumentRecord, rowIndex: number): Promise<Record<string, string> | null> => {
-    const documentUrl = await DocumentService.getDocumentUrl(document.file_path);
-    const isPdf = document.content_type === 'application/pdf' || document.stored_filename.toLowerCase().endsWith('.pdf');
-    
-    // Get extraction fields
-    const extractionFields = columns.map(col => 
-      `${col}: ${columnInstructions[col] || 'Extract this field'}`
-    ).join('\n');
-
-    try {
-      let analysisResult;
-      
-      if (isPdf) {
-        // For PDFs, fetch and convert to base64
-        const response = await fetch(documentUrl);
-        const blob = await response.blob();
-        const reader = new FileReader();
-        const pdfData = await new Promise<string>((resolve) => {
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.readAsDataURL(blob);
-        });
-        
-        const { data, error } = await supabase.functions.invoke('analyze-document', {
-          body: {
-            prompt: `Extract information from this document for the following fields and return as valid JSON:\n${extractionFields}\n\nReturn only a JSON object with field names as keys and extracted values as values. Do not include any markdown, explanations, or additional text.`,
-            imageData: pdfData,
-            fileName: document.stored_filename
-          },
-        });
-        
-        if (error) throw error;
-        analysisResult = data;
+      // Check if there's an existing job running
+      const existingJob = backgroundAnalyzer.getJobStatus();
+      if (existingJob && existingJob.runsheetId === runsheetId) {
+        setCurrentJobId(existingJob.id);
+        setIsAnalyzing(existingJob.status === 'running');
+        setIsPaused(existingJob.status === 'paused');
+        setResults(existingJob.results);
+        setProgress((existingJob.currentIndex / existingJob.documentMap.length) * 100);
       } else {
-        // For images
-        const response = await fetch(documentUrl);
-        const blob = await response.blob();
-        const reader = new FileReader();
-        const imageData = await new Promise<string>((resolve) => {
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.readAsDataURL(blob);
+        const initialResults: BatchAnalysisResult[] = [];
+        documentMap.forEach((doc, rowIndex) => {
+          initialResults.push({
+            rowIndex,
+            documentName: doc.stored_filename,
+            status: 'pending'
+          });
         });
-
-        const { data, error } = await supabase.functions.invoke('analyze-document', {
-          body: {
-            prompt: `Extract information from this document for the following fields and return as valid JSON:\n${extractionFields}\n\nReturn only a JSON object with field names as keys and extracted values as values. Do not include any markdown, explanations, or additional text.`,
-            imageData
-          },
-        });
-        
-        if (error) throw error;
-        analysisResult = data;
+        setResults(initialResults.sort((a, b) => a.rowIndex - b.rowIndex));
+        setProgress(0);
       }
-
-      if (analysisResult?.generatedText) {
-        // Parse the JSON response from AI
-        let extractedData = {};
-        try {
-          extractedData = JSON.parse(analysisResult.generatedText);
-        } catch (e) {
-          // Try to extract JSON from the text
-          const jsonMatch = analysisResult.generatedText.match(/\{[\s\S]*\}/);
-          if (jsonMatch) {
-            extractedData = JSON.parse(jsonMatch[0]);
-          } else {
-            throw new Error('Could not extract valid JSON from AI response');
-          }
-        }
-
-        // Filter to only include columns that exist in our runsheet
-        const filteredData: Record<string, string> = {};
-        Object.keys(extractedData).forEach(key => {
-          if (columns.includes(key) && extractedData[key]) {
-            filteredData[key] = extractedData[key];
-          }
-        });
-
-        return filteredData;
-      }
-      
-      return null;
-    } catch (error) {
-      console.error('Error analyzing document:', error);
-      throw error;
     }
-  };
+  }, [isOpen, documentMap, runsheetId]);
+
+  // Subscribe to background analyzer progress
+  useEffect(() => {
+    const unsubscribe = backgroundAnalyzer.onProgress((progress: AnalysisProgress) => {
+      if (progress.jobId === currentJobId) {
+        setResults(progress.results);
+        setProgress((progress.completed / progress.total) * 100);
+        setIsAnalyzing(progress.status === 'running');
+        setIsPaused(progress.status === 'paused');
+        
+        // Update parent component with current data
+        onDataUpdate(progress.currentData);
+        
+        if (progress.status === 'completed') {
+          const successCount = progress.results.filter(r => r.status === 'success' && (!r.error || !r.error.includes('Skipped'))).length;
+          const errorCount = progress.results.filter(r => r.status === 'error').length;
+          const skippedCount = progress.results.filter(r => r.error && r.error.includes('Skipped')).length;
+          
+          toast({
+            title: "Batch analysis completed",
+            description: `Successfully analyzed ${successCount} documents.${errorCount > 0 ? ` ${errorCount} failed.` : ''}${skippedCount > 0 ? ` ${skippedCount} skipped.` : ''}`,
+          });
+          
+          setCurrentJobId(null);
+          setIsAnalyzing(false);
+          setIsPaused(false);
+        }
+      }
+    });
+
+    return unsubscribe;
+  }, [currentJobId, onDataUpdate, toast]);
+
 
   const startBatchAnalysis = async () => {
     if (documentMap.size === 0) {
@@ -159,186 +119,64 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
       return;
     }
 
-    setIsAnalyzing(true);
-    const controller = new AbortController();
-    setAbortController(controller);
-
-    const documentsToAnalyze = Array.from(documentMap.entries());
-    const totalDocuments = documentsToAnalyze.length;
-    let completedCount = 0;
-    const updatedData = [...currentData];
-
-    // Add warning for page navigation during analysis
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = 'Analysis in progress. Are you sure you want to leave?';
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-
     try {
-      for (const [rowIndex, document] of documentsToAnalyze) {
-        if (controller.signal.aborted) break;
-
-        // Check if we should skip this row due to existing meaningful data
-        // We'll be more intelligent here - only skip if there's actual content data, not just filenames
-        const hasExistingData = updatedData[rowIndex] && columns.some(column => {
-          const value = updatedData[rowIndex][column];
-          // Skip if there's meaningful data that's not just a filename or document reference
-          return value && value.trim() !== '' && 
-                 !value.toLowerCase().includes('.pdf') && 
-                 !value.toLowerCase().includes('.png') && 
-                 !value.toLowerCase().includes('.jpg') && 
-                 !value.toLowerCase().includes('.jpeg') &&
-                 !value.toLowerCase().includes('document') &&
-                 value.length > 5; // Ignore very short values that might be auto-generated
-        });
-        
-        if (skipRowsWithData && hasExistingData) {
-          console.log(`⏭️ Skipping row ${rowIndex} - has existing data`);
-          setResults(prev => prev.map(result => 
-            result.rowIndex === rowIndex 
-              ? { ...result, status: 'success', extractedData: {}, error: 'Skipped - row has existing data' }
-              : result
-          ));
-          completedCount++;
-          setProgress((completedCount / totalDocuments) * 100);
-          continue;
-        }
-
-        console.log(`🔍 Starting analysis for row ${rowIndex}: ${document.stored_filename}`);
-
-        // Update status to analyzing
-        setResults(prev => prev.map(result => 
-          result.rowIndex === rowIndex 
-            ? { ...result, status: 'analyzing' }
-            : result
-        ));
-
-        try {
-          const extractedData = await analyzeDocument(document, rowIndex);
-          
-          if (extractedData && Object.keys(extractedData).length > 0) {
-            // Update the row data
-            if (!updatedData[rowIndex]) {
-              updatedData[rowIndex] = {};
-            }
-            
-            // Merge or overwrite based on user preference
-            if (skipRowsWithData) {
-              // Only add data to empty fields
-              Object.keys(extractedData).forEach(key => {
-                if (!updatedData[rowIndex][key] || updatedData[rowIndex][key].trim() === '') {
-                  updatedData[rowIndex][key] = extractedData[key];
-                }
-              });
-            } else {
-              // Overwrite existing data
-              updatedData[rowIndex] = {
-                ...updatedData[rowIndex],
-                ...extractedData
-              };
-            }
-
-            // Save progress to database immediately after each document
-            try {
-              await supabase.functions.invoke('save-runsheet', {
-                body: {
-                  runsheetId: runsheetId,
-                  runsheetData: {
-                    name: runsheetId, // Placeholder, will be handled by the function
-                    columns: columns,
-                    data: updatedData,
-                    columnInstructions: columnInstructions
-                  }
-                }
-              });
-              console.log(`✅ Saved progress after analyzing row ${rowIndex}`);
-            } catch (saveError) {
-              console.error(`Failed to save progress for row ${rowIndex}:`, saveError);
-              // Continue analysis even if save fails
-            }
-
-            // Update results
-            setResults(prev => prev.map(result => 
-              result.rowIndex === rowIndex 
-                ? { ...result, status: 'success', extractedData }
-                : result
-            ));
-            
-            console.log(`✅ Successfully analyzed document at row ${rowIndex}, extracted ${Object.keys(extractedData).length} fields`);
-          } else {
-            console.log(`⚠️ No data extracted from document at row ${rowIndex}`);
-            throw new Error('No data extracted from document');
-          }
-        } catch (error) {
-          console.error(`Error analyzing document at row ${rowIndex}:`, error);
-          setResults(prev => prev.map(result => 
-            result.rowIndex === rowIndex 
-              ? { ...result, status: 'error', error: error.message }
-              : result
-          ));
-        }
-
-        completedCount++;
-        setProgress((completedCount / totalDocuments) * 100);
-        
-        console.log(`📊 Progress: ${completedCount}/${totalDocuments} documents processed`);
-        
-        // Update parent component with current progress
-        onDataUpdate([...updatedData]);
-      }
-
-      if (!controller.signal.aborted) {
-        // Calculate success count from the actual analysis results, not from state
-        let actualSuccessCount = 0;
-        let actualErrorCount = 0;
-        
-        // Check the final results by iterating through what we actually processed
-        setResults(prev => {
-          const finalResults = [...prev];
-          finalResults.forEach(result => {
-            if (result.status === 'success' && (!result.error || !result.error.includes('Skipped'))) {
-              actualSuccessCount++;
-            } else if (result.status === 'error') {
-              actualErrorCount++;
-            }
-          });
-          return finalResults;
-        });
-        
-        // Wait a bit for state to update, then get the actual counts
-        setTimeout(() => {
-          setResults(prev => {
-            const successCount = prev.filter(r => r.status === 'success' && (!r.error || !r.error.includes('Skipped'))).length;
-            const errorCount = prev.filter(r => r.status === 'error').length;
-            const skippedCount = prev.filter(r => r.error && r.error.includes('Skipped')).length;
-            
-            toast({
-              title: "Batch analysis completed",
-              description: `Successfully analyzed ${successCount} documents.${errorCount > 0 ? ` ${errorCount} failed.` : ''}${skippedCount > 0 ? ` ${skippedCount} skipped.` : ''}`,
-            });
-            return prev;
-          });
-        }, 100);
-      }
-    } catch (error) {
-      console.error('Batch analysis error:', error);
+      const jobId = await backgroundAnalyzer.startAnalysis(
+        runsheetId,
+        columns,
+        columnInstructions,
+        documentMap,
+        currentData,
+        skipRowsWithData
+      );
+      
+      setCurrentJobId(jobId);
+      setIsAnalyzing(true);
+      setIsPaused(false);
+      
       toast({
-        title: "Batch analysis failed",
-        description: "An error occurred during batch analysis. Please try again.",
+        title: "Analysis started",
+        description: "Document analysis is running in the background. You can navigate to other tabs.",
+      });
+    } catch (error) {
+      console.error('Failed to start batch analysis:', error);
+      toast({
+        title: "Failed to start analysis",
+        description: "An error occurred while starting the analysis.",
         variant: "destructive"
       });
-    } finally {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
+    }
+  };
+
+  const pauseAnalysis = () => {
+    if (currentJobId) {
+      backgroundAnalyzer.pauseAnalysis();
+      setIsPaused(true);
       setIsAnalyzing(false);
-      setAbortController(null);
+      toast({
+        title: "Analysis paused",
+        description: "The batch analysis has been paused.",
+      });
+    }
+  };
+
+  const resumeAnalysis = () => {
+    if (currentJobId) {
+      backgroundAnalyzer.resumeAnalysis();
+      setIsPaused(false);
+      setIsAnalyzing(true);
+      toast({
+        title: "Analysis resumed",
+        description: "The batch analysis has been resumed.",
+      });
     }
   };
 
   const handleAbort = () => {
-    if (abortController) {
-      abortController.abort();
+    if (currentJobId) {
+      backgroundAnalyzer.cancelAnalysis();
+      setCurrentJobId(null);
       setIsAnalyzing(false);
+      setIsPaused(false);
       toast({
         title: "Analysis cancelled",
         description: "Batch document analysis has been cancelled.",
@@ -467,25 +305,48 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
           </Button>
           
           <div className="flex gap-2">
-            {isAnalyzing && (
-              <Button variant="destructive" onClick={handleAbort}>
-                Cancel Analysis
+            {!isAnalyzing && !isPaused && (
+              <Button 
+                onClick={startBatchAnalysis} 
+                disabled={documentMap.size === 0}
+                className="flex items-center gap-2"
+              >
+                <Brain className="w-4 h-4" />
+                Start Analysis
               </Button>
             )}
-            {!isAnalyzing && documentMap.size > 0 && (
-              <>
-                {results.length > 0 && results.every(r => r.status === 'success' || r.status === 'error') ? (
-                  <Button variant="outline" disabled className="flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4" />
-                    Analysis Complete
-                  </Button>
-                ) : (
-                  <Button onClick={startBatchAnalysis} className="flex items-center gap-2">
-                    <Brain className="w-4 h-4" />
-                    Start Analysis
-                  </Button>
-                )}
-              </>
+            
+            {isAnalyzing && (
+              <Button 
+                onClick={pauseAnalysis} 
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <Pause className="w-4 h-4" />
+                Pause
+              </Button>
+            )}
+            
+            {isPaused && (
+              <Button 
+                onClick={resumeAnalysis} 
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <Play className="w-4 h-4" />
+                Resume
+              </Button>
+            )}
+            
+            {(isAnalyzing || isPaused) && (
+              <Button 
+                onClick={handleAbort} 
+                variant="destructive"
+                className="flex items-center gap-2"
+              >
+                <Square className="w-4 h-4" />
+                Stop
+              </Button>
             )}
           </div>
         </div>
