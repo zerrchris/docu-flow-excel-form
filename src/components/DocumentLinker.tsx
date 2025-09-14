@@ -54,6 +54,29 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
   const { toast } = useToast();
   const inputId = React.useMemo(() => `runsheet-file-input-${rowIndex}-${runsheetId}`,[rowIndex, runsheetId]);
 
+  const openFileDialog = React.useCallback(() => {
+    const input = fileInputRef.current;
+    if (!input) {
+      console.error('🔧 DocumentLinker: file input not available');
+      return;
+    }
+    try {
+      // Prefer native showPicker when available (more reliable inside iframes)
+      // @ts-ignore - not yet in TS lib for all targets
+      if (typeof input.showPicker === 'function') {
+        // @ts-ignore
+        input.showPicker();
+        console.log('🔧 DocumentLinker: showPicker() called');
+      } else {
+        input.click();
+        console.log('🔧 DocumentLinker: input.click() called');
+      }
+    } catch (err) {
+      console.warn('🔧 DocumentLinker: showPicker/click failed, retrying with click()', err);
+      try { input.click(); } catch {}
+    }
+  }, []);
+
   // Update local filename when props change, but only if we haven't made local changes
   React.useEffect(() => {
     console.log('🔧 DocumentLinker: Props changed for row', rowIndex, {
@@ -1052,10 +1075,20 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
         <div className="flex items-center justify-center gap-2 flex-1">
           <label htmlFor={inputId} className="flex-1">
             <Button
+              type="button"
               variant="outline"
               size="sm"
               disabled={isUploading}
               className="h-8 text-xs flex-1 w-full cursor-pointer"
+              onClick={openFileDialog}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  openFileDialog();
+                }
+              }}
+              aria-controls={inputId}
+              aria-label="Add file"
             >
               <Upload className="w-3 h-3 mr-1" />
               {isUploading ? 'Uploading...' : 'Add File'}
