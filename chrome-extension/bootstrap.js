@@ -44,8 +44,34 @@
         btn.addEventListener('mouseenter', () => btn && (btn.style.transform = 'scale(1.1)'));
         btn.addEventListener('mouseleave', () => btn && (btn.style.transform = 'scale(1)'));
         btn.addEventListener('click', async () => {
-          try { chrome.runtime.sendMessage({ action: 'openRunsheet' }); } catch {}
-          try { chrome.runtime.sendMessage({ action: 'ensureContentScript' }); } catch {}
+          console.log(LOG_PREFIX, 'button clicked');
+          
+          try { 
+            // First ensure content script is loaded
+            const response = await chrome.runtime.sendMessage({ action: 'ensureContentScript' });
+            console.log(LOG_PREFIX, 'ensureContentScript response:', response);
+            
+            // Wait a bit longer to ensure content script is fully initialized
+            setTimeout(() => {
+              console.log(LOG_PREFIX, 'triggering runsheet UI');
+              
+              // Dispatch a custom event to trigger runsheet UI
+              window.dispatchEvent(new CustomEvent('runsheetpro-open'));
+              
+              // Also try to call the global function if it exists
+              if (window.openRunsheetUI) {
+                console.log(LOG_PREFIX, 'calling global openRunsheetUI function');
+                window.openRunsheetUI();
+              } else {
+                console.log(LOG_PREFIX, 'global openRunsheetUI function not found');
+              }
+            }, 200);
+            
+            // Notify background
+            chrome.runtime.sendMessage({ action: 'openRunsheet' });
+          } catch (e) {
+            console.warn(LOG_PREFIX, 'click handler error:', e);
+          }
           
           // Fallback: if UI didn't appear, open the popup
           setTimeout(() => {
@@ -53,9 +79,12 @@
             const selector = document.getElementById('runsheetpro-runsheet-selector');
             const signin = document.getElementById('runsheetpro-signin-popup');
             if (!frame && !selector && !signin) {
+              console.log(LOG_PREFIX, 'no UI detected, opening popup as fallback');
               try { chrome.action.openPopup(); } catch {}
+            } else {
+              console.log(LOG_PREFIX, 'UI detected successfully');
             }
-          }, 700);
+          }, 1500);
         });
         document.body.appendChild(btn);
         console.log(LOG_PREFIX, 'button created');

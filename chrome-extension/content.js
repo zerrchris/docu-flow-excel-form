@@ -2821,6 +2821,28 @@ async function init() {
     console.log('🔧 RunsheetPro Extension: User not authenticated, button will show sign-in prompt');
   }
   
+  // Setup global event listeners for bootstrap communication
+  window.addEventListener('runsheetpro-open', async () => {
+    console.log('🔧 RunsheetPro Extension: Custom event received from bootstrap');
+    const isAuthenticated = await checkAuth();
+    if (isAuthenticated) {
+      showRunsheetSelector();
+    } else {
+      showSignInPopup();
+    }
+  });
+
+  // Expose global function for bootstrap fallback
+  window.openRunsheetUI = async () => {
+    console.log('🔧 RunsheetPro Extension: Global function called from bootstrap');
+    const isAuthenticated = await checkAuth();
+    if (isAuthenticated) {
+      showRunsheetSelector();
+    } else {
+      showSignInPopup();
+    }
+  };
+  
   console.log('🔧 RunsheetPro Extension: Initialized successfully');
 }
 

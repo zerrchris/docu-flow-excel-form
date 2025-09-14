@@ -1,6 +1,15 @@
 // Background script for RunsheetPro Runsheet Assistant
 console.log('RunsheetPro extension background script loaded');
 
+// Add error handling for service worker
+self.addEventListener('error', (event) => {
+  console.error('Service worker error:', event.error);
+});
+
+self.addEventListener('unhandledrejection', (event) => {
+  console.error('Service worker unhandled rejection:', event.reason);
+});
+
 // Handle messages from content scripts
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log('Background received message:', message);
@@ -36,6 +45,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'openPopup') {
     // Handle popup opening requests
     chrome.action.openPopup();
+    sendResponse({ success: true });
+  }
+
+  if (message.action === 'openRunsheet') {
+    // Handle runsheet opening requests from the floating button
+    // Forward this to the content script or trigger the runsheet UI
+    console.log('Opening runsheet from floating button');
     sendResponse({ success: true });
   }
 
