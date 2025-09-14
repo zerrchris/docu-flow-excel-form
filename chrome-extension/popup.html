@@ -1,176 +1,118 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RunsheetPro Assistant</title>
+  <meta charset="utf-8">
   <style>
     body {
-      width: 320px;
-      min-height: 200px;
-      margin: 0;
-      padding: 16px;
+      width: 300px;
+      padding: 20px;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #f8fafc;
     }
-
     .header {
-      display: flex;
-      align-items: center;
-      margin-bottom: 16px;
-      padding-bottom: 12px;
-      border-bottom: 1px solid #e2e8f0;
-    }
-
-    .logo {
-      width: 24px;
-      height: 24px;
-      margin-right: 8px;
-      background: #3b82f6;
-      border-radius: 4px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-weight: bold;
-      font-size: 12px;
-    }
-
-    .title {
-      font-size: 16px;
-      font-weight: 600;
-      color: #1e293b;
-    }
-
-    .welcome-message {
-      background: #eff6ff;
-      border: 1px solid #bfdbfe;
-      border-radius: 6px;
-      padding: 12px;
-      margin-bottom: 16px;
-      font-size: 13px;
-      color: #1e40af;
-    }
-
-    .status {
-      padding: 8px 12px;
-      border-radius: 6px;
-      font-size: 13px;
-      font-weight: 500;
-      margin-bottom: 16px;
       text-align: center;
+      margin-bottom: 20px;
     }
-
+    .logo {
+      width: 48px;
+      height: 48px;
+      margin: 0 auto 10px;
+    }
+    .title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1f2937;
+      margin: 0;
+    }
+    .subtitle {
+      font-size: 12px;
+      color: #6b7280;
+      margin: 4px 0 0 0;
+    }
+    .status {
+      padding: 10px;
+      border-radius: 6px;
+      margin: 16px 0;
+      text-align: center;
+      font-size: 14px;
+    }
     .status.active {
       background: #dcfce7;
-      color: #15803d;
+      color: #166534;
       border: 1px solid #bbf7d0;
     }
-
     .status.inactive {
-      background: #fef2f2;
-      color: #dc2626;
+      background: #fee2e2;
+      color: #991b1b;
       border: 1px solid #fecaca;
     }
-
-    button {
-      width: 100%;
+    .actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .btn {
       padding: 8px 16px;
-      margin-bottom: 8px;
-      border: none;
+      border: 1px solid #d1d5db;
       border-radius: 6px;
-      font-size: 13px;
-      font-weight: 500;
+      background: #ffffff;
+      color: #374151;
+      font-size: 14px;
       cursor: pointer;
       transition: all 0.2s;
     }
-
-    .btn-primary {
+    .btn:hover {
+      background: #f9fafb;
+      border-color: #9ca3af;
+    }
+    .btn.primary {
       background: #3b82f6;
-      color: white;
+      color: #ffffff;
+      border-color: #3b82f6;
     }
-
-    .btn-primary:hover {
+    .btn.primary:hover {
       background: #2563eb;
+      border-color: #2563eb;
     }
-
-    .btn-secondary {
-      background: #f1f5f9;
-      color: #475569;
-      border: 1px solid #e2e8f0;
+    .info-box {
+      background: #e8f4f8;
+      border: 1px solid #3498db;
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 16px;
+      font-size: 12px;
     }
-
-    .btn-secondary:hover {
-      background: #e2e8f0;
+    .info-box p {
+      margin: 4px 0;
+      color: #2c3e50;
     }
-
-    .btn-success {
-      background: #10b981;
-      color: white;
-    }
-
-    .btn-success:hover {
-      background: #059669;
+    .info-box strong {
+      color: #2980b9;
     }
   </style>
 </head>
 <body>
   <div class="header">
-    <div class="logo">RP</div>
-    <div class="title">RunsheetPro</div>
+    <img src="icons/icon48.png" alt="RunsheetPro" class="logo">
+    <h1 class="title">RunsheetPro</h1>
+    <p class="subtitle">Runsheet Assistant</p>
   </div>
-
-  <div class="welcome-message">
-    Click "Activate Extension" to start using RunsheetPro on any webpage for document processing.
-  </div>
-
-  <div id="status" class="status inactive">Extension Inactive</div>
-
-  <!-- Auth Section -->
-  <div id="auth-section" style="display: none;">
-    <div style="margin-bottom: 16px; padding: 16px; background: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px;">
-      <h4 style="margin: 0 0 8px 0; font-size: 14px; color: #92400e;">Sign In Required</h4>
-      <p style="margin: 0; font-size: 12px; color: #92400e;">Please sign in to access your runsheets</p>
-    </div>
-    
-    <form id="signin-form" style="margin-bottom: 16px;">
-      <input type="email" id="email" placeholder="Email" required style="
-        width: 100%; 
-        padding: 8px 12px; 
-        margin-bottom: 8px; 
-        border: 1px solid #d1d5db; 
-        border-radius: 4px; 
-        font-size: 13px;
-        box-sizing: border-box;
-      ">
-      <input type="password" id="password" placeholder="Password" required style="
-        width: 100%; 
-        padding: 8px 12px; 
-        margin-bottom: 12px; 
-        border: 1px solid #d1d5db; 
-        border-radius: 4px; 
-        font-size: 13px;
-        box-sizing: border-box;
-      ">
-      <button type="submit" id="signin-btn" class="btn-primary">Sign In</button>
-    </form>
-    
-    <div style="text-align: center; margin-bottom: 12px;">
-      <span style="font-size: 12px; color: #6b7280;">Don't have an account? </span>
-      <button id="show-signup" style="background: none; border: none; color: #3b82f6; font-size: 12px; cursor: pointer; text-decoration: underline;">Sign Up</button>
-    </div>
-  </div>
-
-  <button id="toggleBtn" class="btn-primary">Activate Extension</button>
-  <button id="viewModeBtn" class="btn-secondary" style="display: none;">Switch to Full View</button>
-  <button id="screenshotBtn" class="btn-secondary" style="display: none;">Screenshot</button>
-  <button id="openApp" class="btn-success">Open Full App</button>
   
-  <div id="auth-status" style="display: none; margin-top: 12px; padding: 8px; background: #dcfce7; border: 1px solid #bbf7d0; border-radius: 4px; font-size: 12px; color: #15803d; text-align: center;">
-    Signed in successfully!
+  <div class="info-box">
+    <p><strong>📝 First time using?</strong></p>
+    <p>Refresh the current page after activating to begin working with your runsheets.</p>
+  </div>
+  
+  <div id="status" class="status inactive">
+    Extension not active
+  </div>
+  
+  <div class="actions">
+    <button id="toggleBtn" class="btn primary">Activate Extension</button>
+    <button id="viewModeBtn" class="btn" style="display: none;">Switch to Full View</button>
+    <button id="screenshotBtn" class="btn" style="display: none;">📷 Screenshot</button>
+    <button id="openApp" class="btn">Open Full App</button>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="popup.js"></script>
 </body>
 </html>

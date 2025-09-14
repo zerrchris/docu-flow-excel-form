@@ -60,46 +60,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (sender.tab && sender.tab.id) {
         chrome.scripting.executeScript({
           target: { tabId: sender.tab.id },
-          func: () => {
-            try {
-              // @ts-ignore - markers set by IIFEs in scripts
-              return {
-                contentLoaded: !!window.runsheetProContentScriptLoaded,
-                stateLoaded: !!window.runsheetProPersistentStateLoaded,
-              };
-            } catch {
-              return { contentLoaded: false, stateLoaded: false };
-            }
-          }
-        }).then((results) => {
-          const res = results && results[0] ? results[0].result : { contentLoaded: false, stateLoaded: false };
-          const files = [];
-          if (!res.stateLoaded) files.push('persistent-state.js', 'error-handler.js');
-          if (!res.contentLoaded) files.push('content.js');
-
-          if (files.length === 0) {
-            sendResponse({ success: true, skipped: true });
-            return;
-          }
-
-          chrome.scripting.executeScript({
-            target: { tabId: sender.tab.id },
-            files
-          }).then(() => sendResponse({ success: true, injected: files }))
-            .catch(err => {
-              console.warn('ensureContentScript failed:', err);
-              sendResponse({ success: false, error: err.message });
-            });
-        }).catch(err => {
-          // Detection failed – inject content as fallback
-          chrome.scripting.executeScript({
-            target: { tabId: sender.tab.id },
-            files: ['content.js']
-          }).then(() => sendResponse({ success: true, fallback: true }))
-            .catch(e => {
-              console.warn('ensureContentScript fallback failed:', e);
-              sendResponse({ success: false, error: e.message });
-            });
+          files: ['persistent-state.js', 'error-handler.js', 'content.js']
+        }).then(() => sendResponse({ success: true })).catch(err => {
+          console.warn('ensureContentScript failed:', err);
+          sendResponse({ success: false, error: err.message });
         });
         return true; // async
       }
@@ -123,42 +87,16 @@ chrome.runtime.onInstalled.addListener((details) => {
   }
 });
 
-// Handle tab updates to inject content script if needed, but avoid duplicates
+// Handle tab updates to inject content script if needed
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.status === 'complete' && tab.url && !tab.url.startsWith('chrome://')) {
-    try {
-      chrome.scripting.executeScript({
-        target: { tabId },
-        func: () => {
-          try {
-            // @ts-ignore - checking marker set by content.js IIFE
-            return !!window.runsheetProContentScriptLoaded;
-          } catch {
-            return false;
-          }
-        }
-      }).then((results) => {
-        const alreadyLoaded = Array.isArray(results) && results[0] && results[0].result === true;
-        if (!alreadyLoaded) {
-          chrome.scripting.executeScript({
-            target: { tabId },
-            files: ['content.js']
-          }).catch(err => {
-            // Ignore errors for pages where we can't inject (like chrome:// pages)
-            console.log('Could not inject content script:', err.message);
-          });
-        } else {
-          console.log('Content script already loaded, skipping inject for tab', tabId);
-        }
-      }).catch(err => {
-        // If detection fails, try to inject once
-        chrome.scripting.executeScript({
-          target: { tabId },
-          files: ['content.js']
-        }).catch(e => console.log('Could not inject content script:', e.message));
-      });
-    } catch (e) {
-      console.log('onUpdated injection check failed:', e);
-    }
+    // Ensure content script is injected
+    chrome.scripting.executeScript({
+      target: { tabId: tabId },
+      files: ['content.js']
+    }).catch(err => {
+      // Ignore errors for pages where we can't inject (like chrome:// pages)
+      console.log('Could not inject content script:', err.message);
+    });
   }
 });

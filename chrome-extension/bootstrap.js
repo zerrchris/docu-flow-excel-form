@@ -1,13 +1,6 @@
 // Lightweight bootstrap to ensure the floating button appears even if the heavy content.js fails to parse
 (function () {
   try {
-    // Prevent multiple execution
-    if (window.runsheetProBootstrapLoaded) {
-      console.log('🟦 RunsheetPro Bootstrap: already loaded, skipping...');
-      return;
-    }
-    window.runsheetProBootstrapLoaded = true;
-
     const LOG_PREFIX = '🟦 RunsheetPro Bootstrap:';
     console.log(LOG_PREFIX, 'loaded');
 
@@ -52,25 +45,34 @@
         btn.addEventListener('mouseleave', () => btn && (btn.style.transform = 'scale(1)'));
         btn.addEventListener('click', async () => {
           console.log(LOG_PREFIX, 'button clicked');
-          try {
-            // Directly try to open the UI without reinjecting scripts
-            console.log(LOG_PREFIX, 'triggering runsheet UI');
-            window.dispatchEvent(new CustomEvent('runsheetpro-open'));
-
-            if (typeof window.openRunsheetUI === 'function') {
-              console.log(LOG_PREFIX, 'calling global openRunsheetUI function');
-              window.openRunsheetUI();
-            } else {
-              console.log(LOG_PREFIX, 'global openRunsheetUI function not found, opening popup');
-              try { chrome.action.openPopup(); } catch {}
-            }
-
-            // Notify background (optional)
-            try { chrome.runtime.sendMessage({ action: 'openRunsheet' }); } catch {}
+          
+          try { 
+            // First ensure content script is loaded
+            const response = await chrome.runtime.sendMessage({ action: 'ensureContentScript' });
+            console.log(LOG_PREFIX, 'ensureContentScript response:', response);
+            
+            // Wait a bit longer to ensure content script is fully initialized
+            setTimeout(() => {
+              console.log(LOG_PREFIX, 'triggering runsheet UI');
+              
+              // Dispatch a custom event to trigger runsheet UI
+              window.dispatchEvent(new CustomEvent('runsheetpro-open'));
+              
+              // Also try to call the global function if it exists
+              if (window.openRunsheetUI) {
+                console.log(LOG_PREFIX, 'calling global openRunsheetUI function');
+                window.openRunsheetUI();
+              } else {
+                console.log(LOG_PREFIX, 'global openRunsheetUI function not found');
+              }
+            }, 200);
+            
+            // Notify background
+            chrome.runtime.sendMessage({ action: 'openRunsheet' });
           } catch (e) {
             console.warn(LOG_PREFIX, 'click handler error:', e);
           }
-
+          
           // Fallback: if UI didn't appear, open the popup
           setTimeout(() => {
             const frame = document.getElementById('runsheetpro-runsheet-frame');
