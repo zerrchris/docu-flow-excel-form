@@ -292,7 +292,7 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
             {!isAnalyzing && results.length > 0 && results.every(r => r.status === 'success' || r.status === 'error') && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <CheckCircle className="w-4 h-4 text-green-500" />
-                Analysis Complete - You can close this dialog
+                Analysis Complete
               </div>
             )}
             
