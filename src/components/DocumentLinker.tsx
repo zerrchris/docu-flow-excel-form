@@ -246,7 +246,7 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
       formData.append('file', processedFile);
       formData.append('runsheetId', actualRunsheetId.trim());
       formData.append('rowIndex', rowIndex.toString());
-      formData.append('originalFilename', processedFile.name); // Use processed filename to ensure correct extension
+      formData.append('originalFilename', file.name); // Use original filename, not processed filename
       formData.append('useSmartNaming', 'false'); // Disable auto smart naming on upload
 
       // Get auth token
