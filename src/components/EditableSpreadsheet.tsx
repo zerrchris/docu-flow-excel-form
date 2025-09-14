@@ -3673,7 +3673,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     const rowActionsWidth = 60; // Narrower row actions column width (no drag handle)
     const dataColumnsWidth = columns.reduce((total, column) => total + getColumnWidth(column), 0);
     const documentFileNameWidth = showDocumentFileNameColumn ? 350 : 0;
-    const actionsColumnWidth = 600; // Fixed width for actions column (Document Linker) - increased to show all buttons
+    const actionsColumnWidth = 480; // Reduced width for actions column to minimize unnecessary space
     return rowActionsWidth + dataColumnsWidth + documentFileNameWidth + actionsColumnWidth;
   };
 
@@ -6773,17 +6773,17 @@ ${extractionFields}`
                     </th>
                   )}
                   
-                  {/* Actions column header - not draggable */}
-                      <th
-                       className="font-bold text-center border-b border-border relative p-0 bg-background sticky top-0"
-                      style={{ 
-                        width: "600px", 
-                        minWidth: "600px",
-                        backgroundColor: 'hsl(var(--background))',
-                        position: 'sticky',
-                        top: '0px',
-                        zIndex: 999
-                      }}
+                   {/* Actions column header - not draggable */}
+                       <th
+                        className="font-bold text-center border-b border-border relative p-0 bg-background sticky top-0"
+                       style={{ 
+                         width: "480px", 
+                         minWidth: "480px",
+                         backgroundColor: 'hsl(var(--background))',
+                         position: 'sticky',
+                         top: '0px',
+                         zIndex: 999
+                       }}
                      >
                     <div className="w-full h-full px-4 py-2 flex gap-2">
                       <Button
@@ -7102,16 +7102,16 @@ ${extractionFields}`
                        );
                      })()}
                     
-                        {/* Actions column - Document management */}
-                      <td 
-                        className="p-0 overflow-hidden"
-                        style={{ 
-                          width: "650px", 
-                          minWidth: "650px",
-                          maxWidth: "650px",
-                          height: `${getRowHeight(rowIndex)}px`,
-                          minHeight: `${getRowHeight(rowIndex)}px`
-                        }}
+                         {/* Actions column - Document management */}
+                       <td 
+                         className="p-0 overflow-hidden"
+                         style={{ 
+                           width: "480px", 
+                           minWidth: "480px",
+                           maxWidth: "480px",
+                           height: `${getRowHeight(rowIndex)}px`,
+                           minHeight: `${getRowHeight(rowIndex)}px`
+                         }}
                      >
                           <div className="bg-background border border-border rounded-md p-2 h-full min-h-[60px] flex gap-2 overflow-visible">
                             {/* Row Actions (Move buttons only) */}
