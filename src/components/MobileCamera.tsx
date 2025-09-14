@@ -4,7 +4,7 @@ import { Capacitor } from '@capacitor/core';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Camera as CameraIcon, Upload, Image as ImageIcon, ZoomIn, FileText, Calendar } from 'lucide-react';
+import { Camera as CameraIcon, Upload, Image as ImageIcon, ZoomIn, FileText, Calendar, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import RunsheetSelectionDialog from './RunsheetSelectionDialog';
@@ -22,6 +22,8 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
   const [fullscreenPhoto, setFullscreenPhoto] = useState<{url: string, name: string} | null>(null);
   const [runsheetDocuments, setRunsheetDocuments] = useState<Array<any>>([]);
   const [loadingDocuments, setLoadingDocuments] = useState(false);
+  const [capturedPages, setCapturedPages] = useState<Array<{ dataUrl: string; name: string }>>([]);
+  const [isUploadingToRunsheet, setIsUploadingToRunsheet] = useState(false);
 
   const checkCameraPermissions = async () => {
     if (!Capacitor.isNativePlatform()) {
@@ -54,7 +56,7 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
     if (runsheet) {
       toast({
         title: isNew ? "Runsheet Created" : "Runsheet Selected",
-        description: `Photos will be added to "${runsheet.name}"`,
+        description: `Ready to capture photos for "${runsheet.name}"`,
       });
       // Load existing documents for this runsheet
       await loadRunsheetDocuments(runsheet.id);
@@ -106,15 +108,6 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
         return;
       }
 
-      if (!selectedRunsheet) {
-        toast({
-          title: "No Runsheet Selected",
-          description: "Please select a runsheet first.",
-          variant: "destructive",
-        });
-        return;
-      }
-
       setIsUploading(true);
 
       const image = await Camera.getPhoto({
@@ -125,7 +118,15 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
       });
 
       if (image.dataUrl) {
-        await uploadPhotoToRunsheet(image.dataUrl);
+        // Add to captured pages instead of uploading immediately
+        const timestamp = Date.now();
+        const fileName = `page_${capturedPages.length + 1}_${timestamp}.jpg`;
+        setCapturedPages(prev => [...prev, { dataUrl: image.dataUrl!, name: fileName }]);
+        
+        toast({
+          title: "Page Captured",
+          description: `Page ${capturedPages.length + 1} captured. Take more photos or upload to runsheet.`,
+        });
       }
     } catch (error) {
       console.error('Error taking picture:', error);
@@ -151,15 +152,6 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
         return;
       }
 
-      if (!selectedRunsheet) {
-        toast({
-          title: "No Runsheet Selected",
-          description: "Please select a runsheet first.",
-          variant: "destructive",
-        });
-        return;
-      }
-
       setIsUploading(true);
 
       const image = await Camera.getPhoto({
@@ -170,7 +162,15 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
       });
 
       if (image.dataUrl) {
-        await uploadPhotoToRunsheet(image.dataUrl);
+        // Add to captured pages instead of uploading immediately
+        const timestamp = Date.now();
+        const fileName = `gallery_${capturedPages.length + 1}_${timestamp}.jpg`;
+        setCapturedPages(prev => [...prev, { dataUrl: image.dataUrl!, name: fileName }]);
+        
+        toast({
+          title: "Photo Added",
+          description: `Photo added to capture session. Take more photos or upload to runsheet.`,
+        });
       }
     } catch (error) {
       console.error('Error selecting from gallery:', error);
@@ -184,16 +184,28 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
     }
   };
 
-  const uploadPhotoToRunsheet = async (dataUrl: string) => {
+  const uploadAllPagesToRunsheet = async () => {
+    if (!selectedRunsheet) {
+      toast({
+        title: "No Runsheet Selected",
+        description: "Please select a runsheet first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (capturedPages.length === 0) {
+      toast({
+        title: "No Pages Captured",
+        description: "Please capture some photos first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploadingToRunsheet(true);
+
     try {
-      if (!selectedRunsheet) {
-        throw new Error('No runsheet selected');
-      }
-
-      // Convert data URL to blob
-      const response = await fetch(dataUrl);
-      const blob = await response.blob();
-
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -205,79 +217,126 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
         return;
       }
 
-      // Generate filename
-      const timestamp = Date.now();
-      const fileName = `mobile_document_${timestamp}.jpg`;
+      let successCount = 0;
+      let errorCount = 0;
 
-      // Create file from blob
-      const file = new File([blob], fileName, { type: 'image/jpeg' });
+      // Upload each page separately
+      for (let i = 0; i < capturedPages.length; i++) {
+        const page = capturedPages[i];
+        
+        try {
+          // Convert data URL to blob
+          const response = await fetch(page.dataUrl);
+          const blob = await response.blob();
 
-      // Create form data
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('runsheetId', selectedRunsheet.id);
-      formData.append('originalFilename', fileName);
+          // Generate filename
+          const timestamp = Date.now();
+          const fileName = `mobile_document_${timestamp}_page_${i + 1}.jpg`;
 
-      // Call edge function to add document to next available row
-      const { data: result, error } = await supabase.functions.invoke(
-        'add-mobile-document-to-runsheet',
-        {
-          body: formData,
+          // Create file from blob
+          const file = new File([blob], fileName, { type: 'image/jpeg' });
+
+          // Create form data
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('runsheetId', selectedRunsheet.id);
+          formData.append('originalFilename', fileName);
+
+          // Call edge function to add document to next available row
+          const { data: result, error } = await supabase.functions.invoke(
+            'add-mobile-document-to-runsheet',
+            {
+              body: formData,
+            }
+          );
+
+          if (error) {
+            throw error;
+          }
+
+          if (!result.success) {
+            throw new Error(result.error || 'Failed to add document to runsheet');
+          }
+
+          // Add to recent photos
+          const newPhoto = { url: result.fileUrl, name: result.storedFilename };
+          setRecentPhotos(prev => [newPhoto, ...prev.slice(0, 4)]);
+
+          // Add to runsheet documents list
+          if (result.document) {
+            setRunsheetDocuments(prev => [...prev, result.document].sort((a, b) => a.row_index - b.row_index));
+          }
+
+          // Notify parent component
+          onPhotoUploaded?.(result.fileUrl, result.storedFilename);
+
+          successCount++;
+        } catch (error) {
+          console.error(`Error uploading page ${i + 1}:`, error);
+          errorCount++;
         }
-      );
-
-      if (error) {
-        throw error;
       }
 
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to add document to runsheet');
+      // Clear captured pages after successful upload
+      setCapturedPages([]);
+
+      if (successCount > 0) {
+        toast({
+          title: "Upload Complete",
+          description: `${successCount} photo${successCount !== 1 ? 's' : ''} uploaded successfully${errorCount > 0 ? `, ${errorCount} failed` : ''}.`,
+        });
+      } else {
+        toast({
+          title: "Upload Failed",
+          description: "Failed to upload any photos. Please try again.",
+          variant: "destructive",
+        });
       }
-
-      // Add to recent photos
-      const newPhoto = { url: result.fileUrl, name: result.storedFilename };
-      setRecentPhotos(prev => [newPhoto, ...prev.slice(0, 4)]);
-
-      // Add to runsheet documents list
-      if (result.document) {
-        setRunsheetDocuments(prev => [...prev, result.document].sort((a, b) => a.row_index - b.row_index));
-      }
-
-      // Notify parent component
-      onPhotoUploaded?.(result.fileUrl, result.storedFilename);
-
-      toast({
-        title: "Photo Added",
-        description: result.message,
-      });
 
     } catch (error: any) {
-      console.error('Error uploading photo to runsheet:', error);
+      console.error('Error uploading photos to runsheet:', error);
       toast({
         title: "Upload Failed",
-        description: error.message || "Failed to upload photo. Please try again.",
+        description: error.message || "Failed to upload photos. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsUploadingToRunsheet(false);
     }
+  };
+
+  const clearCapturedPages = () => {
+    setCapturedPages([]);
+    toast({
+      title: "Pages Cleared",
+      description: "All captured pages have been cleared.",
+    });
+  };
+
+  const removePage = (index: number) => {
+    setCapturedPages(prev => prev.filter((_, i) => i !== index));
+    toast({
+      title: "Page Removed",
+      description: `Page ${index + 1} has been removed.`,
+    });
   };
 
   // Fallback file input for web browsers
   const handleFileInputChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (!selectedRunsheet) {
-        toast({
-          title: "No Runsheet Selected",
-          description: "Please select a runsheet first.",
-          variant: "destructive",
-        });
-        return;
-      }
-
       const reader = new FileReader();
       reader.onload = async (e) => {
         if (e.target?.result) {
-          await uploadPhotoToRunsheet(e.target.result as string);
+          // Add to captured pages instead of uploading immediately
+          const timestamp = Date.now();
+          const fileName = `file_${capturedPages.length + 1}_${timestamp}.jpg`;
+          setCapturedPages(prev => [...prev, { dataUrl: e.target!.result as string, name: fileName }]);
+          
+          toast({
+            title: "File Added",
+            description: `File added to capture session. Take more photos or upload to runsheet.`,
+          });
         }
       };
       reader.readAsDataURL(file);
@@ -290,10 +349,15 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
         <h2 className="text-xl font-semibold">Document Capture</h2>
         <p className="text-muted-foreground">
           {selectedRunsheet 
-            ? `Adding photos to: ${selectedRunsheet.name}`
+            ? `Ready to capture for: ${selectedRunsheet.name}`
             : "Select a runsheet to start capturing documents"
           }
         </p>
+        {capturedPages.length > 0 && (
+          <p className="text-sm text-primary font-medium">
+            {capturedPages.length} page{capturedPages.length !== 1 ? 's' : ''} captured
+          </p>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -312,7 +376,7 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
         {/* Camera Button */}
         <Button 
           onClick={takePicture}
-          disabled={isUploading || !selectedRunsheet}
+          disabled={isUploading}
           variant="default"
           className="h-24 flex flex-col gap-2"
         >
@@ -325,7 +389,7 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
         {Capacitor.isNativePlatform() ? (
           <Button 
             onClick={selectFromGallery}
-            disabled={isUploading || !selectedRunsheet}
+            disabled={isUploading}
             variant="outline"
             className="h-24 flex flex-col gap-2"
           >
@@ -335,7 +399,7 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
         ) : (
           <div className="relative">
             <Button 
-              disabled={isUploading || !selectedRunsheet}
+              disabled={isUploading}
               variant="outline"
               className="h-24 w-full flex flex-col gap-2"
               onClick={() => document.getElementById('file-input')?.click()}
@@ -353,6 +417,70 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
           </div>
         )}
       </div>
+
+      {/* Captured Pages Preview */}
+      {capturedPages.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-medium">Captured Pages ({capturedPages.length})</h3>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={clearCapturedPages}
+                disabled={isUploadingToRunsheet}
+              >
+                Clear All
+              </Button>
+              <Button
+                size="sm"
+                onClick={uploadAllPagesToRunsheet}
+                disabled={!selectedRunsheet || isUploadingToRunsheet}
+                className="gap-1"
+              >
+                {isUploadingToRunsheet ? (
+                  <>
+                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                    Uploading...
+                  </>
+                ) : (
+                  <>Upload to Runsheet</>
+                )}
+              </Button>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            {capturedPages.map((page, index) => (
+              <div key={index} className="relative">
+                <img
+                  src={page.dataUrl}
+                  alt={`Page ${index + 1}`}
+                  className="w-full h-20 object-cover rounded border"
+                />
+                <div className="absolute top-1 left-1 bg-black/70 text-white text-xs px-1 rounded">
+                  {index + 1}
+                </div>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  className="absolute top-1 right-1 h-5 w-5 p-0 text-xs"
+                  onClick={() => removePage(index)}
+                >
+                  ×
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="absolute bottom-1 right-1 h-5 w-5 p-0"
+                  onClick={() => setFullscreenPhoto({ url: page.dataUrl, name: `Page ${index + 1}` })}
+                >
+                  <ZoomIn className="h-2 w-2" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Recent Photos */}
       {recentPhotos.length > 0 && (
