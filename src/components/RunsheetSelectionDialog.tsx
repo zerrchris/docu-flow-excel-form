@@ -68,6 +68,7 @@ const RunsheetSelectionDialog: React.FC<RunsheetSelectionDialogProps> = ({
       const { data, error } = await supabase
         .from('runsheets')
         .select('id, name, created_at, updated_at, data, columns')
+        .eq('user_id', user.id)
         .order('updated_at', { ascending: false });
 
       if (error) {
@@ -118,9 +119,7 @@ const RunsheetSelectionDialog: React.FC<RunsheetSelectionDialogProps> = ({
     setCreatingNew(false);
   };
 
-  const handleSkipRunsheet = () => {
-    onRunsheetSelected(null);
-  };
+  // Skip option removed to enforce runsheet selection in mobile capture flow
 
   // Filter runsheets based on search query
   const filteredRunsheets = runsheets.filter(runsheet =>
@@ -210,15 +209,10 @@ const RunsheetSelectionDialog: React.FC<RunsheetSelectionDialogProps> = ({
               )}
             </div>
 
-            <DialogFooter className="flex justify-between gap-2 pt-4 border-t">
-              <div className="flex gap-2">
-                <Button variant="ghost" onClick={handleSkipRunsheet}>
-                  Skip (No Runsheet)
-                </Button>
-                <Button variant="outline" onClick={() => onOpenChange(false)}>
-                  Cancel
-                </Button>
-              </div>
+            <DialogFooter className="flex justify-end gap-2 pt-4 border-t">
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
               <Button onClick={() => setShowCreateNew(true)} className="gap-2">
                 <Plus className="h-4 w-4" />
                 Create New Runsheet
@@ -252,23 +246,18 @@ const RunsheetSelectionDialog: React.FC<RunsheetSelectionDialogProps> = ({
               <Button variant="outline" onClick={() => setShowCreateNew(false)}>
                 Back to Selection
               </Button>
-              <div className="flex gap-2">
-                <Button variant="ghost" onClick={handleSkipRunsheet}>
-                  Skip (No Runsheet)
-                </Button>
-                <Button 
-                  onClick={handleCreateNewRunsheet}
-                  disabled={creatingNew || !newRunsheetName.trim()}
-                  className="gap-2"
-                >
-                  {creatingNew ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Plus className="h-4 w-4" />
-                  )}
-                  Create Runsheet
-                </Button>
-              </div>
+              <Button 
+                onClick={handleCreateNewRunsheet}
+                disabled={creatingNew || !newRunsheetName.trim()}
+                className="gap-2"
+              >
+                {creatingNew ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Plus className="h-4 w-4" />
+                )}
+                Create Runsheet
+              </Button>
             </DialogFooter>
           </>
         )}
