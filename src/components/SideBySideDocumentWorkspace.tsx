@@ -197,11 +197,11 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
       // Use the bbox extraction function that extracts data AND stores metadata
       const { data, error } = await supabase.functions.invoke('document-extraction-with-bbox', {
         body: {
-          documentData: imageData,
-          runsheetId: runsheetId,
-          rowIndex: rowIndex,
+          document_data: imageData,
+          runsheet_id: runsheetId,
+          row_index: rowIndex,
           columns,
-          columnInstructions: columnInstructions
+          column_instructions: columnInstructions
         }
       });
 
