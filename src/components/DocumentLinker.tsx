@@ -1049,35 +1049,30 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
           }}
         >
         <div className="flex items-center justify-center gap-2 flex-1">
-          <label className="flex-1">
-            <Button
-              variant="outline"
-              size="sm"
-              tabIndex={-1}
-              disabled={isUploading}
-              className="h-8 text-xs flex-1 w-full cursor-pointer"
-              asChild
-            >
-              <span>
-                <Upload className="w-3 h-3 mr-1" />
-                {isUploading ? 'Uploading...' : 'Add File'}
-              </span>
-            </Button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              className="hidden"
-              onChange={(e) => {
-                const files = Array.from(e.target.files || []);
-                if (files.length > 0) {
-                  handleMultipleFiles(files);
-                }
-              }}
-              accept="image/*,.pdf,.doc,.docx,.txt"
-              disabled={isUploading}
-            />
-          </label>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isUploading}
+            className="h-8 text-xs flex-1 w-full cursor-pointer"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Upload className="w-3 h-3 mr-1" />
+            {isUploading ? 'Uploading...' : 'Add File'}
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={(e) => {
+              const files = Array.from(e.target.files || []);
+              if (files.length > 0) {
+                handleMultipleFiles(files);
+              }
+            }}
+            accept="image/*,.pdf,.doc,.docx,.txt"
+            disabled={isUploading}
+          />
           <ScreenshotCapture 
             onFileSelect={handleFileSelect}
             className={`h-8 text-xs ${isUploading ? 'pointer-events-none opacity-50' : ''}`}
