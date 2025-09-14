@@ -57,6 +57,15 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
   const handleRunsheetSelected = async (runsheet: any, isNew?: boolean) => {
     setSelectedRunsheet(runsheet);
     setShowRunsheetSelectionDialog(false);
+
+    // Make this runsheet the active one so it shows up on /runsheet
+    try {
+      if (runsheet?.id) {
+        sessionStorage.setItem('currentRunsheetId', runsheet.id);
+      }
+    } catch (e) {
+      console.warn('Failed to set active runsheet id in sessionStorage', e);
+    }
     
     if (runsheet) {
       toast({
@@ -74,7 +83,6 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
       setRunsheetDocuments([]);
     }
   };
-
   const loadRunsheetDocuments = async (runsheetId: string) => {
     setLoadingDocuments(true);
     try {

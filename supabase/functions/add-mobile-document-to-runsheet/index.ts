@@ -115,21 +115,41 @@ Deno.serve(async (req) => {
 
     console.log(`Using row index ${nextRowIndex} for mobile document`);
 
-    // Generate smart filename using existing database function
-    let storedFilename;
-    const { data: generatedFilename, error: filenameError } = await supabase
-      .rpc('generate_document_filename_with_preferences', {
-        runsheet_data: data,
-        row_index: nextRowIndex,
-        original_filename: originalFilename,
-        user_id: user.id
-      });
+    // Determine stored filename: prefer user-provided name, else generate smart one
+    let storedFilename: string;
 
-    if (filenameError) {
-      console.error('Error generating filename:', filenameError);
-      storedFilename = `mobile_document_${nextRowIndex}_${Date.now()}.${originalFilename.split('.').pop()}`;
+    const sanitizeFilename = (name: string) => {
+      // Remove path parts, keep only base name
+      const base = name.split('/').pop() || name;
+      // Replace disallowed chars, collapse spaces to underscores
+      let cleaned = base.replace(/[^a-zA-Z0-9._\-\s]/g, '').replace(/\s+/g, '_');
+      // Ensure it has an extension; default to jpg if missing
+      if (!/\.[a-zA-Z0-9]{2,4}$/.test(cleaned)) {
+        const ext = (originalFilename.match(/\.[a-zA-Z0-9]{2,4}$/) || ['.jpg'])[0];
+        cleaned = cleaned + ext;
+      }
+      return cleaned;
+    };
+
+    if (originalFilename && originalFilename.trim().length > 0) {
+      // Honor the name the user typed
+      storedFilename = sanitizeFilename(originalFilename.trim());
     } else {
-      storedFilename = generatedFilename || `mobile_document_${nextRowIndex}_${Date.now()}.${originalFilename.split('.').pop()}`;
+      // Generate smart filename using existing database function
+      const { data: generatedFilename, error: filenameError } = await supabase
+        .rpc('generate_document_filename_with_preferences', {
+          runsheet_data: data,
+          row_index: nextRowIndex,
+          original_filename: file.name,
+          user_id: user.id
+        });
+
+      if (filenameError) {
+        console.error('Error generating filename:', filenameError);
+        storedFilename = `mobile_document_${nextRowIndex}_${Date.now()}.${(file.name.split('.').pop() || 'jpg')}`;
+      } else {
+        storedFilename = generatedFilename || `mobile_document_${nextRowIndex}_${Date.now()}.${(file.name.split('.').pop() || 'jpg')}`;
+      }
     }
 
     const filePath = `${user.id}/${runsheetId}/${storedFilename}`;
