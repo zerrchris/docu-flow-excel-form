@@ -306,7 +306,7 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
           
           <div className="flex gap-2">
             {/* Show different buttons based on analysis state */}
-            {!isAnalyzing && !isPaused && results.length === 0 && (
+            {!isAnalyzing && !isPaused && results.every(r => r.status === 'pending') && (
               <Button 
                 onClick={startBatchAnalysis} 
                 disabled={documentMap.size === 0}
