@@ -1,11 +1,21 @@
 // RunsheetPro Extension Content Script
-console.log('🔧 RunsheetPro Extension: Content script loaded');
+(function() {
+  'use strict';
+  
+  // Prevent multiple execution
+  if (window.runsheetProContentScriptLoaded) {
+    console.log('🔧 RunsheetPro Extension: Content script already loaded, skipping');
+    return;
+  }
+  window.runsheetProContentScriptLoaded = true;
+  
+  console.log('🔧 RunsheetPro Extension: Content script loaded');
 
-// Global state
-let isExtensionEnabled = false;
-let currentViewMode = 'single';
-let floatingButton = null;
-let runsheetUI = null;
+  // Global state
+  let isExtensionEnabled = false;
+  let currentViewMode = 'single';
+  let floatingButton = null;
+  let runsheetUI = null;
 
 // Initialize extension
 const initializeExtension = async () => {
@@ -283,19 +293,21 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
   }
 });
 
-// Global function for other scripts to trigger
-window.openRunsheetUI = () => {
-  console.log('🔧 RunsheetPro Extension: openRunsheetUI called');
-  // This would open your runsheet interface
-  // For now, just log that it was called
-};
+  // Global function for other scripts to trigger
+  window.openRunsheetUI = () => {
+    console.log('🔧 RunsheetPro Extension: openRunsheetUI called');
+    // This would open your runsheet interface
+    // For now, just log that it was called
+  };
 
-// Initialize when DOM is ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initializeExtension);
-} else {
-  initializeExtension();
-}
+  // Initialize when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeExtension);
+  } else {
+    initializeExtension();
+  }
 
-// Also initialize after a short delay to ensure everything is loaded
-setTimeout(initializeExtension, 1000);
+  // Also initialize after a short delay to ensure everything is loaded
+  setTimeout(initializeExtension, 1000);
+
+})(); // End of IIFE
