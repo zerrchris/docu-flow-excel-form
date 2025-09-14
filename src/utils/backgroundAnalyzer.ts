@@ -298,17 +298,11 @@ export class BackgroundAnalyzer {
   }
 
   async resumeFromStorage() {
+    // Do not auto-resume jobs on page load to avoid unexpected runs
     const storedJob = this.loadJobFromStorage();
     if (storedJob && storedJob.status === 'running') {
-      this.currentJob = storedJob;
-      console.log('Resuming background analysis from storage - Progress:', `${storedJob.currentIndex}/${storedJob.documentMap.length}`);
-      
-      // Re-establish callbacks if UI components are listening
-      this.notifyCallbacks();
-      
-      // Continue analysis from where it left off
-      this.runAnalysis();
-      return true;
+      console.log('Found running background analysis in storage; not auto-resuming. Waiting for explicit start.');
+      return false;
     }
     return false;
   }
