@@ -11,10 +11,12 @@ import { ExtractionPreferencesService } from '@/services/extractionPreferences';
 import { ColumnWidthPreferencesService } from '@/services/columnWidthPreferences';
 import { useActiveRunsheet } from '@/hooks/useActiveRunsheet';
 import PDFViewerWithFallback from './PDFViewerWithFallback';
+import SimplePDFViewer from './SimplePDFViewer';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import ReExtractDialog from './ReExtractDialog';
+import { ExtractionMetadataService, type ExtractionMetadata } from '@/services/extractionMetadataService';
 
 interface FullScreenDocumentWorkspaceProps {
   runsheetId: string;
@@ -56,6 +58,8 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
   const [focusedColumn, setFocusedColumn] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [showAnalyzeWarning, setShowAnalyzeWarning] = useState(false);
+  const [extractionMetadata, setExtractionMetadata] = useState<ExtractionMetadata[]>([]);
+  const [activeHighlight, setActiveHighlight] = useState<string | null>(null);
   const [panX, setPanX] = useState(0);
   const [panY, setPanY] = useState(0);
   const [isDraggingImage, setIsDraggingImage] = useState(false);
@@ -145,6 +149,20 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
     };
 
     loadDocument();
+  }, [runsheetId, rowIndex]);
+
+  // Load extraction metadata for highlighting
+  useEffect(() => {
+    if (runsheetId && rowIndex !== undefined) {
+      ExtractionMetadataService.getMetadataForRow(runsheetId, rowIndex)
+        .then(metadata => {
+          console.log('🎯 Loaded extraction metadata for fullscreen:', metadata.length, 'entries');
+          setExtractionMetadata(metadata);
+        })
+        .catch(error => {
+          console.error('Error loading extraction metadata:', error);
+        });
+    }
   }, [runsheetId, rowIndex]);
 
   const handleFieldChange = (field: string, value: string) => {

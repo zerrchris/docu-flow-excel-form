@@ -13,10 +13,12 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import PDFViewerWithFallback from './PDFViewerWithFallback';
+import SimplePDFViewer from './SimplePDFViewer';
 import ReExtractDialog from './ReExtractDialog';
 import { ExtractionPreferencesService } from '@/services/extractionPreferences';
 import ColumnPreferencesDialog from './ColumnPreferencesDialog';
 import { DocumentService, type DocumentRecord } from '@/services/documentService';
+import { ExtractionMetadataService, type ExtractionMetadata } from '@/services/extractionMetadataService';
 
 interface ExtractedField {
   key: string;
@@ -48,6 +50,8 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
 }) => {
   const { toast } = useToast();
   const [rowData, setRowData] = useState<Record<string, string>>(initialRowData);
+  const [extractionMetadata, setExtractionMetadata] = useState<ExtractionMetadata[]>([]);
+  const [activeHighlight, setActiveHighlight] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [documentRecord, setDocumentRecord] = useState<DocumentRecord | undefined>(providedDocumentRecord);
   const [isLoadingDocument, setIsLoadingDocument] = useState(false);
@@ -99,6 +103,20 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
       setDocumentRecord(providedDocumentRecord);
     }
   }, [providedDocumentRecord, runsheetId, rowIndex]);
+
+  // Load extraction metadata for highlighting
+  useEffect(() => {
+    if (runsheetId && rowIndex !== undefined) {
+      ExtractionMetadataService.getMetadataForRow(runsheetId, rowIndex)
+        .then(metadata => {
+          console.log('🎯 Loaded extraction metadata:', metadata.length, 'entries');
+          setExtractionMetadata(metadata);
+        })
+        .catch(error => {
+          console.error('Error loading extraction metadata:', error);
+        });
+    }
+  }, [runsheetId, rowIndex]);
 
   // Update local row data when props change
   useEffect(() => {
@@ -624,42 +642,46 @@ Return only the filename, nothing else.`,
                        
                        {/* Removed extraction instruction display - cleaner form */}
                       
-                        {value.length > 100 ? (
-                         <Textarea
-                           value={value}
-                           onChange={(e) => handleFieldChange(columnName, e.target.value)}
-                           className="min-h-[160px] resize-vertical"
-                           placeholder={`Enter ${columnName.toLowerCase()}...`}
-                            onClick={(e) => {
-                              const target = e.target as HTMLTextAreaElement;
-                              
-                              if (e.detail === 2) {
-                                // Double-click: select word at cursor
-                                e.preventDefault();
-                                const text = target.value;
-                                const position = target.selectionStart;
-                                
-                                // Find word boundaries
-                                let start = position;
-                                let end = position;
-                                
-                                // Move start back to beginning of word
-                                while (start > 0 && /\w/.test(text[start - 1])) {
-                                  start--;
-                                }
-                                
-                                // Move end forward to end of word
-                                while (end < text.length && /\w/.test(text[end])) {
-                                  end++;
-                                }
-                                
-                                target.setSelectionRange(start, end);
-                              } else if (e.detail === 3) {
-                                // Triple-click: select all text
-                                e.preventDefault();
-                                target.select();
-                              }
+                         {value.length > 100 ? (
+                          <Textarea
+                            value={value}
+                            onChange={(e) => handleFieldChange(columnName, e.target.value)}
+                            className="min-h-[160px] resize-vertical"
+                            placeholder={`Enter ${columnName.toLowerCase()}...`}
+                            onFocus={() => {
+                              console.log('🎯 Field focused:', columnName);
+                              setActiveHighlight(columnName);
                             }}
+                             onClick={(e) => {
+                               const target = e.target as HTMLTextAreaElement;
+                               
+                               if (e.detail === 2) {
+                                 // Double-click: select word at cursor
+                                 e.preventDefault();
+                                 const text = target.value;
+                                 const position = target.selectionStart;
+                                 
+                                 // Find word boundaries
+                                 let start = position;
+                                 let end = position;
+                                 
+                                 // Move start back to beginning of word
+                                 while (start > 0 && /\w/.test(text[start - 1])) {
+                                   start--;
+                                 }
+                                 
+                                 // Move end forward to end of word
+                                 while (end < text.length && /\w/.test(text[end])) {
+                                   end++;
+                                 }
+                                 
+                                 target.setSelectionRange(start, end);
+                               } else if (e.detail === 3) {
+                                 // Triple-click: select all text
+                                 e.preventDefault();
+                                 target.select();
+                               }
+                             }}
                            onKeyDown={(e) => {
                              if (e.key === 'Tab') {
                                e.preventDefault();
@@ -674,10 +696,14 @@ Return only the filename, nothing else.`,
                            }}
                          />
                        ) : (
-                         <Input
-                           value={value}
-                           onChange={(e) => handleFieldChange(columnName, e.target.value)}
-                           placeholder={`Enter ${columnName.toLowerCase()}...`}
+                          <Input
+                            value={value}
+                            onChange={(e) => handleFieldChange(columnName, e.target.value)}
+                            placeholder={`Enter ${columnName.toLowerCase()}...`}
+                            onFocus={() => {
+                              console.log('🎯 Field focused:', columnName);
+                              setActiveHighlight(columnName);
+                            }}
                             onClick={(e) => {
                               const target = e.target as HTMLInputElement;
                               
@@ -788,11 +814,20 @@ Return only the filename, nothing else.`,
                 </Card>
               ) : documentRecord ? (
                 <div className="h-full w-full">
-                  {documentRecord.content_type?.includes('pdf') ? (
-                    <PDFViewerWithFallback 
-                      file={null}
-                      previewUrl={DocumentService.getDocumentUrlSync(documentRecord.file_path)}
-                    />
+                   {documentRecord.content_type?.includes('pdf') ? (
+                     <SimplePDFViewer 
+                       file={null}
+                       previewUrl={DocumentService.getDocumentUrlSync(documentRecord.file_path)}
+                       extractionMetadata={extractionMetadata}
+                       activeHighlight={activeHighlight}
+                       onFieldClick={(fieldName) => {
+                         console.log('🖱️ PDF field clicked:', fieldName);
+                         setActiveHighlight(fieldName);
+                         // Focus the corresponding input/textarea
+                         const fieldElement = document.querySelector(`input[placeholder*="${fieldName.toLowerCase()}"], textarea[placeholder*="${fieldName.toLowerCase()}"]`) as HTMLElement;
+                         fieldElement?.focus();
+                       }}
+                     />
                       ) : (
                       <div className="h-full w-full relative overflow-hidden">
                         <div 
