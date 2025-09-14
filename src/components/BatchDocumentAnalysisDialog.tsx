@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { CheckCircle, XCircle, AlertCircle, FileText, Brain, Pause, Play, Square } from 'lucide-react';
+import { CheckCircle, XCircle, AlertCircle, FileText, Brain, Square } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
@@ -48,7 +48,6 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
   const [abortController, setAbortController] = useState<AbortController | null>(null);
   const [skipRowsWithData, setSkipRowsWithData] = useState(true);
   const [currentJobId, setCurrentJobId] = useState<string | null>(null);
-  const [isPaused, setIsPaused] = useState(false);
 
   // Initialize results when dialog opens and check for existing job
   useEffect(() => {
@@ -58,7 +57,6 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
       if (existingJob && existingJob.runsheetId === runsheetId) {
         setCurrentJobId(existingJob.id);
         setIsAnalyzing(existingJob.status === 'running');
-        setIsPaused(existingJob.status === 'paused');
         setResults(existingJob.results);
         setProgress((existingJob.currentIndex / existingJob.documentMap.length) * 100);
       } else {
@@ -83,7 +81,6 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
         setResults(progress.results);
         setProgress((progress.completed / progress.total) * 100);
         setIsAnalyzing(progress.status === 'running');
-        setIsPaused(progress.status === 'paused');
         
         // Update parent component with current data
         onDataUpdate(progress.currentData);
@@ -100,7 +97,6 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
           
           setCurrentJobId(null);
           setIsAnalyzing(false);
-          setIsPaused(false);
         }
       }
     });
@@ -131,7 +127,6 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
       
       setCurrentJobId(jobId);
       setIsAnalyzing(true);
-      setIsPaused(false);
       
       toast({
         title: "Analysis started",
@@ -147,36 +142,12 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
     }
   };
 
-  const pauseAnalysis = () => {
-    if (currentJobId) {
-      backgroundAnalyzer.pauseAnalysis();
-      setIsPaused(true);
-      setIsAnalyzing(false);
-      toast({
-        title: "Analysis paused",
-        description: "The batch analysis has been paused.",
-      });
-    }
-  };
-
-  const resumeAnalysis = () => {
-    if (currentJobId) {
-      backgroundAnalyzer.resumeAnalysis();
-      setIsPaused(false);
-      setIsAnalyzing(true);
-      toast({
-        title: "Analysis resumed",
-        description: "The batch analysis has been resumed.",
-      });
-    }
-  };
 
   const handleAbort = () => {
     if (currentJobId) {
       backgroundAnalyzer.cancelAnalysis();
       setCurrentJobId(null);
       setIsAnalyzing(false);
-      setIsPaused(false);
       toast({
         title: "Analysis cancelled",
         description: "Batch document analysis has been cancelled.",
@@ -306,7 +277,7 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
           
           <div className="flex gap-2">
             {/* Show different buttons based on analysis state */}
-            {!isAnalyzing && !isPaused && results.every(r => r.status === 'pending') && (
+            {!isAnalyzing && results.every(r => r.status === 'pending') && (
               <Button 
                 onClick={startBatchAnalysis} 
                 disabled={documentMap.size === 0}
@@ -318,7 +289,7 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
             )}
             
             {/* Show analysis complete state */}
-            {!isAnalyzing && !isPaused && results.length > 0 && results.every(r => r.status === 'success' || r.status === 'error') && (
+            {!isAnalyzing && results.length > 0 && results.every(r => r.status === 'success' || r.status === 'error') && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <CheckCircle className="w-4 h-4 text-green-500" />
                 Analysis Complete - You can close this dialog
@@ -327,28 +298,6 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
             
             {/* Show controls during analysis */}
             {isAnalyzing && (
-              <Button 
-                onClick={pauseAnalysis} 
-                variant="outline"
-                className="flex items-center gap-2"
-              >
-                <Pause className="w-4 h-4" />
-                Pause
-              </Button>
-            )}
-            
-            {isPaused && (
-              <Button 
-                onClick={resumeAnalysis} 
-                variant="outline"
-                className="flex items-center gap-2"
-              >
-                <Play className="w-4 h-4" />
-                Resume
-              </Button>
-            )}
-            
-            {(isAnalyzing || isPaused) && (
               <Button 
                 onClick={handleAbort} 
                 variant="destructive"
