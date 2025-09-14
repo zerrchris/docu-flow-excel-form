@@ -266,6 +266,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     sendResponse({ success: true });
   }
 
+  if (message.action === 'authStatusChanged') {
+    console.log('🔧 RunsheetPro Extension: Auth status changed, authenticated:', message.authenticated);
+    // Refresh auth status
+    checkAuth().then(isAuth => {
+      console.log('🔧 RunsheetPro Extension: Updated auth status:', isAuth);
+    });
+    sendResponse({ success: true });
+  }
+
   return false;
 });
 
