@@ -312,7 +312,7 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
         console.warn('Failed to dispatch documentRecordCreated event', e);
       }
 
-      // Notify parent component
+      // Notify parent component to refresh general document list
       onPhotoUploaded?.(result.fileUrl, result.storedFilename);
 
       // Clear captured pages after successful upload
@@ -536,23 +536,23 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
           </div>
         )}
 
-        {/* Document List */}
+        {/* Document List - Compact and Scrollable */}
         {selectedRunsheet && runsheetDocuments.length > 0 && (
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold">Runsheet Documents</h3>
+              <h3 className="text-base font-semibold">Runsheet Documents ({runsheetDocuments.length})</h3>
               {loadingDocuments && (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
               )}
             </div>
-            <div className="space-y-2">
+            <div className="max-h-32 overflow-y-auto space-y-1 pr-1">
               {runsheetDocuments.map((doc, index) => (
-                <div key={doc.id} className="flex items-center gap-3 p-3 border rounded-lg bg-card">
-                  <div className="w-8 h-8 bg-primary/10 rounded flex items-center justify-center">
-                    <FileText className="h-4 w-4 text-primary" />
+                <div key={doc.id} className="flex items-center gap-2 p-2 border rounded bg-card/50">
+                  <div className="w-6 h-6 bg-primary/10 rounded flex items-center justify-center flex-shrink-0">
+                    <FileText className="h-3 w-3 text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{doc.stored_filename}</p>
+                    <p className="text-xs font-medium truncate">{doc.stored_filename}</p>
                     <p className="text-xs text-muted-foreground">Row {doc.row_index + 1}</p>
                   </div>
                 </div>
