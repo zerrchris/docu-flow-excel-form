@@ -95,7 +95,7 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
           
           toast({
             title: "Batch analysis completed",
-            description: `Successfully analyzed ${successCount} documents.${errorCount > 0 ? ` ${errorCount} failed.` : ''}${skippedCount > 0 ? ` ${skippedCount} skipped.` : ''}`,
+            description: `Successfully analyzed ${successCount} documents.${errorCount > 0 ? ` ${errorCount} failed.` : ''}${skippedCount > 0 ? ` ${skippedCount} skipped.` : ''} You can now close this dialog.`,
           });
           
           setCurrentJobId(null);
@@ -300,12 +300,13 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
         </div>
 
         <div className="flex justify-between">
-          <Button variant="outline" onClick={onClose} disabled={isAnalyzing}>
-            {isAnalyzing ? 'Close When Done' : 'Close'}
+          <Button variant="outline" onClick={onClose}>
+            Close
           </Button>
           
           <div className="flex gap-2">
-            {!isAnalyzing && !isPaused && (
+            {/* Show different buttons based on analysis state */}
+            {!isAnalyzing && !isPaused && results.length === 0 && (
               <Button 
                 onClick={startBatchAnalysis} 
                 disabled={documentMap.size === 0}
@@ -316,6 +317,15 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
               </Button>
             )}
             
+            {/* Show analysis complete state */}
+            {!isAnalyzing && !isPaused && results.length > 0 && results.every(r => r.status === 'success' || r.status === 'error') && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <CheckCircle className="w-4 h-4 text-green-500" />
+                Analysis Complete - You can close this dialog
+              </div>
+            )}
+            
+            {/* Show controls during analysis */}
             {isAnalyzing && (
               <Button 
                 onClick={pauseAnalysis} 
