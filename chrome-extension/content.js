@@ -11,16 +11,24 @@ let runsheetUI = null;
 const initializeExtension = async () => {
   try {
     // Get extension settings
-    const result = await chrome.storage.local.get(['extensionEnabled', 'viewMode']);
-    isExtensionEnabled = result.extensionEnabled !== false;
+    const result = await chrome.storage.local.get(['extensionEnabled', 'viewMode', 'extension_enabled', 'extension_disabled']);
+    
+    // Check multiple possible storage keys for compatibility
+    isExtensionEnabled = (result.extensionEnabled !== false && result.extension_enabled !== false) && result.extension_disabled !== true;
     currentViewMode = result.viewMode || 'single';
 
-    console.log('🔧 RunsheetPro Extension: Initialized', { isExtensionEnabled, currentViewMode });
+    console.log('🔧 RunsheetPro Extension: Initialized', { 
+      isExtensionEnabled, 
+      currentViewMode,
+      rawResult: result 
+    });
 
     if (isExtensionEnabled) {
       showFloatingButton();
+      console.log('🔧 RunsheetPro Extension: Floating button should be visible');
     } else {
       hideFloatingButton();
+      console.log('🔧 RunsheetPro Extension: Extension disabled, hiding button');
     }
   } catch (error) {
     console.error('🔧 RunsheetPro Extension: Initialization error:', error);
@@ -221,11 +229,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log('🔧 RunsheetPro Extension: Content script received message:', message);
 
   if (message.action === 'toggleExtension') {
+    console.log('🔧 RunsheetPro Extension: Toggle message received, enabled:', message.enabled);
     isExtensionEnabled = message.enabled;
     if (isExtensionEnabled) {
       showFloatingButton();
+      console.log('🔧 RunsheetPro Extension: Showing floating button');
     } else {
       hideFloatingButton();
+      console.log('🔧 RunsheetPro Extension: Hiding floating button');
     }
     sendResponse({ success: true });
   }
@@ -247,9 +258,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 // Storage change listener
 chrome.storage.onChanged.addListener((changes, namespace) => {
+  console.log('🔧 RunsheetPro Extension: Storage changed:', changes, namespace);
+  
   if (namespace === 'local') {
-    if (changes.extensionEnabled) {
-      isExtensionEnabled = changes.extensionEnabled.newValue !== false;
+    if (changes.extensionEnabled || changes.extension_enabled || changes.extension_disabled) {
+      const enabled = changes.extensionEnabled?.newValue !== false && 
+                     changes.extension_enabled?.newValue !== false && 
+                     changes.extension_disabled?.newValue !== true;
+      
+      console.log('🔧 RunsheetPro Extension: Extension enabled state changed to:', enabled);
+      isExtensionEnabled = enabled;
+      
       if (isExtensionEnabled) {
         showFloatingButton();
       } else {
@@ -259,6 +278,7 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
 
     if (changes.viewMode) {
       currentViewMode = changes.viewMode.newValue || 'single';
+      console.log('🔧 RunsheetPro Extension: View mode changed to:', currentViewMode);
     }
   }
 });

@@ -39,26 +39,36 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Toggle extension
   toggleBtn.addEventListener('click', async () => {
+    console.log('🔧 RunsheetPro Popup: Toggle button clicked');
     try {
       const currentStatus = await checkStatus();
       const newStatus = !currentStatus;
       
+      console.log('🔧 RunsheetPro Popup: Current status:', currentStatus, 'New status:', newStatus);
+      
       await chrome.storage.local.set({ extensionEnabled: newStatus, extension_enabled: newStatus, extension_disabled: !newStatus });
+      console.log('🔧 RunsheetPro Popup: Storage updated');
       
       // Send message to content scripts to update
       const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+      console.log('🔧 RunsheetPro Popup: Active tabs:', tabs);
+      
       if (tabs[0]) {
+        console.log('🔧 RunsheetPro Popup: Sending message to tab:', tabs[0].id);
         chrome.tabs.sendMessage(tabs[0].id, { 
           action: 'toggleExtension', 
           enabled: newStatus 
-        }).catch(() => {
-          // Ignore errors if content script isn't loaded
+        }).then(response => {
+          console.log('🔧 RunsheetPro Popup: Message response:', response);
+        }).catch(error => {
+          console.warn('🔧 RunsheetPro Popup: Message error:', error);
         });
       }
       
       await checkStatus();
+      console.log('🔧 RunsheetPro Popup: Toggle complete');
     } catch (error) {
-      console.error('Error toggling extension:', error);
+      console.error('🔧 RunsheetPro Popup: Error toggling extension:', error);
     }
   });
 
