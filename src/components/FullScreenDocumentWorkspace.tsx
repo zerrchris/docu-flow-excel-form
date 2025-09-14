@@ -11,12 +11,10 @@ import { ExtractionPreferencesService } from '@/services/extractionPreferences';
 import { ColumnWidthPreferencesService } from '@/services/columnWidthPreferences';
 import { useActiveRunsheet } from '@/hooks/useActiveRunsheet';
 import PDFViewerWithFallback from './PDFViewerWithFallback';
-import SimplePDFViewer from './SimplePDFViewer';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import ReExtractDialog from './ReExtractDialog';
-import { ExtractionMetadataService, type ExtractionMetadata } from '@/services/extractionMetadataService';
 
 interface FullScreenDocumentWorkspaceProps {
   runsheetId: string;
@@ -57,18 +55,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
   const [resizing, setResizing] = useState<{column: string, startX: number, startWidth: number} | null>(null);
   const [focusedColumn, setFocusedColumn] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analysisController, setAnalysisController] = useState<AbortController | null>(null);
   const [showAnalyzeWarning, setShowAnalyzeWarning] = useState(false);
-  const [extractionMetadata, setExtractionMetadata] = useState<ExtractionMetadata[]>([]);
-  const [activeHighlight, setActiveHighlight] = useState<string | null>(null);
-  const imageScrollRef = useRef<HTMLDivElement>(null);
-  const imageRef = useRef<HTMLImageElement>(null);
-  const [imageDims, setImageDims] = useState<{naturalWidth: number; naturalHeight: number; displayedWidth: number; displayedHeight: number}>({
-    naturalWidth: 0,
-    naturalHeight: 0,
-    displayedWidth: 0,
-    displayedHeight: 0,
-  });
   const [panX, setPanX] = useState(0);
   const [panY, setPanY] = useState(0);
   const [isDraggingImage, setIsDraggingImage] = useState(false);
@@ -159,30 +146,6 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
 
     loadDocument();
   }, [runsheetId, rowIndex]);
-
-  // Load extraction metadata for highlighting
-  useEffect(() => {
-    if (runsheetId && rowIndex !== undefined) {
-      ExtractionMetadataService.getMetadataForRow(runsheetId, rowIndex)
-        .then(metadata => {
-          console.log('🎯 Loaded extraction metadata for fullscreen:', metadata.length, 'entries');
-          setExtractionMetadata(metadata);
-        })
-        .catch(error => {
-          console.error('Error loading extraction metadata:', error);
-        });
-    }
-  }, [runsheetId, rowIndex]);
-
-  // When a field becomes active, scroll its highlight into view (for images)
-  useEffect(() => {
-    if (activeHighlight && imageScrollRef.current) {
-      const el = imageScrollRef.current.querySelector(`[data-img-highlight="${activeHighlight}"]`) as HTMLElement | null;
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
-      }
-    }
-  }, [activeHighlight]);
 
   const handleFieldChange = (field: string, value: string) => {
     const updatedData = { ...localRowData, [field]: value };
@@ -313,7 +276,6 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
   const handleCellClick = (column: string) => {
     if (editingColumn) return;
     setFocusedColumn(column);
-    setActiveHighlight(column);
     // Single click - start editing and select all text if there's existing data
     if (localRowData[column] && localRowData[column].trim() !== '') {
       startEditing(column, true); // Pass true to indicate we want to select all
@@ -411,9 +373,6 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
     if (!documentUrl || isAnalyzing) return;
     
     try {
-      // Create abort controller for canceling analysis
-      const controller = new AbortController();
-      setAnalysisController(controller);
       setIsAnalyzing(true);
       console.log('🔍 Starting document analysis for row:', rowIndex);
       
@@ -435,28 +394,6 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
         reader.onloadend = () => resolve(reader.result as string);
         reader.readAsDataURL(blob);
       });
-      
-      // First, store extraction metadata with bounding boxes
-      try {
-        const { data: bboxResult, error: bboxError } = await supabase.functions.invoke('document-extraction-with-bbox', {
-          body: {
-            document_data: imageData,
-            runsheet_id: runsheetId,
-            row_index: rowIndex,
-            columns: editableFields,
-            column_instructions: {} // optional in fullscreen
-          }
-        });
-        if (!bboxError) {
-          console.log('🟨 BBox metadata stored (fullscreen):', bboxResult?.stored_metadata_count);
-          const freshMeta = await ExtractionMetadataService.getMetadataForRow(runsheetId, rowIndex);
-          setExtractionMetadata(freshMeta);
-        } else {
-          console.warn('BBox extraction error (fullscreen):', bboxError);
-        }
-      } catch (err) {
-        console.warn('BBox extraction invocation failed (fullscreen):', err);
-      }
       
       const { data, error } = await supabase.functions.invoke('analyze-document', {
         body: {
@@ -560,20 +497,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
       });
     } finally {
       setIsAnalyzing(false);
-      setAnalysisController(null);
     }
-  };
-
-  const cancelAnalysis = () => {
-    if (analysisController) {
-      analysisController.abort();
-      setAnalysisController(null);
-    }
-    setIsAnalyzing(false);
-    toast({
-      title: "Analysis canceled",
-      description: "Document analysis was stopped",
-    });
   };
 
   // Re-extract functionality for individual fields
@@ -761,7 +685,6 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
               ) : (
                 <div className="h-full w-full relative overflow-hidden">
                   <div 
-                    ref={imageScrollRef}
                     className="h-full w-full overflow-auto scrollbar-thin scrollbar-thumb-muted-foreground/30 scrollbar-track-transparent"
                     onWheel={(e) => {
                       if (!fitToWidth) {
@@ -779,57 +702,25 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                       }
                     }}
                   >
-                    <div className="relative inline-block">
-                      <img
-                        ref={imageRef}
-                        src={documentUrl}
-                        alt={documentName}
-                        className={`transition-all duration-200 ease-out select-none ${
-                          fitToWidth ? 'w-full h-auto object-contain' : 'object-contain cursor-grab active:cursor-grabbing'
-                        }`}
-                        style={{
-                          minHeight: fitToWidth ? 'auto' : '100%',
-                          minWidth: fitToWidth ? '100%' : 'auto',
-                        }}
-                        draggable={false}
-                        onLoad={(e) => {
-                          const img = e.currentTarget as HTMLImageElement;
-                          setImageDims({
-                            naturalWidth: img.naturalWidth,
-                            naturalHeight: img.naturalHeight,
-                            displayedWidth: img.clientWidth,
-                            displayedHeight: img.clientHeight,
-                          });
-                        }}
-                        onMouseDown={fitToWidth ? undefined : handleImageMouseDown}
-                        onMouseMove={fitToWidth ? undefined : handleImageMouseMove}
-                        onMouseUp={fitToWidth ? undefined : handleImageMouseUp}
-                        onError={() => setError('Failed to load image')}
-                      />
-
-                      {/* Highlight overlays for images */}
-                      {imageDims.displayedWidth > 0 && extractionMetadata.map((highlight) => {
-                        const scaleX = imageDims.naturalWidth ? (imageDims.displayedWidth / imageDims.naturalWidth) : 1;
-                        const scaleY = imageDims.naturalHeight ? (imageDims.displayedHeight / imageDims.naturalHeight) : 1;
-                        const left = (highlight.bbox_x1 || 0) * scaleX;
-                        const top = (highlight.bbox_y1 || 0) * scaleY;
-                        const width = ((highlight.bbox_x2 || 0) - (highlight.bbox_x1 || 0)) * scaleX;
-                        const height = ((highlight.bbox_y2 || 0) - (highlight.bbox_y1 || 0)) * scaleY;
-                        const isActive = activeHighlight === highlight.field_name;
-                        return (
-                          <div
-                            key={highlight.id}
-                            data-img-highlight={highlight.field_name}
-                            className={`absolute border-2 rounded pointer-events-auto ${isActive ? 'bg-yellow-300/40 border-yellow-500 z-20' : 'bg-blue-300/30 border-blue-500 z-10 hover:bg-blue-300/40'}`}
-                            style={{ left, top, width, height }}
-                            title={`${highlight.field_name}: ${highlight.extracted_value}`}
-                            onClick={() => {
-                              setActiveHighlight(highlight.field_name);
-                            }}
-                          />
-                        );
-                      })}
-                    </div>
+                    <img
+                      src={documentUrl}
+                      alt={documentName}
+                      className={`transition-all duration-200 ease-out select-none ${
+                        fitToWidth ? 'w-full h-auto object-contain' : 'object-contain cursor-grab active:cursor-grabbing'
+                      }`}
+                      style={{
+                        minHeight: fitToWidth ? 'auto' : '100%',
+                        minWidth: fitToWidth ? '100%' : 'auto',
+                        transform: fitToWidth ? 'none' : `scale(${zoom}) rotate(${rotation}deg)`,
+                        transformOrigin: 'center',
+                        willChange: fitToWidth ? 'auto' : 'transform'
+                      }}
+                      draggable={false}
+                      onMouseDown={fitToWidth ? undefined : handleImageMouseDown}
+                      onMouseMove={fitToWidth ? undefined : handleImageMouseMove}
+                      onMouseUp={fitToWidth ? undefined : handleImageMouseUp}
+                      onError={() => setError('Failed to load image')}
+                    />
                   </div>
                 </div>
               )}
@@ -845,50 +736,36 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
               <div className="p-4 border-b bg-muted/20 flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <h4 className="font-semibold">Working Row {rowIndex + 1}</h4>
-                   {documentUrl && !isLoading && !error && !isAnalyzing && (
-                     <Button
-                       variant="outline"
-                       size="sm"
-                       onClick={() => {
-                         const hasExisting = editableFields.some((c) => ((localRowData[c] || '').toString().trim() !== ''));
-                         if (hasExisting) {
-                           setShowAnalyzeWarning(true);
-                         } else {
-                           analyzeDocumentAndPopulateRow();
-                         }
-                       }}
-                       className="gap-2 text-blue-600 hover:text-blue-700 border-blue-200 hover:border-blue-300"
-                       title="Analyze document and extract data to populate row fields"
-                     >
-                       <Brain className="h-4 w-4" />
-                       Analyze
-                     </Button>
-                   )}
-                   
-                   {/* Cancel Analysis Button */}
-                   {isAnalyzing && (
-                     <Button
-                       variant="destructive"
-                       size="sm"
-                       onClick={cancelAnalysis}
-                       className="gap-2"
-                       title="Cancel document analysis"
-                     >
-                       <X className="h-4 w-4" />
-                       Cancel Analysis
-                     </Button>
-                   )}
+                  {documentUrl && !isLoading && !error && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const hasExisting = editableFields.some((c) => ((localRowData[c] || '').toString().trim() !== ''));
+                        if (hasExisting) {
+                          setShowAnalyzeWarning(true);
+                        } else {
+                          analyzeDocumentAndPopulateRow();
+                        }
+                      }}
+                      disabled={isAnalyzing}
+                      className="gap-2 text-blue-600 hover:text-blue-700 border-blue-200 hover:border-blue-300"
+                      title="Analyze document and extract data to populate row fields"
+                    >
+                      <Brain className="h-4 w-4" />
+                      {isAnalyzing ? 'Analyzing...' : 'Analyze'}
+                    </Button>
+                  )}
                 </div>
-                 <Button
-                   variant="outline"
-                   size="sm"
-                   onClick={handleBackToRunsheet}
-                   disabled={isAnalyzing}
-                   className="gap-2"
-                 >
-                   <ArrowLeft className="h-4 w-4" />
-                   Back to Runsheet
-                 </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleBackToRunsheet}
+                  className="gap-2"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to Runsheet
+                </Button>
               </div>
               <div className="flex-1 min-h-0 flex flex-col border-b border-border">
                 <div className="h-full w-full overflow-auto">
@@ -913,19 +790,18 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                             {column}
                           </span>
                           {/* Re-extract button in header */}
-                           <Button
-                             variant="ghost"
-                             size="sm"
-                             onClick={(e) => {
-                               e.stopPropagation();
-                               handleReExtractField(column);
-                             }}
-                             disabled={isAnalyzing}
-                             className="h-6 w-6 p-0 hover:bg-purple-100 dark:hover:bg-purple-900/20 text-purple-600 dark:text-purple-400 flex-shrink-0"
-                             title={`Re-extract "${column}" field with AI feedback`}
-                           >
-                             <Sparkles className="h-3 w-3" />
-                           </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleReExtractField(column);
+                            }}
+                            className="h-6 w-6 p-0 hover:bg-purple-100 dark:hover:bg-purple-900/20 text-purple-600 dark:text-purple-400 flex-shrink-0"
+                            title={`Re-extract "${column}" field with AI feedback`}
+                          >
+                            <Sparkles className="h-3 w-3" />
+                          </Button>
                           
                           {/* Column resize handle */}
                           <div

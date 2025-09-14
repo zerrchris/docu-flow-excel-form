@@ -8,17 +8,15 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
-import { ArrowLeft, Sparkles, RotateCcw, FileText, Wand2, AlertTriangle, Settings, Edit3, X } from 'lucide-react';
+import { ArrowLeft, Sparkles, RotateCcw, FileText, Wand2, AlertTriangle, Settings, Edit3 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import PDFViewerWithFallback from './PDFViewerWithFallback';
-import SimplePDFViewer from './SimplePDFViewer';
 import ReExtractDialog from './ReExtractDialog';
 import { ExtractionPreferencesService } from '@/services/extractionPreferences';
 import ColumnPreferencesDialog from './ColumnPreferencesDialog';
 import { DocumentService, type DocumentRecord } from '@/services/documentService';
-import { ExtractionMetadataService, type ExtractionMetadata } from '@/services/extractionMetadataService';
 
 interface ExtractedField {
   key: string;
@@ -50,10 +48,7 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
 }) => {
   const { toast } = useToast();
   const [rowData, setRowData] = useState<Record<string, string>>(initialRowData);
-  const [extractionMetadata, setExtractionMetadata] = useState<ExtractionMetadata[]>([]);
-  const [activeHighlight, setActiveHighlight] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analysisController, setAnalysisController] = useState<AbortController | null>(null);
   const [documentRecord, setDocumentRecord] = useState<DocumentRecord | undefined>(providedDocumentRecord);
   const [isLoadingDocument, setIsLoadingDocument] = useState(false);
   
@@ -62,14 +57,6 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
   const [showAnalyzeWarning, setShowAnalyzeWarning] = useState(false);
   const [imageFitToWidth, setImageFitToWidth] = useState(true); // Default to fit-to-width for images
   const [imageZoom, setImageZoom] = useState(1);
-  const imageScrollRef = useRef<HTMLDivElement>(null);
-  const imageRef = useRef<HTMLImageElement>(null);
-  const [imageDims, setImageDims] = useState<{naturalWidth: number; naturalHeight: number; displayedWidth: number; displayedHeight: number}>({
-    naturalWidth: 0,
-    naturalHeight: 0,
-    displayedWidth: 0,
-    displayedHeight: 0,
-  });
   
   // Re-extract dialog state
   const [reExtractDialog, setReExtractDialog] = useState<{
@@ -113,30 +100,6 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
     }
   }, [providedDocumentRecord, runsheetId, rowIndex]);
 
-  // Load extraction metadata for highlighting
-  useEffect(() => {
-    if (runsheetId && rowIndex !== undefined) {
-      ExtractionMetadataService.getMetadataForRow(runsheetId, rowIndex)
-        .then(metadata => {
-          console.log('🎯 Loaded extraction metadata:', metadata.length, 'entries');
-          setExtractionMetadata(metadata);
-        })
-        .catch(error => {
-          console.error('Error loading extraction metadata:', error);
-        });
-    }
-  }, [runsheetId, rowIndex]);
-
-  // When a field becomes active, scroll its highlight into view (for images)
-  useEffect(() => {
-    if (activeHighlight && imageScrollRef.current) {
-      const el = imageScrollRef.current.querySelector(`[data-img-highlight="${activeHighlight}"]`) as HTMLElement | null;
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
-      }
-    }
-  }, [activeHighlight]);
-
   // Update local row data when props change
   useEffect(() => {
     setRowData(initialRowData);
@@ -168,9 +131,6 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
     }
 
     try {
-      // Create abort controller for canceling analysis
-      const controller = new AbortController();
-      setAnalysisController(controller);
       setIsAnalyzing(true);
       console.log('🔍 Starting document analysis for side-by-side workspace, row:', rowIndex);
       
@@ -194,29 +154,18 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
         reader.readAsDataURL(blob);
       });
       
-      // Use the bbox extraction function that extracts data AND stores metadata
-      const { data, error } = await supabase.functions.invoke('document-extraction-with-bbox', {
+      const { data, error } = await supabase.functions.invoke('analyze-document', {
         body: {
-          document_data: imageData,
-          runsheet_id: runsheetId,
-          row_index: rowIndex,
-          columns,
-          column_instructions: columnInstructions
+          prompt: `Extract information from this document for the following fields and return as valid JSON:\n${extractionFields}\n\nReturn only a JSON object with field names as keys and extracted values as values. Do not include any markdown, explanations, or additional text.`,
+          imageData,
         }
       });
 
       if (error) {
-        throw new Error(error.message || 'Analysis failed');
+        throw new Error(error.message || 'OpenAI analysis failed');
       }
       
-      analysisResult = { extracted_data: data?.extracted_data, generatedText: JSON.stringify(data?.extracted_data || {}) };
-      
-      // Refresh metadata for highlights
-      if (data?.metadata_stored) {
-        console.log('🟨 BBox metadata stored (side-by-side):', data?.stored_metadata_count);
-        const freshMeta = await ExtractionMetadataService.getMetadataForRow(runsheetId, rowIndex);
-        setExtractionMetadata(freshMeta);
-      }
+      analysisResult = data;
 
       console.log('📡 Analysis function response (side-by-side):', { data: analysisResult });
 
@@ -302,20 +251,7 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
       });
     } finally {
       setIsAnalyzing(false);
-      setAnalysisController(null);
     }
-  };
-
-  const cancelAnalysis = () => {
-    if (analysisController) {
-      analysisController.abort();
-      setAnalysisController(null);
-    }
-    setIsAnalyzing(false);
-    toast({
-      title: "Analysis canceled",
-      description: "Document analysis was stopped",
-    });
   };
 
   const handleReanalyzeField = async (fieldName: string) => {
@@ -581,7 +517,6 @@ Return only the filename, nothing else.`,
             variant="outline"
             size="sm"
             onClick={() => setShowColumnPreferences(true)}
-            disabled={isAnalyzing}
             className="flex items-center gap-2"
           >
             <Settings className="w-4 h-4" />
@@ -604,37 +539,25 @@ Return only the filename, nothing else.`,
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-lg font-semibold">Row Data</h3>
                 <div className="flex items-center gap-2">
-                   {/* Analyze Document */}
-                    {documentRecord && !isAnalyzing && (
-                      <Button
-                        onClick={() => {
-                          const hasExisting = columns.some((col) => ((rowData[col] || '').toString().trim() !== ''));
-                          if (hasExisting) {
-                            setShowAnalyzeWarning(true);
-                          } else {
-                            handleAnalyzeDocument();
-                          }
-                        }}
-                        className="flex items-center gap-2"
-                        size="sm"
-                      >
-                        <Sparkles className="w-4 h-4" />
-                        Analyze Document
-                      </Button>
-                    )}
-                    
-                    {/* Cancel Analysis Button */}
-                    {isAnalyzing && (
-                      <Button
-                        onClick={cancelAnalysis}
-                        variant="destructive"
-                        className="flex items-center gap-2"
-                        size="sm"
-                      >
-                        <X className="w-4 h-4" />
-                        Cancel Analysis
-                      </Button>
-                    )}
+                  {/* Analyze Document */}
+                   {documentRecord && (
+                     <Button
+                       onClick={() => {
+                         const hasExisting = columns.some((col) => ((rowData[col] || '').toString().trim() !== ''));
+                         if (hasExisting) {
+                           setShowAnalyzeWarning(true);
+                         } else {
+                           handleAnalyzeDocument();
+                         }
+                       }}
+                       disabled={isAnalyzing}
+                       className="flex items-center gap-2"
+                       size="sm"
+                     >
+                       <Sparkles className="w-4 h-4" />
+                       {isAnalyzing ? "Analyzing..." : "Analyze Document"}
+                     </Button>
+                   )}
                  </div>
                </div>
              </div>
@@ -701,46 +624,42 @@ Return only the filename, nothing else.`,
                        
                        {/* Removed extraction instruction display - cleaner form */}
                       
-                         {value.length > 100 ? (
-                          <Textarea
-                            value={value}
-                            onChange={(e) => handleFieldChange(columnName, e.target.value)}
-                            className="min-h-[160px] resize-vertical"
-                            placeholder={`Enter ${columnName.toLowerCase()}...`}
-                            onFocus={() => {
-                              console.log('🎯 Field focused:', columnName);
-                              setActiveHighlight(columnName);
+                        {value.length > 100 ? (
+                         <Textarea
+                           value={value}
+                           onChange={(e) => handleFieldChange(columnName, e.target.value)}
+                           className="min-h-[160px] resize-vertical"
+                           placeholder={`Enter ${columnName.toLowerCase()}...`}
+                            onClick={(e) => {
+                              const target = e.target as HTMLTextAreaElement;
+                              
+                              if (e.detail === 2) {
+                                // Double-click: select word at cursor
+                                e.preventDefault();
+                                const text = target.value;
+                                const position = target.selectionStart;
+                                
+                                // Find word boundaries
+                                let start = position;
+                                let end = position;
+                                
+                                // Move start back to beginning of word
+                                while (start > 0 && /\w/.test(text[start - 1])) {
+                                  start--;
+                                }
+                                
+                                // Move end forward to end of word
+                                while (end < text.length && /\w/.test(text[end])) {
+                                  end++;
+                                }
+                                
+                                target.setSelectionRange(start, end);
+                              } else if (e.detail === 3) {
+                                // Triple-click: select all text
+                                e.preventDefault();
+                                target.select();
+                              }
                             }}
-                             onClick={(e) => {
-                               const target = e.target as HTMLTextAreaElement;
-                               
-                               if (e.detail === 2) {
-                                 // Double-click: select word at cursor
-                                 e.preventDefault();
-                                 const text = target.value;
-                                 const position = target.selectionStart;
-                                 
-                                 // Find word boundaries
-                                 let start = position;
-                                 let end = position;
-                                 
-                                 // Move start back to beginning of word
-                                 while (start > 0 && /\w/.test(text[start - 1])) {
-                                   start--;
-                                 }
-                                 
-                                 // Move end forward to end of word
-                                 while (end < text.length && /\w/.test(text[end])) {
-                                   end++;
-                                 }
-                                 
-                                 target.setSelectionRange(start, end);
-                               } else if (e.detail === 3) {
-                                 // Triple-click: select all text
-                                 e.preventDefault();
-                                 target.select();
-                               }
-                             }}
                            onKeyDown={(e) => {
                              if (e.key === 'Tab') {
                                e.preventDefault();
@@ -755,14 +674,10 @@ Return only the filename, nothing else.`,
                            }}
                          />
                        ) : (
-                          <Input
-                            value={value}
-                            onChange={(e) => handleFieldChange(columnName, e.target.value)}
-                            placeholder={`Enter ${columnName.toLowerCase()}...`}
-                            onFocus={() => {
-                              console.log('🎯 Field focused:', columnName);
-                              setActiveHighlight(columnName);
-                            }}
+                         <Input
+                           value={value}
+                           onChange={(e) => handleFieldChange(columnName, e.target.value)}
+                           placeholder={`Enter ${columnName.toLowerCase()}...`}
                             onClick={(e) => {
                               const target = e.target as HTMLInputElement;
                               
@@ -873,24 +788,14 @@ Return only the filename, nothing else.`,
                 </Card>
               ) : documentRecord ? (
                 <div className="h-full w-full">
-                   {documentRecord.content_type?.includes('pdf') ? (
-                     <SimplePDFViewer 
-                       file={null}
-                       previewUrl={DocumentService.getDocumentUrlSync(documentRecord.file_path)}
-                       extractionMetadata={extractionMetadata}
-                       activeHighlight={activeHighlight}
-                       onFieldClick={(fieldName) => {
-                         console.log('🖱️ PDF field clicked:', fieldName);
-                         setActiveHighlight(fieldName);
-                         // Focus the corresponding input/textarea
-                         const fieldElement = document.querySelector(`input[placeholder*="${fieldName.toLowerCase()}"], textarea[placeholder*="${fieldName.toLowerCase()}"]`) as HTMLElement;
-                         fieldElement?.focus();
-                       }}
-                     />
+                  {documentRecord.content_type?.includes('pdf') ? (
+                    <PDFViewerWithFallback 
+                      file={null}
+                      previewUrl={DocumentService.getDocumentUrlSync(documentRecord.file_path)}
+                    />
                       ) : (
                       <div className="h-full w-full relative overflow-hidden">
                         <div 
-                          ref={imageScrollRef}
                           className="h-full w-full overflow-auto scrollbar-thin scrollbar-thumb-muted-foreground/30 scrollbar-track-transparent"
                           onWheel={(e) => {
                             if (!imageFitToWidth) {
@@ -933,60 +838,23 @@ Return only the filename, nothing else.`,
                             }
                           }}
                         >
-                          <div className="relative inline-block">
-                            <img 
-                              ref={imageRef}
-                              src={DocumentService.getDocumentUrlSync(documentRecord.file_path)}
-                              alt={documentRecord.stored_filename}
-                              className={`transition-all duration-200 ease-out select-none ${
-                                imageFitToWidth ? 'w-full h-auto object-contain' : 'max-w-none object-contain cursor-zoom-in'
-                              }`}
-                              style={{ 
-                                minHeight: imageFitToWidth ? 'auto' : '100%'
-                              }}
-                              onLoad={(e) => {
-                                const img = e.currentTarget as HTMLImageElement;
-                                const displayedWidth = img.clientWidth;
-                                const displayedHeight = img.clientHeight;
-                                setImageDims({
-                                  naturalWidth: img.naturalWidth,
-                                  naturalHeight: img.naturalHeight,
-                                  displayedWidth,
-                                  displayedHeight,
-                                });
-                              }}
-                              onClick={() => {
-                                if (!imageFitToWidth) {
-                                  setImageZoom(prev => prev === 1 ? 2 : prev === 2 ? 0.5 : 1);
-                                }
-                              }}
-                            />
-
-                            {/* Highlight overlays for images */}
-                            {imageDims.displayedWidth > 0 && extractionMetadata.map((highlight) => {
-                              const scaleX = imageDims.naturalWidth ? (imageDims.displayedWidth / imageDims.naturalWidth) : 1;
-                              const scaleY = imageDims.naturalHeight ? (imageDims.displayedHeight / imageDims.naturalHeight) : 1;
-                              const left = (highlight.bbox_x1 || 0) * scaleX;
-                              const top = (highlight.bbox_y1 || 0) * scaleY;
-                              const width = ((highlight.bbox_x2 || 0) - (highlight.bbox_x1 || 0)) * scaleX;
-                              const height = ((highlight.bbox_y2 || 0) - (highlight.bbox_y1 || 0)) * scaleY;
-                              const isActive = activeHighlight === highlight.field_name;
-                              return (
-                                <div
-                                  key={highlight.id}
-                                  data-img-highlight={highlight.field_name}
-                                  className={`absolute border-2 rounded pointer-events-auto ${isActive ? 'bg-yellow-300/40 border-yellow-500 z-20' : 'bg-blue-300/30 border-blue-500 z-10 hover:bg-blue-300/40'}`}
-                                  style={{ left, top, width, height }}
-                                  title={`${highlight.field_name}: ${highlight.extracted_value}`}
-                                  onClick={() => {
-                                    setActiveHighlight(highlight.field_name);
-                                    const fieldElement = document.querySelector(`input[placeholder*="${highlight.field_name.toLowerCase()}"], textarea[placeholder*="${highlight.field_name.toLowerCase()}"]`) as HTMLElement;
-                                    fieldElement?.focus();
-                                  }}
-                                />
-                              );
-                            })}
-                          </div>
+                          <img 
+                            src={DocumentService.getDocumentUrlSync(documentRecord.file_path)}
+                            alt={documentRecord.stored_filename}
+                            className={`transition-all duration-200 ease-out select-none ${
+                              imageFitToWidth ? 'w-full h-auto object-contain' : 'max-w-none object-contain cursor-zoom-in'
+                            }`}
+                            style={{ 
+                              minHeight: imageFitToWidth ? 'auto' : '100%',
+                              transformOrigin: 'center',
+                              transform: imageZoom !== 1 ? `scale(${imageZoom})` : 'none'
+                            }}
+                            onClick={() => {
+                              if (!imageFitToWidth) {
+                                setImageZoom(prev => prev === 1 ? 2 : prev === 2 ? 0.5 : 1);
+                              }
+                            }}
+                          />
                         </div>
                       </div>
                   )}

@@ -26,76 +26,20 @@ import { cn } from '@/lib/utils';
 // Configure PDF.js worker - use CDN worker for better compatibility
 pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
-interface ExtractionMetadata {
-  id: string;
-  field_name: string;
-  extracted_value: string;
-  page_number: number;
-  bbox_x1: number;
-  bbox_y1: number;
-  bbox_x2: number;
-  bbox_y2: number;
-  confidence_score: number;
-}
-
 interface SimplePDFViewerProps {
   file: File | null;
   previewUrl: string | null;
-  extractionMetadata?: ExtractionMetadata[];
-  activeHighlight?: string | null;
-  onFieldClick?: (fieldName: string) => void;
 }
 
-const SimplePDFViewer: React.FC<SimplePDFViewerProps> = ({ 
-  file, 
-  previewUrl, 
-  extractionMetadata = [], 
-  activeHighlight = null,
-  onFieldClick 
-}) => {
+const SimplePDFViewer: React.FC<SimplePDFViewerProps> = ({ file, previewUrl }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [scale, setScale] = useState(1.2);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pageInput, setPageInput] = useState('');
-  const pageContainerRef = useRef<HTMLDivElement>(null);
   
   const documentSource = previewUrl || file;
-
-  // Handle highlight navigation and scrolling
-  useEffect(() => {
-    if (activeHighlight && extractionMetadata.length > 0) {
-      const highlightInfo = extractionMetadata.find(m => m.field_name === activeHighlight);
-      if (highlightInfo) {
-        console.log('🎯 Navigating to highlight:', highlightInfo.field_name, 'on page', highlightInfo.page_number);
-        
-        // Navigate to the correct page
-        if (highlightInfo.page_number !== currentPage) {
-          setCurrentPage(highlightInfo.page_number);
-          setPageInput(highlightInfo.page_number.toString());
-        }
-        
-        // Scroll to highlight after page loads
-        setTimeout(() => {
-          const highlightEl = pageContainerRef.current?.querySelector(`[data-highlight="${activeHighlight}"]`);
-          if (highlightEl) {
-            highlightEl.scrollIntoView({ 
-              behavior: 'smooth', 
-              block: 'center', 
-              inline: 'center' 
-            });
-            console.log('📍 Scrolled to highlight element');
-          }
-        }, 500); // Give page time to render
-      }
-    }
-  }, [activeHighlight, extractionMetadata, currentPage]);
-
-  // Get highlights for current page
-  const currentPageHighlights = extractionMetadata.filter(
-    metadata => metadata.page_number === currentPage
-  );
 
   // Reset states when file/previewUrl changes
   useEffect(() => {
@@ -263,74 +207,37 @@ const SimplePDFViewer: React.FC<SimplePDFViewerProps> = ({
         )}
         
         {!loading && !error && (
-          <div className="w-full h-full overflow-auto overscroll-contain" ref={pageContainerRef}>
+          <div className="w-full h-full overflow-auto overscroll-contain">
             <div className="flex justify-center items-start p-4">
-              <div className="relative">
-                <Document
-                  file={documentSource}
-                  onLoadSuccess={onDocumentLoadSuccess}
-                  onLoadError={onDocumentLoadError}
-                  loading=""
-                  error=""
-                  options={{
-                    cMapUrl: 'https://unpkg.com/pdfjs-dist@4.4.168/cmaps/',
-                    cMapPacked: true,
-                    standardFontDataUrl: 'https://unpkg.com/pdfjs-dist@4.4.168/standard_fonts/'
-                  }}
-                  onItemClick={(item) => console.log('PDF item clicked:', item)}
-                  onPassword={(callback) => {
-                    console.log('PDF requires password');
-                    callback(null); // No password
-                  }}
-                >
-                  <Page 
-                    pageNumber={currentPage}
-                    scale={scale}
-                    className="shadow-lg border border-border bg-white"
-                    renderAnnotationLayer={true}
-                    renderTextLayer={true}
-                    onLoadSuccess={() => console.log('Page loaded successfully')}
-                    onLoadError={(error) => console.error('Page load error:', error)}
-                    onRenderSuccess={() => console.log('Page rendered successfully')}
-                    onRenderError={(error) => console.error('Page render error:', error)}
-                  />
-                </Document>
-                
-                {/* Highlight overlays for current page */}
-                {currentPageHighlights.map((highlight) => {
-                  const isActive = activeHighlight === highlight.field_name;
-                  return (
-                    <div
-                      key={highlight.id}
-                      data-highlight={highlight.field_name}
-                      className={cn(
-                        "absolute pointer-events-auto cursor-pointer border-2 rounded transition-all duration-300",
-                        isActive 
-                          ? "bg-yellow-300/50 border-yellow-500 shadow-lg z-20" 
-                          : "bg-blue-200/30 border-blue-400 hover:bg-blue-300/40 z-10"
-                      )}
-                      style={{
-                        left: `${highlight.bbox_x1 * scale}px`,
-                        top: `${highlight.bbox_y1 * scale}px`,
-                        width: `${(highlight.bbox_x2 - highlight.bbox_x1) * scale}px`,
-                        height: `${(highlight.bbox_y2 - highlight.bbox_y1) * scale}px`,
-                      }}
-                      onClick={() => {
-                        console.log('🖱️ Highlight clicked:', highlight.field_name);
-                        onFieldClick?.(highlight.field_name);
-                      }}
-                      title={`${highlight.field_name}: ${highlight.extracted_value} (Confidence: ${Math.round(highlight.confidence_score * 100)}%)`}
-                    >
-                      {/* Label for active highlight */}
-                      {isActive && (
-                        <div className="absolute -top-6 left-0 bg-yellow-500 text-yellow-50 text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap z-30">
-                          {highlight.field_name}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+              <Document
+                file={documentSource}
+                onLoadSuccess={onDocumentLoadSuccess}
+                onLoadError={onDocumentLoadError}
+                loading=""
+                error=""
+                options={{
+                  cMapUrl: 'https://unpkg.com/pdfjs-dist@4.4.168/cmaps/',
+                  cMapPacked: true,
+                  standardFontDataUrl: 'https://unpkg.com/pdfjs-dist@4.4.168/standard_fonts/'
+                }}
+                onItemClick={(item) => console.log('PDF item clicked:', item)}
+                onPassword={(callback) => {
+                  console.log('PDF requires password');
+                  callback(null); // No password
+                }}
+              >
+                <Page 
+                  pageNumber={currentPage}
+                  scale={scale}
+                  className="shadow-lg border border-border bg-white"
+                  renderAnnotationLayer={true}
+                  renderTextLayer={true}
+                  onLoadSuccess={() => console.log('Page loaded successfully')}
+                  onLoadError={(error) => console.error('Page load error:', error)}
+                  onRenderSuccess={() => console.log('Page rendered successfully')}
+                  onRenderError={(error) => console.error('Page render error:', error)}
+                />
+              </Document>
             </div>
           </div>
         )}
