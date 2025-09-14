@@ -3997,72 +3997,8 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     const isCurrentlyEditing = editingCell?.rowIndex === rowIndex && editingCell?.column === column;
     
     if (isCurrentlyEditing) {
-      // If already editing, handle word selection at double-click position
-      event?.preventDefault();
-      event?.stopPropagation();
-      
-      if (textareaRef.current && event) {
-        const textarea = textareaRef.current;
-        const rect = textarea.getBoundingClientRect();
-        const x = event.clientX - rect.left;
-        const y = event.clientY - rect.top;
-        
-        // Calculate cursor position at click location
-        const value = cellValue;
-        const style = window.getComputedStyle(textarea);
-        const paddingLeft = parseInt(style.paddingLeft) || 0;
-        const paddingTop = parseInt(style.paddingTop) || 0;
-        
-        const adjustedX = x - paddingLeft;
-        const adjustedY = y - paddingTop;
-        
-        // Simple position calculation for double-click
-        const lines = value.split('\n');
-        const lineHeight = parseInt(style.lineHeight) || 20;
-        const targetLine = Math.floor(adjustedY / lineHeight);
-        
-        let position = 0;
-        for (let i = 0; i < Math.min(targetLine, lines.length - 1); i++) {
-          position += lines[i].length + 1;
-        }
-        
-        if (targetLine < lines.length) {
-          const currentLine = lines[targetLine];
-          const charWidth = 8; // Approximate character width
-          const charIndex = Math.floor(adjustedX / charWidth);
-          position += Math.min(charIndex, currentLine.length);
-        }
-        
-        position = Math.max(0, Math.min(position, value.length));
-        
-        // Find word boundaries
-        let wordStart = position;
-        let wordEnd = position;
-        
-        // If not on a word character, find nearest word
-        if (position < value.length && !/\w/.test(value[position])) {
-          let backPos = position - 1;
-          while (backPos >= 0 && !/\w/.test(value[backPos])) backPos--;
-          let forwardPos = position + 1;
-          while (forwardPos < value.length && !/\w/.test(value[forwardPos])) forwardPos++;
-          
-          if (backPos >= 0 && (forwardPos >= value.length || position - backPos <= forwardPos - position)) {
-            position = backPos;
-          } else if (forwardPos < value.length) {
-            position = forwardPos;
-          }
-        }
-        
-        wordStart = position;
-        wordEnd = position;
-        
-        // Expand to word boundaries
-        while (wordStart > 0 && /\w/.test(value[wordStart - 1])) wordStart--;
-        while (wordEnd < value.length && /\w/.test(value[wordEnd])) wordEnd++;
-        
-        // Select the word
-        textarea.setSelectionRange(wordStart, wordEnd);
-      }
+      // Let native double-click behavior select the word; do not interfere
+      return;
     } else {
       // Prevent browser default double-click selection conflicts
       event?.preventDefault();
@@ -6971,7 +6907,6 @@ ${extractionFields}`
                                      handleInputKeyDown(e);
                                    }
                                  }}
-                                 onDoubleClick={(e) => handleCellDoubleClick(rowIndex, column, e)}
                                 onBlur={() => {
                                   // Use setTimeout to ensure blur happens after any potential click events
                                   setTimeout(() => {
@@ -7078,7 +7013,6 @@ ${extractionFields}`
                                  ref={textareaRef}
                                  value={cellValue}
                                  onChange={(e) => setCellValue(e.target.value)}
-                                 onDoubleClick={(e) => handleCellDoubleClick(rowIndex, column, e)}
                                   onKeyDown={(e) => {
                                     if (e.key === 'Enter' && !e.shiftKey) {
                                       e.preventDefault();
