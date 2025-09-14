@@ -288,6 +288,22 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
         await loadRunsheetDocuments(selectedRunsheet.id);
       }
 
+      // Notify spreadsheet to refresh document map
+      try {
+        window.dispatchEvent(new CustomEvent('documentRecordCreated', {
+          detail: {
+            runsheetId: selectedRunsheet?.id,
+            rowIndex: result.rowIndex,
+            allPossibleIds: {
+              activeRunsheetId: selectedRunsheet?.id,
+              finalRunsheetId: selectedRunsheet?.id,
+            },
+          },
+        }));
+      } catch (e) {
+        console.warn('Failed to dispatch documentRecordCreated event', e);
+      }
+
       // Notify parent component
       onPhotoUploaded?.(result.fileUrl, result.storedFilename);
 
