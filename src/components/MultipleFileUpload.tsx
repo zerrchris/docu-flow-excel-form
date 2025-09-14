@@ -11,6 +11,7 @@ import { useActiveRunsheet } from '@/hooks/useActiveRunsheet';
 import { supabase } from '@/integrations/supabase/client';
 import { convertPDFToImages, isPDF, createFileFromBlob } from '@/utils/pdfToImage';
 import { validateMultipleFiles } from '@/utils/fileValidation';
+import { syncService } from '@/utils/syncService';
 
 interface FileUploadStatus {
   file: File;
@@ -403,6 +404,9 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
     }
 
     setIsUploading(true);
+    
+    // Prevent sync service from interrupting upload
+    syncService.setUploadInProgress(true);
 
     // Get current document map to check for existing document links
     let documentMap: Map<number, any> = new Map();
@@ -613,6 +617,9 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
     }
 
     setIsUploading(false);
+    
+    // Re-enable sync service after upload is complete
+    syncService.setUploadInProgress(false);
 
     // Organize uploaded documents into runsheet folder
     const successfulFiles = files.filter(f => f.status === 'success');

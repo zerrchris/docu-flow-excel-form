@@ -5,10 +5,16 @@ import { toast } from '@/hooks/use-toast';
 export class SyncService {
   private syncInProgress = false;
   private syncCallbacks: Array<(status: SyncStatus) => void> = [];
+  private uploadInProgress = false;
 
   async syncAll(): Promise<void> {
     if (this.syncInProgress) {
       console.log('Sync already in progress');
+      return;
+    }
+
+    if (this.uploadInProgress) {
+      console.log('Upload in progress, deferring sync');
       return;
     }
 
@@ -173,6 +179,15 @@ export class SyncService {
 
   isSyncing(): boolean {
     return this.syncInProgress;
+  }
+
+  setUploadInProgress(inProgress: boolean): void {
+    console.log(`Setting upload in progress: ${inProgress}`);
+    this.uploadInProgress = inProgress;
+  }
+
+  isUploadInProgress(): boolean {
+    return this.uploadInProgress;
   }
 }
 
