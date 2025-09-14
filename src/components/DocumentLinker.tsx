@@ -52,6 +52,7 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const inputId = React.useMemo(() => `runsheet-file-input-${rowIndex}-${runsheetId}`,[rowIndex, runsheetId]);
 
   // Update local filename when props change, but only if we haven't made local changes
   React.useEffect(() => {
@@ -1049,26 +1050,19 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
           }}
         >
         <div className="flex items-center justify-center gap-2 flex-1">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={isUploading}
-            className="h-8 text-xs flex-1 w-full cursor-pointer"
-            onClick={() => {
-              console.log('🔧 DocumentLinker: Add File button clicked for row', rowIndex);
-              console.log('🔧 DocumentLinker: fileInputRef.current:', fileInputRef.current);
-              if (fileInputRef.current) {
-                fileInputRef.current.click();
-                console.log('🔧 DocumentLinker: Triggered file input click');
-              } else {
-                console.error('🔧 DocumentLinker: fileInputRef.current is null!');
-              }
-            }}
-          >
-            <Upload className="w-3 h-3 mr-1" />
-            {isUploading ? 'Uploading...' : 'Add File'}
-          </Button>
+          <label htmlFor={inputId} className="flex-1">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isUploading}
+              className="h-8 text-xs flex-1 w-full cursor-pointer"
+            >
+              <Upload className="w-3 h-3 mr-1" />
+              {isUploading ? 'Uploading...' : 'Add File'}
+            </Button>
+          </label>
           <input
+            id={inputId}
             ref={fileInputRef}
             type="file"
             multiple
