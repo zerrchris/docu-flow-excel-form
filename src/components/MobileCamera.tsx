@@ -375,232 +375,248 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
   };
 
   return (
-    <Card className="p-6 space-y-4">
-      <div className="text-center space-y-2">
-        <h2 className="text-xl font-semibold">Document Capture</h2>
-        <p className="text-muted-foreground">
-          {selectedRunsheet 
-            ? `Ready to capture for: ${selectedRunsheet.name}`
-            : "Select a runsheet to start capturing documents"
-          }
-        </p>
-        {capturedPages.length > 0 && (
-          <p className="text-sm text-primary font-medium">
-            {capturedPages.length} page{capturedPages.length !== 1 ? 's' : ''} captured
-          </p>
-        )}
-      </div>
+    <div className="relative min-h-screen bg-background">
+      {/* Main Content Area */}
+      <div className="pb-32 px-4 pt-6">
+        {/* Header Section */}
+        <div className="text-center space-y-3 mb-6">
+          <h2 className="text-2xl font-bold">Document Capture</h2>
+          <div className="space-y-2">
+            <p className="text-muted-foreground text-base">
+              {selectedRunsheet 
+                ? `Capturing for: ${selectedRunsheet.name}`
+                : "Select a runsheet to start"
+              }
+            </p>
+            {capturedPages.length > 0 && (
+              <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-3 py-1 rounded-full">
+                <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
+                <span className="text-sm font-medium">
+                  {capturedPages.length} page{capturedPages.length !== 1 ? 's' : ''} captured
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Select Runsheet Button */}
-        <Button 
-          onClick={startDocumentCapture}
-          variant={selectedRunsheet ? "outline" : "default"}
-          className="h-24 flex flex-col gap-2"
-        >
-          <Upload className="h-6 w-6" />
-          <span className="text-sm">
-            {selectedRunsheet ? "Change Runsheet" : "Select Runsheet"}
-          </span>
-        </Button>
-
-        {/* Camera Button */}
-        <Button 
-          onClick={takePicture}
-          disabled={isUploading}
-          variant="default"
-          className="h-24 flex flex-col gap-2"
-        >
-          <CameraIcon className="h-6 w-6" />
-          <span className="text-sm">Take Photo</span>
-          {isUploading && <span className="text-xs">Uploading...</span>}
-        </Button>
-
-        {/* Gallery Button */}
-        {Capacitor.isNativePlatform() ? (
-          <Button 
-            onClick={selectFromGallery}
-            disabled={isUploading}
-            variant="outline"
-            className="h-24 flex flex-col gap-2"
-          >
-            <ImageIcon className="h-6 w-6" />
-            <span className="text-sm">Choose from Gallery</span>
-          </Button>
-        ) : (
-          <div className="relative">
+        {/* Runsheet Selection */}
+        {!selectedRunsheet && (
+          <div className="mb-6">
             <Button 
-              disabled={isUploading}
-              variant="outline"
-              className="h-24 w-full flex flex-col gap-2"
-              onClick={() => document.getElementById('file-input')?.click()}
+              onClick={startDocumentCapture}
+              size="lg"
+              className="w-full h-16 text-lg flex items-center gap-3"
             >
-              <ImageIcon className="h-6 w-6" />
-              <span className="text-sm">Choose File</span>
+              <Upload className="h-6 w-6" />
+              Select Runsheet to Begin
             </Button>
-            <input
-              id="file-input"
-              type="file"
-              accept="image/*"
-              onChange={handleFileInputChange}
-              className="hidden"
-            />
           </div>
         )}
-      </div>
 
-      {/* Captured Pages Preview */}
-      {capturedPages.length > 0 && (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium">Captured Pages ({capturedPages.length})</h3>
-            <div className="flex gap-2">
+        {/* Captured Pages Preview */}
+        {capturedPages.length > 0 && (
+          <div className="space-y-4 mb-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Captured Pages</h3>
               <Button
                 size="sm"
                 variant="outline"
                 onClick={clearCapturedPages}
                 disabled={isUploadingToRunsheet}
+                className="h-10 px-4"
               >
                 Clear All
               </Button>
-              <Button
-                size="sm"
-                onClick={showUploadDialog}
-                disabled={!selectedRunsheet || isUploadingToRunsheet}
-                className="gap-1"
-              >
-                {isUploadingToRunsheet ? (
-                  <>
-                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
-                    Uploading...
-                  </>
-                ) : (
-                  <>
-                    <Combine className="h-3 w-3" />
-                    Upload to Runsheet
-                  </>
-                )}
-              </Button>
             </div>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            {capturedPages.map((page, index) => (
-              <div key={index} className="relative">
-                <img
-                  src={page.dataUrl}
-                  alt={`Page ${index + 1}`}
-                  className="w-full h-20 object-cover rounded border"
-                />
-                <div className="absolute top-1 left-1 bg-black/70 text-white text-xs px-1 rounded">
-                  {index + 1}
-                </div>
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  className="absolute top-1 right-1 h-5 w-5 p-0 text-xs"
-                  onClick={() => removePage(index)}
-                >
-                  ×
-                </Button>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  className="absolute bottom-1 right-1 h-5 w-5 p-0"
-                  onClick={() => setFullscreenPhoto({ url: page.dataUrl, name: `Page ${index + 1}` })}
-                >
-                  <ZoomIn className="h-2 w-2" />
-                </Button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Recent Photos */}
-      {recentPhotos.length > 0 && (
-        <div className="space-y-2">
-          <h3 className="text-sm font-medium">Recent Photos</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            {recentPhotos.map((photo, index) => (
-              <div key={index} className="relative">
-                <img
-                  src={photo.url}
-                  alt={photo.name}
-                  className="w-full h-20 object-cover rounded cursor-pointer border"
-                  onClick={() => setFullscreenPhoto(photo)}
-                />
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  className="absolute bottom-1 right-1 h-6 w-6 p-0"
-                  onClick={() => setFullscreenPhoto(photo)}
-                >
-                  <ZoomIn className="h-3 w-3" />
-                </Button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Runsheet Documents */}
-      {selectedRunsheet && (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium">Documents in "{selectedRunsheet.name}"</h3>
-            <span className="text-xs text-muted-foreground">
-              {runsheetDocuments.length} document{runsheetDocuments.length !== 1 ? 's' : ''}
-            </span>
-          </div>
-          
-          {loadingDocuments ? (
-            <div className="text-center py-4">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
-              <p className="text-xs text-muted-foreground mt-2">Loading documents...</p>
-            </div>
-          ) : runsheetDocuments.length > 0 ? (
-            <div className="space-y-2 max-h-48 overflow-y-auto">
-              {runsheetDocuments.map((doc, index) => (
-                <div key={doc.id} className="flex items-center gap-3 p-2 bg-muted/50 rounded-md text-sm">
-                  <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{doc.stored_filename}</p>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span>Row {doc.row_index + 1}</span>
-                      <span>•</span>
-                      <span className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        {new Date(doc.created_at).toLocaleDateString()}
-                      </span>
+            
+            {/* Larger preview grid for better mobile interaction */}
+            <div className="grid grid-cols-2 gap-4">
+              {capturedPages.map((page, index) => (
+                <div key={index} className="relative group">
+                  <div className="aspect-[3/4] relative rounded-lg overflow-hidden border-2 border-border">
+                    <img
+                      src={page.dataUrl}
+                      alt={`Page ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                    {/* Page number overlay */}
+                    <div className="absolute top-2 left-2 bg-black/80 text-white text-sm px-2 py-1 rounded">
+                      {index + 1}
                     </div>
-                  </div>
-                  {doc.file_path && (
+                    {/* Remove button with larger touch target */}
                     <Button
                       size="sm"
-                      variant="ghost"
-                      className="h-6 w-6 p-0 flex-shrink-0"
-                      onClick={() => {
-                        const { data: urlData } = supabase.storage
-                          .from('documents')
-                          .getPublicUrl(doc.file_path);
-                        setFullscreenPhoto({ url: urlData.publicUrl, name: doc.stored_filename });
-                      }}
+                      variant="destructive"
+                      className="absolute top-2 right-2 h-8 w-8 p-0 text-xs"
+                      onClick={() => removePage(index)}
+                      disabled={isUploadingToRunsheet}
                     >
-                      <ZoomIn className="h-3 w-3" />
+                      <X className="h-4 w-4" />
                     </Button>
-                  )}
+                  </div>
                 </div>
               ))}
             </div>
-          ) : (
-            <div className="text-center py-4 text-muted-foreground">
-              <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p className="text-sm">No documents yet</p>
-              <p className="text-xs">Start capturing to see your documents here</p>
+          </div>
+        )}
+
+        {/* Recent Photos */}
+        {recentPhotos.length > 0 && (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Recent Uploads</h3>
+            <div className="grid grid-cols-1 gap-3">
+              {recentPhotos.map((photo, index) => (
+                <div
+                  key={index}
+                  className="flex items-center gap-3 p-3 border rounded-lg bg-card"
+                >
+                  <img
+                    src={photo.url}
+                    alt={photo.name}
+                    className="w-12 h-12 object-cover rounded"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{photo.name}</p>
+                    <p className="text-xs text-muted-foreground">Uploaded successfully</p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setFullscreenPhoto(photo)}
+                    className="h-8 w-8 p-0"
+                  >
+                    <ZoomIn className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
             </div>
-          )}
-        </div>
-      )}
+          </div>
+        )}
+
+        {/* Document List */}
+        {selectedRunsheet && runsheetDocuments.length > 0 && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Runsheet Documents</h3>
+              {loadingDocuments && (
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+              )}
+            </div>
+            <div className="space-y-2">
+              {runsheetDocuments.map((doc, index) => (
+                <div key={doc.id} className="flex items-center gap-3 p-3 border rounded-lg bg-card">
+                  <div className="w-8 h-8 bg-primary/10 rounded flex items-center justify-center">
+                    <FileText className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{doc.stored_filename}</p>
+                    <p className="text-xs text-muted-foreground">Row {doc.row_index + 1}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Sticky Bottom Action Bar */}
+      <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-t border-border p-4 space-y-3">
+        {selectedRunsheet ? (
+          <>
+            {/* Primary Action Buttons */}
+            <div className="grid grid-cols-2 gap-3">
+              <Button 
+                onClick={takePicture}
+                disabled={isUploading}
+                size="lg"
+                className="h-14 flex flex-col gap-1 relative"
+              >
+                <CameraIcon className="h-6 w-6" />
+                <span className="text-sm font-medium">Camera</span>
+                {isUploading && (
+                  <div className="absolute inset-0 bg-black/20 rounded-md flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  </div>
+                )}
+              </Button>
+
+              {Capacitor.isNativePlatform() ? (
+                <Button 
+                  onClick={selectFromGallery}
+                  disabled={isUploading}
+                  variant="outline"
+                  size="lg"
+                  className="h-14 flex flex-col gap-1"
+                >
+                  <ImageIcon className="h-6 w-6" />
+                  <span className="text-sm font-medium">Gallery</span>
+                </Button>
+              ) : (
+                <div className="relative">
+                  <Button 
+                    disabled={isUploading}
+                    variant="outline"
+                    size="lg"
+                    className="h-14 w-full flex flex-col gap-1"
+                    onClick={() => document.getElementById('file-input')?.click()}
+                  >
+                    <ImageIcon className="h-6 w-6" />
+                    <span className="text-sm font-medium">Choose File</span>
+                  </Button>
+                  <input
+                    id="file-input"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileInputChange}
+                    className="hidden"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Upload Button */}
+            {capturedPages.length > 0 && (
+              <Button
+                onClick={showUploadDialog}
+                disabled={isUploadingToRunsheet}
+                className="w-full h-12 text-base font-semibold gap-2"
+              >
+                {isUploadingToRunsheet ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Uploading {capturedPages.length} page{capturedPages.length !== 1 ? 's' : ''}...
+                  </>
+                ) : (
+                  <>
+                    <Combine className="h-5 w-5" />
+                    Upload {capturedPages.length} Page{capturedPages.length !== 1 ? 's' : ''} to Runsheet
+                  </>
+                )}
+              </Button>
+            )}
+
+            {/* Change Runsheet Button */}
+            <Button 
+              onClick={startDocumentCapture}
+              variant="ghost"
+              size="sm"
+              className="w-full h-10 text-muted-foreground"
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              Change Runsheet
+            </Button>
+          </>
+        ) : (
+          <Button 
+            onClick={startDocumentCapture}
+            size="lg"
+            className="w-full h-14 text-lg"
+          >
+            <Upload className="h-6 w-6 mr-3" />
+            Select Runsheet to Begin
+          </Button>
+        )}
+      </div>
 
       {/* Runsheet Selection Dialog */}
       <RunsheetSelectionDialog
@@ -677,6 +693,6 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
           )}
         </DialogContent>
       </Dialog>
-    </Card>
+    </div>
   );
 };
