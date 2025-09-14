@@ -194,41 +194,29 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
         reader.readAsDataURL(blob);
       });
       
-      // Store extraction metadata with bounding boxes
-      try {
-        const { data: bboxResult, error: bboxError } = await supabase.functions.invoke('document-extraction-with-bbox', {
-          body: {
-            document_data: imageData,
-            runsheet_id: runsheetId,
-            row_index: rowIndex,
-            columns,
-            column_instructions: columnInstructions
-          }
-        });
-        if (!bboxError) {
-          console.log('🟨 BBox metadata stored:', bboxResult?.stored_metadata_count);
-          // Refresh metadata from DB for reliability
-          const freshMeta = await ExtractionMetadataService.getMetadataForRow(runsheetId, rowIndex);
-          setExtractionMetadata(freshMeta);
-        } else {
-          console.warn('BBox extraction error:', bboxError);
-        }
-      } catch (err) {
-        console.warn('BBox extraction invocation failed:', err);
-      }
-      
-      const { data, error } = await supabase.functions.invoke('analyze-document', {
+      // Use the bbox extraction function that extracts data AND stores metadata
+      const { data, error } = await supabase.functions.invoke('document-extraction-with-bbox', {
         body: {
-          prompt: `Extract information from this document for the following fields and return as valid JSON:\n${extractionFields}\n\nReturn only a JSON object with field names as keys and extracted values as values. Do not include any markdown, explanations, or additional text.`,
-          imageData,
+          documentData: imageData,
+          runsheetId: runsheetId,
+          rowIndex: rowIndex,
+          columns,
+          columnInstructions: columnInstructions
         }
       });
 
       if (error) {
-        throw new Error(error.message || 'OpenAI analysis failed');
+        throw new Error(error.message || 'Analysis failed');
       }
       
-      analysisResult = data;
+      analysisResult = { extracted_data: data?.extracted_data, generatedText: JSON.stringify(data?.extracted_data || {}) };
+      
+      // Refresh metadata for highlights
+      if (data?.metadata_stored) {
+        console.log('🟨 BBox metadata stored (side-by-side):', data?.stored_metadata_count);
+        const freshMeta = await ExtractionMetadataService.getMetadataForRow(runsheetId, rowIndex);
+        setExtractionMetadata(freshMeta);
+      }
 
       console.log('📡 Analysis function response (side-by-side):', { data: analysisResult });
 
