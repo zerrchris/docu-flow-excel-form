@@ -1,6 +1,13 @@
 // Lightweight bootstrap to ensure the floating button appears even if the heavy content.js fails to parse
 (function () {
   try {
+    // Prevent multiple execution
+    if (window.runsheetProBootstrapLoaded) {
+      console.log('🟦 RunsheetPro Bootstrap: already loaded, skipping...');
+      return;
+    }
+    window.runsheetProBootstrapLoaded = true;
+
     const LOG_PREFIX = '🟦 RunsheetPro Bootstrap:';
     console.log(LOG_PREFIX, 'loaded');
 
