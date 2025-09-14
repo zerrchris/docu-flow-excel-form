@@ -1725,21 +1725,27 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
           
           // Only update if the change came from a different source (e.g., extension or another tab)
           const newData = payload.new?.data as Record<string, string>[];
-          if (newData && JSON.stringify(newData) !== JSON.stringify(data)) {
-            console.log('🔄 Applying real-time data update');
-            setData(newData);
-            onDataChange?.(newData);
-            
-            // Show a subtle notification only if there are significant changes
-            const hasSignificantChanges = checkForSignificantChanges(data, newData);
-            if (hasSignificantChanges) {
-              // Use a brief, less intrusive notification
-              toast({
-                title: "Synced",
-                description: "Data updated from another source",
-                duration: 2000, // Shorter duration
-              });
-            }
+          if (newData) {
+            // Use a ref to get current data to avoid stale closures
+            setData(currentData => {
+              if (JSON.stringify(newData) !== JSON.stringify(currentData)) {
+                console.log('🔄 Applying real-time data update');
+                onDataChange?.(newData);
+                
+                // Show a subtle notification only if there are significant changes
+                const hasSignificantChanges = checkForSignificantChanges(currentData, newData);
+                if (hasSignificantChanges) {
+                  // Use a brief, less intrusive notification
+                  toast({
+                    title: "Synced",
+                    description: "Data updated from another source",
+                    duration: 2000, // Shorter duration
+                  });
+                }
+                return newData;
+              }
+              return currentData;
+            });
           }
         }
       )
@@ -1756,7 +1762,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       console.log('🔄 Cleaning up real-time subscription');
       supabase.removeChannel(channel);
     };
-  }, [currentRunsheetId, data, onDataChange, toast]);
+  }, [currentRunsheetId, onDataChange, toast]); // Removed 'data' from dependencies
 
 
   // Enhanced auto-save functionality with immediate saving

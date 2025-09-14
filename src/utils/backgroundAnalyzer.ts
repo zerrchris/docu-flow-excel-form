@@ -301,9 +301,16 @@ export class BackgroundAnalyzer {
     const storedJob = this.loadJobFromStorage();
     if (storedJob && storedJob.status === 'running') {
       this.currentJob = storedJob;
-      console.log('Resuming background analysis from storage');
+      console.log('Resuming background analysis from storage - Progress:', `${storedJob.currentIndex}/${storedJob.documentMap.length}`);
+      
+      // Re-establish callbacks if UI components are listening
+      this.notifyCallbacks();
+      
+      // Continue analysis from where it left off
       this.runAnalysis();
+      return true;
     }
+    return false;
   }
 
   pauseAnalysis() {
@@ -371,9 +378,62 @@ export interface AnalysisProgress {
 
 export const backgroundAnalyzer = BackgroundAnalyzer.getInstance();
 
-// Auto-resume on page load
+// Auto-resume on page load and prevent unload during analysis
 if (typeof window !== 'undefined') {
+  // Resume analysis on page load with better logging
   window.addEventListener('load', () => {
+    console.log('Page loaded - checking for background analysis to resume');
+    const resumed = backgroundAnalyzer.resumeFromStorage();
+    if (resumed) {
+      console.log('⚡ Background analysis resumed successfully');
+    } else {
+      console.log('No background analysis to resume');
+    }
+  });
+  
+  // Also try to resume on DOMContentLoaded for faster startup
+  window.addEventListener('DOMContentLoaded', () => {
     backgroundAnalyzer.resumeFromStorage();
   });
+  
+  // Prevent page unload during analysis
+  window.addEventListener('beforeunload', (e) => {
+    const job = backgroundAnalyzer.getJobStatus();
+    if (job && job.status === 'running') {
+      e.preventDefault();
+      e.returnValue = 'Document analysis is in progress. Leaving now will cancel the analysis. Are you sure?';
+      return e.returnValue;
+    }
+  });
+  
+  // Prevent navigation during analysis (for modern browsers)
+  let navigationWarningShown = false;
+  const originalPushState = history.pushState;
+  const originalReplaceState = history.replaceState;
+  
+  history.pushState = function(...args) {
+    const job = backgroundAnalyzer.getJobStatus();
+    if (job && job.status === 'running' && !navigationWarningShown) {
+      navigationWarningShown = true;
+      if (!confirm('Document analysis is in progress. Navigating away will pause the analysis. Continue?')) {
+        navigationWarningShown = false;
+        return;
+      }
+      navigationWarningShown = false;
+    }
+    return originalPushState.apply(this, args);
+  };
+  
+  history.replaceState = function(...args) {
+    const job = backgroundAnalyzer.getJobStatus();
+    if (job && job.status === 'running' && !navigationWarningShown) {
+      navigationWarningShown = true;
+      if (!confirm('Document analysis is in progress. Navigating away will pause the analysis. Continue?')) {
+        navigationWarningShown = false;
+        return;
+      }
+      navigationWarningShown = false;
+    }
+    return originalReplaceState.apply(this, args);
+  };
 }
