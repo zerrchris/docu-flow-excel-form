@@ -283,9 +283,9 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
       const newPhoto = { url: result.fileUrl, name: result.storedFilename };
       setRecentPhotos(prev => [newPhoto, ...prev.slice(0, 4)]);
 
-      // Add to runsheet documents list
-      if (result.document) {
-        setRunsheetDocuments(prev => [...prev, result.document].sort((a, b) => a.row_index - b.row_index));
+      // Refresh the runsheet documents list to show the new document
+      if (selectedRunsheet) {
+        await loadRunsheetDocuments(selectedRunsheet.id);
       }
 
       // Notify parent component
