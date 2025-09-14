@@ -1054,7 +1054,16 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
             size="sm"
             disabled={isUploading}
             className="h-8 text-xs flex-1 w-full cursor-pointer"
-            onClick={() => fileInputRef.current?.click()}
+            onClick={() => {
+              console.log('🔧 DocumentLinker: Add File button clicked for row', rowIndex);
+              console.log('🔧 DocumentLinker: fileInputRef.current:', fileInputRef.current);
+              if (fileInputRef.current) {
+                fileInputRef.current.click();
+                console.log('🔧 DocumentLinker: Triggered file input click');
+              } else {
+                console.error('🔧 DocumentLinker: fileInputRef.current is null!');
+              }
+            }}
           >
             <Upload className="w-3 h-3 mr-1" />
             {isUploading ? 'Uploading...' : 'Add File'}
