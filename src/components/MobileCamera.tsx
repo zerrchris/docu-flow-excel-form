@@ -575,7 +575,9 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
                 className="h-14 flex flex-col gap-1 relative"
               >
                 <CameraIcon className="h-6 w-6" />
-                <span className="text-sm font-medium">Camera</span>
+                <span className="text-sm font-medium">
+                  {capturedPages.length === 0 ? "Camera" : `Page ${capturedPages.length + 1}`}
+                </span>
                 {isUploading && (
                   <div className="absolute inset-0 bg-black/20 rounded-md flex items-center justify-center">
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
