@@ -382,24 +382,39 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
         <div className="text-center space-y-3 mb-6">
           <h2 className="text-2xl font-bold">Document Capture</h2>
           <div className="space-y-2">
-            <p className="text-muted-foreground text-base">
-              {selectedRunsheet 
-                ? `Capturing for: ${selectedRunsheet.name}`
-                : "Select a runsheet to start"
-              }
-            </p>
-            {capturedPages.length > 0 && (
-              <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-3 py-1 rounded-full">
-                <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
-                <span className="text-sm font-medium">
-                  {capturedPages.length} page{capturedPages.length !== 1 ? 's' : ''} captured
-                </span>
+            {selectedRunsheet ? (
+              <>
+                <p className="text-muted-foreground text-base">
+                  Capturing for: <span className="font-medium text-foreground">{selectedRunsheet.name}</span>
+                </p>
+                {capturedPages.length > 0 && (
+                  <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-3 py-1 rounded-full">
+                    <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
+                    <span className="text-sm font-medium">
+                      {capturedPages.length} page{capturedPages.length !== 1 ? 's' : ''} captured
+                    </span>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-muted-foreground text-base">
+                  Select a runsheet to organize your captured documents
+                </p>
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                  <p className="text-amber-800 text-sm font-medium">
+                    📋 Runsheet Required
+                  </p>
+                  <p className="text-amber-700 text-xs mt-1">
+                    Choose a runsheet to ensure your documents are properly organized and linked to your data.
+                  </p>
+                </div>
               </div>
             )}
           </div>
         </div>
 
-        {/* Runsheet Selection */}
+        {/* Runsheet Selection - Always visible if none selected */}
         {!selectedRunsheet && (
           <div className="mb-6">
             <Button 
@@ -408,8 +423,36 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
               className="w-full h-16 text-lg flex items-center gap-3"
             >
               <Upload className="h-6 w-6" />
-              Select Runsheet to Begin
+              Select Runsheet to Begin Capture
             </Button>
+            <p className="text-center text-xs text-muted-foreground mt-2">
+              Camera and gallery will be available after runsheet selection
+            </p>
+          </div>
+        )}
+
+        {/* Selected Runsheet Info */}
+        {selectedRunsheet && (
+          <div className="mb-6 p-4 bg-primary/5 border border-primary/20 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                  <FileText className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <p className="font-medium">{selectedRunsheet.name}</p>
+                  <p className="text-sm text-muted-foreground">Active runsheet</p>
+                </div>
+              </div>
+              <Button 
+                onClick={startDocumentCapture}
+                variant="ghost"
+                size="sm"
+                className="text-primary"
+              >
+                Change
+              </Button>
+            </div>
           </div>
         )}
 
@@ -523,7 +566,7 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
       <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-t border-border p-4 space-y-3">
         {selectedRunsheet ? (
           <>
-            {/* Primary Action Buttons */}
+            {/* Primary Action Buttons - Only show when runsheet is selected */}
             <div className="grid grid-cols-2 gap-3">
               <Button 
                 onClick={takePicture}
@@ -574,7 +617,7 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
               )}
             </div>
 
-            {/* Upload Button */}
+            {/* Upload Button - Only show when pages are captured */}
             {capturedPages.length > 0 && (
               <Button
                 onClick={showUploadDialog}
@@ -594,27 +637,22 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
                 )}
               </Button>
             )}
-
-            {/* Change Runsheet Button */}
-            <Button 
-              onClick={startDocumentCapture}
-              variant="ghost"
-              size="sm"
-              className="w-full h-10 text-muted-foreground"
-            >
-              <Upload className="h-4 w-4 mr-2" />
-              Change Runsheet
-            </Button>
           </>
         ) : (
-          <Button 
-            onClick={startDocumentCapture}
-            size="lg"
-            className="w-full h-14 text-lg"
-          >
-            <Upload className="h-6 w-6 mr-3" />
-            Select Runsheet to Begin
-          </Button>
+          /* Runsheet Selection Required */
+          <div className="text-center space-y-3">
+            <Button 
+              onClick={startDocumentCapture}
+              size="lg"
+              className="w-full h-14 text-lg"
+            >
+              <Upload className="h-6 w-6 mr-3" />
+              Select Runsheet First
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              Runsheet selection is required for organized document capture
+            </p>
+          </div>
         )}
       </div>
 
