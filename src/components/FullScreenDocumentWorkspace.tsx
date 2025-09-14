@@ -369,8 +369,13 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
 
   const handleImageMouseUp = () => setIsDraggingImage(false);
 
+  const [abortController, setAbortController] = useState<AbortController | null>(null);
+
   const analyzeDocumentAndPopulateRow = async () => {
     if (!documentUrl || isAnalyzing) return;
+    
+    const controller = new AbortController();
+    setAbortController(controller);
     
     try {
       setIsAnalyzing(true);
@@ -497,6 +502,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
       });
     } finally {
       setIsAnalyzing(false);
+      setAbortController(null);
     }
   };
 
@@ -642,17 +648,18 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
         <div className="flex items-center space-x-2">
           {!isPdf && (
             <>
-              <Button variant="outline" size="sm" onClick={handleZoomOut}>
+              <Button variant="outline" size="sm" onClick={handleZoomOut} disabled={isAnalyzing}>
                 <ZoomOut className="h-4 w-4" />
               </Button>
               <span className="text-sm font-medium">{Math.round(zoom * 100)}%</span>
-              <Button variant="outline" size="sm" onClick={handleZoomIn}>
+              <Button variant="outline" size="sm" onClick={handleZoomIn} disabled={isAnalyzing}>
                 <ZoomIn className="h-4 w-4" />
               </Button>
               <Button 
                 variant={fitToWidth ? "default" : "outline"} 
                 size="sm" 
                 onClick={() => setFitToWidth(!fitToWidth)}
+                disabled={isAnalyzing}
                 title="Fit to width"
               >
                 Fit Width
@@ -736,26 +743,49 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
               <div className="p-4 border-b bg-muted/20 flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <h4 className="font-semibold">Working Row {rowIndex + 1}</h4>
-                  {documentUrl && !isLoading && !error && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const hasExisting = editableFields.some((c) => ((localRowData[c] || '').toString().trim() !== ''));
-                        if (hasExisting) {
-                          setShowAnalyzeWarning(true);
-                        } else {
-                          analyzeDocumentAndPopulateRow();
-                        }
-                      }}
-                      disabled={isAnalyzing}
-                      className="gap-2 text-blue-600 hover:text-blue-700 border-blue-200 hover:border-blue-300"
-                      title="Analyze document and extract data to populate row fields"
-                    >
-                      <Brain className="h-4 w-4" />
-                      {isAnalyzing ? 'Analyzing...' : 'Analyze'}
-                    </Button>
-                  )}
+                   {documentUrl && !isLoading && !error && (
+                     <>
+                       {isAnalyzing ? (
+                         <Button
+                           variant="outline"
+                           size="sm"
+                           onClick={() => {
+                             if (abortController) {
+                               abortController.abort();
+                             }
+                             setIsAnalyzing(false);
+                             setAbortController(null);
+                             toast({
+                               title: "Analysis cancelled",
+                               description: "Document analysis was cancelled.",
+                             });
+                           }}
+                           className="gap-2 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                           title="Cancel document analysis"
+                         >
+                           Cancel Analysis
+                         </Button>
+                       ) : (
+                         <Button
+                           variant="outline"
+                           size="sm"
+                           onClick={() => {
+                             const hasExisting = editableFields.some((c) => ((localRowData[c] || '').toString().trim() !== ''));
+                             if (hasExisting) {
+                               setShowAnalyzeWarning(true);
+                             } else {
+                               analyzeDocumentAndPopulateRow();
+                             }
+                           }}
+                           className="gap-2 text-blue-600 hover:text-blue-700 border-blue-200 hover:border-blue-300"
+                           title="Analyze document and extract data to populate row fields"
+                         >
+                           <Brain className="h-4 w-4" />
+                           Analyze
+                         </Button>
+                       )}
+                     </>
+                   )}
                 </div>
                 <Button
                   variant="outline"

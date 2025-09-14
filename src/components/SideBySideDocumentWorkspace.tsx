@@ -106,6 +106,8 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
     setHasUnsavedChanges(false);
   }, [initialRowData, rowIndex]);
 
+  const [abortController, setAbortController] = useState<AbortController | null>(null);
+
   const handleAnalyzeDocument = async (forceOverwrite = false) => {
     console.log('🔍 SIDE-BY-SIDE: handleAnalyzeDocument called');
     console.log('🔍 SIDE-BY-SIDE: documentRecord:', documentRecord);
@@ -129,6 +131,9 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
         return;
       }
     }
+
+    const controller = new AbortController();
+    setAbortController(controller);
 
     try {
       setIsAnalyzing(true);
@@ -251,6 +256,7 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
       });
     } finally {
       setIsAnalyzing(false);
+      setAbortController(null);
     }
   };
 
@@ -517,6 +523,7 @@ Return only the filename, nothing else.`,
             variant="outline"
             size="sm"
             onClick={() => setShowColumnPreferences(true)}
+            disabled={isAnalyzing}
             className="flex items-center gap-2"
           >
             <Settings className="w-4 h-4" />
@@ -539,25 +546,47 @@ Return only the filename, nothing else.`,
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-lg font-semibold">Row Data</h3>
                 <div className="flex items-center gap-2">
-                  {/* Analyze Document */}
-                   {documentRecord && (
-                     <Button
-                       onClick={() => {
-                         const hasExisting = columns.some((col) => ((rowData[col] || '').toString().trim() !== ''));
-                         if (hasExisting) {
-                           setShowAnalyzeWarning(true);
-                         } else {
-                           handleAnalyzeDocument();
-                         }
-                       }}
-                       disabled={isAnalyzing}
-                       className="flex items-center gap-2"
-                       size="sm"
-                     >
-                       <Sparkles className="w-4 h-4" />
-                       {isAnalyzing ? "Analyzing..." : "Analyze Document"}
-                     </Button>
-                   )}
+                   {/* Analyze Document */}
+                    {documentRecord && (
+                      <>
+                        {isAnalyzing ? (
+                          <Button
+                            onClick={() => {
+                              if (abortController) {
+                                abortController.abort();
+                              }
+                              setIsAnalyzing(false);
+                              setAbortController(null);
+                              toast({
+                                title: "Analysis cancelled",
+                                description: "Document analysis was cancelled.",
+                              });
+                            }}
+                            variant="outline"
+                            className="flex items-center gap-2 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                            size="sm"
+                          >
+                            Cancel Analysis
+                          </Button>
+                        ) : (
+                          <Button
+                            onClick={() => {
+                              const hasExisting = columns.some((col) => ((rowData[col] || '').toString().trim() !== ''));
+                              if (hasExisting) {
+                                setShowAnalyzeWarning(true);
+                              } else {
+                                handleAnalyzeDocument();
+                              }
+                            }}
+                            className="flex items-center gap-2"
+                            size="sm"
+                          >
+                            <Sparkles className="w-4 h-4" />
+                            Analyze Document
+                          </Button>
+                        )}
+                      </>
+                    )}
                  </div>
                </div>
              </div>
