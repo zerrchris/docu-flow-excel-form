@@ -54,9 +54,9 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
     if (isOpen && documentMap.size > 0) {
       // Check if there's an existing job running
       const existingJob = backgroundAnalyzer.getJobStatus();
-      if (existingJob && existingJob.runsheetId === runsheetId) {
+      if (existingJob && existingJob.runsheetId === runsheetId && existingJob.status === 'running') {
         setCurrentJobId(existingJob.id);
-        setIsAnalyzing(existingJob.status === 'running');
+        setIsAnalyzing(true);
         setResults(existingJob.results);
         setProgress((existingJob.currentIndex / existingJob.documentMap.length) * 100);
       } else {
