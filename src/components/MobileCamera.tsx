@@ -4,7 +4,7 @@ import { Capacitor } from '@capacitor/core';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Camera as CameraIcon, Upload, Image as ImageIcon, ZoomIn } from 'lucide-react';
+import { Camera as CameraIcon, Upload, Image as ImageIcon, ZoomIn, FileText, Calendar } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import RunsheetSelectionDialog from './RunsheetSelectionDialog';
@@ -20,6 +20,8 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
   const [selectedRunsheet, setSelectedRunsheet] = useState<any>(null);
   const [showRunsheetSelectionDialog, setShowRunsheetSelectionDialog] = useState(false);
   const [fullscreenPhoto, setFullscreenPhoto] = useState<{url: string, name: string} | null>(null);
+  const [runsheetDocuments, setRunsheetDocuments] = useState<Array<any>>([]);
+  const [loadingDocuments, setLoadingDocuments] = useState(false);
 
   const checkCameraPermissions = async () => {
     if (!Capacitor.isNativePlatform()) {
@@ -45,7 +47,7 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
     setShowRunsheetSelectionDialog(true);
   };
 
-  const handleRunsheetSelected = (runsheet: any, isNew?: boolean) => {
+  const handleRunsheetSelected = async (runsheet: any, isNew?: boolean) => {
     setSelectedRunsheet(runsheet);
     setShowRunsheetSelectionDialog(false);
     
@@ -54,14 +56,41 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
         title: isNew ? "Runsheet Created" : "Runsheet Selected",
         description: `Photos will be added to "${runsheet.name}"`,
       });
-      // Proceed directly to taking picture
-      takePicture();
+      // Load existing documents for this runsheet
+      await loadRunsheetDocuments(runsheet.id);
     } else {
       toast({
         title: "No Runsheet Selected",
         description: "Please select a runsheet to continue",
         variant: "destructive"
       });
+      setRunsheetDocuments([]);
+    }
+  };
+
+  const loadRunsheetDocuments = async (runsheetId: string) => {
+    setLoadingDocuments(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: documents, error } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('runsheet_id', runsheetId)
+        .eq('user_id', user.id)
+        .order('row_index', { ascending: true });
+
+      if (error) {
+        console.error('Error loading runsheet documents:', error);
+        return;
+      }
+
+      setRunsheetDocuments(documents || []);
+    } catch (error) {
+      console.error('Error loading runsheet documents:', error);
+    } finally {
+      setLoadingDocuments(false);
     }
   };
 
@@ -209,6 +238,11 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
       const newPhoto = { url: result.fileUrl, name: result.storedFilename };
       setRecentPhotos(prev => [newPhoto, ...prev.slice(0, 4)]);
 
+      // Add to runsheet documents list
+      if (result.document) {
+        setRunsheetDocuments(prev => [...prev, result.document].sort((a, b) => a.row_index - b.row_index));
+      }
+
       // Notify parent component
       onPhotoUploaded?.(result.fileUrl, result.storedFilename);
 
@@ -344,6 +378,65 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Runsheet Documents */}
+      {selectedRunsheet && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-medium">Documents in "{selectedRunsheet.name}"</h3>
+            <span className="text-xs text-muted-foreground">
+              {runsheetDocuments.length} document{runsheetDocuments.length !== 1 ? 's' : ''}
+            </span>
+          </div>
+          
+          {loadingDocuments ? (
+            <div className="text-center py-4">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
+              <p className="text-xs text-muted-foreground mt-2">Loading documents...</p>
+            </div>
+          ) : runsheetDocuments.length > 0 ? (
+            <div className="space-y-2 max-h-48 overflow-y-auto">
+              {runsheetDocuments.map((doc, index) => (
+                <div key={doc.id} className="flex items-center gap-3 p-2 bg-muted/50 rounded-md text-sm">
+                  <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate">{doc.stored_filename}</p>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span>Row {doc.row_index + 1}</span>
+                      <span>•</span>
+                      <span className="flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        {new Date(doc.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+                  {doc.file_path && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 w-6 p-0 flex-shrink-0"
+                      onClick={() => {
+                        const { data: urlData } = supabase.storage
+                          .from('documents')
+                          .getPublicUrl(doc.file_path);
+                        setFullscreenPhoto({ url: urlData.publicUrl, name: doc.stored_filename });
+                      }}
+                    >
+                      <ZoomIn className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-4 text-muted-foreground">
+              <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">No documents yet</p>
+              <p className="text-xs">Start capturing to see your documents here</p>
+            </div>
+          )}
         </div>
       )}
 
