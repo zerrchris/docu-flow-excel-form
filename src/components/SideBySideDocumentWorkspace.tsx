@@ -8,7 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
-import { ArrowLeft, Sparkles, RotateCcw, FileText, Wand2, AlertTriangle, Settings, Edit3 } from 'lucide-react';
+import { ArrowLeft, Sparkles, RotateCcw, FileText, Wand2, AlertTriangle, Settings, Edit3, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -53,6 +53,7 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
   const [extractionMetadata, setExtractionMetadata] = useState<ExtractionMetadata[]>([]);
   const [activeHighlight, setActiveHighlight] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisController, setAnalysisController] = useState<AbortController | null>(null);
   const [documentRecord, setDocumentRecord] = useState<DocumentRecord | undefined>(providedDocumentRecord);
   const [isLoadingDocument, setIsLoadingDocument] = useState(false);
   
@@ -167,6 +168,9 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
     }
 
     try {
+      // Create abort controller for canceling analysis
+      const controller = new AbortController();
+      setAnalysisController(controller);
       setIsAnalyzing(true);
       console.log('🔍 Starting document analysis for side-by-side workspace, row:', rowIndex);
       
@@ -310,7 +314,20 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
       });
     } finally {
       setIsAnalyzing(false);
+      setAnalysisController(null);
     }
+  };
+
+  const cancelAnalysis = () => {
+    if (analysisController) {
+      analysisController.abort();
+      setAnalysisController(null);
+    }
+    setIsAnalyzing(false);
+    toast({
+      title: "Analysis canceled",
+      description: "Document analysis was stopped",
+    });
   };
 
   const handleReanalyzeField = async (fieldName: string) => {
@@ -576,6 +593,7 @@ Return only the filename, nothing else.`,
             variant="outline"
             size="sm"
             onClick={() => setShowColumnPreferences(true)}
+            disabled={isAnalyzing}
             className="flex items-center gap-2"
           >
             <Settings className="w-4 h-4" />
@@ -598,25 +616,37 @@ Return only the filename, nothing else.`,
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-lg font-semibold">Row Data</h3>
                 <div className="flex items-center gap-2">
-                  {/* Analyze Document */}
-                   {documentRecord && (
-                     <Button
-                       onClick={() => {
-                         const hasExisting = columns.some((col) => ((rowData[col] || '').toString().trim() !== ''));
-                         if (hasExisting) {
-                           setShowAnalyzeWarning(true);
-                         } else {
-                           handleAnalyzeDocument();
-                         }
-                       }}
-                       disabled={isAnalyzing}
-                       className="flex items-center gap-2"
-                       size="sm"
-                     >
-                       <Sparkles className="w-4 h-4" />
-                       {isAnalyzing ? "Analyzing..." : "Analyze Document"}
-                     </Button>
-                   )}
+                   {/* Analyze Document */}
+                    {documentRecord && !isAnalyzing && (
+                      <Button
+                        onClick={() => {
+                          const hasExisting = columns.some((col) => ((rowData[col] || '').toString().trim() !== ''));
+                          if (hasExisting) {
+                            setShowAnalyzeWarning(true);
+                          } else {
+                            handleAnalyzeDocument();
+                          }
+                        }}
+                        className="flex items-center gap-2"
+                        size="sm"
+                      >
+                        <Sparkles className="w-4 h-4" />
+                        Analyze Document
+                      </Button>
+                    )}
+                    
+                    {/* Cancel Analysis Button */}
+                    {isAnalyzing && (
+                      <Button
+                        onClick={cancelAnalysis}
+                        variant="destructive"
+                        className="flex items-center gap-2"
+                        size="sm"
+                      >
+                        <X className="w-4 h-4" />
+                        Cancel Analysis
+                      </Button>
+                    )}
                  </div>
                </div>
              </div>
