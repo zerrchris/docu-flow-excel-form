@@ -60,6 +60,14 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
   const [showAnalyzeWarning, setShowAnalyzeWarning] = useState(false);
   const [extractionMetadata, setExtractionMetadata] = useState<ExtractionMetadata[]>([]);
   const [activeHighlight, setActiveHighlight] = useState<string | null>(null);
+  const imageScrollRef = useRef<HTMLDivElement>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
+  const [imageDims, setImageDims] = useState<{naturalWidth: number; naturalHeight: number; displayedWidth: number; displayedHeight: number}>({
+    naturalWidth: 0,
+    naturalHeight: 0,
+    displayedWidth: 0,
+    displayedHeight: 0,
+  });
   const [panX, setPanX] = useState(0);
   const [panY, setPanY] = useState(0);
   const [isDraggingImage, setIsDraggingImage] = useState(false);
@@ -164,6 +172,16 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
         });
     }
   }, [runsheetId, rowIndex]);
+
+  // When a field becomes active, scroll its highlight into view (for images)
+  useEffect(() => {
+    if (activeHighlight && imageScrollRef.current) {
+      const el = imageScrollRef.current.querySelector(`[data-img-highlight="${activeHighlight}"]`) as HTMLElement | null;
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+      }
+    }
+  }, [activeHighlight]);
 
   const handleFieldChange = (field: string, value: string) => {
     const updatedData = { ...localRowData, [field]: value };
@@ -294,6 +312,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
   const handleCellClick = (column: string) => {
     if (editingColumn) return;
     setFocusedColumn(column);
+    setActiveHighlight(column);
     // Single click - start editing and select all text if there's existing data
     if (localRowData[column] && localRowData[column].trim() !== '') {
       startEditing(column, true); // Pass true to indicate we want to select all
@@ -412,6 +431,28 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
         reader.onloadend = () => resolve(reader.result as string);
         reader.readAsDataURL(blob);
       });
+      
+      // First, store extraction metadata with bounding boxes
+      try {
+        const { data: bboxResult, error: bboxError } = await supabase.functions.invoke('document-extraction-with-bbox', {
+          body: {
+            document_data: imageData,
+            runsheet_id: runsheetId,
+            row_index: rowIndex,
+            columns: editableFields,
+            column_instructions: {} // optional in fullscreen
+          }
+        });
+        if (!bboxError) {
+          console.log('🟨 BBox metadata stored (fullscreen):', bboxResult?.stored_metadata_count);
+          const freshMeta = await ExtractionMetadataService.getMetadataForRow(runsheetId, rowIndex);
+          setExtractionMetadata(freshMeta);
+        } else {
+          console.warn('BBox extraction error (fullscreen):', bboxError);
+        }
+      } catch (err) {
+        console.warn('BBox extraction invocation failed (fullscreen):', err);
+      }
       
       const { data, error } = await supabase.functions.invoke('analyze-document', {
         body: {
@@ -703,6 +744,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
               ) : (
                 <div className="h-full w-full relative overflow-hidden">
                   <div 
+                    ref={imageScrollRef}
                     className="h-full w-full overflow-auto scrollbar-thin scrollbar-thumb-muted-foreground/30 scrollbar-track-transparent"
                     onWheel={(e) => {
                       if (!fitToWidth) {
@@ -720,25 +762,57 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                       }
                     }}
                   >
-                    <img
-                      src={documentUrl}
-                      alt={documentName}
-                      className={`transition-all duration-200 ease-out select-none ${
-                        fitToWidth ? 'w-full h-auto object-contain' : 'object-contain cursor-grab active:cursor-grabbing'
-                      }`}
-                      style={{
-                        minHeight: fitToWidth ? 'auto' : '100%',
-                        minWidth: fitToWidth ? '100%' : 'auto',
-                        transform: fitToWidth ? 'none' : `scale(${zoom}) rotate(${rotation}deg)`,
-                        transformOrigin: 'center',
-                        willChange: fitToWidth ? 'auto' : 'transform'
-                      }}
-                      draggable={false}
-                      onMouseDown={fitToWidth ? undefined : handleImageMouseDown}
-                      onMouseMove={fitToWidth ? undefined : handleImageMouseMove}
-                      onMouseUp={fitToWidth ? undefined : handleImageMouseUp}
-                      onError={() => setError('Failed to load image')}
-                    />
+                    <div className="relative inline-block">
+                      <img
+                        ref={imageRef}
+                        src={documentUrl}
+                        alt={documentName}
+                        className={`transition-all duration-200 ease-out select-none ${
+                          fitToWidth ? 'w-full h-auto object-contain' : 'object-contain cursor-grab active:cursor-grabbing'
+                        }`}
+                        style={{
+                          minHeight: fitToWidth ? 'auto' : '100%',
+                          minWidth: fitToWidth ? '100%' : 'auto',
+                        }}
+                        draggable={false}
+                        onLoad={(e) => {
+                          const img = e.currentTarget as HTMLImageElement;
+                          setImageDims({
+                            naturalWidth: img.naturalWidth,
+                            naturalHeight: img.naturalHeight,
+                            displayedWidth: img.clientWidth,
+                            displayedHeight: img.clientHeight,
+                          });
+                        }}
+                        onMouseDown={fitToWidth ? undefined : handleImageMouseDown}
+                        onMouseMove={fitToWidth ? undefined : handleImageMouseMove}
+                        onMouseUp={fitToWidth ? undefined : handleImageMouseUp}
+                        onError={() => setError('Failed to load image')}
+                      />
+
+                      {/* Highlight overlays for images */}
+                      {imageDims.displayedWidth > 0 && extractionMetadata.map((highlight) => {
+                        const scaleX = imageDims.naturalWidth ? (imageDims.displayedWidth / imageDims.naturalWidth) : 1;
+                        const scaleY = imageDims.naturalHeight ? (imageDims.displayedHeight / imageDims.naturalHeight) : 1;
+                        const left = (highlight.bbox_x1 || 0) * scaleX;
+                        const top = (highlight.bbox_y1 || 0) * scaleY;
+                        const width = ((highlight.bbox_x2 || 0) - (highlight.bbox_x1 || 0)) * scaleX;
+                        const height = ((highlight.bbox_y2 || 0) - (highlight.bbox_y1 || 0)) * scaleY;
+                        const isActive = activeHighlight === highlight.field_name;
+                        return (
+                          <div
+                            key={highlight.id}
+                            data-img-highlight={highlight.field_name}
+                            className={`absolute border-2 rounded pointer-events-auto ${isActive ? 'bg-yellow-300/40 border-yellow-500 z-20' : 'bg-blue-300/30 border-blue-500 z-10 hover:bg-blue-300/40'}`}
+                            style={{ left, top, width, height }}
+                            title={`${highlight.field_name}: ${highlight.extracted_value}`}
+                            onClick={() => {
+                              setActiveHighlight(highlight.field_name);
+                            }}
+                          />
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               )}

@@ -61,6 +61,14 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
   const [showAnalyzeWarning, setShowAnalyzeWarning] = useState(false);
   const [imageFitToWidth, setImageFitToWidth] = useState(true); // Default to fit-to-width for images
   const [imageZoom, setImageZoom] = useState(1);
+  const imageScrollRef = useRef<HTMLDivElement>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
+  const [imageDims, setImageDims] = useState<{naturalWidth: number; naturalHeight: number; displayedWidth: number; displayedHeight: number}>({
+    naturalWidth: 0,
+    naturalHeight: 0,
+    displayedWidth: 0,
+    displayedHeight: 0,
+  });
   
   // Re-extract dialog state
   const [reExtractDialog, setReExtractDialog] = useState<{
@@ -118,6 +126,16 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
     }
   }, [runsheetId, rowIndex]);
 
+  // When a field becomes active, scroll its highlight into view (for images)
+  useEffect(() => {
+    if (activeHighlight && imageScrollRef.current) {
+      const el = imageScrollRef.current.querySelector(`[data-img-highlight="${activeHighlight}"]`) as HTMLElement | null;
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+      }
+    }
+  }, [activeHighlight]);
+
   // Update local row data when props change
   useEffect(() => {
     setRowData(initialRowData);
@@ -171,6 +189,29 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
         reader.onloadend = () => resolve(reader.result as string);
         reader.readAsDataURL(blob);
       });
+      
+      // Store extraction metadata with bounding boxes
+      try {
+        const { data: bboxResult, error: bboxError } = await supabase.functions.invoke('document-extraction-with-bbox', {
+          body: {
+            document_data: imageData,
+            runsheet_id: runsheetId,
+            row_index: rowIndex,
+            columns,
+            column_instructions: columnInstructions
+          }
+        });
+        if (!bboxError) {
+          console.log('🟨 BBox metadata stored:', bboxResult?.stored_metadata_count);
+          // Refresh metadata from DB for reliability
+          const freshMeta = await ExtractionMetadataService.getMetadataForRow(runsheetId, rowIndex);
+          setExtractionMetadata(freshMeta);
+        } else {
+          console.warn('BBox extraction error:', bboxError);
+        }
+      } catch (err) {
+        console.warn('BBox extraction invocation failed:', err);
+      }
       
       const { data, error } = await supabase.functions.invoke('analyze-document', {
         body: {
@@ -831,6 +872,7 @@ Return only the filename, nothing else.`,
                       ) : (
                       <div className="h-full w-full relative overflow-hidden">
                         <div 
+                          ref={imageScrollRef}
                           className="h-full w-full overflow-auto scrollbar-thin scrollbar-thumb-muted-foreground/30 scrollbar-track-transparent"
                           onWheel={(e) => {
                             if (!imageFitToWidth) {
@@ -873,23 +915,60 @@ Return only the filename, nothing else.`,
                             }
                           }}
                         >
-                          <img 
-                            src={DocumentService.getDocumentUrlSync(documentRecord.file_path)}
-                            alt={documentRecord.stored_filename}
-                            className={`transition-all duration-200 ease-out select-none ${
-                              imageFitToWidth ? 'w-full h-auto object-contain' : 'max-w-none object-contain cursor-zoom-in'
-                            }`}
-                            style={{ 
-                              minHeight: imageFitToWidth ? 'auto' : '100%',
-                              transformOrigin: 'center',
-                              transform: imageZoom !== 1 ? `scale(${imageZoom})` : 'none'
-                            }}
-                            onClick={() => {
-                              if (!imageFitToWidth) {
-                                setImageZoom(prev => prev === 1 ? 2 : prev === 2 ? 0.5 : 1);
-                              }
-                            }}
-                          />
+                          <div className="relative inline-block">
+                            <img 
+                              ref={imageRef}
+                              src={DocumentService.getDocumentUrlSync(documentRecord.file_path)}
+                              alt={documentRecord.stored_filename}
+                              className={`transition-all duration-200 ease-out select-none ${
+                                imageFitToWidth ? 'w-full h-auto object-contain' : 'max-w-none object-contain cursor-zoom-in'
+                              }`}
+                              style={{ 
+                                minHeight: imageFitToWidth ? 'auto' : '100%'
+                              }}
+                              onLoad={(e) => {
+                                const img = e.currentTarget as HTMLImageElement;
+                                const displayedWidth = img.clientWidth;
+                                const displayedHeight = img.clientHeight;
+                                setImageDims({
+                                  naturalWidth: img.naturalWidth,
+                                  naturalHeight: img.naturalHeight,
+                                  displayedWidth,
+                                  displayedHeight,
+                                });
+                              }}
+                              onClick={() => {
+                                if (!imageFitToWidth) {
+                                  setImageZoom(prev => prev === 1 ? 2 : prev === 2 ? 0.5 : 1);
+                                }
+                              }}
+                            />
+
+                            {/* Highlight overlays for images */}
+                            {imageDims.displayedWidth > 0 && extractionMetadata.map((highlight) => {
+                              const scaleX = imageDims.naturalWidth ? (imageDims.displayedWidth / imageDims.naturalWidth) : 1;
+                              const scaleY = imageDims.naturalHeight ? (imageDims.displayedHeight / imageDims.naturalHeight) : 1;
+                              const left = (highlight.bbox_x1 || 0) * scaleX;
+                              const top = (highlight.bbox_y1 || 0) * scaleY;
+                              const width = ((highlight.bbox_x2 || 0) - (highlight.bbox_x1 || 0)) * scaleX;
+                              const height = ((highlight.bbox_y2 || 0) - (highlight.bbox_y1 || 0)) * scaleY;
+                              const isActive = activeHighlight === highlight.field_name;
+                              return (
+                                <div
+                                  key={highlight.id}
+                                  data-img-highlight={highlight.field_name}
+                                  className={`absolute border-2 rounded pointer-events-auto ${isActive ? 'bg-yellow-300/40 border-yellow-500 z-20' : 'bg-blue-300/30 border-blue-500 z-10 hover:bg-blue-300/40'}`}
+                                  style={{ left, top, width, height }}
+                                  title={`${highlight.field_name}: ${highlight.extracted_value}`}
+                                  onClick={() => {
+                                    setActiveHighlight(highlight.field_name);
+                                    const fieldElement = document.querySelector(`input[placeholder*="${highlight.field_name.toLowerCase()}"], textarea[placeholder*="${highlight.field_name.toLowerCase()}"]`) as HTMLElement;
+                                    fieldElement?.focus();
+                                  }}
+                                />
+                              );
+                            })}
+                          </div>
                         </div>
                       </div>
                   )}
