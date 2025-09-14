@@ -4,7 +4,10 @@ import { Capacitor } from '@capacitor/core';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Camera as CameraIcon, Upload, Image as ImageIcon, ZoomIn, FileText, Calendar, X } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Camera as CameraIcon, Upload, Image as ImageIcon, ZoomIn, FileText, Calendar, X, Combine } from 'lucide-react';
+import { combineImages } from '@/utils/imageCombiner';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import RunsheetSelectionDialog from './RunsheetSelectionDialog';
@@ -24,6 +27,8 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
   const [loadingDocuments, setLoadingDocuments] = useState(false);
   const [capturedPages, setCapturedPages] = useState<Array<{ dataUrl: string; name: string }>>([]);
   const [isUploadingToRunsheet, setIsUploadingToRunsheet] = useState(false);
+  const [showNamingDialog, setShowNamingDialog] = useState(false);
+  const [documentName, setDocumentName] = useState('');
 
   const checkCameraPermissions = async () => {
     if (!Capacitor.isNativePlatform()) {
@@ -184,7 +189,7 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
     }
   };
 
-  const uploadAllPagesToRunsheet = async () => {
+  const showUploadDialog = () => {
     if (!selectedRunsheet) {
       toast({
         title: "No Runsheet Selected",
@@ -203,7 +208,24 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
       return;
     }
 
+    // Generate default name
+    const timestamp = new Date().toLocaleString();
+    setDocumentName(`Document_${timestamp}`);
+    setShowNamingDialog(true);
+  };
+
+  const uploadCombinedDocument = async () => {
+    if (!documentName.trim()) {
+      toast({
+        title: "Name Required",
+        description: "Please enter a name for the document.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsUploadingToRunsheet(true);
+    setShowNamingDialog(false);
 
     try {
       // Get current user
@@ -217,87 +239,72 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
         return;
       }
 
-      let successCount = 0;
-      let errorCount = 0;
-
-      // Upload each page separately
+      // Convert captured pages to files
+      const files: File[] = [];
       for (let i = 0; i < capturedPages.length; i++) {
         const page = capturedPages[i];
-        
-        try {
-          // Convert data URL to blob
-          const response = await fetch(page.dataUrl);
-          const blob = await response.blob();
-
-          // Generate filename
-          const timestamp = Date.now();
-          const fileName = `mobile_document_${timestamp}_page_${i + 1}.jpg`;
-
-          // Create file from blob
-          const file = new File([blob], fileName, { type: 'image/jpeg' });
-
-          // Create form data
-          const formData = new FormData();
-          formData.append('file', file);
-          formData.append('runsheetId', selectedRunsheet.id);
-          formData.append('originalFilename', fileName);
-
-          // Call edge function to add document to next available row
-          const { data: result, error } = await supabase.functions.invoke(
-            'add-mobile-document-to-runsheet',
-            {
-              body: formData,
-            }
-          );
-
-          if (error) {
-            throw error;
-          }
-
-          if (!result.success) {
-            throw new Error(result.error || 'Failed to add document to runsheet');
-          }
-
-          // Add to recent photos
-          const newPhoto = { url: result.fileUrl, name: result.storedFilename };
-          setRecentPhotos(prev => [newPhoto, ...prev.slice(0, 4)]);
-
-          // Add to runsheet documents list
-          if (result.document) {
-            setRunsheetDocuments(prev => [...prev, result.document].sort((a, b) => a.row_index - b.row_index));
-          }
-
-          // Notify parent component
-          onPhotoUploaded?.(result.fileUrl, result.storedFilename);
-
-          successCount++;
-        } catch (error) {
-          console.error(`Error uploading page ${i + 1}:`, error);
-          errorCount++;
-        }
+        const response = await fetch(page.dataUrl);
+        const blob = await response.blob();
+        const file = new File([blob], `page_${i + 1}.jpg`, { type: 'image/jpeg' });
+        files.push(file);
       }
+
+      // Combine images using the image combiner utility
+      const combinedResult = await combineImages(files, {
+        type: 'vertical',
+        quality: 0.8,
+        maxWidth: 1200,
+        filename: `${documentName.trim()}.jpg`
+      });
+
+      // Create form data
+      const formData = new FormData();
+      formData.append('file', combinedResult.file);
+      formData.append('runsheetId', selectedRunsheet.id);
+      formData.append('originalFilename', combinedResult.file.name);
+
+      // Call edge function to add document to next available row
+      const { data: result, error } = await supabase.functions.invoke(
+        'add-mobile-document-to-runsheet',
+        {
+          body: formData,
+        }
+      );
+
+      if (error) {
+        throw error;
+      }
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to add document to runsheet');
+      }
+
+      // Add to recent photos
+      const newPhoto = { url: result.fileUrl, name: result.storedFilename };
+      setRecentPhotos(prev => [newPhoto, ...prev.slice(0, 4)]);
+
+      // Add to runsheet documents list
+      if (result.document) {
+        setRunsheetDocuments(prev => [...prev, result.document].sort((a, b) => a.row_index - b.row_index));
+      }
+
+      // Notify parent component
+      onPhotoUploaded?.(result.fileUrl, result.storedFilename);
 
       // Clear captured pages after successful upload
       setCapturedPages([]);
+      setDocumentName('');
 
-      if (successCount > 0) {
-        toast({
-          title: "Upload Complete",
-          description: `${successCount} photo${successCount !== 1 ? 's' : ''} uploaded successfully${errorCount > 0 ? `, ${errorCount} failed` : ''}.`,
-        });
-      } else {
-        toast({
-          title: "Upload Failed",
-          description: "Failed to upload any photos. Please try again.",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Document Uploaded",
+        description: `"${documentName}" uploaded successfully with ${files.length} pages combined.`,
+      });
 
     } catch (error: any) {
-      console.error('Error uploading photos to runsheet:', error);
+      console.error('Error uploading combined document:', error);
       toast({
         title: "Upload Failed",
-        description: error.message || "Failed to upload photos. Please try again.",
+        description: error.message || "Failed to upload document. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -434,7 +441,7 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
               </Button>
               <Button
                 size="sm"
-                onClick={uploadAllPagesToRunsheet}
+                onClick={showUploadDialog}
                 disabled={!selectedRunsheet || isUploadingToRunsheet}
                 className="gap-1"
               >
@@ -444,7 +451,10 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
                     Uploading...
                   </>
                 ) : (
-                  <>Upload to Runsheet</>
+                  <>
+                    <Combine className="h-3 w-3" />
+                    Upload to Runsheet
+                  </>
                 )}
               </Button>
             </div>
@@ -576,6 +586,52 @@ export const MobileCamera: React.FC<MobileCameraProps> = ({ onPhotoUploaded }) =
         title="Select Runsheet for Mobile Capture"
         description="Choose which runsheet to add your captured documents to. Photos will be added to the next available row."
       />
+
+      {/* Document Naming Dialog */}
+      <Dialog open={showNamingDialog} onOpenChange={setShowNamingDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Name Your Document</DialogTitle>
+            <DialogDescription>
+              Enter a name for this {capturedPages.length}-page document before uploading to the runsheet.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="document-name">Document Name</Label>
+              <Input
+                id="document-name"
+                value={documentName}
+                onChange={(e) => setDocumentName(e.target.value)}
+                placeholder="Enter document name..."
+                onKeyDown={(e) => e.key === 'Enter' && uploadCombinedDocument()}
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => setShowNamingDialog(false)}
+                disabled={isUploadingToRunsheet}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={uploadCombinedDocument}
+                disabled={isUploadingToRunsheet || !documentName.trim()}
+              >
+                {isUploadingToRunsheet ? (
+                  <>
+                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-2"></div>
+                    Uploading...
+                  </>
+                ) : (
+                  'Upload Document'
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Fullscreen Photo Dialog */}
       <Dialog open={!!fullscreenPhoto} onOpenChange={() => setFullscreenPhoto(null)}>
