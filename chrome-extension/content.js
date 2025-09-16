@@ -1000,6 +1000,8 @@ function createRunsheetFrame() {
     </span>
     <div class="frame-controls">
       ${currentViewMode === 'single' ? '<button id="screenshot-btn" class="control-btn" style="background: green !important; color: white !important;">📷 Screenshot Options</button>' : ''}
+      ${currentViewMode === 'single' ? '<button id="view-screenshot-btn" class="control-btn" style="background: blue !important; color: white !important; display: none;">👁️ View Screenshot</button>' : ''}
+      ${currentViewMode === 'single' ? '<button id="retake-screenshot-btn" class="control-btn" style="background: orange !important; color: white !important; display: none;">🔄 Retake</button>' : ''}
       <button id="open-app-btn" class="control-btn">🚀 Open in App</button>
       <button id="view-mode-btn" class="control-btn">${currentViewMode === 'single' ? '📋 Quick View' : '📝 Back to Entry'}</button>
       <button id="select-runsheet-btn" class="control-btn">📄 Select Sheet</button>
@@ -2499,6 +2501,14 @@ function setupFrameEventListeners() {
   if (viewScreenshotBtn) {
     viewScreenshotBtn.addEventListener('click', () => {
       viewCurrentScreenshot();
+    });
+  }
+  
+  // Retake screenshot button
+  const retakeScreenshotBtn = document.getElementById('retake-screenshot-btn');
+  if (retakeScreenshotBtn) {
+    retakeScreenshotBtn.addEventListener('click', () => {
+      retakeScreenshot();
     });
   }
   
@@ -4316,11 +4326,13 @@ try {
   console.error('🔧 RunsheetPro Extension: Error stack:', error.stack);
 }
 
-// Update screenshot indicator in header
+// Update screenshot indicator in header and control buttons
 function updateScreenshotIndicator(hasScreenshot) {
   const indicator = document.getElementById('screenshot-indicator');
   const analyzeBtn = document.getElementById('analyze-screenshot-btn');
   const viewBtn = document.getElementById('view-screenshot-btn');
+  const screenshotBtn = document.getElementById('screenshot-btn');
+  const retakeBtn = document.getElementById('retake-screenshot-btn');
   
   if (indicator) {
     indicator.style.display = hasScreenshot ? 'inline' : 'none';
@@ -4333,6 +4345,20 @@ function updateScreenshotIndicator(hasScreenshot) {
   
   if (viewBtn) {
     viewBtn.style.display = hasScreenshot ? 'inline-block' : 'none';
+  }
+  
+  // Toggle main screenshot button visibility based on screenshot state
+  if (screenshotBtn) {
+    screenshotBtn.style.display = hasScreenshot ? 'none' : 'inline-block';
+  }
+  
+  // Show view and retake buttons when screenshot exists
+  if (document.getElementById('view-screenshot-btn')) {
+    document.getElementById('view-screenshot-btn').style.display = hasScreenshot ? 'inline-block' : 'none';
+  }
+  
+  if (document.getElementById('retake-screenshot-btn')) {
+    document.getElementById('retake-screenshot-btn').style.display = hasScreenshot ? 'inline-block' : 'none';
   }
 }
 
@@ -4431,6 +4457,114 @@ async function analyzeCurrentScreenshot() {
       analyzeBtn.disabled = false;
     }
   }
+}
+
+// Function to view current screenshot
+function viewCurrentScreenshot() {
+  if (!window.currentCapturedSnip) {
+    showNotification('No screenshot captured yet', 'warning');
+    return;
+  }
+  
+  // Create modal to view screenshot
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background: rgba(0, 0, 0, 0.8) !important;
+    z-index: 2147483647 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  `;
+  
+  const modal = document.createElement('div');
+  modal.style.cssText = `
+    background: white !important;
+    border-radius: 12px !important;
+    padding: 20px !important;
+    max-width: 90vw !important;
+    max-height: 90vh !important;
+    overflow: auto !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3) !important;
+  `;
+  
+  const img = document.createElement('img');
+  img.src = window.currentCapturedSnip;
+  img.style.cssText = `
+    max-width: 100% !important;
+    max-height: 70vh !important;
+    border: 1px solid #ddd !important;
+    border-radius: 8px !important;
+  `;
+  
+  const buttonContainer = document.createElement('div');
+  buttonContainer.style.cssText = `
+    display: flex !important;
+    gap: 12px !important;
+    justify-content: center !important;
+    margin-top: 20px !important;
+  `;
+  
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = 'Close';
+  closeBtn.style.cssText = `
+    padding: 8px 16px !important;
+    background: #6b7280 !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 6px !important;
+    cursor: pointer !important;
+  `;
+  
+  const retakeBtn = document.createElement('button');
+  retakeBtn.textContent = '🔄 Retake Screenshot';
+  retakeBtn.style.cssText = `
+    padding: 8px 16px !important;
+    background: #f59e0b !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 6px !important;
+    cursor: pointer !important;
+  `;
+  
+  closeBtn.addEventListener('click', () => overlay.remove());
+  retakeBtn.addEventListener('click', () => {
+    overlay.remove();
+    retakeScreenshot();
+  });
+  
+  // Close on overlay click
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) overlay.remove();
+  });
+  
+  buttonContainer.appendChild(closeBtn);
+  buttonContainer.appendChild(retakeBtn);
+  modal.appendChild(img);
+  modal.appendChild(buttonContainer);
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+}
+
+// Function to retake screenshot
+function retakeScreenshot() {
+  // Clear current screenshot
+  window.currentCapturedSnip = null;
+  window.currentSnipFilename = null;
+  
+  // Update button visibility
+  updateScreenshotIndicator(false);
+  
+  // Start new screenshot process
+  startSnipMode();
+  
+  showNotification('Previous screenshot cleared. Take a new screenshot.', 'info');
+}
 }
 
 // View current screenshot
