@@ -983,16 +983,7 @@ function createRunsheetFrame() {
   const header = document.createElement('div');
   header.className = 'frame-header';
   header.innerHTML = `
-    <span class="frame-title">RunsheetPro Runsheet - ${activeRunsheet?.name || 'Default'} 
-      ${currentViewMode === 'single' ? `
-        <div style="display: inline-flex; align-items: center; margin-left: 8px; gap: 4px;">
-          <span id="screenshot-indicator" style="font-size: 11px; color: hsl(var(--primary, 215 80% 40%)); margin-left: 4px; display: none;">📷</span>
-          <button id="view-screenshot-btn" style="background: hsl(var(--muted, 210 40% 96%)); color: hsl(var(--foreground, 222 47% 11%)); border: 1px solid hsl(var(--border, 214 32% 91%)); padding: 2px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; display: none;" title="View current screenshot">👁️ View</button>
-          <button id="analyze-screenshot-btn" style="background: hsl(var(--accent, 230 60% 60%)); color: white; border: 1px solid hsl(var(--accent, 230 60% 60%)); padding: 2px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; display: none;" title="Analyze screenshot with AI">🔍 Analyze</button>
-        </div>
-      ` : ''}
-    </span>
-    </span>
+    <span class="frame-title">RunsheetPro Runsheet - ${activeRunsheet?.name || 'Default'}</span>
     <div class="frame-controls">
       ${currentViewMode === 'single' ? '<button id="screenshot-btn" class="control-btn" style="background: green !important; color: white !important;">📷 Screenshot Options</button>' : ''}
       ${currentViewMode === 'single' ? '<button id="view-screenshot-btn" class="control-btn" style="background: blue !important; color: white !important; display: none;">👁️ View Screenshot</button>' : ''}
@@ -3680,6 +3671,14 @@ async function captureSelectedArea(left, top, width, height) {
               window.currentCapturedSnip = blob;
               window.currentSnipFilename = `captured_snip_${Date.now()}.png`;
               
+              // If we're in quickview mode, immediately link to the selected row
+              if (currentViewMode === 'full' && currentRowIndex !== undefined) {
+                await linkScreenshotToSpecificRow(currentRowIndex, blob, window.currentSnipFilename);
+                cleanupSnipMode();
+                return;
+              }
+              
+              // For single entry mode, continue with standard flow
               // Try enhanced AI processing first
               const aiResult = await processSnipWithAI(blob, {
                 filename: window.currentSnipFilename,
@@ -4999,4 +4998,64 @@ try {
   }
 } catch (error) {
   console.error('🔧 Critical initialization error:', error);
+}
+
+// Function to link screenshot directly to a specific row (for quickview mode)
+async function linkScreenshotToSpecificRow(rowIndex, blob, filename) {
+  try {
+    if (!activeRunsheet || !userSession) {
+      throw new Error('No active runsheet or authentication');
+    }
+    
+    console.log(`🔧 RunsheetPro Extension: Linking screenshot to row ${rowIndex}`);
+    
+    // Upload the screenshot first
+    const uploadResult = await uploadSnipToStorage(blob);
+    
+    // Update the specific row in the runsheet data
+    if (!activeRunsheet.data[rowIndex]) {
+      activeRunsheet.data[rowIndex] = {};
+    }
+    
+    activeRunsheet.data[rowIndex]['Document File Name'] = filename;
+    activeRunsheet.data[rowIndex]['screenshot_url'] = uploadResult.url;
+    
+    // Sync the updated row data with the backend
+    const syncResponse = await fetch('https://xnpmrafjjqsissbtempj.supabase.co/functions/v1/extension-sync', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${userSession.access_token}`,
+        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhucG1yYWZqanFzaXNzYnRlbXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4NzMyNjcsImV4cCI6MjA2ODQ0OTI2N30.aQG15Ed8IOLJfM5p7XF_kEM5FUz8zJug1pxAi9rTTsg',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        runsheet_id: activeRunsheet.id,
+        row_data: activeRunsheet.data[rowIndex],
+        screenshot_url: uploadResult.url,
+        target_row_index: rowIndex // Specify the exact row to update
+      })
+    });
+    
+    if (!syncResponse.ok) {
+      throw new Error('Failed to sync screenshot with backend');
+    }
+    
+    // Clear the captured snip since it's now saved
+    window.currentCapturedSnip = null;
+    window.currentSnipFilename = null;
+    
+    // Refresh the quickview display to show the new document
+    if (currentViewMode === 'full') {
+      const content = document.querySelector('#runsheetpro-runsheet-frame .frame-content');
+      if (content) {
+        createFullRunsheetView(content);
+      }
+    }
+    
+    showNotification('✅ Screenshot linked to row successfully!', 'success');
+    
+  } catch (error) {
+    console.error('Error linking screenshot to row:', error);
+    showNotification(`Failed to link screenshot: ${error.message}`, 'error');
+  }
 }
