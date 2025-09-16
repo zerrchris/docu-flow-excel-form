@@ -929,17 +929,15 @@ function createRunsheetFrame() {
   const resizeHandle = document.createElement('div');
   resizeHandle.className = 'frame-resize-handle';
   resizeHandle.style.cssText = `
-    height: 8px !important;
+    height: 6px !important;
     background: hsl(var(--border)) !important;
     cursor: ns-resize !important;
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
+    position: relative !important;
     opacity: 0.7 !important;
     transition: all 0.2s ease !important;
-    z-index: 1000 !important;
+    z-index: 10 !important;
     border-bottom: 1px solid hsl(var(--border)) !important;
+    flex-shrink: 0 !important;
   `;
   
   // Add resize functionality
@@ -1003,12 +1001,11 @@ function createRunsheetFrame() {
   content.className = 'frame-content';
   content.style.cssText = `
     padding: 0 !important;
-    height: calc(100% - 44px) !important;
+    height: calc(100% - 38px) !important;
     overflow-x: auto !important;
     overflow-y: hidden !important;
     background: hsl(var(--background, 0 0% 100%)) !important;
-    position: relative !important;
-    top: 8px !important;
+    flex: 1 !important;
   `;
   
   // Load current view mode from storage
@@ -1029,8 +1026,9 @@ function createRunsheetFrame() {
     updateRowNavigationUI();
   }, 100);
   
-  // Ensure proper stacking order and positioning
-  runsheetFrame.style.position = 'relative';
+  // Set up frame as flex container
+  runsheetFrame.style.display = 'flex';
+  runsheetFrame.style.flexDirection = 'column';
   runsheetFrame.appendChild(resizeHandle);
   runsheetFrame.appendChild(header);
   runsheetFrame.appendChild(content);
