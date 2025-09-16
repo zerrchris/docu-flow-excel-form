@@ -2549,6 +2549,10 @@ function linkCapturedImageToRow(rowIndex) {
 function setupFrameEventListeners() {
   if (!runsheetFrame) return;
   
+  // Update screenshot indicator to show/hide buttons based on current state
+  setTimeout(() => {
+    updateScreenshotIndicator();
+  }, 50);
   
   // Screenshot button
   const screenshotBtn = document.getElementById('screenshot-btn');
@@ -4443,13 +4447,8 @@ function updateScreenshotIndicator(hasScreenshot) {
     screenshotBtn.style.display = actuallyHasScreenshot ? 'none' : 'inline-block';
   }
   
-  // Show view and retake buttons when screenshot exists
-  if (document.getElementById('view-screenshot-btn')) {
-    document.getElementById('view-screenshot-btn').style.display = actuallyHasScreenshot ? 'inline-block' : 'none';
-  }
-  
-  if (document.getElementById('retake-screenshot-btn')) {
-    document.getElementById('retake-screenshot-btn').style.display = actuallyHasScreenshot ? 'inline-block' : 'none';
+  if (retakeBtn) {
+    retakeBtn.style.display = actuallyHasScreenshot ? 'inline-block' : 'none';
   }
 }
 
