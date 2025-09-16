@@ -113,7 +113,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     let appUrl = isLocalDevelopment 
       ? 'http://localhost:8080' 
-      : 'https://preview--docu-flow-excel-form.lovable.app';
+      : 'https://id-preview--9e913707-5b2b-41be-9c86-3541992b5349.lovable.app';
     
     // Include auth data and active runsheet if available
     try {
