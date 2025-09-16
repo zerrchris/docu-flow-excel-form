@@ -1428,10 +1428,8 @@ function createSingleEntryView(content) {
           screenshotBtn.title = 'Take screenshot';
         }
         
-        // Only show the button if there's a linked snip or no document is linked yet
-        const documentInput = document.querySelector('.editable-row input[data-column="Document File Name"]');
-        const hasLinkedDocument = documentInput && documentInput.value && documentInput.value.trim() !== '';
-        screenshotBtn.style.display = (hasLinkedSnip || !hasLinkedDocument) ? 'inline-block' : 'none';
+        // Only show the button if there's actually a linked snip to view
+        screenshotBtn.style.display = hasLinkedSnip ? 'inline-block' : 'none';
       };
 
       // Make updateScreenshotButton globally accessible
