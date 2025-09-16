@@ -56,19 +56,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.action === 'ensureContentScript') {
+    // Avoid reinjecting scripts; content scripts are declared in the manifest
     try {
-      if (sender.tab && sender.tab.id) {
-        chrome.scripting.executeScript({
-          target: { tabId: sender.tab.id },
-          files: ['persistent-state.js', 'error-handler.js', 'content.js']
-        }).then(() => sendResponse({ success: true })).catch(err => {
-          console.warn('ensureContentScript failed:', err);
-          sendResponse({ success: false, error: err.message });
-        });
-        return true; // async
-      }
+      sendResponse({ success: true, skipped: true });
     } catch (e) {
       console.warn('ensureContentScript error:', e);
+      sendResponse({ success: false, error: e.message });
     }
   }
 });
@@ -90,16 +83,7 @@ chrome.runtime.onInstalled.addListener((details) => {
   }
 });
 
-// Handle tab updates to inject content script if needed
+// Handle tab updates: no-op (manifest handles injection to avoid duplicates)
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (changeInfo.status === 'complete' && tab.url && !tab.url.startsWith('chrome://')) {
-    // Ensure content script is injected
-    chrome.scripting.executeScript({
-      target: { tabId: tabId },
-      files: ['content.js']
-    }).catch(err => {
-      // Ignore errors for pages where we can't inject (like chrome:// pages)
-      console.log('Could not inject content script:', err.message);
-    });
-  }
+  // Intentionally left blank
 });

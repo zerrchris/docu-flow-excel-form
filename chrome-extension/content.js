@@ -4565,7 +4565,6 @@ function retakeScreenshot() {
   
   showNotification('Previous screenshot cleared. Take a new screenshot.', 'info');
 }
-}
 
 // View current screenshot
 function viewCurrentScreenshot() {
