@@ -2797,10 +2797,16 @@ async function init() {
   try {
     // Check enable/disable flags (support both legacy and new keys)
     const settings = await chrome.storage.local.get(['extension_enabled', 'extensionEnabled', 'extension_disabled']);
+    console.log('🔧 Extension settings retrieved:', settings);
+    
     const enabledFlag = settings.extensionEnabled;
     const legacyEnabled = settings.extension_enabled;
     const disabledFlag = settings.extension_disabled;
-    const isEnabled = (enabledFlag !== false && legacyEnabled !== false) && disabledFlag !== true;
+    
+    // Default to enabled if no settings exist
+    const isEnabled = enabledFlag !== false && legacyEnabled !== false && disabledFlag !== true;
+    
+    console.log('🔧 Extension enabled status:', isEnabled);
 
     if (!isEnabled) {
       console.log('🔧 RunsheetPro Extension: Extension is disabled');

@@ -78,12 +78,15 @@ chrome.runtime.onInstalled.addListener((details) => {
   console.log('RunsheetPro extension installed:', details.reason);
   
   if (details.reason === 'install') {
-    // Set default settings on first install
+    // Set default settings on first install - ensure extension is enabled by default
     chrome.storage.local.set({
       extensionEnabled: true,
+      extension_enabled: true,
+      extension_disabled: false,
       autoCapture: false,
       syncInterval: 5000
     });
+    console.log('RunsheetPro extension: Default settings applied - extension enabled');
   }
 });
 
