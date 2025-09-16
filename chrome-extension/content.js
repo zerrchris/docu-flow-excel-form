@@ -2934,45 +2934,48 @@ function showSnipModeSelector(skipOverwriteCheck = true) {
     
     <div style="display: flex; flex-direction: column; gap: 12px;">
       <button id="single-snip-option" style="
-        background: #3b82f6;
+        background: linear-gradient(135deg, #4285f4, #5c70d6);
         color: white;
         border: none;
-        border-radius: 8px;
+        border-radius: 12px;
         padding: 16px;
         text-align: left;
         cursor: pointer;
         transition: all 0.2s;
         font-size: 14px;
+        box-shadow: 0 2px 8px rgba(66, 133, 244, 0.2);
       ">
         <div style="font-weight: 600; margin-bottom: 4px;">📷 Single Snip</div>
         <div style="opacity: 0.9; font-size: 13px;">Capture one area and automatically link it to your runsheet</div>
       </button>
       
       <button id="scroll-snip-option" style="
-        background: #10b981;
+        background: linear-gradient(135deg, #10b981, #14a85f);
         color: white;
         border: none;
-        border-radius: 8px;
+        border-radius: 12px;
         padding: 16px;
         text-align: left;
         cursor: pointer;
         transition: all 0.2s;
         font-size: 14px;
+        box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
       ">
         <div style="font-weight: 600; margin-bottom: 4px;">📜 Snip & Scroll</div>
         <div style="opacity: 0.9; font-size: 13px;">Capture multiple areas on the same page by scrolling between snips</div>
       </button>
       
       <button id="navigate-snip-option" style="
-        background: #f59e0b;
+        background: linear-gradient(135deg, #f59e0b, #d97706);
         color: white;
         border: none;
-        border-radius: 8px;
+        border-radius: 12px;
         padding: 16px;
         text-align: left;
         cursor: pointer;
         transition: all 0.2s;
         font-size: 14px;
+        box-shadow: 0 2px 8px rgba(245, 158, 11, 0.2);
       ">
         <div style="font-weight: 600; margin-bottom: 4px;">🔗 Click & Navigate</div>
         <div style="opacity: 0.9; font-size: 13px;">Capture areas across multiple pages by clicking links or navigating</div>
