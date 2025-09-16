@@ -929,13 +929,17 @@ function createRunsheetFrame() {
   const resizeHandle = document.createElement('div');
   resizeHandle.className = 'frame-resize-handle';
   resizeHandle.style.cssText = `
-    height: 4px !important;
+    height: 8px !important;
     background: hsl(var(--border)) !important;
     cursor: ns-resize !important;
-    position: relative !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
     opacity: 0.7 !important;
     transition: all 0.2s ease !important;
-    z-index: 1 !important;
+    z-index: 1000 !important;
+    border-bottom: 1px solid hsl(var(--border)) !important;
   `;
   
   // Add resize functionality
@@ -997,6 +1001,15 @@ function createRunsheetFrame() {
   // Create content area
   const content = document.createElement('div');
   content.className = 'frame-content';
+  content.style.cssText = `
+    padding: 0 !important;
+    height: calc(100% - 44px) !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    background: hsl(var(--background, 0 0% 100%)) !important;
+    position: relative !important;
+    top: 8px !important;
+  `;
   
   // Load current view mode from storage
   chrome.storage.local.get(['viewMode']).then(result => {
@@ -1016,6 +1029,8 @@ function createRunsheetFrame() {
     updateRowNavigationUI();
   }, 100);
   
+  // Ensure proper stacking order and positioning
+  runsheetFrame.style.position = 'relative';
   runsheetFrame.appendChild(resizeHandle);
   runsheetFrame.appendChild(header);
   runsheetFrame.appendChild(content);

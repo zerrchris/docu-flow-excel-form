@@ -71,10 +71,12 @@
 /* Frame Content */
 .frame-content {
   padding: 0 !important;
-  height: calc(100% - 36px) !important; /* Account for 4px resize handle + 32px header */
+  height: calc(100% - 44px) !important; /* Account for 8px resize handle + 36px header */
   overflow-x: auto !important;
   overflow-y: hidden !important;
   background: hsl(var(--background, 0 0% 100%)) !important;
+  position: relative !important;
+  top: 8px !important;
 }
 
 /* Runsheet Table - Matching EditableSpreadsheet styling */
