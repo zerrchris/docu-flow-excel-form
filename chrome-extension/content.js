@@ -3117,16 +3117,8 @@ async function showRunsheetSelector() {
   const createNewBtn = modal.querySelector('#create-new-runsheet');
   createNewBtn.addEventListener('click', () => {
     overlay.remove();
-    // Clear current runsheet and start fresh
-    activeRunsheet = null;
-    chrome.storage.local.remove('activeRunsheet');
-    createRunsheetFrame();
-    if (runsheetFrame) {
-      runsheetFrame.style.display = 'block';
-      document.body.appendChild(runsheetFrame);
-      setupFrameEventListeners();
-    }
-    showNotification('Started new runsheet', 'success');
+    // Show the quick create dialog to properly name and save the new runsheet
+    showQuickCreateDialog();
   });
 
   // Close on overlay click
