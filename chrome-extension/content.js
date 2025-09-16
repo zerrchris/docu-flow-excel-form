@@ -411,11 +411,16 @@ function showQuickCreateDialog() {
       const data = await response.json();
       
       if (response.ok && data.success) {
+        console.log('🔧 RunsheetPro Extension: Quick create response:', data);
         closeQuickCreate();
         showNotification(`Created runsheet: ${name}`, 'success');
         
-        // Load the new runsheet immediately
-        setTimeout(() => loadRunsheet(data.runsheet), 500);
+        // Load the new runsheet immediately - no delay needed
+        if (data.runsheet) {
+          loadRunsheet(data.runsheet);
+        } else {
+          console.error('🔧 RunsheetPro Extension: No runsheet data in response');
+        }
         
       } else {
         throw new Error(data.error || 'Failed to create runsheet');
