@@ -2834,39 +2834,47 @@ async function init() {
   
   console.log('🔧 RunsheetPro Extension: Extension is enabled, continuing initialization');
   
-  // Always create the runsheet button first
-  createRunsheetButton();
-  console.log('🔧 RunsheetPro Extension: Button creation attempted');
-  
-  // Check authentication after button is created
-  const isAuthenticated = await checkAuth();
-  console.log('🔧 RunsheetPro Extension: Authentication check result:', isAuthenticated);
-  
-  // Check if there's an active runsheet to restore (only if authenticated)
-  if (isAuthenticated) {
-    const storedData = await chrome.storage.local.get(['active_runsheet']);
-    if (storedData.active_runsheet) {
-      console.log('🔧 RunsheetPro Extension: Restoring active runsheet:', storedData.active_runsheet.name);
-      
-      // Restore the active runsheet
-      activeRunsheet = storedData.active_runsheet;
-      
-      // Find the next available blank row for data entry
-      currentRowIndex = findNextAvailableRow(activeRunsheet);
-      console.log('🔧 RunsheetPro Extension: Set currentRowIndex to next available row:', currentRowIndex);
-      
-      // Create and show the frame with the restored runsheet
-      createRunsheetFrame();
-      if (runsheetFrame) {
-        runsheetFrame.style.display = 'block';
-        document.body.appendChild(runsheetFrame);
-        setupFrameEventListeners();
-      }
-      
-      showNotification(`Restored runsheet: ${activeRunsheet.name} (Row ${currentRowIndex + 1})`, 'success');
-    }
+  // Use state restoration system if available
+  if (typeof initializeExtensionWithStateRestore === 'function') {
+    console.log('🔧 RunsheetPro Extension: Using advanced state restoration');
+    await initializeExtensionWithStateRestore();
   } else {
-    console.log('🔧 RunsheetPro Extension: User not authenticated, button will show sign-in prompt');
+    console.log('🔧 RunsheetPro Extension: Using basic initialization');
+    
+    // Always create the runsheet button first
+    createRunsheetButton();
+    console.log('🔧 RunsheetPro Extension: Button creation attempted');
+    
+    // Check authentication after button is created
+    const isAuthenticated = await checkAuth();
+    console.log('🔧 RunsheetPro Extension: Authentication check result:', isAuthenticated);
+    
+    // Check if there's an active runsheet to restore (only if authenticated)
+    if (isAuthenticated) {
+      const storedData = await chrome.storage.local.get(['active_runsheet']);
+      if (storedData.active_runsheet) {
+        console.log('🔧 RunsheetPro Extension: Restoring active runsheet:', storedData.active_runsheet.name);
+        
+        // Restore the active runsheet
+        activeRunsheet = storedData.active_runsheet;
+        
+        // Find the next available blank row for data entry
+        currentRowIndex = findNextAvailableRow(activeRunsheet);
+        console.log('🔧 RunsheetPro Extension: Set currentRowIndex to next available row:', currentRowIndex);
+        
+        // Create and show the frame with the restored runsheet
+        createRunsheetFrame();
+        if (runsheetFrame) {
+          runsheetFrame.style.display = 'block';
+          document.body.appendChild(runsheetFrame);
+          setupFrameEventListeners();
+        }
+        
+        showNotification(`Restored runsheet: ${activeRunsheet.name} (Row ${currentRowIndex + 1})`, 'success');
+      }
+    } else {
+      console.log('🔧 RunsheetPro Extension: User not authenticated, button will show sign-in prompt');
+    }
   }
   
   // Setup global event listeners for bootstrap communication
