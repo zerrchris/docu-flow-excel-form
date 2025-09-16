@@ -338,7 +338,7 @@ function showQuickCreateDialog() {
     </div>
     <div style="background: hsl(var(--muted, 210 40% 96%)); padding: 12px; border-radius: 6px; margin-bottom: 16px; border-left: 3px solid hsl(var(--primary, 215 80% 40%));">
       <p style="margin: 0; font-size: 13px; color: hsl(var(--foreground, 222 47% 11%));">
-        ⚡ <strong>Quick Create</strong> sets up a runsheet with standard real estate columns.<br>
+        ⚡ <strong>Quick Create</strong> sets up a runsheet with your default column preferences.<br>
         For custom columns and advanced settings, create a new runsheet in the main app.
       </p>
     </div>
@@ -348,8 +348,8 @@ function showQuickCreateDialog() {
         <input type="text" id="runsheet-name" required placeholder="e.g., Property Research - January 2025" style="width: 100%; padding: 8px 12px; border: 1px solid hsl(var(--border, 214 32% 91%)); border-radius: 6px; font-size: 14px;">
       </div>
       <div style="font-size: 12px; color: hsl(var(--muted-foreground, 215 16% 47%));">
-        <strong>Default columns included:</strong><br>
-        Inst Number, Book/Page, Inst Type, Recording Date, Document Date, Grantor, Grantee, Legal Description, Notes, Document File Name
+        <strong>Uses your default column preferences</strong><br>
+        If no preferences are set, default document processing columns will be used.
       </div>
       <button type="submit" id="create-submit" style="padding: 10px; background: hsl(var(--primary, 215 80% 40%)); color: hsl(var(--primary-foreground, 210 40% 98%)); border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">
         Create Runsheet

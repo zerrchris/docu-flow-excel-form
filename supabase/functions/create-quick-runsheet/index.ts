@@ -64,35 +64,49 @@ Deno.serve(async (req) => {
 
     console.log('Creating quick runsheet for user:', user.id, 'with name:', name)
 
-    // Default columns for real estate runsheets
-    const defaultColumns = [
-      'Inst Number',
-      'Book/Page', 
-      'Inst Type',
-      'Recording Date',
-      'Document Date',
-      'Grantor',
-      'Grantee',
-      'Legal Description',
-      'Notes'
-    ]
+    // Try to get user's default extraction preferences
+    const { data: userPreferences, error: preferencesError } = await supabase
+      .from('user_extraction_preferences')
+      .select('columns, column_instructions')
+      .eq('user_id', user.id)
+      .eq('is_default', true)
+      .single()
 
-    // Default column instructions for extraction
-    const defaultColumnInstructions = {
-      'Inst Number': 'Extract the instrument number exactly as it appears on the document',
-      'Book/Page': 'Extract the complete book and page reference (e.g., Book 123, Page 456)',
-      'Inst Type': 'Extract the type of instrument (e.g., Deed, Mortgage, Lien, etc.)',
-      'Recording Date': 'Extract the date when the document was recorded at the courthouse',
-      'Document Date': 'Extract the date the document was signed or executed',
-      'Grantor': "Extract the Grantor's name as it appears on the document and include the address if there is one",
-      'Grantee': "Extract the Grantee's name as it appears on the document and include the address if there is one",
-      'Legal Description': 'Extract the complete legal description of the property including lot, block, subdivision, and metes and bounds if present',
-      'Notes': 'Extract any additional relevant information, special conditions, or remarks'
+    let columns: string[]
+    let columnInstructions: Record<string, string>
+
+    if (userPreferences && !preferencesError) {
+      // Use user's default preferences
+      columns = userPreferences.columns || []
+      columnInstructions = userPreferences.column_instructions || {}
+      console.log('Using user preferences with', columns.length, 'columns')
+    } else {
+      // Fall back to sensible default columns for document processing
+      console.log('No user preferences found, using default columns')
+      columns = [
+        'Document Type',
+        'Date',
+        'Reference Number',
+        'Name/Entity',
+        'Description',
+        'Amount',
+        'Notes'
+      ]
+
+      columnInstructions = {
+        'Document Type': 'Extract the type of document (e.g., Invoice, Contract, Report, etc.)',
+        'Date': 'Extract the main date from the document (creation, effective, or due date)',
+        'Reference Number': 'Extract any reference, ID, or tracking number',
+        'Name/Entity': 'Extract the primary person, company, or entity name',
+        'Description': 'Extract a brief description or subject of the document',
+        'Amount': 'Extract any monetary amounts, quantities, or measurements',
+        'Notes': 'Extract any additional relevant information or special remarks'
+      }
     }
 
     // Create initial empty row
     const initialData = [{}]
-    defaultColumns.forEach(col => {
+    columns.forEach(col => {
       initialData[0][col] = ''
     })
 
@@ -102,9 +116,9 @@ Deno.serve(async (req) => {
       .insert({
         user_id: user.id,
         name: name.trim(),
-        columns: defaultColumns,
+        columns: columns,
         data: initialData,
-        column_instructions: defaultColumnInstructions
+        column_instructions: columnInstructions
       })
       .select()
       .single()
