@@ -4336,6 +4336,14 @@ try {
 
 // Update screenshot indicator in header and control buttons
 function updateScreenshotIndicator(hasScreenshot) {
+  // Check for current captured snip first, then check stored screenshot
+  const hasCapturedSnip = !!window.currentCapturedSnip;
+  const hasStoredScreenshot = activeRunsheet && activeRunsheet.data && activeRunsheet.data[currentRowIndex] && 
+    (activeRunsheet.data[currentRowIndex]['Document File Name'] || activeRunsheet.data[currentRowIndex]['screenshot_url']);
+  
+  // Only show screenshot-related buttons if we actually have a screenshot
+  const actuallyHasScreenshot = hasCapturedSnip || hasStoredScreenshot;
+  
   const indicator = document.getElementById('screenshot-indicator');
   const analyzeBtn = document.getElementById('analyze-screenshot-btn');
   const viewBtn = document.getElementById('view-screenshot-btn');
@@ -4343,30 +4351,30 @@ function updateScreenshotIndicator(hasScreenshot) {
   const retakeBtn = document.getElementById('retake-screenshot-btn');
   
   if (indicator) {
-    indicator.style.display = hasScreenshot ? 'inline' : 'none';
-    indicator.title = hasScreenshot ? 'Screenshot captured for this row' : '';
+    indicator.style.display = actuallyHasScreenshot ? 'inline' : 'none';
+    indicator.title = actuallyHasScreenshot ? 'Screenshot available for this row' : '';
   }
   
   if (analyzeBtn) {
-    analyzeBtn.style.display = hasScreenshot ? 'inline-block' : 'none';
+    analyzeBtn.style.display = actuallyHasScreenshot ? 'inline-block' : 'none';
   }
   
   if (viewBtn) {
-    viewBtn.style.display = hasScreenshot ? 'inline-block' : 'none';
+    viewBtn.style.display = actuallyHasScreenshot ? 'inline-block' : 'none';
   }
   
   // Toggle main screenshot button visibility based on screenshot state
   if (screenshotBtn) {
-    screenshotBtn.style.display = hasScreenshot ? 'none' : 'inline-block';
+    screenshotBtn.style.display = actuallyHasScreenshot ? 'none' : 'inline-block';
   }
   
   // Show view and retake buttons when screenshot exists
   if (document.getElementById('view-screenshot-btn')) {
-    document.getElementById('view-screenshot-btn').style.display = hasScreenshot ? 'inline-block' : 'none';
+    document.getElementById('view-screenshot-btn').style.display = actuallyHasScreenshot ? 'inline-block' : 'none';
   }
   
   if (document.getElementById('retake-screenshot-btn')) {
-    document.getElementById('retake-screenshot-btn').style.display = hasScreenshot ? 'inline-block' : 'none';
+    document.getElementById('retake-screenshot-btn').style.display = actuallyHasScreenshot ? 'inline-block' : 'none';
   }
 }
 
