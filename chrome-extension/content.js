@@ -984,19 +984,14 @@ function createRunsheetFrame() {
   header.className = 'frame-header';
   header.innerHTML = `
     <span class="frame-title">RunsheetPro Runsheet - ${activeRunsheet?.name || 'Default'} 
-      <span id="current-row-indicator" style="font-size: 12px; color: hsl(var(--muted-foreground, 215 16% 47%)); margin-left: 8px;">
-        (Row ${currentRowIndex + 1})
-      </span>
       ${currentViewMode === 'single' ? `
         <div style="display: inline-flex; align-items: center; margin-left: 8px; gap: 4px;">
-          <span id="target-row-indicator" style="font-size: 12px; color: hsl(var(--muted-foreground, 215 16% 47%)); margin-right: 8px;">
-            (Will add to Row ${currentRowIndex + 1})
-          </span>
           <span id="screenshot-indicator" style="font-size: 11px; color: hsl(var(--primary, 215 80% 40%)); margin-left: 4px; display: none;">📷</span>
           <button id="view-screenshot-btn" style="background: hsl(var(--muted, 210 40% 96%)); color: hsl(var(--foreground, 222 47% 11%)); border: 1px solid hsl(var(--border, 214 32% 91%)); padding: 2px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; display: none;" title="View current screenshot">👁️ View</button>
           <button id="analyze-screenshot-btn" style="background: hsl(var(--accent, 230 60% 60%)); color: white; border: 1px solid hsl(var(--accent, 230 60% 60%)); padding: 2px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; display: none;" title="Analyze screenshot with AI">🔍 Analyze</button>
         </div>
       ` : ''}
+    </span>
     </span>
     <div class="frame-controls">
       ${currentViewMode === 'single' ? '<button id="screenshot-btn" class="control-btn" style="background: green !important; color: white !important;">📷 Screenshot Options</button>' : ''}
@@ -1108,13 +1103,10 @@ function findNextAvailableRow(runsheetData) {
   return runsheetData.data.length;
 }
 
-// Update target row indicator
+// Update target row indicator - removed since we're not showing row numbers in header anymore
 function updateTargetRowIndicator() {
-  const indicator = document.getElementById('target-row-indicator');
-  if (indicator) {
-    const rowNumber = currentRowIndex + 1; // Use current row index instead of next available
-    indicator.textContent = `(Will add to Row ${rowNumber})`;
-  }
+  // This function is no longer used since we removed the row indicator from header
+  // Keeping it for compatibility in case other code calls it
 }
 
 // Refresh single entry view to show current row
@@ -3322,6 +3314,10 @@ function loadSelectedRunsheet(runsheetData) {
     data: runsheetData.data || [],
     columnInstructions: runsheetData.column_instructions || {}
   };
+
+  // Find the first available row instead of defaulting to 0
+  currentRowIndex = findNextAvailableRow(activeRunsheet);
+  console.log(`🔧 RunsheetPro Extension: Set current row to ${currentRowIndex} (next available row)`);
 
   // Save to storage
   chrome.storage.local.set({ activeRunsheet });
