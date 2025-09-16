@@ -31,16 +31,21 @@ let snipControlPanel = null;
 // Check authentication status
 async function checkAuth() {
   try {
+    console.log('🔧 Checking auth - requesting storage');
     const authData = await chrome.storage.local.get(['supabase_session']);
+    console.log('🔧 Auth data retrieved:', !!authData.supabase_session);
+    
     if (authData.supabase_session && authData.supabase_session.access_token) {
       userSession = authData.supabase_session;
-      console.log('🔧 RunsheetPro Extension: User authenticated');
+      console.log('🔧 User authenticated');
       return true;
     }
-    console.log('🔧 RunsheetPro Extension: No authentication found');
+    console.log('🔧 No authentication found');
     return false;
   } catch (error) {
-    console.error('Auth check failed:', error);
+    console.error('🔧 Auth check failed:', error);
+    // Show error and allow fallback
+    showNotification('Authentication check failed. Try refreshing the page.', 'error');
     return false;
   }
 }
@@ -105,13 +110,21 @@ function createRunsheetButton() {
   
   // Click handler
   runsheetButton.addEventListener('click', async () => {
+    console.log('🔧 Button clicked - checking state');
+    
     if (runsheetFrame && runsheetFrame.style.display !== 'none') {
+      console.log('🔧 Toggling existing frame');
       toggleRunsheetFrame();
     } else {
+      console.log('🔧 Checking authentication...');
       const isAuthenticated = await checkAuth();
+      console.log('🔧 Auth result:', isAuthenticated);
+      
       if (isAuthenticated) {
+        console.log('🔧 Showing runsheet selector');
         showRunsheetSelector();
       } else {
+        console.log('🔧 Showing sign-in popup');
         showSignInPopup();
       }
     }
@@ -130,6 +143,19 @@ function createRunsheetButton() {
   document.body.appendChild(runsheetButton);
   console.log('🔧 RunsheetPro Extension: Runsheet button created and added to DOM');
   console.log('🔧 RunsheetPro Extension: Button is in DOM:', document.body.contains(runsheetButton));
+  
+  // Add debug button for testing
+  const debugButton = document.createElement('div');
+  debugButton.style.cssText = runsheetButton.style.cssText;
+  debugButton.style.right = '90px !important';
+  debugButton.innerHTML = '🔧';
+  debugButton.title = 'Debug Extension';
+  debugButton.addEventListener('click', () => {
+    console.log('🔧 Debug clicked');
+    // Force show sign-in popup
+    showSignInPopup();
+  });
+  document.body.appendChild(debugButton);
 }
 
 // Show sign-in popup
@@ -4714,7 +4740,41 @@ function updateTableWidth() {
   
   console.log('🔧 RunsheetPro Extension: Updated table width to', totalWidth, 'px');
 }
-  });
+
+// Add test function for debugging
+window.testExtensionUI = function() {
+  console.log('🧪 Testing Extension UI');
+  console.log('🧪 Button exists:', !!document.getElementById('runsheetpro-runsheet-button'));
+  console.log('🧪 Frame exists:', !!runsheetFrame);
+  console.log('🧪 Active runsheet:', !!activeRunsheet);
+  console.log('🧪 User session:', !!userSession);
   
-  console.log('🔧 RunsheetPro Extension: Updated table width to', totalWidth, 'px');
+  // Force show sign-in popup for testing
+  showSignInPopup();
+};
+
+// Improved initialization
+try {
+  console.log('🔧 Starting initialization...');
+  
+  // Force initialization after a delay to ensure DOM is ready
+  const initWithDelay = () => {
+    console.log('🔧 DOM ready state:', document.readyState);
+    console.log('🔧 Body exists:', !!document.body);
+    
+    if (document.body) {
+      init();
+    } else {
+      console.log('🔧 Body not ready, retrying...');
+      setTimeout(initWithDelay, 100);
+    }
+  };
+  
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initWithDelay);
+  } else {
+    setTimeout(initWithDelay, 50);
+  }
+} catch (error) {
+  console.error('🔧 Critical initialization error:', error);
 }
