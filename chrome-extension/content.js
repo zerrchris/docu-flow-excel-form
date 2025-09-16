@@ -4067,6 +4067,9 @@ async function processSnipWithAI(blob, metadata = {}) {
     return { success: false, error: error.message };
   }
 }
+
+// Upload snip to Supabase storage
+async function uploadSnipToStorage(blob) {
   try {
     if (!userSession) {
       throw new Error('User not authenticated');
