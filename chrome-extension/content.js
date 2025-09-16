@@ -4512,8 +4512,8 @@ async function analyzeCurrentScreenshot() {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        image_data: screenshotData,
-        analysis_type: 'document_extraction'
+        prompt: `Analyze this document image and extract any relevant data for the current runsheet. Please extract text, numbers, dates, and other relevant information that can be used to populate form fields.`,
+        imageData: screenshotData.imageUrl || screenshotData
       })
     });
 
@@ -4524,11 +4524,17 @@ async function analyzeCurrentScreenshot() {
       analyzeBtn.disabled = false;
     }
 
-    if (result.success && result.extracted_data) {
+    if (result.generatedText) {
       showNotification('Screenshot analyzed successfully!', 'success');
       
-      // Fill in the form fields with extracted data
-      fillFormWithExtractedData(result.extracted_data);
+      try {
+        // Parse the JSON response from the AI
+        const extractedData = JSON.parse(result.generatedText);
+        fillFormWithExtractedData(extractedData);
+      } catch (parseError) {
+        console.error('Failed to parse extracted data:', parseError);
+        showNotification('Analysis completed but data format was invalid', 'warning');
+      }
     } else {
       throw new Error(result.error || 'Analysis failed');
     }
