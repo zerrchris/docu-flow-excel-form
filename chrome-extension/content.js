@@ -90,7 +90,7 @@ function createRunsheetButton() {
     transition: all 0.3s ease !important;
     user-select: none !important;
   `;
-  runsheetButton.innerHTML = '📋';
+  runsheetButton.innerHTML = '⚡';
   runsheetButton.title = 'RunsheetPro Runsheet Assistant';
   console.log('🔧 RunsheetPro Extension: Button HTML and styles set, about to add event listeners');
   
