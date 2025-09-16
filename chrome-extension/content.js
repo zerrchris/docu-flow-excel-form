@@ -1068,24 +1068,43 @@ function findNextAvailableRow(runsheetData) {
     return 0; // First row
   }
   
-  // Look for first completely empty row
+  // Look for first completely empty row (no data AND no linked documents)
   for (let i = 0; i < runsheetData.data.length; i++) {
     const row = runsheetData.data[i];
+    
+    // Check if row exists and has any data
     if (!row || Object.keys(row).length === 0) {
-      return i;
+      return i; // Completely empty row
     }
     
-    // Check if all values are empty/null
-    const hasData = Object.values(row).some(value => 
-      value !== null && value !== undefined && value !== ''
-    );
+    // Check if all values are empty/null (but also check for document links)
+    const hasTextData = Object.entries(row).some(([key, value]) => {
+      // Skip document-related fields for text data check
+      if (key === 'Document File Name' || key === 'screenshot_url' || key.toLowerCase().includes('document')) {
+        return false;
+      }
+      return value !== null && value !== undefined && value !== '' && value !== 'N/A';
+    });
     
-    if (!hasData) {
+    // Check if row has any linked documents
+    const hasLinkedDocuments = Object.entries(row).some(([key, value]) => {
+      if (key === 'Document File Name' || key === 'screenshot_url' || key.toLowerCase().includes('document')) {
+        return value !== null && value !== undefined && value !== '';
+      }
+      return false;
+    });
+    
+    // Row is available if it has no text data AND no linked documents
+    if (!hasTextData && !hasLinkedDocuments) {
+      console.log(`🔧 RunsheetPro Extension: Found available row at index ${i}`);
       return i;
+    } else {
+      console.log(`🔧 RunsheetPro Extension: Row ${i} has data (textData: ${hasTextData}, linkedDocs: ${hasLinkedDocuments}), skipping`);
     }
   }
   
   // No empty rows found, add to end
+  console.log(`🔧 RunsheetPro Extension: No empty rows found, using new row at index ${runsheetData.data.length}`);
   return runsheetData.data.length;
 }
 
