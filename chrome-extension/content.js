@@ -2430,8 +2430,8 @@ function createFullRunsheetView(content) {
         if (confirm('This will replace the existing document/screenshot. Continue?')) {
           const originalRowIndex = currentRowIndex;
           currentRowIndex = rowIndex;
-          // Skip warning since we already confirmed replacement
-          showSnipModeSelector(false); // Pass false to skip overwrite check
+          // Skip warning since we already confirmed replacement (pass true to skip check)
+          showSnipModeSelector(true); // Pass true to skip overwrite check
           // Don't restore the original row index - keep it set to the row we're replacing
         }
       });
@@ -2457,8 +2457,8 @@ function createFullRunsheetView(content) {
       addBtn.addEventListener('click', () => {
         const originalRowIndex = currentRowIndex;
         currentRowIndex = rowIndex;
-        // Skip warning since we already know there's no document
-        showSnipModeSelector(false); // Pass false to skip overwrite check
+        // Skip warning since we already know there's no document (pass true to skip check)
+        showSnipModeSelector(true); // Pass true to skip overwrite check
         // Don't restore the original row index - keep it set to the row we're adding to
       });
       
