@@ -1002,9 +1002,9 @@ function createRunsheetFrame() {
       ${currentViewMode === 'single' ? '<button id="screenshot-btn" class="control-btn" style="background: green !important; color: white !important;">📷 Screenshot Options</button>' : ''}
       ${currentViewMode === 'single' ? '<button id="view-screenshot-btn" class="control-btn" style="background: blue !important; color: white !important; display: none;">👁️ View Screenshot</button>' : ''}
       ${currentViewMode === 'single' ? '<button id="retake-screenshot-btn" class="control-btn" style="background: orange !important; color: white !important; display: none;">🔄 Retake</button>' : ''}
-      <button id="open-app-btn" class="control-btn">🚀 Open in App</button>
+      ${currentViewMode === 'single' ? '<button id="open-app-btn" class="control-btn">🚀 Open in App</button>' : ''}
+      ${currentViewMode === 'single' ? '<button id="select-runsheet-btn" class="control-btn">📄 Select Sheet</button>' : ''}
       <button id="view-mode-btn" class="control-btn">${currentViewMode === 'single' ? '📋 Quick View' : '📝 Back to Entry'}</button>
-      <button id="select-runsheet-btn" class="control-btn">📄 Select Sheet</button>
     </div>
   `;
   
@@ -2440,7 +2440,7 @@ function createFullRunsheetView(content) {
           currentRowIndex = rowIndex;
           // Skip warning since we already confirmed replacement
           showSnipModeSelector(false); // Pass false to skip overwrite check
-          currentRowIndex = originalRowIndex; // Restore original row index
+          // Don't restore the original row index - keep it set to the row we're replacing
         }
       });
       
@@ -2467,7 +2467,7 @@ function createFullRunsheetView(content) {
         currentRowIndex = rowIndex;
         // Skip warning since we already know there's no document
         showSnipModeSelector(false); // Pass false to skip overwrite check
-        currentRowIndex = originalRowIndex; // Restore original row index
+        // Don't restore the original row index - keep it set to the row we're adding to
       });
       
       actionTd.appendChild(addBtn);
