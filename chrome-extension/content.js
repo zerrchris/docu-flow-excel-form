@@ -1451,7 +1451,8 @@ function createSingleEntryView(content) {
           return false;
         }
         const currentRow = activeRunsheet.data[currentRowIndex];
-        return currentRow && (currentRow.screenshot_url || (window.capturedSnip && window.capturedSnip.imageUrl));
+        return currentRow && ((currentRow.screenshot_url && currentRow.screenshot_url.trim() !== '' && currentRow.screenshot_url !== 'N/A') || 
+                             (window.capturedSnip && window.capturedSnip.imageUrl));
       };
 
       // Function to switch between upload and document modes
@@ -2392,8 +2393,9 @@ function createFullRunsheetView(content) {
       vertical-align: middle !important;
     `;
 
-    // Check if this row has a document/screenshot
-    const hasDocument = rowData['Document File Name'] || rowData['screenshot_url'];
+    // Check if this row has a document/screenshot (must have actual non-empty values)
+    const hasDocument = (rowData['Document File Name'] && rowData['Document File Name'].trim() !== '' && rowData['Document File Name'] !== 'N/A') || 
+                       (rowData['screenshot_url'] && rowData['screenshot_url'].trim() !== '' && rowData['screenshot_url'] !== 'N/A');
     
     if (hasDocument) {
       // Show view button and indicator
@@ -2447,8 +2449,8 @@ function createFullRunsheetView(content) {
     } else {
       // Show add screenshot button
       const addBtn = document.createElement('button');
-      addBtn.innerHTML = '📷+';
-      addBtn.title = 'Add screenshot';
+      addBtn.innerHTML = '📷 Add Document';
+      addBtn.title = 'Add screenshot or document to this row';
       addBtn.style.cssText = `
         background: hsl(var(--primary, 215 80% 40%)) !important;
         color: white !important;
@@ -2457,6 +2459,7 @@ function createFullRunsheetView(content) {
         border-radius: 3px !important;
         cursor: pointer !important;
         font-size: 11px !important;
+        font-weight: 500 !important;
       `;
       
       addBtn.addEventListener('click', () => {
@@ -3341,7 +3344,8 @@ function startSnipModeWithMode(mode = 'single', skipOverwriteCheck = false) {
   // Check if there's already a file for this row and warn user (unless skipping)
   if (!skipOverwriteCheck && activeRunsheet && activeRunsheet.data && activeRunsheet.data[currentRowIndex]) {
     const currentRow = activeRunsheet.data[currentRowIndex];
-    const hasExistingFile = currentRow['Document File Name'] || currentRow['screenshot_url'];
+    const hasExistingFile = (currentRow['Document File Name'] && currentRow['Document File Name'].trim() !== '' && currentRow['Document File Name'] !== 'N/A') || 
+                           (currentRow['screenshot_url'] && currentRow['screenshot_url'].trim() !== '' && currentRow['screenshot_url'] !== 'N/A');
     
     if (hasExistingFile) {
       const confirmOverwrite = confirm('A document/screenshot already exists for this row. Taking a new screenshot will replace the existing file. Continue?');
