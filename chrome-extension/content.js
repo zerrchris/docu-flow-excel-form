@@ -2415,7 +2415,7 @@ function createFullRunsheetView(content) {
         // Temporarily set currentRowIndex to this row for viewing
         const originalRowIndex = currentRowIndex;
         currentRowIndex = rowIndex;
-        viewCurrentScreenshot();
+        showSnipPreview();
         currentRowIndex = originalRowIndex; // Restore original row index
       });
       
@@ -2563,7 +2563,7 @@ function setupFrameEventListeners() {
   const viewScreenshotBtn = document.getElementById('view-screenshot-btn');
   if (viewScreenshotBtn) {
     viewScreenshotBtn.addEventListener('click', () => {
-      viewCurrentScreenshot();
+      showSnipPreview();
     });
   }
   
@@ -4551,11 +4551,10 @@ async function analyzeCurrentScreenshot() {
 }
 
 // Function to view current screenshot
-function viewCurrentScreenshot() {
-  if (!window.currentCapturedSnip) {
-    showNotification('No screenshot captured yet', 'warning');
-    return;
-  }
+// Removed duplicate viewCurrentScreenshot function - using unified showSnipPreview function
+function deletedViewCurrentScreenshot() {
+  // This function has been replaced by showSnipPreview() for consistency
+  showSnipPreview();
   
   // Create modal to view screenshot
   const overlay = document.createElement('div');
@@ -4657,138 +4656,7 @@ function retakeScreenshot() {
   showNotification('Previous screenshot cleared. Take a new screenshot.', 'info');
 }
 
-// View current screenshot
-function viewCurrentScreenshot() {
-  console.log('🔧 RunsheetPro Extension: Viewing current screenshot');
-  
-  // Get screenshot from current row data
-  let screenshotData = null;
-  let screenshotSource = '';
-  
-  if (activeRunsheet && activeRunsheet.data && activeRunsheet.data[currentRowIndex]) {
-    const currentRow = activeRunsheet.data[currentRowIndex];
-    screenshotData = currentRow['screenshot_url'] || currentRow['Document File Name'];
-    screenshotSource = 'stored';
-  }
-  
-  // Fallback to captured snip or recent captures
-  if (!screenshotData) {
-    if (window.currentCapturedSnip) {
-      screenshotData = window.currentCapturedSnip;
-      screenshotSource = 'captured';
-    } else if (captures.length > 0) {
-      screenshotData = captures[captures.length - 1];
-      screenshotSource = 'recent';
-    }
-  }
-
-  if (!screenshotData) {
-    showNotification('No document/screenshot available to view for this row', 'error');
-    return;
-  }
-
-  // Create screenshot viewer modal
-  const modal = document.createElement('div');
-  modal.id = 'screenshot-viewer-modal';
-  modal.style.cssText = `
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 100vw !important;
-    height: 100vh !important;
-    background: rgba(0, 0, 0, 0.9) !important;
-    z-index: 2147483647 !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    backdrop-filter: blur(4px) !important;
-  `;
-
-  const content = document.createElement('div');
-  content.style.cssText = `
-    position: relative !important;
-    max-width: 90vw !important;
-    max-height: 90vh !important;
-    background: white !important;
-    border-radius: 8px !important;
-    padding: 16px !important;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3) !important;
-  `;
-
-  const header = document.createElement('div');
-  header.style.cssText = `
-    display: flex !important;
-    justify-content: space-between !important;
-    align-items: center !important;
-    margin-bottom: 12px !important;
-    padding-bottom: 8px !important;
-    border-bottom: 1px solid #e5e7eb !important;
-  `;
-
-  const title = document.createElement('h3');
-  title.textContent = `Screenshot Preview (${screenshotSource})`;
-  title.style.cssText = `
-    margin: 0 !important;
-    font-size: 16px !important;
-    font-weight: 600 !important;
-    color: #1f2937 !important;
-  `;
-
-  const closeBtn = document.createElement('button');
-  closeBtn.textContent = '✕';
-  closeBtn.style.cssText = `
-    background: none !important;
-    border: none !important;
-    font-size: 20px !important;
-    cursor: pointer !important;
-    color: #6b7280 !important;
-    width: 32px !important;
-    height: 32px !important;
-    border-radius: 4px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-  `;
-
-  const image = document.createElement('img');
-  image.src = screenshotData;
-  image.style.cssText = `
-    max-width: 100% !important;
-    max-height: 70vh !important;
-    object-fit: contain !important;
-    border: 1px solid #e5e7eb !important;
-    border-radius: 4px !important;
-  `;
-
-  // Close handlers
-  const closeModal = () => {
-    modal.remove();
-  };
-
-  closeBtn.addEventListener('click', closeModal);
-  modal.addEventListener('click', (e) => {
-    if (e.target === modal) closeModal();
-  });
-
-  // Keyboard close
-  const handleKeyPress = (e) => {
-    if (e.key === 'Escape') {
-      closeModal();
-      document.removeEventListener('keydown', handleKeyPress);
-    }
-  };
-  document.addEventListener('keydown', handleKeyPress);
-
-  // Build modal
-  header.appendChild(title);
-  header.appendChild(closeBtn);
-  content.appendChild(header);
-  content.appendChild(image);
-  modal.appendChild(content);
-  document.body.appendChild(modal);
-
-  console.log('🔧 RunsheetPro Extension: Screenshot viewer opened');
-}
+// Removed duplicate viewCurrentScreenshot function - now using unified showSnipPreview function
 
 // Fill form fields with extracted data from AI analysis
 function fillFormWithExtractedData(extractedData) {
