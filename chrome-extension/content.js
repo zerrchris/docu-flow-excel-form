@@ -990,7 +990,7 @@ function createRunsheetFrame() {
       ${currentViewMode === 'single' ? `
         <div style="display: inline-flex; align-items: center; margin-left: 8px; gap: 4px;">
           <span id="target-row-indicator" style="font-size: 12px; color: hsl(var(--muted-foreground, 215 16% 47%)); margin-right: 8px;">
-            (Will add to Row ${getNextAvailableRowNumber()})
+            (Will add to Row ${currentRowIndex + 1})
           </span>
           <span id="screenshot-indicator" style="font-size: 11px; color: hsl(var(--primary, 215 80% 40%)); margin-left: 4px; display: none;">📷</span>
           <button id="view-screenshot-btn" style="background: hsl(var(--muted, 210 40% 96%)); color: hsl(var(--foreground, 222 47% 11%)); border: 1px solid hsl(var(--border, 214 32% 91%)); padding: 2px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; display: none;" title="View current screenshot">👁️ View</button>
@@ -1093,7 +1093,7 @@ function findNextAvailableRow(runsheetData) {
 function updateTargetRowIndicator() {
   const indicator = document.getElementById('target-row-indicator');
   if (indicator) {
-    const rowNumber = getNextAvailableRowNumber();
+    const rowNumber = currentRowIndex + 1; // Use current row index instead of next available
     indicator.textContent = `(Will add to Row ${rowNumber})`;
   }
 }
