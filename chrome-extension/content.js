@@ -866,7 +866,8 @@ function loadRunsheet(runsheet) {
   
   // Save state when setting active runsheet
   if (typeof saveExtensionState === 'function') {
-    saveExtensionState();
+    try { saveExtensionState(); }
+    catch (e) { console.error('🔧 RunsheetPro Extension: saveExtensionState failed:', e); }
   }
   
   // Store runsheet data for persistence across page navigation

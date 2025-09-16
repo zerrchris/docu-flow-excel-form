@@ -1,16 +1,18 @@
 // RunsheetPro Extension - Persistent State Management
 // Handles state persistence across page navigations
 
-// Persistent state keys - wrapped to avoid conflicts
-if (typeof STATE_KEYS === 'undefined') {
-  const STATE_KEYS = {
-  ACTIVE_RUNSHEET: 'extension_active_runsheet',
-  USER_SESSION: 'extension_user_session', 
-  CURRENT_ROW_INDEX: 'extension_current_row_index',
-  SNIP_SESSION: 'extension_snip_session',
-  FORM_DATA: 'extension_form_data',
-  VIEW_MODE: 'extension_view_mode'
+// Persistent state keys - ensure global singleton
+var STATE_KEYS = (typeof window !== 'undefined' ? (window.STATE_KEYS || null) : null);
+if (!STATE_KEYS) {
+  STATE_KEYS = {
+    ACTIVE_RUNSHEET: 'extension_active_runsheet',
+    USER_SESSION: 'extension_user_session',
+    CURRENT_ROW_INDEX: 'extension_current_row_index',
+    SNIP_SESSION: 'extension_snip_session',
+    FORM_DATA: 'extension_form_data',
+    VIEW_MODE: 'extension_view_mode'
   };
+  if (typeof window !== 'undefined') window.STATE_KEYS = STATE_KEYS;
 }
 
 // Snipping session state
