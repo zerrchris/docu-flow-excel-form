@@ -1269,7 +1269,7 @@ function createSingleEntryView(content) {
         line-height: 1 !important;
       `;
       
-      // Screenshot button
+      // Screenshot/View Snip button
       const screenshotBtn = document.createElement('button');
       screenshotBtn.innerHTML = '📷 Screenshot';
       screenshotBtn.style.cssText = `
@@ -1419,18 +1419,55 @@ function createSingleEntryView(content) {
       fileInput.accept = 'image/*,.pdf,.doc,.docx';
       fileInput.style.display = 'none';
       
+      // Function to update screenshot button based on linked snip
+      const updateScreenshotButton = () => {
+        const hasLinkedSnip = checkForLinkedSnip();
+        if (hasLinkedSnip) {
+          screenshotBtn.innerHTML = '👁️ View Snip';
+          screenshotBtn.classList.add('view-snip');
+          screenshotBtn.style.background = 'hsl(var(--accent, 230 60% 60%)) !important';
+          screenshotBtn.style.color = 'white !important';
+          screenshotBtn.title = 'View linked screenshot';
+        } else {
+          screenshotBtn.innerHTML = '📷 Screenshot';
+          screenshotBtn.classList.remove('view-snip');
+          screenshotBtn.style.background = 'hsl(var(--secondary, 210 40% 96%)) !important';
+          screenshotBtn.style.color = 'hsl(var(--secondary-foreground, 222 47% 11%)) !important';
+          screenshotBtn.title = 'Take screenshot';
+        }
+        
+        // Only show the button if there's a linked snip or no document is linked yet
+        const documentInput = document.querySelector('.editable-row input[data-column="Document File Name"]');
+        const hasLinkedDocument = documentInput && documentInput.value && documentInput.value.trim() !== '';
+        screenshotBtn.style.display = (hasLinkedSnip || !hasLinkedDocument) ? 'inline-block' : 'none';
+      };
+
+      // Make updateScreenshotButton globally accessible
+      window.updateScreenshotButtonGlobal = updateScreenshotButton;
+
+      // Function to check for linked snip in current row
+      const checkForLinkedSnip = () => {
+        if (!activeRunsheet || !activeRunsheet.data || currentRowIndex >= activeRunsheet.data.length) {
+          return false;
+        }
+        const currentRow = activeRunsheet.data[currentRowIndex];
+        return currentRow && (currentRow.screenshot_url || (window.capturedSnip && window.capturedSnip.imageUrl));
+      };
+
       // Function to switch between upload and document modes
       const switchToDocumentMode = (filename) => {
         uploadInterface.style.display = 'none';
         documentInterface.style.display = 'flex';
         filenameText.textContent = filename;
         headerContent.style.border = '1px solid hsl(var(--border, 214 32% 91%))';
+        updateScreenshotButton(); // Update button when switching modes
       };
       
       const switchToUploadMode = () => {
         uploadInterface.style.display = 'flex';
         documentInterface.style.display = 'none';
         headerContent.style.border = '1px dashed hsl(var(--border, 214 32% 91%))';
+        updateScreenshotButton(); // Update button when switching modes
       };
       
       // Check if there's already a document linked on page load
@@ -1438,6 +1475,8 @@ function createSingleEntryView(content) {
         const documentInput = document.querySelector('.editable-row input[data-column="Document File Name"]');
         if (documentInput && documentInput.value && documentInput.value.trim() !== '') {
           switchToDocumentMode(documentInput.value);
+        } else {
+          updateScreenshotButton(); // Update button state on load
         }
       };
       
@@ -1482,7 +1521,12 @@ function createSingleEntryView(content) {
       
       screenshotBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        startSnipMode();
+        // Check if this is a view snip button or screenshot button
+        if (screenshotBtn.classList.contains('view-snip')) {
+          showSnipPreview();
+        } else {
+          startSnipMode();
+        }
       });
       
       // Event handlers for document interface
@@ -4420,6 +4464,12 @@ function updateRowNavigationUI() {
   } else {
     updateScreenshotIndicator(false);
   }
+  
+  // Update screenshot button state when row changes
+  // Call updateScreenshotButton if it exists (it's defined within the createRunsheetFrame scope)
+  if (typeof window.updateScreenshotButtonGlobal === 'function') {
+    window.updateScreenshotButtonGlobal();
+  }
 }
 
 // Analyze current screenshot with AI
@@ -4917,6 +4967,128 @@ function updateTableWidth() {
   });
   
   console.log('🔧 RunsheetPro Extension: Updated table width to', totalWidth, 'px');
+}
+
+// Show preview of linked snip
+function showSnipPreview() {
+  if (!activeRunsheet || !activeRunsheet.data || currentRowIndex >= activeRunsheet.data.length) {
+    showNotification('No snip data available', 'error');
+    return;
+  }
+
+  const currentRow = activeRunsheet.data[currentRowIndex];
+  let snipUrl = null;
+
+  // Check for stored screenshot URL first
+  if (currentRow && currentRow.screenshot_url) {
+    snipUrl = currentRow.screenshot_url;
+  }
+  // Then check for current captured snip
+  else if (window.capturedSnip && window.capturedSnip.imageUrl) {
+    snipUrl = window.capturedSnip.imageUrl;
+  }
+
+  if (!snipUrl) {
+    showNotification('No linked snip found for this row', 'error');
+    return;
+  }
+
+  // Create modal overlay
+  const modal = document.createElement('div');
+  modal.style.cssText = `
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background: rgba(0, 0, 0, 0.8) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    z-index: 10000 !important;
+    backdrop-filter: blur(5px) !important;
+  `;
+
+  // Create image container
+  const imageContainer = document.createElement('div');
+  imageContainer.style.cssText = `
+    max-width: 90vw !important;
+    max-height: 90vh !important;
+    background: white !important;
+    border-radius: 8px !important;
+    padding: 20px !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3) !important;
+    position: relative !important;
+  `;
+
+  // Create close button
+  const closeBtn = document.createElement('button');
+  closeBtn.innerHTML = '✕';
+  closeBtn.style.cssText = `
+    position: absolute !important;
+    top: 10px !important;
+    right: 10px !important;
+    background: hsl(var(--destructive, 0 84% 60%)) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 50% !important;
+    width: 30px !important;
+    height: 30px !important;
+    cursor: pointer !important;
+    font-size: 16px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  `;
+
+  // Create image
+  const img = document.createElement('img');
+  img.src = snipUrl;
+  img.style.cssText = `
+    max-width: 100% !important;
+    max-height: 70vh !important;
+    object-fit: contain !important;
+    border-radius: 4px !important;
+  `;
+
+  // Create title
+  const title = document.createElement('h3');
+  title.textContent = `Snip for Row ${currentRowIndex + 1}`;
+  title.style.cssText = `
+    margin: 0 0 15px 0 !important;
+    font-size: 18px !important;
+    color: hsl(var(--foreground, 222 47% 11%)) !important;
+    text-align: center !important;
+  `;
+
+  // Assemble modal
+  imageContainer.appendChild(closeBtn);
+  imageContainer.appendChild(title);
+  imageContainer.appendChild(img);
+  modal.appendChild(imageContainer);
+
+  // Event handlers
+  closeBtn.addEventListener('click', () => {
+    document.body.removeChild(modal);
+  });
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      document.body.removeChild(modal);
+    }
+  });
+
+  // Handle escape key
+  const handleEscape = (e) => {
+    if (e.key === 'Escape') {
+      document.body.removeChild(modal);
+      document.removeEventListener('keydown', handleEscape);
+    }
+  };
+  document.addEventListener('keydown', handleEscape);
+
+  // Show modal
+  document.body.appendChild(modal);
 }
 
 // Add test function for debugging
