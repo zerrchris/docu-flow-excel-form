@@ -1432,8 +1432,8 @@ function createSingleEntryView(content) {
           screenshotBtn.title = 'Take screenshot';
         }
         
-        // Only show the button if there's actually a linked snip to view
-        screenshotBtn.style.display = hasLinkedSnip ? 'inline-block' : 'none';
+        // Always show the button - either to take a screenshot or view an existing one
+        screenshotBtn.style.display = 'inline-block';
       };
 
       // Make updateScreenshotButton globally accessible
