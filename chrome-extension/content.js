@@ -3603,7 +3603,7 @@ async function showRunsheetSelector() {
       `;
     } else {
       listDiv.innerHTML = runsheets.map(runsheet => `
-        <div class="runsheet-item" data-runsheet='${JSON.stringify(runsheet)}' style="
+        <div class="runsheet-item" data-runsheet="${encodeURIComponent(JSON.stringify(runsheet))}" style="
           border: 1px solid #e5e7eb;
           border-radius: 8px;
           padding: 16px;
@@ -3636,7 +3636,7 @@ async function showRunsheetSelector() {
         });
         
         item.addEventListener('click', () => {
-          const runsheetData = JSON.parse(item.dataset.runsheet);
+          const runsheetData = JSON.parse(decodeURIComponent(item.dataset.runsheet));
           loadSelectedRunsheet(runsheetData);
           overlay.remove();
         });
