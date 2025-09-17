@@ -1663,7 +1663,7 @@ function createSingleEntryView(content) {
         padding: 0px 2px !important;
         font-size: 11px !important;
         display: flex !important;
-        align-items: center !important;
+        align-items: flex-start !important;
       `;
       cell.appendChild(cellContent);
     }
@@ -2364,7 +2364,7 @@ function createFullRunsheetView(content) {
       max-width: 80px !important;
       width: 80px !important;
       border-right: 1px solid hsl(var(--border, 214 32% 91%)) !important;
-      vertical-align: middle !important;
+      vertical-align: top !important;
     `;
 
     // Check if this row has a document/screenshot (must have actual non-empty values)
