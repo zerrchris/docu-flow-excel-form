@@ -3362,7 +3362,7 @@ function showSnipModeSelector(skipOverwriteCheck = true) {
         font-size: 14px;
         box-shadow: 0 2px 8px rgba(245, 158, 11, 0.2);
       ">
-        <div style="font-weight: 600; margin-bottom: 4px;">🔗 Click & Navigate</div>
+        <div style="font-weight: 600; margin-bottom: 4px;">🔗 Snip & Navigate</div>
         <div style="opacity: 0.9; font-size: 13px;">Capture areas across multiple pages by clicking links or navigating</div>
       </button>
     </div>
@@ -3692,7 +3692,7 @@ function startSnipModeWithMode(mode = 'single', skipOverwriteCheck = false) {
   const messages = {
     single: 'Single snip mode! Drag to select area - it will auto-submit when done.',
     scroll: 'Snip & scroll mode! Drag to select areas, scroll as needed. Your session will persist. Smart scrolling enabled for document viewers.',
-    navigate: 'Click & navigate mode! Drag to select areas, navigate between pages. Your session will persist.'
+    navigate: 'Snip & navigate mode! Drag to select areas, navigate between pages. Your session will persist.'
   };
   
   showNotification(messages[mode], 'info');
