@@ -3750,7 +3750,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         document.removeEventListener('mouseup', handleMouseUp);
       };
     }
-  }, [resizing, resizingRow]);
+  }, [resizing, resizingRow, isDraggingResize, getColumnWidth, getMinimumColumnWidth, currentRunsheetId, getRowHeight]);
 
 
   // Runsheet name editing functions
