@@ -4524,17 +4524,31 @@ function updateScreenshotIndicator(hasScreenshot) {
     analyzeBtn.style.display = actuallyHasScreenshot ? 'inline-block' : 'none';
   }
   
-  if (viewBtn) {
-    viewBtn.style.display = actuallyHasScreenshot ? 'inline-block' : 'none';
-  }
-  
-  // Toggle main screenshot button visibility based on screenshot state
-  if (screenshotBtn) {
-    screenshotBtn.style.display = actuallyHasScreenshot ? 'none' : 'inline-block';
-  }
-  
-  if (retakeBtn) {
-    retakeBtn.style.display = actuallyHasScreenshot ? 'inline-block' : 'none';
+  // Only show header buttons in single entry mode, not in quick view
+  if (currentViewMode === 'single') {
+    if (viewBtn) {
+      viewBtn.style.display = actuallyHasScreenshot ? 'inline-block' : 'none';
+    }
+    
+    // Toggle main screenshot button visibility based on screenshot state
+    if (screenshotBtn) {
+      screenshotBtn.style.display = actuallyHasScreenshot ? 'none' : 'inline-block';
+    }
+    
+    if (retakeBtn) {
+      retakeBtn.style.display = actuallyHasScreenshot ? 'inline-block' : 'none';
+    }
+  } else {
+    // In quick view mode, hide all header screenshot buttons
+    if (viewBtn) {
+      viewBtn.style.display = 'none';
+    }
+    if (retakeBtn) {
+      retakeBtn.style.display = 'none';
+    }
+    if (screenshotBtn) {
+      screenshotBtn.style.display = 'none';
+    }
   }
 }
 
