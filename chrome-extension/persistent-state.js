@@ -295,11 +295,18 @@ async function initializeExtensionWithStateRestore() {
           restoreSnipSession();
         }, 1000);
       } else {
-        // Different domain - ask user if they want to continue the session
-        console.log('🔧 RunsheetPro Extension: Different domain detected, asking user about session continuation');
-        setTimeout(() => {
-          askUserAboutSessionContinuation();
-        }, 2000);
+        // Different domain - ask user if they want to continue the session, but only if no quickview is already shown
+        console.log('🔧 RunsheetPro Extension: Different domain detected, checking if quickview is active');
+        if (!runsheetFrame || runsheetFrame.style.display === 'none') {
+          console.log('🔧 RunsheetPro Extension: No quickview active, asking user about session continuation');
+          setTimeout(() => {
+            askUserAboutSessionContinuation();
+          }, 2000);
+        } else {
+          console.log('🔧 RunsheetPro Extension: Quickview is active, not showing session dialog');
+          // Silently clear the session since user is already working on something else
+          clearSnipSession();
+        }
       }
     } else {
       console.log('🔧 RunsheetPro Extension: No active snip session to restore');
@@ -314,7 +321,16 @@ function askUserAboutSessionContinuation() {
     return;
   }
   
+  // Check if there are any existing extension modals or UI elements
+  const existingModal = document.querySelector('[id*="runsheetpro"]');
+  if (existingModal) {
+    console.log('🔧 RunsheetPro Extension: Extension UI already active, clearing snip session silently');
+    clearSnipSession();
+    return;
+  }
+  
   const modal = document.createElement('div');
+  modal.id = 'runsheetpro-session-modal';
   modal.style.cssText = `
     position: fixed !important;
     top: 0 !important;
@@ -325,7 +341,7 @@ function askUserAboutSessionContinuation() {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    z-index: 2147483647 !important;
+    z-index: 1000000 !important;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
   `;
   
