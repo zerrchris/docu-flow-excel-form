@@ -4838,6 +4838,18 @@ async function analyzeCurrentScreenshot() {
       analyzeBtn.disabled = true;
     }
 
+    // Get active runsheet data for better extraction
+    const runsheetData = await chrome.storage.local.get(['activeRunsheet']);
+    const activeRunsheet = runsheetData.activeRunsheet;
+    
+    // Build extraction prompt based on runsheet columns
+    let extractionPrompt = `Analyze this document image and extract any relevant data for the current runsheet. Please extract text, numbers, dates, and other relevant information that can be used to populate form fields.`;
+    
+    if (activeRunsheet?.columns) {
+      const extractionFields = activeRunsheet.columns.map(col => `${col}: [extracted value]`).join('\n');
+      extractionPrompt = `Extract information from this document for the following fields and return as valid JSON:\n${extractionFields}\n\nReturn only a JSON object with field names as keys and extracted values as values. Do not include any markdown, explanations, or additional text.`;
+    }
+
     const response = await fetch('https://xnpmrafjjqsissbtempj.supabase.co/functions/v1/analyze-document', {
       method: 'POST',
       headers: {
@@ -4846,7 +4858,7 @@ async function analyzeCurrentScreenshot() {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        prompt: `Analyze this document image and extract any relevant data for the current runsheet. Please extract text, numbers, dates, and other relevant information that can be used to populate form fields.`,
+        prompt: extractionPrompt,
         imageData: screenshotData
       })
     });
