@@ -1047,6 +1047,7 @@ function createRunsheetFrame() {
       ${currentViewMode === 'single' ? '<button id="screenshot-btn" class="control-btn" style="background: green !important; color: white !important;">📷 Screenshot Options</button>' : ''}
       ${currentViewMode === 'single' ? '<button id="view-screenshot-btn" class="control-btn" style="background: blue !important; color: white !important; display: none;">👁️ View Screenshot</button>' : ''}
       ${currentViewMode === 'single' ? '<button id="retake-screenshot-btn" class="control-btn" style="background: orange !important; color: white !important; display: none;">🔄 Retake</button>' : ''}
+      ${currentViewMode === 'single' ? '<button id="analyze-screenshot-btn" class="control-btn" style="background: purple !important; color: white !important; display: none;">🔍 Analyze</button>' : ''}
       ${currentViewMode === 'single' ? '<button id="open-app-btn" class="control-btn">🚀 Open in App</button>' : ''}
       ${currentViewMode === 'single' ? '<button id="select-runsheet-btn" class="control-btn">📄 Select Sheet</button>' : ''}
       <button id="view-mode-btn" class="control-btn">${currentViewMode === 'single' ? '📋 Quick View' : '📝 Save & Close'}</button>
@@ -2772,6 +2773,13 @@ function setupFrameEventListeners() {
     });
   }
   
+  // Analyze screenshot button
+  const analyzeScreenshotBtn = document.getElementById('analyze-screenshot-btn');
+  if (analyzeScreenshotBtn) {
+    analyzeScreenshotBtn.addEventListener('click', () => {
+      analyzeCurrentScreenshot();
+    });
+  }
   // Remove old row navigation event listeners (no longer needed)
   // Single entry view is for adding new data only
   
@@ -4925,13 +4933,18 @@ try {
 
 // Update screenshot indicator in header and control buttons
 function updateScreenshotIndicator(hasScreenshot) {
-  // Check for current captured snip first, then check stored screenshot
-  const hasCapturedSnip = !!window.currentCapturedSnip;
-  const hasStoredScreenshot = activeRunsheet && activeRunsheet.data && activeRunsheet.data[currentRowIndex] && 
-    (activeRunsheet.data[currentRowIndex]['Document File Name'] || activeRunsheet.data[currentRowIndex]['screenshot_url']);
+  // If hasScreenshot is explicitly passed, use that value
+  // Otherwise, check for current captured snip or stored screenshot
+  let actuallyHasScreenshot;
   
-  // Only show screenshot-related buttons if we actually have a screenshot
-  const actuallyHasScreenshot = hasCapturedSnip || hasStoredScreenshot;
+  if (hasScreenshot !== undefined) {
+    actuallyHasScreenshot = hasScreenshot;
+  } else {
+    const hasCapturedSnip = !!window.currentCapturedSnip;
+    const hasStoredScreenshot = activeRunsheet && activeRunsheet.data && activeRunsheet.data[currentRowIndex] && 
+      (activeRunsheet.data[currentRowIndex]['Document File Name'] || activeRunsheet.data[currentRowIndex]['screenshot_url']);
+    actuallyHasScreenshot = hasCapturedSnip || hasStoredScreenshot;
+  }
   
   const indicator = document.getElementById('screenshot-indicator');
   const analyzeBtn = document.getElementById('analyze-screenshot-btn');
@@ -4944,8 +4957,13 @@ function updateScreenshotIndicator(hasScreenshot) {
     indicator.title = actuallyHasScreenshot ? 'Screenshot available for this row' : '';
   }
   
+  // Analyze button should only show in single entry mode when there's a screenshot
   if (analyzeBtn) {
-    analyzeBtn.style.display = actuallyHasScreenshot ? 'inline-block' : 'none';
+    if (currentViewMode === 'single' && actuallyHasScreenshot) {
+      analyzeBtn.style.display = 'inline-block';
+    } else {
+      analyzeBtn.style.display = 'none';
+    }
   }
   
   // Only show header buttons in single entry mode, not in quick view
