@@ -992,7 +992,7 @@ function createRunsheetFrame() {
       ${currentViewMode === 'single' ? '<button id="retake-screenshot-btn" class="control-btn" style="background: orange !important; color: white !important; display: none;">🔄 Retake</button>' : ''}
       ${currentViewMode === 'single' ? '<button id="open-app-btn" class="control-btn">🚀 Open in App</button>' : ''}
       ${currentViewMode === 'single' ? '<button id="select-runsheet-btn" class="control-btn">📄 Select Sheet</button>' : ''}
-      <button id="view-mode-btn" class="control-btn">${currentViewMode === 'single' ? '📋 Quick View' : '📝 Back to Entry'}</button>
+      <button id="view-mode-btn" class="control-btn">${currentViewMode === 'single' ? '📋 Quick View' : '📝 Save & Close'}</button>
     </div>
   `;
   
@@ -2348,14 +2348,27 @@ function createFullRunsheetView(content) {
       
       // Handle data changes
       inputElement.addEventListener('input', () => {
+        const currentRow = parseInt(inputElement.getAttribute('data-row'));
         // Update the runsheet data
         if (!activeRunsheet.data[currentRow]) {
           activeRunsheet.data[currentRow] = {};
         }
         activeRunsheet.data[currentRow][column] = inputElement.value;
         
-        // Sync data changes
-        syncData();
+        // Persist changes
+        if (currentViewMode === 'full') {
+          // Debounced per-row save in Quick View
+          if (!window.__rowSaveDebouncers) window.__rowSaveDebouncers = {};
+          if (!window.__rowSaveDebouncers[currentRow]) {
+            window.__rowSaveDebouncers[currentRow] = debounce(() => {
+              try { syncFullRow(currentRow); } catch (e) { console.error('Row sync failed', e); }
+            }, 400);
+          }
+          window.__rowSaveDebouncers[currentRow]();
+        } else {
+          // Single entry mode behavior
+          syncData();
+        }
       });
       
       // Handle focus events to select text
@@ -2479,8 +2492,9 @@ function createFullRunsheetView(content) {
 }
 
 // Switch between view modes
-function switchViewMode(newMode) {
+async function switchViewMode(newMode) {
   if (newMode === currentViewMode) return;
+  const prevMode = currentViewMode;
   
   // Save current form data before switching views
   if (typeof saveCurrentFormData === 'function') {
@@ -2489,6 +2503,11 @@ function switchViewMode(newMode) {
   
   currentViewMode = newMode;
   chrome.storage.local.set({ viewMode: newMode });
+  
+  // If leaving Quick View, persist all row changes to DB
+  if (prevMode === 'full' && newMode === 'single') {
+    try { await persistActiveRunsheetData(); } catch (e) { console.warn('Persist on close failed', e); }
+  }
   
   // Recreate the frame content
   if (runsheetFrame) {
@@ -2499,12 +2518,27 @@ function switchViewMode(newMode) {
         createFullRunsheetView(content);
       } else {
         createSingleEntryView(content);
-        
         // Single entry mode should ALWAYS start blank for new data entry
-        // Never restore form data - this is for entering NEW rows
       }
     }
     updateViewModeButton();
+    
+    // Update header controls visibility for current mode
+    const ids = ['screenshot-btn','view-screenshot-btn','retake-screenshot-btn','open-app-btn','select-runsheet-btn'];
+    ids.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      // In Quick View (full) hide all these buttons; in Single show default, but keep view/retake hidden until indicator toggles
+      if (currentViewMode === 'full') {
+        el.style.display = 'none';
+      } else {
+        if (id === 'view-screenshot-btn' || id === 'retake-screenshot-btn') {
+          el.style.display = 'none';
+        } else {
+          el.style.display = 'inline-block';
+        }
+      }
+    });
     
     // Save state when switching view modes
     if (typeof saveExtensionState === 'function') {
@@ -2517,7 +2551,7 @@ function switchViewMode(newMode) {
 function updateViewModeButton() {
   const viewModeBtn = document.getElementById('view-mode-btn');
   if (viewModeBtn) {
-    viewModeBtn.textContent = currentViewMode === 'single' ? '📋 Quick View' : '📝 Back to Entry';
+    viewModeBtn.textContent = currentViewMode === 'single' ? '📋 Quick View' : '📝 Save & Close';
   }
 }
 
@@ -2787,6 +2821,60 @@ async function syncData() {
   } catch (error) {
     console.error('Sync error:', error);
     showNotification('Failed to sync data', 'error');
+  }
+}
+
+// Sync a specific row in Quick View (full)
+async function syncFullRow(rowIndex) {
+  try {
+    if (!activeRunsheet || !userSession) return;
+    // Collect inputs for this row
+    const rowInputs = document.querySelectorAll(`#runsheetpro-runsheet-frame [data-row="${rowIndex}"]`);
+    const rowData = {};
+    rowInputs.forEach((el) => {
+      const col = el.getAttribute('data-column');
+      if (col) rowData[col] = (el.value && typeof el.value === 'string') ? el.value.trim() : (el.value || '');
+    });
+    // Merge with any existing values like screenshot_url
+    const existing = (activeRunsheet.data && activeRunsheet.data[rowIndex]) || {};
+    activeRunsheet.data[rowIndex] = { ...existing, ...rowData };
+
+    await fetch('https://xnpmrafjjqsissbtempj.supabase.co/functions/v1/extension-sync', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${userSession.access_token}`,
+        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhucG1yYWZqanFzaXNzYnRlbXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4NzMyNjcsImV4cCI6MjA2ODQ0OTI2N30.aQG15Ed8IOLJfM5p7XF_kEM5FUz8zJug1pxAi9rTTsg',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        runsheet_id: activeRunsheet.id,
+        row_data: activeRunsheet.data[rowIndex],
+        target_row_index: rowIndex
+      })
+    });
+  } catch (e) {
+    console.error('syncFullRow error:', e);
+  }
+}
+
+// Persist entire runsheet data (used when leaving Quick View)
+async function persistActiveRunsheetData() {
+  try {
+    if (!activeRunsheet || !userSession) return;
+    const res = await fetch('https://xnpmrafjjqsissbtempj.supabase.co/rest/v1/runsheets?id=eq.' + activeRunsheet.id, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${userSession.access_token}`,
+        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhucG1yYWZqanFzaXNzYnRlbXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4NzMyNjcsImV4cCI6MjA2ODQ0OTI2N30.aQG15Ed8IOLJfM5p7XF_kEM5FUz8zJug1pxAi9rTTsg'
+      },
+      body: JSON.stringify({ data: activeRunsheet.data, updated_at: new Date().toISOString() })
+    });
+    if (!res.ok) {
+      console.warn('persistActiveRunsheetData failed', await res.text());
+    }
+  } catch (e) {
+    console.error('persistActiveRunsheetData error:', e);
   }
 }
 
