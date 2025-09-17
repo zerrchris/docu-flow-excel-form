@@ -2360,6 +2360,25 @@ function createFullRunsheetView(content) {
         }
       });
       
+      // Add double-click handler for re-analysis
+      inputElement.addEventListener('dblclick', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Only allow re-analysis if there's a document for this row
+        const rowData = activeRunsheet.data[rowIndex] || {};
+        const hasDocument = (rowData['Document File Name'] && rowData['Document File Name'].trim() !== '' && rowData['Document File Name'] !== 'N/A') || 
+                           (rowData['screenshot_url'] && rowData['screenshot_url'].trim() !== '' && rowData['screenshot_url'] !== 'N/A');
+        
+        if (!hasDocument) {
+          showNotification('No document available for this row. Add a document first.', 'error');
+          return;
+        }
+        
+        // Show re-extract dialog for this specific field
+        showReExtractDialog(column, inputElement.value, rowIndex);
+      });
+
       td.appendChild(inputElement);
       row.appendChild(td);
     });
@@ -3131,6 +3150,292 @@ async function persistActiveRunsheetData() {
   } catch (e) {
     console.error('persistActiveRunsheetData error:', e);
   }
+}
+
+// Show re-extract dialog for a specific field
+function showReExtractDialog(fieldName, currentValue, rowIndex) {
+  // Create backdrop
+  const backdrop = document.createElement('div');
+  backdrop.style.cssText = `
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background: rgba(0, 0, 0, 0.5) !important;
+    z-index: 999999 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  `;
+  
+  // Create dialog
+  const dialog = document.createElement('div');
+  dialog.style.cssText = `
+    background: hsl(var(--card, 0 0% 100%)) !important;
+    border: 1px solid hsl(var(--border, 214 32% 91%)) !important;
+    border-radius: 8px !important;
+    padding: 24px !important;
+    width: 90% !important;
+    max-width: 500px !important;
+    max-height: 90vh !important;
+    overflow-y: auto !important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2) !important;
+  `;
+  
+  dialog.innerHTML = `
+    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+      <span style="font-size: 20px;">✨</span>
+      <h3 style="margin: 0; font-size: 18px; font-weight: 600; color: hsl(var(--foreground, 222 47% 11%));">
+        Re-extract "${fieldName}"
+      </h3>
+    </div>
+    
+    <div style="margin-bottom: 16px;">
+      <label style="display: block; font-size: 12px; font-weight: 500; color: hsl(var(--muted-foreground, 215 16% 47%)); margin-bottom: 4px;">
+        Current Value:
+      </label>
+      <div style="padding: 12px; background: hsl(var(--muted, 210 40% 96%)); border-radius: 4px; font-size: 14px; min-height: 20px;">
+        ${currentValue ? currentValue : '<span style="color: hsl(var(--muted-foreground, 215 16% 47%)); font-style: italic;">Empty - No data was extracted for this field</span>'}
+      </div>
+    </div>
+    
+    <div style="margin-bottom: 16px;">
+      <label for="re-extract-notes" style="display: block; font-size: 12px; font-weight: 500; color: hsl(var(--foreground, 222 47% 11%)); margin-bottom: 4px;">
+        What's wrong? Provide feedback:
+      </label>
+      <textarea id="re-extract-notes" 
+        placeholder="${currentValue ? 
+          "E.g., 'The date should be from the top right corner' or 'Missing the second grantor name' or 'This should be empty - no value found'" : 
+          "E.g., 'Look for the property address in the middle section' or 'The date might be stamped at the top' or 'Check for signatures at the bottom'"
+        }"
+        style="width: 100%; min-height: 80px; padding: 8px; border: 1px solid hsl(var(--border, 214 32% 91%)); border-radius: 4px; font-size: 14px; font-family: inherit; resize: vertical; background: hsl(var(--background, 0 0% 100%));"
+      ></textarea>
+    </div>
+    
+    <div style="margin-bottom: 16px;">
+      <div style="display: flex; align-items: start; gap: 8px; margin-bottom: 12px;">
+        <input type="checkbox" id="save-preferences" style="margin-top: 2px;">
+        <div>
+          <label for="save-preferences" style="font-size: 14px; font-weight: 500; color: hsl(var(--foreground, 222 47% 11%)); cursor: pointer;">
+            Save to default extraction instructions
+          </label>
+          <p style="margin: 2px 0 0 0; font-size: 12px; color: hsl(var(--muted-foreground, 215 16% 47%));">
+            Add this feedback to the default column instructions for all future runsheets
+          </p>
+        </div>
+      </div>
+      
+      <div style="display: flex; align-items: start; gap: 8px;">
+        <input type="checkbox" id="save-runsheet" style="margin-top: 2px;">
+        <div>
+          <label for="save-runsheet" style="font-size: 14px; font-weight: 500; color: hsl(var(--foreground, 222 47% 11%)); cursor: pointer;">
+            Save to this runsheet's instructions
+          </label>
+          <p style="margin: 2px 0 0 0; font-size: 12px; color: hsl(var(--muted-foreground, 215 16% 47%));">
+            Add this feedback to the column instructions for this specific runsheet only
+          </p>
+        </div>
+      </div>
+    </div>
+    
+    <div style="font-size: 12px; color: hsl(var(--muted-foreground, 215 16% 47%)); margin-bottom: 20px;">
+      The AI will re-analyze the document focusing on your feedback to correct this specific field.
+    </div>
+    
+    <div style="display: flex; gap: 8px; justify-content: flex-end;">
+      <button id="cancel-re-extract" style="padding: 8px 16px; border: 1px solid hsl(var(--border, 214 32% 91%)); background: hsl(var(--background, 0 0% 100%)); color: hsl(var(--foreground, 222 47% 11%)); border-radius: 4px; cursor: pointer; font-size: 14px;">
+        Cancel
+      </button>
+      <button id="submit-re-extract" style="padding: 8px 16px; border: 1px solid hsl(var(--primary, 215 80% 40%)); background: hsl(var(--primary, 215 80% 40%)); color: white; border-radius: 4px; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 6px;" disabled>
+        <span>✨</span>
+        Re-extract Field
+      </button>
+    </div>
+  `;
+  
+  backdrop.appendChild(dialog);
+  document.body.appendChild(backdrop);
+  
+  // Get form elements
+  const notesTextarea = dialog.querySelector('#re-extract-notes');
+  const savePreferencesCheckbox = dialog.querySelector('#save-preferences');
+  const saveRunsheetCheckbox = dialog.querySelector('#save-runsheet');
+  const cancelBtn = dialog.querySelector('#cancel-re-extract');
+  const submitBtn = dialog.querySelector('#submit-re-extract');
+  
+  // Enable/disable submit button based on notes content
+  const updateSubmitBtn = () => {
+    const hasNotes = notesTextarea.value.trim().length > 0;
+    submitBtn.disabled = !hasNotes;
+    submitBtn.style.opacity = hasNotes ? '1' : '0.5';
+    submitBtn.style.cursor = hasNotes ? 'pointer' : 'not-allowed';
+  };
+  
+  notesTextarea.addEventListener('input', updateSubmitBtn);
+  notesTextarea.focus();
+  
+  // Cancel handler
+  const closeDialog = () => {
+    document.body.removeChild(backdrop);
+  };
+  
+  cancelBtn.addEventListener('click', closeDialog);
+  backdrop.addEventListener('click', (e) => {
+    if (e.target === backdrop) closeDialog();
+  });
+  
+  // Submit handler
+  submitBtn.addEventListener('click', async () => {
+    const notes = notesTextarea.value.trim();
+    if (!notes) return;
+    
+    const saveToPreferences = savePreferencesCheckbox.checked;
+    const saveToRunsheet = saveRunsheetCheckbox.checked;
+    
+    // Disable form during processing
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span style="animation: spin 1s linear infinite; display: inline-block;">🔄</span> Re-extracting...';
+    notesTextarea.disabled = true;
+    savePreferencesCheckbox.disabled = true;
+    saveRunsheetCheckbox.disabled = true;
+    
+    try {
+      await performReExtraction(fieldName, currentValue, notes, saveToPreferences, saveToRunsheet, rowIndex);
+      closeDialog();
+    } catch (error) {
+      console.error('Re-extraction error:', error);
+      showNotification('Re-extraction failed: ' + error.message, 'error');
+      
+      // Re-enable form
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<span>✨</span> Re-extract Field';
+      notesTextarea.disabled = false;
+      savePreferencesCheckbox.disabled = false;
+      saveRunsheetCheckbox.disabled = false;
+    }
+  });
+}
+
+// Perform re-extraction of a specific field
+async function performReExtraction(fieldName, currentValue, notes, saveToPreferences, saveToRunsheet, rowIndex) {
+  if (!activeRunsheet || !userSession) {
+    throw new Error('No active runsheet or authentication');
+  }
+  
+  const rowData = activeRunsheet.data[rowIndex] || {};
+  
+  // Get document data - check for screenshot_url first, then Document File Name
+  let imageData, fileName, fileUrl;
+  
+  if (rowData['screenshot_url']) {
+    // It's a screenshot URL - we need to fetch it and convert to base64
+    try {
+      const response = await fetch(rowData['screenshot_url']);
+      const blob = await response.blob();
+      imageData = await blobToBase64(blob);
+      fileName = rowData['Document File Name'] || 'screenshot.png';
+      fileUrl = rowData['screenshot_url'];
+    } catch (error) {
+      throw new Error('Failed to fetch screenshot: ' + error.message);
+    }
+  } else if (rowData['Document File Name'] && window.extensionFileStorage && window.extensionFileStorage.has(rowData['Document File Name'])) {
+    // It's a stored file
+    const file = window.extensionFileStorage.get(rowData['Document File Name']);
+    imageData = await fileToBase64(file);
+    fileName = file.name;
+  } else {
+    throw new Error('No document or screenshot found for this row');
+  }
+  
+  // Get field instructions from runsheet column_instructions
+  const fieldInstructions = activeRunsheet.column_instructions && activeRunsheet.column_instructions[fieldName] 
+    ? activeRunsheet.column_instructions[fieldName] 
+    : `Extract the ${fieldName} from the document`;
+  
+  // Call the re-extract-field function
+  const response = await fetch('https://xnpmrafjjqsissbtempj.supabase.co/functions/v1/re-extract-field', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${userSession.access_token}`,
+      'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhucG1yYWZqanFzaXNzYnRlbXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4NzMyNjcsImV4cCI6MjA2ODQ0OTI2N30.aQG15Ed8IOLJfM5p7XF_kEM5FUz8zJug1pxAi9rTTsg',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      imageData,
+      fileName,
+      fieldName,
+      fieldInstructions,
+      userNotes: notes,
+      currentValue,
+      fileUrl,
+      saveToPreferences,
+      saveToRunsheet,
+      runsheetId: activeRunsheet.id
+    })
+  });
+  
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Server error: ${response.status} - ${errorText}`);
+  }
+  
+  const result = await response.json();
+  
+  if (result.error) {
+    throw new Error(result.error);
+  }
+  
+  // Update the field value in the UI and data
+  const inputElement = document.querySelector(`[data-row="${rowIndex}"][data-column="${fieldName}"]`);
+  if (inputElement) {
+    inputElement.value = result.extractedValue || '';
+    
+    // Update the runsheet data
+    if (!activeRunsheet.data[rowIndex]) {
+      activeRunsheet.data[rowIndex] = {};
+    }
+    activeRunsheet.data[rowIndex][fieldName] = result.extractedValue || '';
+    
+    // Persist the change
+    if (currentViewMode === 'full') {
+      syncFullRow(rowIndex);
+    } else {
+      syncData();
+    }
+    
+    // Show success notification
+    const apiUsed = result.apiUsed || 'AI';
+    showNotification(`✅ Field "${fieldName}" re-extracted successfully using ${apiUsed}`, 'success');
+  }
+}
+
+// Helper function to convert file to base64
+async function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      const base64 = result.split(',')[1]; // Remove data:image/... prefix
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// Helper function to convert blob to base64
+async function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      const base64 = result.split(',')[1]; // Remove data:image/... prefix
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
 }
 
 // Toggle frame minimization
