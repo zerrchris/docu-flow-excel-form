@@ -69,6 +69,12 @@ async function restoreExtensionState() {
 
 // Save extension state to storage
 function saveExtensionState() {
+  // Add domain tracking to snip session
+  if (snipSession.active) {
+    snipSession.domain = window.location.hostname;
+    snipSession.timestamp = Date.now();
+  }
+  
   const stateToSave = {
     [STATE_KEYS.ACTIVE_RUNSHEET]: activeRunsheet,
     [STATE_KEYS.USER_SESSION]: userSession,
@@ -273,22 +279,107 @@ async function initializeExtensionWithStateRestore() {
       }
     }
     
-    // If we had an active snip session, restore it
+    // Check if we should restore snip session based on context
     if (snipSession.active) {
-      console.log('🔧 RunsheetPro Extension: Restoring active snip session', snipSession);
-      setTimeout(() => {
-        console.log('🔧 RunsheetPro Extension: Attempting to restore snip session after timeout');
-        restoreSnipSession();
-      }, 1000); // Increased timeout to give more time for page to stabilize
+      console.log('🔧 RunsheetPro Extension: Found active snip session', snipSession);
+      
+      // Only auto-restore on the same domain or for navigate/scroll modes that persist across domains
+      const currentDomain = window.location.hostname;
+      const sessionDomain = snipSession.domain || '';
+      const sameOrigin = currentDomain === sessionDomain;
+      
+      // Auto-restore for navigate/scroll modes or same domain
+      if ((snipSession.mode === 'navigate' || snipSession.mode === 'scroll') || sameOrigin) {
+        console.log('🔧 RunsheetPro Extension: Auto-restoring snip session (mode:', snipSession.mode, ', same domain:', sameOrigin, ')');
+        setTimeout(() => {
+          restoreSnipSession();
+        }, 1000);
+      } else {
+        // Different domain - ask user if they want to continue the session
+        console.log('🔧 RunsheetPro Extension: Different domain detected, asking user about session continuation');
+        setTimeout(() => {
+          askUserAboutSessionContinuation();
+        }, 2000);
+      }
     } else {
       console.log('🔧 RunsheetPro Extension: No active snip session to restore');
     }
     
-  } catch (error) {
-    console.error('🔧 RunsheetPro Extension: Error initializing with state restore:', error);
-    // Fall back to normal initialization
-    initializeExtension();
+}
+
+// Ask user about continuing snip session on different domain
+function askUserAboutSessionContinuation() {
+  if (!document.body) {
+    setTimeout(askUserAboutSessionContinuation, 500);
+    return;
   }
+  
+  const modal = document.createElement('div');
+  modal.style.cssText = `
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background: rgba(0, 0, 0, 0.8) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    z-index: 2147483647 !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  `;
+  
+  const dialog = document.createElement('div');
+  dialog.style.cssText = `
+    background: white !important;
+    border-radius: 12px !important;
+    padding: 24px !important;
+    max-width: 400px !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3) !important;
+    text-align: center !important;
+  `;
+  
+  dialog.innerHTML = `
+    <h3 style="margin: 0 0 16px 0; color: #1f2937; font-size: 18px;">Continue Snip Session?</h3>
+    <p style="margin: 0 0 20px 0; color: #6b7280; font-size: 14px; line-height: 1.5;">
+      You have an active snip session from a different website. Would you like to continue it here?
+    </p>
+    <div style="display: flex; gap: 12px; justify-content: center;">
+      <button id="continue-session" style="background: #3b82f6; color: white; border: none; border-radius: 6px; padding: 10px 20px; cursor: pointer; font-size: 14px;">
+        Continue Session
+      </button>
+      <button id="start-fresh" style="background: #6b7280; color: white; border: none; border-radius: 6px; padding: 10px 20px; cursor: pointer; font-size: 14px;">
+        Start Fresh
+      </button>
+    </div>
+  `;
+  
+  const continueBtn = dialog.querySelector('#continue-session');
+  const startFreshBtn = dialog.querySelector('#start-fresh');
+  
+  continueBtn.addEventListener('click', () => {
+    document.body.removeChild(modal);
+    restoreSnipSession();
+  });
+  
+  startFreshBtn.addEventListener('click', () => {
+    document.body.removeChild(modal);
+    clearSnipSession();
+  });
+  
+  modal.appendChild(dialog);
+  document.body.appendChild(modal);
+}
+
+// Clear snip session
+function clearSnipSession() {
+  snipSession = {
+    active: false,
+    mode: 'single',
+    captures: []
+  };
+  saveExtensionState();
+  console.log('🔧 RunsheetPro Extension: Snip session cleared');
 }
 
 // Initialize when content script loads
