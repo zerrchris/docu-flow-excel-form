@@ -91,6 +91,7 @@
   display: flex !important;
   width: fit-content !important; /* Only as wide as content */
   flex-shrink: 0 !important;
+  border-bottom: 1px solid hsl(var(--border, 214 32% 91%)) !important;
 }
 
 .table-row.editable-row {
@@ -102,6 +103,7 @@
   background: hsl(var(--muted, 0 0% 96%)) !important;
   font-weight: 600 !important;
   border-bottom: 1px solid hsl(var(--border, 0 0% 89%)) !important;
+  border-top: 1px solid hsl(var(--border, 214 32% 91%)) !important;
   position: sticky !important;
   top: 0 !important;
   z-index: 10 !important;
@@ -137,6 +139,10 @@
   border-right: none !important;
 }
 
+/* Left border for first column to complete the grid */
+.table-row .table-cell:first-child {
+  border-left: 1px solid hsl(var(--border, 214 32% 91%)) !important;
+}
 /* Cell content styling to match EditableSpreadsheet */
 .cell-content {
   width: 100% !important;
