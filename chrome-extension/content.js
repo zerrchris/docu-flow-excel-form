@@ -1025,7 +1025,6 @@ function createRunsheetFrame() {
       ${currentViewMode === 'single' ? '<button id="screenshot-btn" class="control-btn" style="background: green !important; color: white !important;">📷 Screenshot Options</button>' : ''}
       ${currentViewMode === 'single' ? '<button id="view-screenshot-btn" class="control-btn" style="background: blue !important; color: white !important; display: none;">👁️ View Screenshot</button>' : ''}
       ${currentViewMode === 'single' ? '<button id="retake-screenshot-btn" class="control-btn" style="background: orange !important; color: white !important; display: none;">🔄 Retake</button>' : ''}
-      ${currentViewMode === 'single' ? '<button id="analyze-screenshot-btn" class="control-btn" style="background: purple !important; color: white !important; display: none;">🧠 Analyze</button>' : ''}
       ${currentViewMode === 'single' ? '<button id="open-app-btn" class="control-btn">🚀 Open in App</button>' : ''}
       ${currentViewMode === 'single' ? '<button id="select-runsheet-btn" class="control-btn">📄 Select Sheet</button>' : ''}
       <button id="view-mode-btn" class="control-btn">${currentViewMode === 'single' ? '📋 Quick View' : '📝 Save & Close'}</button>
@@ -2714,14 +2713,6 @@ function setupFrameEventListeners() {
   if (retakeScreenshotBtn) {
     retakeScreenshotBtn.addEventListener('click', () => {
       retakeScreenshot();
-    });
-  }
-  
-  // Analyze screenshot button
-  const analyzeBtn = document.getElementById('analyze-screenshot-btn');
-  if (analyzeBtn) {
-    analyzeBtn.addEventListener('click', () => {
-      analyzeCurrentScreenshot();
     });
   }
   
