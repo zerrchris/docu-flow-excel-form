@@ -758,7 +758,7 @@ async function addRowToSheet() {
       
       // Mark screenshot as added to sheet if one was included
       if (screenshotUrl) {
-        screenshotAddedToSheet = true;
+        window.screenshotAddedToSheet = true;
       }
       
       // If a document was created, fire an event for the main app to refresh its document map
@@ -2862,7 +2862,7 @@ function hasUnsavedData() {
   }
 
   // If a screenshot was captured but not yet added to the sheet
-  if (window.currentCapturedSnip && !screenshotAddedToSheet) {
+  if (window.currentCapturedSnip && !window.screenshotAddedToSheet) {
     hasRealData = true;
   }
 
@@ -2945,14 +2945,50 @@ function showUnsavedDataWarning(action, callback) {
   
   // Event handlers
   document.getElementById('save-and-continue').addEventListener('click', async () => {
-    dialog.remove();
-    // Add current data to sheet first
-    await addRowToSheet();
-    // Then proceed with the action
-    callback();
+    try {
+      // Add current data to sheet first
+      await addRowToSheet();
+      // Clear the screenshot flag to prevent dialog from reappearing
+      window.screenshotAddedToSheet = true;
+      // Clear any captured snip data
+      if (window.currentCapturedSnip) {
+        window.currentCapturedSnip = null;
+        window.currentSnipFilename = null;
+      }
+      // Remove dialog AFTER successful save
+      dialog.remove();
+      // Then proceed with the action
+      callback();
+    } catch (error) {
+      console.error('Error saving data:', error);
+      // Still remove dialog even if save fails
+      dialog.remove();
+      callback();
+    }
   });
   
   document.getElementById('continue-without-saving').addEventListener('click', () => {
+    // Clear all form data and screenshot state
+    const inputs = document.querySelectorAll('#runsheetpro-runsheet-frame input, #runsheetpro-runsheet-frame textarea');
+    inputs.forEach(input => {
+      if (input.type !== 'hidden') {
+        input.value = '';
+      }
+    });
+    
+    // Clear screenshot state
+    window.screenshotAddedToSheet = true;
+    if (window.currentCapturedSnip) {
+      window.currentCapturedSnip = null;
+      window.currentSnipFilename = null;
+      updateScreenshotIndicator(false);
+    }
+    
+    // Clear saved form data
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      chrome.storage.local.remove(['extension_form_data']);
+    }
+    
     dialog.remove();
     callback();
   });
