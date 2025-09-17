@@ -33,17 +33,33 @@ async function restoreExtensionState() {
       STATE_KEYS.CURRENT_ROW_INDEX,
       STATE_KEYS.SNIP_SESSION,
       STATE_KEYS.FORM_DATA,
-      STATE_KEYS.VIEW_MODE
+      STATE_KEYS.VIEW_MODE,
+      // Legacy/fallback keys
+      'activeRunsheet',
+      'active_runsheet',
+      'supabase_session'
     ], (result) => {
       console.log('🔧 RunsheetPro Extension: Restoring state:', result);
       
+      // Active runsheet (prefer new key, fallback to legacy keys)
       if (result[STATE_KEYS.ACTIVE_RUNSHEET]) {
         activeRunsheet = result[STATE_KEYS.ACTIVE_RUNSHEET];
+      } else if (result.activeRunsheet) {
+        activeRunsheet = result.activeRunsheet;
+      } else if (result.active_runsheet) {
+        activeRunsheet = result.active_runsheet;
+      }
+      if (activeRunsheet) {
         console.log('🔧 RunsheetPro Extension: Restored active runsheet:', activeRunsheet.name);
       }
       
+      // User session (prefer new key, fallback to supabase_session)
       if (result[STATE_KEYS.USER_SESSION]) {
         userSession = result[STATE_KEYS.USER_SESSION];
+      } else if (result.supabase_session) {
+        userSession = result.supabase_session;
+      }
+      if (userSession) {
         console.log('🔧 RunsheetPro Extension: Restored user session');
       }
       
@@ -80,11 +96,15 @@ function saveExtensionState() {
     [STATE_KEYS.USER_SESSION]: userSession,
     [STATE_KEYS.CURRENT_ROW_INDEX]: currentRowIndex,
     [STATE_KEYS.SNIP_SESSION]: snipSession,
-    [STATE_KEYS.VIEW_MODE]: currentViewMode
+    [STATE_KEYS.VIEW_MODE]: currentViewMode,
+    // Mirror to legacy keys for compatibility
+    activeRunsheet: activeRunsheet,
+    active_runsheet: activeRunsheet,
+    supabase_session: userSession
   };
   
   chrome.storage.local.set(stateToSave, () => {
-    console.log('🔧 RunsheetPro Extension: State saved');
+    console.log('🔧 RunsheetPro Extension: State saved (with legacy mirrors)');
   });
 }
 

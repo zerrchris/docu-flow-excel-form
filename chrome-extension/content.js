@@ -297,6 +297,11 @@ function showSignInPopup() {
           user: data.user
         };
         
+        // Persist full extension state (mirrors legacy keys)
+        if (typeof saveExtensionState !== 'undefined') {
+          saveExtensionState();
+        }
+        
         closeSignIn();
         showNotification('Signed in successfully!', 'success');
         
@@ -3218,12 +3223,13 @@ async function init() {
     
     // Check if there's an active runsheet to restore (only if authenticated)
     if (isAuthenticated) {
-      const storedData = await chrome.storage.local.get(['active_runsheet']);
-      if (storedData.active_runsheet) {
-        console.log('🔧 RunsheetPro Extension: Restoring active runsheet:', storedData.active_runsheet.name);
+      const storedData = await chrome.storage.local.get(['active_runsheet', 'activeRunsheet']);
+      const restoredRunsheet = storedData.active_runsheet || storedData.activeRunsheet;
+      if (restoredRunsheet) {
+        console.log('🔧 RunsheetPro Extension: Restoring active runsheet:', restoredRunsheet.name);
         
         // Restore the active runsheet
-        activeRunsheet = storedData.active_runsheet;
+        activeRunsheet = restoredRunsheet;
         
         // Find the next available blank row for data entry
         currentRowIndex = findNextAvailableRow(activeRunsheet);
@@ -3628,8 +3634,11 @@ function loadSelectedRunsheet(runsheetData) {
   currentRowIndex = findNextAvailableRow(activeRunsheet);
   console.log(`🔧 RunsheetPro Extension: Set current row to ${currentRowIndex} (next available row)`);
 
-  // Save to storage
+  // Save to storage (and mirror via persistent-state if available)
   chrome.storage.local.set({ activeRunsheet });
+  if (typeof saveExtensionState !== 'undefined') {
+    saveExtensionState();
+  }
 
   // Refresh the frame
   createRunsheetFrame();
