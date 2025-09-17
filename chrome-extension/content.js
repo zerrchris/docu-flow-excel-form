@@ -932,9 +932,9 @@ function createRunsheetFrame() {
   runsheetFrame.id = 'runsheetpro-runsheet-frame';
   
   // Restore saved height or use default
-  const savedHeight = localStorage.getItem('runsheetpro-frame-height') || '200';
-  runsheetFrame.style.height = `${savedHeight}px`;
-  document.body.style.paddingBottom = `${savedHeight}px`;
+  const savedHeight = parseInt(localStorage.getItem('runsheetpro-frame-height') || '200', 10);
+  runsheetFrame.style.setProperty('height', `${savedHeight}px`, 'important');
+  document.body.style.setProperty('padding-bottom', `${savedHeight}px`, 'important');
   
   // Create resize handle at the top
   const resizeHandle = document.createElement('div');
@@ -973,8 +973,8 @@ function createRunsheetFrame() {
     const deltaY = startY - e.clientY;
     const newHeight = Math.max(150, Math.min(600, startHeight + deltaY));
     
-    runsheetFrame.style.height = `${newHeight}px`;
-    document.body.style.paddingBottom = `${newHeight}px`;
+    runsheetFrame.style.setProperty('height', `${newHeight}px`, 'important');
+    document.body.style.setProperty('padding-bottom', `${newHeight}px`, 'important');
     
     // Save preferred height
     localStorage.setItem('runsheetpro-frame-height', newHeight.toString());
