@@ -1177,6 +1177,17 @@ function refreshCurrentView() {
 // Create single entry view (original functionality)
 // Create single entry view (original functionality)
 function createSingleEntryView(content) {
+  // Create table wrapper to hold table and action area side by side
+  const tableWrapper = document.createElement('div');
+  tableWrapper.className = 'table-wrapper';
+  tableWrapper.style.cssText = `
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+    width: 100% !important;
+  `;
+  
   // Create dynamic table based on runsheet data
   const table = document.createElement('div');
   table.className = 'runsheet-table';
@@ -1185,6 +1196,7 @@ function createSingleEntryView(content) {
     flex-direction: column !important;
     border: none !important;
     width: fit-content !important;
+    flex-shrink: 0 !important;
   `;
   
   // Get runsheet data or use defaults
@@ -1896,14 +1908,18 @@ function createSingleEntryView(content) {
   
   table.appendChild(dataRow);
   
+  // Add table to wrapper
+  tableWrapper.appendChild(table);
+  
   // Create action area immediately adjacent to the table
   const actionArea = document.createElement('div');
   actionArea.className = 'table-action-area';
   actionArea.style.cssText = `
     display: flex !important;
+    flex-direction: column !important;
     gap: 8px !important;
     padding: 8px !important;
-    align-items: center !important;
+    align-items: flex-start !important;
     justify-content: flex-start !important;
     flex-shrink: 0 !important;
     min-height: 32px !important;
@@ -1961,11 +1977,14 @@ function createSingleEntryView(content) {
   
   actionArea.appendChild(addRowBtn);
   
-  // Create container that holds table and action area side by side with no extra space
+  // Add action area to wrapper
+  tableWrapper.appendChild(actionArea);
+  
+  // Create container that holds the table wrapper with proper styling
   const tableContainer = document.createElement('div');
   tableContainer.style.cssText = `
     display: flex !important;
-    align-items: stretch !important;
+    align-items: flex-start !important;
     width: fit-content !important;
     max-width: none !important;
     border: 1px solid hsl(var(--border, 214 32% 91%)) !important;
@@ -1974,8 +1993,7 @@ function createSingleEntryView(content) {
     position: relative !important;
   `;
   
-  tableContainer.appendChild(table);
-  tableContainer.appendChild(actionArea);
+  tableContainer.appendChild(tableWrapper);
   
   // Wrap in horizontal scroll container
   const scrollContainer = document.createElement('div');
