@@ -1001,6 +1001,7 @@ function createRunsheetFrame() {
       ${currentViewMode === 'single' ? '<button id="screenshot-btn" class="control-btn" style="background: green !important; color: white !important;">📷 Screenshot Options</button>' : ''}
       ${currentViewMode === 'single' ? '<button id="view-screenshot-btn" class="control-btn" style="background: blue !important; color: white !important; display: none;">👁️ View Screenshot</button>' : ''}
       ${currentViewMode === 'single' ? '<button id="retake-screenshot-btn" class="control-btn" style="background: orange !important; color: white !important; display: none;">🔄 Retake</button>' : ''}
+      ${currentViewMode === 'single' ? '<button id="analyze-screenshot-btn" class="control-btn" style="background: purple !important; color: white !important; display: none;">🧠 Analyze</button>' : ''}
       ${currentViewMode === 'single' ? '<button id="open-app-btn" class="control-btn">🚀 Open in App</button>' : ''}
       ${currentViewMode === 'single' ? '<button id="select-runsheet-btn" class="control-btn">📄 Select Sheet</button>' : ''}
       <button id="view-mode-btn" class="control-btn">${currentViewMode === 'single' ? '📋 Quick View' : '📝 Save & Close'}</button>
@@ -2334,7 +2335,7 @@ function createFullRunsheetView(content) {
                        (rowData['screenshot_url'] && rowData['screenshot_url'].trim() !== '' && rowData['screenshot_url'] !== 'N/A');
     
     if (hasDocument) {
-      // Show view button and indicator
+      // Show view button, analyze button, and replace button
       const viewBtn = document.createElement('button');
       viewBtn.innerHTML = '👁️';
       viewBtn.title = 'View document/screenshot';
@@ -2342,11 +2343,13 @@ function createFullRunsheetView(content) {
         background: hsl(var(--muted, 210 40% 96%)) !important;
         color: hsl(var(--foreground, 222 47% 11%)) !important;
         border: 1px solid hsl(var(--border, 214 32% 91%)) !important;
-        padding: 4px 6px !important;
+        padding: 2px 4px !important;
         border-radius: 3px !important;
         cursor: pointer !important;
-        font-size: 11px !important;
-        margin-right: 4px !important;
+        font-size: 10px !important;
+        margin-right: 2px !important;
+        width: 20px !important;
+        height: 20px !important;
       `;
       
       viewBtn.addEventListener('click', () => {
@@ -2356,6 +2359,41 @@ function createFullRunsheetView(content) {
         showSnipPreview();
         currentRowIndex = originalRowIndex; // Restore original row index
       });
+
+      // Add analyze button like in the main app
+      const analyzeBtn = document.createElement('button');
+      analyzeBtn.innerHTML = '🧠';
+      analyzeBtn.title = 'Analyze document with AI';
+      analyzeBtn.style.cssText = `
+        background: hsl(var(--accent, 230 60% 60%)) !important;
+        color: white !important;
+        border: 1px solid hsl(var(--accent, 230 60% 60%)) !important;
+        padding: 2px 4px !important;
+        border-radius: 3px !important;
+        cursor: pointer !important;
+        font-size: 10px !important;
+        margin-right: 2px !important;
+        width: 20px !important;
+        height: 20px !important;
+      `;
+      
+      analyzeBtn.addEventListener('click', async () => {
+        const originalRowIndex = currentRowIndex;
+        currentRowIndex = rowIndex;
+        
+        try {
+          analyzeBtn.textContent = '🔄';
+          analyzeBtn.disabled = true;
+          await analyzeCurrentScreenshot();
+        } catch (error) {
+          console.error('Analysis error:', error);
+          showNotification('Analysis failed: ' + error.message, 'error');
+        } finally {
+          analyzeBtn.textContent = '🧠';
+          analyzeBtn.disabled = false;
+          currentRowIndex = originalRowIndex;
+        }
+      });
       
       const addBtn = document.createElement('button');
       addBtn.innerHTML = '📷+';
@@ -2364,10 +2402,12 @@ function createFullRunsheetView(content) {
         background: hsl(var(--destructive, 0 84% 60%)) !important;
         color: white !important;
         border: 1px solid hsl(var(--destructive, 0 84% 60%)) !important;
-        padding: 4px 6px !important;
+        padding: 2px 4px !important;
         border-radius: 3px !important;
         cursor: pointer !important;
-        font-size: 11px !important;
+        font-size: 10px !important;
+        width: 20px !important;
+        height: 20px !important;
       `;
       
       addBtn.addEventListener('click', () => {
@@ -2381,6 +2421,7 @@ function createFullRunsheetView(content) {
       });
       
       actionTd.appendChild(viewBtn);
+      actionTd.appendChild(analyzeBtn);
       actionTd.appendChild(addBtn);
     } else {
       // Show add screenshot button
@@ -2513,7 +2554,7 @@ async function switchViewMode(newMode) {
     updateViewModeButton();
     
     // Update header controls visibility for current mode
-    const ids = ['screenshot-btn','view-screenshot-btn','retake-screenshot-btn','open-app-btn','select-runsheet-btn'];
+    const ids = ['screenshot-btn','view-screenshot-btn','retake-screenshot-btn','analyze-screenshot-btn','open-app-btn','select-runsheet-btn'];
     ids.forEach(id => {
       const el = document.getElementById(id);
       if (!el) return;
@@ -2521,7 +2562,7 @@ async function switchViewMode(newMode) {
       if (currentViewMode === 'full') {
         el.style.display = 'none';
       } else {
-        if (id === 'view-screenshot-btn' || id === 'retake-screenshot-btn') {
+        if (id === 'view-screenshot-btn' || id === 'retake-screenshot-btn' || id === 'analyze-screenshot-btn') {
           el.style.display = 'none';
         } else {
           el.style.display = 'inline-block';
