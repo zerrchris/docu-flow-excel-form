@@ -248,7 +248,10 @@ window.EnhancedSnipWorkflow = {
       </div>
       ` : ''}
       
-      <div style="display: flex; gap: 12px; justify-content: flex-end;">
+      <div style="display: flex; gap: 12px; justify-content: flex-end; flex-wrap: wrap;">
+        <button id="subject-lands-fill" style="background: #10b981; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 500;">
+          🏞️ Subject Lands
+        </button>
         <button id="accept-analysis" style="background: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 500;">
           ✅ Accept & Add to Runsheet
         </button>
@@ -264,6 +267,11 @@ window.EnhancedSnipWorkflow = {
     // Event handlers
     content.querySelector('#close-preview').addEventListener('click', () => modal.remove());
     content.querySelector('#cancel-analysis').addEventListener('click', () => modal.remove());
+    
+    // Subject Lands button handler
+    content.querySelector('#subject-lands-fill').addEventListener('click', () => {
+      this.showSubjectLandsSelector(analysisResult, modal);
+    });
     
     content.querySelector('#accept-analysis').addEventListener('click', () => {
       modal.remove();
@@ -352,6 +360,170 @@ window.EnhancedSnipWorkflow = {
     if (indicator) {
       indicator.remove();
     }
+  },
+
+  // Show Subject Lands selector
+  async showSubjectLandsSelector(analysisResult, parentModal) {
+    try {
+      const accessToken = localStorage.getItem('supabase.auth.token');
+      if (!accessToken) {
+        alert('Please sign in to access Subject Lands templates');
+        return;
+      }
+
+      const response = await fetch('https://xnpmrafjjqsissbtempj.supabase.co/functions/v1/get-subject-lands-templates', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${JSON.parse(accessToken).access_token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const result = await response.json();
+      
+      if (!result.success || !result.templates?.length) {
+        alert('No Subject Lands templates found. Please create templates in your account settings first.');
+        return;
+      }
+
+      // Create subject lands selector modal
+      const selector = document.createElement('div');
+      selector.style.cssText = `
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        background: rgba(0, 0, 0, 0.7) !important;
+        z-index: 2147483647 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+      `;
+      
+      const content = document.createElement('div');
+      content.style.cssText = `
+        background: white !important;
+        border-radius: 12px !important;
+        padding: 24px !important;
+        max-width: 600px !important;
+        max-height: 80vh !important;
+        overflow-y: auto !important;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+      `;
+      
+      const templatesHTML = result.templates.map(template => `
+        <div class="template-option" data-template-id="${template.id}" style="
+          border: 1px solid #d1d5db; 
+          border-radius: 8px; 
+          padding: 12px; 
+          margin-bottom: 10px; 
+          cursor: pointer;
+          transition: background-color 0.2s;
+        " onmouseover="this.style.backgroundColor='#f3f4f6'" onmouseout="this.style.backgroundColor='white'">
+          <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+            <strong style="color: #1f2937;">${template.name}</strong>
+            ${template.is_default ? '<span style="background: #3b82f6; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px;">Default</span>' : ''}
+          </div>
+          ${template.description ? `<p style="color: #6b7280; font-size: 14px; margin-bottom: 8px;">${template.description}</p>` : ''}
+          <div style="background: #f9fafb; padding: 8px; border-radius: 4px; font-size: 12px; max-height: 60px; overflow-y: auto; color: #374151;">
+            ${template.subject_lands_text.substring(0, 150)}${template.subject_lands_text.length > 150 ? '...' : ''}
+          </div>
+        </div>
+      `).join('');
+      
+      content.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <h2 style="margin: 0; color: #1f2937;">🏞️ Select Subject Lands Template</h2>
+          <button id="close-selector" style="background: none; border: none; font-size: 24px; cursor: pointer;">×</button>
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+          ${templatesHTML}
+        </div>
+        
+        <div style="display: flex; gap: 12px; justify-content: flex-end;">
+          <button id="cancel-selector" style="background: #6b7280; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 500;">
+            Cancel
+          </button>
+        </div>
+      `;
+      
+      // Event handlers
+      content.querySelector('#close-selector').addEventListener('click', () => selector.remove());
+      content.querySelector('#cancel-selector').addEventListener('click', () => selector.remove());
+      
+      // Template selection handlers
+      content.querySelectorAll('.template-option').forEach(option => {
+        option.addEventListener('click', () => {
+          const templateId = option.dataset.templateId;
+          const selectedTemplate = result.templates.find(t => t.id === templateId);
+          
+          if (selectedTemplate) {
+            // Apply the template to subject lands field
+            this.applySubjectLandsTemplate(selectedTemplate, analysisResult);
+            selector.remove();
+            parentModal.remove();
+          }
+        });
+      });
+      
+      selector.appendChild(content);
+      document.body.appendChild(selector);
+      
+    } catch (error) {
+      console.error('Error loading Subject Lands templates:', error);
+      alert('Failed to load Subject Lands templates. Please try again.');
+    }
+  },
+
+  // Apply Subject Lands template
+  applySubjectLandsTemplate(template, analysisResult) {
+    // Find subject lands field in the extracted data
+    const extractedData = analysisResult.analysis?.extracted_data || {};
+    const subjectLandsKeys = Object.keys(extractedData).filter(key => 
+      key.toLowerCase().includes('subject') && key.toLowerCase().includes('land')
+    );
+    
+    if (subjectLandsKeys.length > 0) {
+      // Apply to existing subject lands field
+      extractedData[subjectLandsKeys[0]] = template.subject_lands_text;
+    } else {
+      // Add new subject lands field
+      extractedData['Subject Lands'] = template.subject_lands_text;
+    }
+    
+    // Show updated preview with applied template
+    this.showEnhancedPreview({
+      ...analysisResult,
+      analysis: {
+        ...analysisResult.analysis,
+        extracted_data: extractedData
+      }
+    });
+    
+    // Show success message
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+      position: fixed !important;
+      top: 20px !important;
+      right: 20px !important;
+      background: #10b981 !important;
+      color: white !important;
+      padding: 12px 20px !important;
+      border-radius: 6px !important;
+      z-index: 2147483648 !important;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+      font-weight: 500 !important;
+    `;
+    notification.textContent = `✅ "${template.name}" applied to Subject Lands`;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.remove();
+      }
+    }, 3000);
   }
 };
 
