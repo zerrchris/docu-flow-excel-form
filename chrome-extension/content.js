@@ -4824,12 +4824,12 @@ function updateScreenshotIndicator(hasScreenshot) {
     indicator.title = actuallyHasScreenshot ? 'Screenshot available for this row' : '';
   }
   
-  if (analyzeBtn) {
-    analyzeBtn.style.display = actuallyHasScreenshot ? 'inline-block' : 'none';
-  }
-  
   // Only show header buttons in single entry mode, not in quick view
   if (currentViewMode === 'single') {
+    if (analyzeBtn) {
+      analyzeBtn.style.display = actuallyHasScreenshot ? 'inline-block' : 'none';
+    }
+    
     if (viewBtn) {
       viewBtn.style.display = actuallyHasScreenshot ? 'inline-block' : 'none';
     }
@@ -4843,7 +4843,10 @@ function updateScreenshotIndicator(hasScreenshot) {
       retakeBtn.style.display = actuallyHasScreenshot ? 'inline-block' : 'none';
     }
   } else {
-    // In quick view mode, hide all header screenshot buttons
+    // In quick view mode, hide all header screenshot buttons including analyze
+    if (analyzeBtn) {
+      analyzeBtn.style.display = 'none';
+    }
     if (viewBtn) {
       viewBtn.style.display = 'none';
     }
