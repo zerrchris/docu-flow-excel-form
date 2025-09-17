@@ -699,7 +699,29 @@ async function addRowToSheet() {
     if (runsheet.data && Array.isArray(runsheet.data)) {
       // Find first empty row or add to end
       nextRowIndex = runsheet.data.findIndex(row => {
-        return runsheet.columns.every(col => !row[col] || row[col].trim() === '');
+        if (!row || Object.keys(row).length === 0) {
+          return true; // Completely empty row
+        }
+        
+        // Check if row has any text data
+        const hasTextData = Object.entries(row).some(([key, value]) => {
+          // Skip document-related fields for text data check
+          if (key === 'Document File Name' || key === 'screenshot_url' || key.toLowerCase().includes('document')) {
+            return false;
+          }
+          return value !== null && value !== undefined && value !== '' && value !== 'N/A';
+        });
+        
+        // Check if row has any linked documents
+        const hasLinkedDocuments = Object.entries(row).some(([key, value]) => {
+          if (key === 'Document File Name' || key === 'screenshot_url' || key.toLowerCase().includes('document')) {
+            return value !== null && value !== undefined && value !== '' && value !== 'N/A';
+          }
+          return false;
+        });
+        
+        // Row is empty only if it has no text data AND no linked documents
+        return !hasTextData && !hasLinkedDocuments;
       });
       
       if (nextRowIndex === -1) {
@@ -1077,9 +1099,31 @@ function findFirstEmptyRow(runsheetData) {
     return 0; // First row if no data exists
   }
   
-  // Find first empty row
+  // Find first row that is truly empty (no text data AND no linked documents)
   const emptyRowIndex = runsheetData.data.findIndex(row => {
-    return runsheetData.columns.every(col => !row[col] || row[col].trim() === '');
+    if (!row || Object.keys(row).length === 0) {
+      return true; // Completely empty row
+    }
+    
+    // Check if row has any text data
+    const hasTextData = Object.entries(row).some(([key, value]) => {
+      // Skip document-related fields for text data check
+      if (key === 'Document File Name' || key === 'screenshot_url' || key.toLowerCase().includes('document')) {
+        return false;
+      }
+      return value !== null && value !== undefined && value !== '' && value !== 'N/A';
+    });
+    
+    // Check if row has any linked documents
+    const hasLinkedDocuments = Object.entries(row).some(([key, value]) => {
+      if (key === 'Document File Name' || key === 'screenshot_url' || key.toLowerCase().includes('document')) {
+        return value !== null && value !== undefined && value !== '' && value !== 'N/A';
+      }
+      return false;
+    });
+    
+    // Row is empty only if it has no text data AND no linked documents
+    return !hasTextData && !hasLinkedDocuments;
   });
   
   // If no empty row found, return the next index (add to end)
