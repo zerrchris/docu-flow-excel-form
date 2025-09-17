@@ -2831,26 +2831,48 @@ function hasUnsavedData() {
   const scope = editableRow || document.querySelector('#runsheetpro-runsheet-frame');
   if (!scope) return false;
 
-  // Any non-empty textarea counts as unsaved data
+  // Check if we have meaningful data that hasn't been saved
+  let hasRealData = false;
+
+  // Check textareas for meaningful content (not just whitespace)
   const textareas = scope.querySelectorAll('textarea');
   for (const textarea of textareas) {
-    if (textarea.value && textarea.value.trim()) {
-      return true;
+    const value = textarea.value && textarea.value.trim();
+    if (value) {
+      // Only consider it unsaved if it's meaningful content and not placeholder text
+      const isPlaceholder = textarea.placeholder && value === textarea.placeholder.trim();
+      if (!isPlaceholder) {
+        hasRealData = true;
+        break;
+      }
     }
   }
 
-  // If a screenshot was captured but not yet added to the sheet, warn as well
+  // Check input fields for meaningful content
+  const inputs = scope.querySelectorAll('input[type="text"], input:not([type])');
+  for (const input of inputs) {
+    const value = input.value && input.value.trim();
+    if (value) {
+      const isPlaceholder = input.placeholder && value === input.placeholder.trim();
+      if (!isPlaceholder) {
+        hasRealData = true;
+        break;
+      }
+    }
+  }
+
+  // If a screenshot was captured but not yet added to the sheet
   if (window.currentCapturedSnip && !screenshotAddedToSheet) {
-    return true;
+    hasRealData = true;
   }
 
-  // If Document File Name has a value but not yet added (rare in single view), treat as unsaved
+  // Only check Document File Name if we have other data or a screenshot
   const docInput = scope.querySelector('input[type="hidden"][data-column="Document File Name"]');
-  if (docInput && docInput.value && docInput.value.trim() && !screenshotAddedToSheet) {
+  if (docInput && docInput.value && docInput.value.trim() && !screenshotAddedToSheet && hasRealData) {
     return true;
   }
 
-  return false;
+  return hasRealData;
 }
 
 // Show warning dialog for unsaved data
