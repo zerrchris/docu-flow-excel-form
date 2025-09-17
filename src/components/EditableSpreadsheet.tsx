@@ -6633,26 +6633,26 @@ ${extractionFields}`
             >
                <tr className="hover:bg-muted/50 transition-colors">
                   {/* Row Actions column header */}
-                  <th
-                    className="font-bold text-center border-r border-b border-border relative p-0 bg-background sticky top-0"
-                    style={{ 
-                       width: "60px", 
-                       minWidth: "60px",
+                   <th
+                     className="font-bold text-center border-r border-b border-border relative p-0 bg-background sticky top-0 min-h-14"
+                     style={{ 
+                        width: "60px", 
+                        minWidth: "60px",
                       backgroundColor: 'hsl(var(--background))',
                       position: 'sticky',
                       top: '0px',
                       zIndex: 999
                     }}
                   >
-                    <div className="w-full h-full px-1 py-2 flex items-center justify-center">
-                      <span className="font-bold text-xs">#</span>
-                    </div>
+                     <div className="w-full min-h-[3rem] px-1 py-2 flex items-center justify-center">
+                       <span className="font-bold text-xs">#</span>
+                     </div>
                   </th>
                   
                   {columns.map((column) => (
-                    <th 
+                     <th 
                         key={column}
-                        className={`font-bold text-center border-r border-b border-border relative p-0 last:border-r-0 cursor-move transition-all duration-200 h-12 px-4 text-left align-middle font-medium text-muted-foreground
+                        className={`font-bold text-center border-r border-b border-border relative p-0 last:border-r-0 cursor-move transition-all duration-200 min-h-14 px-4 text-left align-top font-medium text-muted-foreground
                            ${draggedColumn === column ? 'opacity-50 transform scale-95' : ''}
                            ${dragOverColumn === column ? 'bg-primary/20 shadow-lg' : 'bg-background/95'}
                            ${localMissingColumns.includes(column) ? 'bg-yellow-100 border-2 border-yellow-400 dark:bg-yellow-900/20 dark:border-yellow-500 animate-pulse shadow-yellow-200 dark:shadow-yellow-900' : 'hover:bg-muted/30'}
@@ -6696,16 +6696,18 @@ ${extractionFields}`
                                   openColumnDialog(column);
                                 }}
                               >
-                                <div className="flex flex-col items-center pr-6"> {/* Add right padding to make room for resize handle */}
-                                  <span 
-                                    className="font-bold truncate max-w-full" 
-                                    title={column}
-                                    style={{ 
-                                      maxWidth: `${getColumnWidth(column) - 30}px` // Reserve 30px for resize handle
-                                    }}
-                                  >
-                                    {column}
-                                  </span>
+                                 <div className="flex flex-col items-center pr-6 min-h-[3rem]"> {/* Add right padding to make room for resize handle */}
+                                   <span 
+                                     className="font-bold text-center leading-tight max-w-full break-words hyphens-auto" 
+                                     title={column}
+                                     style={{ 
+                                       maxWidth: `${getColumnWidth(column) - 30}px`, // Reserve 30px for resize handle
+                                       wordBreak: 'break-word',
+                                       overflowWrap: 'break-word'
+                                     }}
+                                   >
+                                     {column}
+                                   </span>
                                   {localMissingColumns.includes(column) && (
                                     <span className="text-xs text-yellow-700 dark:text-yellow-300 mt-1 font-medium animate-pulse truncate max-w-full">
                                       Click to save
@@ -6756,36 +6758,36 @@ ${extractionFields}`
                  
                   {/* Document File Name column header - conditionally visible */}
                   {showDocumentFileNameColumn && (
-                       <th
-                        className="font-bold text-center border-r border-b border-border relative p-0 bg-background sticky top-0"
-                       style={{ 
-                         width: "200px", 
-                         minWidth: "200px",
-                         backgroundColor: 'hsl(var(--background))',
-                         position: 'sticky',
+                        <th
+                         className="font-bold text-center border-r border-b border-border relative p-0 bg-background sticky top-0 min-h-14"
+                        style={{ 
+                          width: "200px", 
+                          minWidth: "200px",
+                          backgroundColor: 'hsl(var(--background))',
+                          position: 'sticky',
                          top: '0px',
                          zIndex: 999
                        }}
                      >
-                     <div className="w-full h-full px-4 py-2 flex flex-col items-center justify-center">
-                       <span className="font-bold">Document File Name</span>
-                     </div>
+                      <div className="w-full min-h-[3rem] px-4 py-2 flex flex-col items-center justify-center">
+                        <span className="font-bold text-center leading-tight break-words">Document File Name</span>
+                      </div>
                     </th>
                   )}
                   
                    {/* Actions column header - not draggable */}
-                       <th
-                        className="font-bold text-center border-b border-border relative p-0 bg-background sticky top-0"
-                       style={{ 
-                         width: "480px", 
-                         minWidth: "480px",
-                         backgroundColor: 'hsl(var(--background))',
-                         position: 'sticky',
+                        <th
+                         className="font-bold text-center border-b border-border relative p-0 bg-background sticky top-0 min-h-14"
+                        style={{ 
+                          width: "480px", 
+                          minWidth: "480px",
+                          backgroundColor: 'hsl(var(--background))',
+                          position: 'sticky',
                          top: '0px',
                          zIndex: 999
                        }}
                      >
-                    <div className="w-full h-full px-4 py-2 flex gap-2">
+                    <div className="w-full min-h-[3rem] px-4 py-2 flex gap-2 items-center">
                       <Button
                         variant="outline"
                         size="sm"
