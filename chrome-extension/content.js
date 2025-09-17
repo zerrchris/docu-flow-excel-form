@@ -5190,7 +5190,6 @@ function updateTableWidth() {
   console.log('🔧 RunsheetPro Extension: Updated table width to', totalWidth, 'px');
 }
 
-// Show preview of linked snip
 function showSnipPreview() {
   if (!activeRunsheet || !activeRunsheet.data || currentRowIndex >= activeRunsheet.data.length) {
     showNotification('No snip data available', 'error');
@@ -5223,7 +5222,7 @@ function showSnipPreview() {
     left: 0 !important;
     width: 100vw !important;
     height: 100vh !important;
-    background: rgba(0, 0, 0, 0.8) !important;
+    background: rgba(0, 0, 0, 0.9) !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -5231,63 +5230,237 @@ function showSnipPreview() {
     backdrop-filter: blur(5px) !important;
   `;
 
-  // Create image container
-  const imageContainer = document.createElement('div');
-  imageContainer.style.cssText = `
-    max-width: 90vw !important;
-    max-height: 90vh !important;
+  // Create scrollable viewer container
+  const viewerContainer = document.createElement('div');
+  viewerContainer.style.cssText = `
+    width: 95vw !important;
+    height: 95vh !important;
     background: white !important;
-    border-radius: 8px !important;
-    padding: 20px !important;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5) !important;
     position: relative !important;
-  `;
-
-  // Create close button
-  const closeBtn = document.createElement('button');
-  closeBtn.innerHTML = '✕';
-  closeBtn.style.cssText = `
-    position: absolute !important;
-    top: 10px !important;
-    right: 10px !important;
-    background: hsl(var(--destructive, 0 84% 60%)) !important;
-    color: white !important;
-    border: none !important;
-    border-radius: 50% !important;
-    width: 30px !important;
-    height: 30px !important;
-    cursor: pointer !important;
-    font-size: 16px !important;
     display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
   `;
 
-  // Create image
-  const img = document.createElement('img');
-  img.src = snipUrl;
-  img.style.cssText = `
-    max-width: 100% !important;
-    max-height: 70vh !important;
-    object-fit: contain !important;
-    border-radius: 4px !important;
+  // Create header with controls
+  const header = document.createElement('div');
+  header.style.cssText = `
+    background: linear-gradient(135deg, hsl(var(--primary, 215 80% 40%)), hsl(var(--primary, 215 80% 45%))) !important;
+    color: white !important;
+    padding: 15px 20px !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    border-radius: 12px 12px 0 0 !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1) !important;
   `;
 
   // Create title
   const title = document.createElement('h3');
-  title.textContent = `Snip for Row ${currentRowIndex + 1}`;
+  title.textContent = `Document Viewer - Row ${currentRowIndex + 1}`;
   title.style.cssText = `
-    margin: 0 0 15px 0 !important;
+    margin: 0 !important;
     font-size: 18px !important;
-    color: hsl(var(--foreground, 222 47% 11%)) !important;
-    text-align: center !important;
+    font-weight: 600 !important;
   `;
 
-  // Assemble modal
-  imageContainer.appendChild(closeBtn);
-  imageContainer.appendChild(title);
-  imageContainer.appendChild(img);
-  modal.appendChild(imageContainer);
+  // Create control buttons container
+  const controls = document.createElement('div');
+  controls.style.cssText = `
+    display: flex !important;
+    gap: 10px !important;
+    align-items: center !important;
+  `;
+
+  // Zoom controls
+  const zoomOutBtn = document.createElement('button');
+  zoomOutBtn.innerHTML = '🔍-';
+  zoomOutBtn.title = 'Zoom Out';
+  zoomOutBtn.style.cssText = `
+    background: rgba(255, 255, 255, 0.2) !important;
+    color: white !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    border-radius: 6px !important;
+    padding: 8px 12px !important;
+    cursor: pointer !important;
+    font-size: 14px !important;
+    transition: all 0.2s ease !important;
+  `;
+
+  const zoomInBtn = document.createElement('button');
+  zoomInBtn.innerHTML = '🔍+';
+  zoomInBtn.title = 'Zoom In';
+  zoomInBtn.style.cssText = `
+    background: rgba(255, 255, 255, 0.2) !important;
+    color: white !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    border-radius: 6px !important;
+    padding: 8px 12px !important;
+    cursor: pointer !important;
+    font-size: 14px !important;
+    transition: all 0.2s ease !important;
+  `;
+
+  const resetZoomBtn = document.createElement('button');
+  resetZoomBtn.innerHTML = '🔄';
+  resetZoomBtn.title = 'Reset Zoom';
+  resetZoomBtn.style.cssText = `
+    background: rgba(255, 255, 255, 0.2) !important;
+    color: white !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    border-radius: 6px !important;
+    padding: 8px 12px !important;
+    cursor: pointer !important;
+    font-size: 14px !important;
+    transition: all 0.2s ease !important;
+  `;
+
+  // Close button
+  const closeBtn = document.createElement('button');
+  closeBtn.innerHTML = '✕';
+  closeBtn.title = 'Close Viewer';
+  closeBtn.style.cssText = `
+    background: rgba(220, 38, 38, 0.8) !important;
+    color: white !important;
+    border: 1px solid rgba(220, 38, 38, 0.9) !important;
+    border-radius: 6px !important;
+    padding: 8px 12px !important;
+    cursor: pointer !important;
+    font-size: 16px !important;
+    font-weight: bold !important;
+    transition: all 0.2s ease !important;
+  `;
+
+  // Create scrollable content area
+  const scrollContainer = document.createElement('div');
+  scrollContainer.style.cssText = `
+    flex: 1 !important;
+    overflow: auto !important;
+    background: #f8f9fa !important;
+    position: relative !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 20px !important;
+  `;
+
+  // Create image with zoom functionality
+  const img = document.createElement('img');
+  img.src = snipUrl;
+  img.style.cssText = `
+    max-width: 100% !important;
+    height: auto !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
+    transition: transform 0.3s ease !important;
+    cursor: grab !important;
+    user-select: none !important;
+    transform-origin: center center !important;
+  `;
+
+  // Zoom functionality
+  let currentZoom = 1;
+  let isDragging = false;
+  let startX, startY, scrollLeft, scrollTop;
+
+  const updateZoom = (newZoom) => {
+    currentZoom = Math.max(0.25, Math.min(5, newZoom));
+    img.style.transform = `scale(${currentZoom})`;
+    
+    // Update cursor based on zoom level
+    if (currentZoom > 1) {
+      img.style.cursor = 'grab';
+    } else {
+      img.style.cursor = 'default';
+    }
+  };
+
+  // Zoom controls
+  zoomInBtn.addEventListener('click', () => updateZoom(currentZoom * 1.25));
+  zoomOutBtn.addEventListener('click', () => updateZoom(currentZoom * 0.8));
+  resetZoomBtn.addEventListener('click', () => updateZoom(1));
+
+  // Mouse wheel zoom
+  scrollContainer.addEventListener('wheel', (e) => {
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? 0.9 : 1.1;
+      updateZoom(currentZoom * delta);
+    }
+  });
+
+  // Drag functionality for zoomed images
+  img.addEventListener('mousedown', (e) => {
+    if (currentZoom > 1) {
+      isDragging = true;
+      img.style.cursor = 'grabbing';
+      startX = e.pageX - scrollContainer.offsetLeft;
+      startY = e.pageY - scrollContainer.offsetTop;
+      scrollLeft = scrollContainer.scrollLeft;
+      scrollTop = scrollContainer.scrollTop;
+      e.preventDefault();
+    }
+  });
+
+  scrollContainer.addEventListener('mousemove', (e) => {
+    if (!isDragging || currentZoom <= 1) return;
+    e.preventDefault();
+    const x = e.pageX - scrollContainer.offsetLeft;
+    const y = e.pageY - scrollContainer.offsetTop;
+    const walkX = (x - startX) * 2;
+    const walkY = (y - startY) * 2;
+    scrollContainer.scrollLeft = scrollLeft - walkX;
+    scrollContainer.scrollTop = scrollTop - walkY;
+  });
+
+  scrollContainer.addEventListener('mouseup', () => {
+    isDragging = false;
+    if (currentZoom > 1) {
+      img.style.cursor = 'grab';
+    } else {
+      img.style.cursor = 'default';
+    }
+  });
+
+  scrollContainer.addEventListener('mouseleave', () => {
+    isDragging = false;
+    if (currentZoom > 1) {
+      img.style.cursor = 'grab';
+    } else {
+      img.style.cursor = 'default';
+    }
+  });
+
+  // Status bar with instructions
+  const statusBar = document.createElement('div');
+  statusBar.style.cssText = `
+    background: #e5e7eb !important;
+    color: #374151 !important;
+    padding: 10px 20px !important;
+    text-align: center !important;
+    font-size: 12px !important;
+    border-radius: 0 0 12px 12px !important;
+  `;
+  statusBar.innerHTML = '💡 <strong>Tips:</strong> Use Ctrl+Scroll to zoom • Drag to pan when zoomed • Esc to close';
+
+  // Assemble controls
+  controls.appendChild(zoomOutBtn);
+  controls.appendChild(resetZoomBtn);
+  controls.appendChild(zoomInBtn);
+  controls.appendChild(closeBtn);
+
+  // Assemble header
+  header.appendChild(title);
+  header.appendChild(controls);
+
+  // Assemble container
+  scrollContainer.appendChild(img);
+  viewerContainer.appendChild(header);
+  viewerContainer.appendChild(scrollContainer);
+  viewerContainer.appendChild(statusBar);
+  modal.appendChild(viewerContainer);
 
   // Event handlers
   closeBtn.addEventListener('click', () => {
@@ -5311,6 +5484,9 @@ function showSnipPreview() {
 
   // Show modal
   document.body.appendChild(modal);
+
+  // Focus for keyboard events
+  modal.focus();
 }
 
 // Add test function for debugging
