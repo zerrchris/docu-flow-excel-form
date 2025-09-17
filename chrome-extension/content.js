@@ -4839,7 +4839,35 @@ async function analyzeCurrentScreenshot() {
       return;
     }
   } else if (activeRunsheet.data && activeRunsheet.data[currentRowIndex]) {
-    screenshotData = activeRunsheet.data[currentRowIndex]['screenshot_url'];
+    const storedScreenshotUrl = activeRunsheet.data[currentRowIndex]['screenshot_url'];
+    
+    // If it's a storage URL, we need to fetch it and convert to data URL
+    if (storedScreenshotUrl && storedScreenshotUrl.startsWith('https://')) {
+      try {
+        console.log('🔧 Fetching screenshot from storage URL for analysis');
+        const response = await fetch(storedScreenshotUrl);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch screenshot: ${response.statusText}`);
+        }
+        const blob = await response.blob();
+        
+        // Convert blob to data URL
+        const dataUrl = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+        screenshotData = dataUrl;
+      } catch (error) {
+        console.error('Failed to fetch and convert screenshot:', error);
+        showNotification('Failed to load screenshot for analysis', 'error');
+        return;
+      }
+    } else {
+      // It's already a data URL
+      screenshotData = storedScreenshotUrl;
+    }
   } else if (captures.length > 0) {
     screenshotData = captures[captures.length - 1];
   }
