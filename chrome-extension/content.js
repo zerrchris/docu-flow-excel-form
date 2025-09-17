@@ -4781,7 +4781,20 @@ async function analyzeCurrentScreenshot() {
   let screenshotData = null;
   
   if (window.currentCapturedSnip) {
-    screenshotData = window.currentCapturedSnip;
+    // Convert blob to data URL for analysis
+    try {
+      const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(window.currentCapturedSnip);
+      });
+      screenshotData = dataUrl;
+    } catch (error) {
+      console.error('Failed to convert blob to data URL:', error);
+      showNotification('Failed to process screenshot data', 'error');
+      return;
+    }
   } else if (activeRunsheet.data && activeRunsheet.data[currentRowIndex]) {
     screenshotData = activeRunsheet.data[currentRowIndex]['screenshot_url'];
   } else if (captures.length > 0) {
@@ -4811,7 +4824,7 @@ async function analyzeCurrentScreenshot() {
       },
       body: JSON.stringify({
         prompt: `Analyze this document image and extract any relevant data for the current runsheet. Please extract text, numbers, dates, and other relevant information that can be used to populate form fields.`,
-        imageData: screenshotData.imageUrl || screenshotData
+        imageData: screenshotData
       })
     });
 
