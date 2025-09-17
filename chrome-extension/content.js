@@ -19,6 +19,7 @@ let isCapturing = false;
 let userSession = null;
 let currentViewMode = 'single'; // 'single' or 'full'
 let currentRowIndex = 0; // Track current row being edited
+let screenshotAddedToSheet = false; // Track if current screenshot has been added to sheet
 
 // Snip mode variables
 let isSnipMode = false;
@@ -707,6 +708,11 @@ async function addRowToSheet() {
     
     if (result.success) {
       showNotification(`Row ${result.row_index + 1} added successfully!`, 'success');
+      
+      // Mark screenshot as added to sheet if one was included
+      if (screenshotUrl) {
+        screenshotAddedToSheet = true;
+      }
       
       // If a document was created, fire an event for the main app to refresh its document map
       if (result.document_created) {
@@ -2599,7 +2605,15 @@ function setupFrameEventListeners() {
   // Open in app button
   const openAppBtn = document.getElementById('open-app-btn');
   if (openAppBtn) {
-    openAppBtn.addEventListener('click', openCurrentRunsheetInApp);
+    openAppBtn.addEventListener('click', () => {
+      if (hasUnsavedData()) {
+        showUnsavedDataWarning('opening the app', () => {
+          openCurrentRunsheetInApp();
+        });
+      } else {
+        openCurrentRunsheetInApp();
+      }
+    });
   }
   
   // View mode button
@@ -2607,7 +2621,14 @@ function setupFrameEventListeners() {
   if (viewModeBtn) {
     viewModeBtn.addEventListener('click', () => {
       const newMode = currentViewMode === 'single' ? 'full' : 'single';
-      switchViewMode(newMode);
+      
+      if (currentViewMode === 'single' && hasUnsavedData()) {
+        showUnsavedDataWarning('switching to Quick View', () => {
+          switchViewMode(newMode);
+        });
+      } else {
+        switchViewMode(newMode);
+      }
     });
   }
   
@@ -2615,9 +2636,132 @@ function setupFrameEventListeners() {
   const selectRunsheetBtn = document.getElementById('select-runsheet-btn');
   if (selectRunsheetBtn) {
     selectRunsheetBtn.addEventListener('click', () => {
-      showRunsheetSelector();
+      if (hasUnsavedData()) {
+        showUnsavedDataWarning('selecting a different sheet', () => {
+          showRunsheetSelector();
+        });
+      } else {
+        showRunsheetSelector();
+      }
     });
   }
+}
+
+// Check if there's unsaved data in single entry mode
+function hasUnsavedData() {
+  if (currentViewMode !== 'single') return false;
+  
+  const dataRow = document.querySelector('.data-row');
+  if (!dataRow) return false;
+  
+  // Check if any textarea has content
+  const textareas = dataRow.querySelectorAll('textarea');
+  for (const textarea of textareas) {
+    if (textarea.value.trim()) {
+      return true;
+    }
+  }
+  
+  // Check if there's a linked screenshot that hasn't been added to sheet
+  if (currentScreenshotBlob && !screenshotAddedToSheet) {
+    return true;
+  }
+  
+  return false;
+}
+
+// Show warning dialog for unsaved data
+function showUnsavedDataWarning(action, callback) {
+  const existingDialog = document.getElementById('unsaved-data-dialog');
+  if (existingDialog) existingDialog.remove();
+  
+  const dialog = document.createElement('div');
+  dialog.id = 'unsaved-data-dialog';
+  dialog.style.cssText = `
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    background: rgba(0, 0, 0, 0.5) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    z-index: 10001 !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  `;
+  
+  dialog.innerHTML = `
+    <div style="
+      background: white;
+      border-radius: 8px;
+      padding: 24px;
+      max-width: 400px;
+      margin: 20px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    ">
+      <h3 style="margin: 0 0 16px 0; color: #333; font-size: 18px;">⚠️ Unsaved Data</h3>
+      <p style="margin: 0 0 20px 0; color: #666; line-height: 1.4;">
+        You have unsaved data in the current entry. Do you want to add it to the runsheet before ${action}?
+      </p>
+      <div style="display: flex; gap: 8px; justify-content: flex-end;">
+        <button id="save-and-continue" style="
+          background: hsl(215 80% 40%);
+          color: white;
+          border: none;
+          border-radius: 4px;
+          padding: 8px 16px;
+          cursor: pointer;
+          font-size: 14px;
+        ">Add to Sheet & ${action}</button>
+        <button id="continue-without-saving" style="
+          background: #dc2626;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          padding: 8px 16px;
+          cursor: pointer;
+          font-size: 14px;
+        ">Discard & ${action}</button>
+        <button id="cancel-action" style="
+          background: #6b7280;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          padding: 8px 16px;
+          cursor: pointer;
+          font-size: 14px;
+        ">Cancel</button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(dialog);
+  
+  // Event handlers
+  document.getElementById('save-and-continue').addEventListener('click', async () => {
+    dialog.remove();
+    // Add current data to sheet first
+    await addRowToSheet();
+    // Then proceed with the action
+    callback();
+  });
+  
+  document.getElementById('continue-without-saving').addEventListener('click', () => {
+    dialog.remove();
+    callback();
+  });
+  
+  document.getElementById('cancel-action').addEventListener('click', () => {
+    dialog.remove();
+  });
+  
+  // Close on outside click
+  dialog.addEventListener('click', (e) => {
+    if (e.target === dialog) {
+      dialog.remove();
+    }
+  });
 }
 
 // Open current runsheet in the main app
@@ -3796,8 +3940,9 @@ async function captureSelectedArea(left, top, width, height) {
                 }
               }
               
-              // Update screenshot indicator
+              // Update screenshot indicator and reset added status
               updateScreenshotIndicator(true);
+              screenshotAddedToSheet = false; // New screenshot hasn't been added yet
               
               cleanupSnipMode();
               showNotification('✅ Screenshot captured successfully! Fill in any additional data and click "Add Row" to save.', 'success');
@@ -3897,8 +4042,9 @@ async function finishSnipping() {
       }
     }
     
-    // Update screenshot indicator
+    // Update screenshot indicator and reset added status
     updateScreenshotIndicator(true);
+    screenshotAddedToSheet = false; // New screenshot hasn't been added yet
     
     showNotification(`✅ ${snipsToProcess.length} snips combined and ready! Fill in data and click "Add to Row" to save everything.`, 'success');
     
@@ -4740,8 +4886,9 @@ function retakeScreenshot() {
   window.currentCapturedSnip = null;
   window.currentSnipFilename = null;
   
-  // Update button visibility
+  // Update button visibility and reset added status
   updateScreenshotIndicator(false);
+  screenshotAddedToSheet = false; // Reset since screenshot is cleared
   
   // Start new screenshot process
   startSnipMode();
