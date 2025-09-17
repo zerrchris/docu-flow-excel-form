@@ -5203,9 +5203,10 @@ function showSnipPreview() {
   }
   // Then check for current captured snip (blob format)
   else if (window.currentCapturedSnip) {
-    // Convert blob to data URL for display
-    snipUrl = window.currentCapturedSnip;
-    console.log('🔧 Found currentCapturedSnip:', typeof snipUrl);
+    // Convert blob to object URL for display
+    console.log('🔧 Found currentCapturedSnip, converting blob to URL');
+    snipUrl = URL.createObjectURL(window.currentCapturedSnip);
+    console.log('🔧 Created object URL:', snipUrl);
   }
 
   if (!snipUrl) {
