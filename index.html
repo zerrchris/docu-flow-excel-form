@@ -24,6 +24,20 @@
 
   <body>
     <div id="root"></div>
+    <script>
+      // Prevent external jQuery/Bootstrap errors from affecting our app
+      window.addEventListener('error', function(e) {
+        if (e.message && (
+          e.message.includes('Syntax error, unrecognized expression: #') ||
+          e.message.includes('bootstrap') ||
+          e.message.includes('jquery')
+        )) {
+          console.warn('Suppressed external library error:', e.message);
+          e.preventDefault();
+          return true;
+        }
+      });
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
