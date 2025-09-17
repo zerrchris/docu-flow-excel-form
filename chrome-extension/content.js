@@ -3672,11 +3672,16 @@ function startSnipModeWithMode(mode = 'single', skipOverwriteCheck = false) {
   
   const messages = {
     single: 'Single snip mode! Drag to select area - it will auto-submit when done.',
-    scroll: 'Snip & scroll mode! Drag to select areas, scroll as needed. Your session will persist.',
+    scroll: 'Snip & scroll mode! Drag to select areas, scroll as needed. Your session will persist. Smart scrolling enabled for document viewers.',
     navigate: 'Click & navigate mode! Drag to select areas, navigate between pages. Your session will persist.'
   };
   
   showNotification(messages[mode], 'info');
+  
+  // Enable smart scroll detection for document viewers
+  if (mode === 'scroll') {
+    enableSmartScrollDetection();
+  }
 }
 
 // Create snip overlay for selection
@@ -5398,4 +5403,232 @@ async function linkScreenshotToSpecificRow(rowIndex, blob, filename) {
     console.error('Error linking screenshot to row:', error);
     showNotification(`Failed to link screenshot: ${error.message}`, 'error');
   }
+}
+
+// Smart scroll detection for document viewers
+let smartScrollEnabled = false;
+let lastScrollableElement = null;
+let scrollKeyHandler = null;
+
+function enableSmartScrollDetection() {
+  if (smartScrollEnabled) return;
+  
+  smartScrollEnabled = true;
+  console.log('🔧 RunsheetPro Extension: Smart scroll detection enabled');
+  
+  // Remove existing handler
+  if (scrollKeyHandler) {
+    document.removeEventListener('keydown', scrollKeyHandler);
+  }
+  
+  // Create enhanced scroll handler
+  scrollKeyHandler = (e) => {
+    // Only handle scroll keys in snip mode
+    if (!isSnipMode || snipMode !== 'scroll') return;
+    
+    const scrollKeys = ['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', 'Space'];
+    if (!scrollKeys.includes(e.key)) return;
+    
+    // Find the best scrollable element
+    const targetElement = findBestScrollableElement(e.target);
+    
+    if (targetElement && targetElement !== document.documentElement && targetElement !== document.body) {
+      // Prevent default browser scrolling
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // Perform smart scroll on the detected element
+      performSmartScroll(targetElement, e.key, e.shiftKey);
+    }
+  };
+  
+  // Add the scroll handler
+  document.addEventListener('keydown', scrollKeyHandler, { passive: false, capture: true });
+  
+  // Also detect mouse wheel events on specific elements
+  enableMouseWheelScrollDetection();
+}
+
+function disableSmartScrollDetection() {
+  if (!smartScrollEnabled) return;
+  
+  smartScrollEnabled = false;
+  console.log('🔧 RunsheetPro Extension: Smart scroll detection disabled');
+  
+  if (scrollKeyHandler) {
+    document.removeEventListener('keydown', scrollKeyHandler);
+    scrollKeyHandler = null;
+  }
+  
+  // Remove mouse wheel detection
+  disableMouseWheelScrollDetection();
+}
+
+function findBestScrollableElement(startElement) {
+  let element = startElement;
+  
+  // Walk up the DOM tree to find scrollable elements
+  while (element && element !== document.body) {
+    if (isScrollableElement(element)) {
+      // Prioritize certain types of containers
+      if (isDocumentViewer(element)) {
+        console.log('🔧 Found document viewer for scrolling:', element);
+        return element;
+      }
+      
+      // Check if it has meaningful scroll content
+      if (hasScrollableContent(element)) {
+        console.log('🔧 Found scrollable element:', element);
+        return element;
+      }
+    }
+    element = element.parentElement;
+  }
+  
+  // Fallback to document scrolling
+  return document.documentElement;
+}
+
+function isScrollableElement(element) {
+  if (!element || element === document.body || element === document.documentElement) {
+    return false;
+  }
+  
+  const style = window.getComputedStyle(element);
+  const hasScrollbar = element.scrollHeight > element.clientHeight || element.scrollWidth > element.clientWidth;
+  const canScroll = ['auto', 'scroll'].includes(style.overflowY) || ['auto', 'scroll'].includes(style.overflow);
+  
+  return hasScrollbar && canScroll;
+}
+
+function isDocumentViewer(element) {
+  // Check for common document viewer characteristics
+  const classNames = element.className.toLowerCase();
+  const tagName = element.tagName.toLowerCase();
+  
+  // Common PDF viewer selectors
+  const viewerSelectors = [
+    'pdf-viewer', 'document-viewer', 'viewer-container', 'pdf-container',
+    'embed-responsive', 'doc-viewer', 'preview-container', 'document-frame',
+    'pdf-js-viewer', 'pdfjs-viewer', 'adobe-reader', 'foxit-reader'
+  ];
+  
+  // Check if it's an iframe with document content
+  if (tagName === 'iframe') {
+    const src = element.src.toLowerCase();
+    if (src.includes('.pdf') || src.includes('viewer') || src.includes('document')) {
+      return true;
+    }
+  }
+  
+  // Check for viewer-specific class names
+  return viewerSelectors.some(selector => classNames.includes(selector));
+}
+
+function hasScrollableContent(element) {
+  const scrollableHeight = element.scrollHeight - element.clientHeight;
+  const scrollableWidth = element.scrollWidth - element.clientWidth;
+  
+  // Must have at least 100px of scrollable content to be considered meaningful
+  return scrollableHeight > 100 || scrollableWidth > 100;
+}
+
+function performSmartScroll(element, key, shiftKey) {
+  const scrollAmount = shiftKey ? element.clientHeight : 100; // Larger scroll with Shift
+  
+  let deltaX = 0, deltaY = 0;
+  
+  switch (key) {
+    case 'ArrowUp':
+      deltaY = -scrollAmount / 4;
+      break;
+    case 'ArrowDown':
+      deltaY = scrollAmount / 4;
+      break;
+    case 'PageUp':
+      deltaY = -scrollAmount;
+      break;
+    case 'PageDown':
+    case 'Space':
+      deltaY = scrollAmount;
+      break;
+    case 'Home':
+      element.scrollTop = 0;
+      return;
+    case 'End':
+      element.scrollTop = element.scrollHeight;
+      return;
+  }
+  
+  // Smooth scroll
+  element.scrollBy({
+    top: deltaY,
+    left: deltaX,
+    behavior: 'smooth'
+  });
+  
+  console.log(`🔧 Smart scroll: ${key} on element`, element, `deltaY: ${deltaY}`);
+}
+
+// Mouse wheel detection for document viewers
+let mouseWheelHandler = null;
+
+function enableMouseWheelScrollDetection() {
+  if (mouseWheelHandler) return;
+  
+  mouseWheelHandler = (e) => {
+    if (!isSnipMode || snipMode !== 'scroll') return;
+    
+    const targetElement = findBestScrollableElement(e.target);
+    
+    // If we found a specific document viewer, ensure the scroll happens there
+    if (targetElement && targetElement !== document.documentElement && targetElement !== document.body) {
+      if (isDocumentViewer(targetElement)) {
+        // For document viewers, let the event proceed but ensure it targets the right element
+        console.log('🔧 Mouse wheel on document viewer:', targetElement);
+        
+        // Focus the element to ensure it receives scroll events
+        if (targetElement.focus) {
+          targetElement.focus();
+        }
+      }
+    }
+  };
+  
+  document.addEventListener('wheel', mouseWheelHandler, { passive: true, capture: true });
+}
+
+function disableMouseWheelScrollDetection() {
+  if (mouseWheelHandler) {
+    document.removeEventListener('wheel', mouseWheelHandler);
+    mouseWheelHandler = null;
+  }
+}
+
+// Update cleanup function to disable smart scroll
+function cleanupSnipMode() {
+  isSnipMode = false;
+  snipMode = 'single';
+  capturedSnips = [];
+  
+  // Disable smart scrolling
+  disableSmartScrollDetection();
+  
+  // Remove overlays and UI
+  if (snipOverlay) {
+    snipOverlay.remove();
+    snipOverlay = null;
+  }
+  
+  if (snipControlPanel) {
+    snipControlPanel.remove();
+    snipControlPanel = null;
+  }
+  
+  if (snipSelection) {
+    snipSelection.remove();
+    snipSelection = null;
+  }
+  
+  console.log('🔧 RunsheetPro Extension: Snip mode cleaned up with smart scroll disabled');
 }
