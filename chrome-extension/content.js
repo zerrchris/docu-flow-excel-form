@@ -2197,7 +2197,11 @@ function createFullRunsheetView(content) {
         // Auto-resize function
         const autoResize = () => {
           inputElement.style.height = 'auto';
-          inputElement.style.height = Math.max(24, inputElement.scrollHeight) + 'px';
+          const newHeight = Math.max(24, inputElement.scrollHeight);
+          inputElement.style.height = newHeight + 'px';
+          
+          // Sync row height - make all cells in this row the same height
+          syncRowHeight(rowIndex, newHeight + 12); // Add padding for cell height
         };
         inputElement.addEventListener('input', () => {
           autoResize();
@@ -2561,6 +2565,37 @@ function createFullRunsheetView(content) {
   fullViewContainer.appendChild(tableContainer);
   fullViewContainer.appendChild(addRowsContainer);
   content.appendChild(fullViewContainer);
+}
+
+// Sync row height to ensure consistent alignment
+function syncRowHeight(rowIndex, minHeight) {
+  // Find all cells in this row and set them to the same height
+  const rowCells = document.querySelectorAll(`[data-row="${rowIndex}"]`);
+  let maxHeight = minHeight;
+  
+  // First pass: find the maximum height needed in this row
+  rowCells.forEach(cell => {
+    if (cell.tagName === 'TEXTAREA') {
+      const cellHeight = Math.max(24, cell.scrollHeight) + 12;
+      maxHeight = Math.max(maxHeight, cellHeight);
+    }
+  });
+  
+  // Second pass: apply the maximum height to all cells in the row
+  rowCells.forEach(cell => {
+    const parentTd = cell.closest('td');
+    if (parentTd) {
+      parentTd.style.minHeight = maxHeight + 'px';
+      parentTd.style.height = maxHeight + 'px';
+      
+      // For input elements, center them vertically within the cell
+      if (cell.tagName === 'INPUT') {
+        cell.style.height = '32px';
+        parentTd.style.paddingTop = Math.max(0, (maxHeight - 32) / 2) + 'px';
+        parentTd.style.paddingBottom = Math.max(0, (maxHeight - 32) / 2) + 'px';
+      }
+    }
+  });
 }
 
 // Switch between view modes
