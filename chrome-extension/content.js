@@ -4128,6 +4128,11 @@ async function captureSelectedArea(left, top, width, height) {
           if (snipMode === 'navigate') {
             console.log('🔧 RunsheetPro Extension: Navigate mode - hiding crosshairs and showing nav panel');
             hideSnipModeForNavigation();
+            // Show the navigation panel again
+            const navPanel = document.getElementById('runsheetpro-nav-controls');
+            if (navPanel) {
+              navPanel.style.display = 'flex';
+            }
           }
           
           // Handle single mode - process with AI analysis if available
@@ -4370,7 +4375,7 @@ function createNavigationControlPanel() {
     border-radius: 4px !important;
     border: 1px solid #e5e7eb !important;
   `;
-  counter.textContent = `Snips captured: ${capturedSnips.length}`;
+  counter.textContent = `Snips captured: ${(snipMode === 'navigate' || snipMode === 'scroll') ? snipSession.captures.length : capturedSnips.length}`;
   
   // Snip Again button
   const snipAgainButton = document.createElement('button');
@@ -4440,19 +4445,29 @@ function createNavigationControlPanel() {
 
 // Resume snip mode after navigation
 function resumeSnipMode() {
+  console.log('🔧 RunsheetPro Extension: Resuming snip mode');
+  
   // Restore captured snips from session
   if (snipSession.active && snipSession.captures.length > 0) {
     capturedSnips = [...snipSession.captures];
+    console.log('🔧 RunsheetPro Extension: Restored', capturedSnips.length, 'captured snips for resume');
   }
   
-  // Show the crosshairs overlay for selection
+  // Set global snip mode flag
+  isSnipMode = true;
+  
+  // Always recreate the overlay on a new page since DOM elements don't persist
   if (snipOverlay) {
-    snipOverlay.style.display = 'block';
-  } else {
-    createSnipOverlay();
+    snipOverlay.remove();
+  }
+  createSnipOverlay();
+  
+  // Hide the navigation panel temporarily while snipping
+  const navPanel = document.getElementById('runsheetpro-nav-controls');
+  if (navPanel) {
+    navPanel.style.display = 'none';
   }
   
-  // Don't create a separate control panel - session persists with navigation panel
   showNotification('Ready for next snip! Drag to select area.', 'info');
 }
 
