@@ -29,7 +29,7 @@ const queryClient = new QueryClient();
 // Component to handle navigation-based runsheet clearing
 const NavigationHandler = () => {
   const location = useLocation();
-  const { clearActiveRunsheet, currentRunsheetId } = useActiveRunsheet();
+  const { clearActiveRunsheet, currentRunsheetId, setCurrentRunsheet } = useActiveRunsheet();
 
   useEffect(() => {
     // Clear active runsheet when navigating away from /runsheet
@@ -38,6 +38,21 @@ const NavigationHandler = () => {
       clearActiveRunsheet();
     }
   }, [location.pathname, currentRunsheetId, clearActiveRunsheet]);
+
+  useEffect(() => {
+    // Listen for extension messages to update active runsheet
+    const handleExtensionMessage = (event: MessageEvent) => {
+      if (event.source === window && event.data?.source === 'runsheet-extension') {
+        if (event.data.type === 'EXTENSION_RUNSHEET_CHANGED') {
+          console.log('📋 Received runsheet change from extension:', event.data.runsheetId);
+          setCurrentRunsheet(event.data.runsheetId);
+        }
+      }
+    };
+
+    window.addEventListener('message', handleExtensionMessage);
+    return () => window.removeEventListener('message', handleExtensionMessage);
+  }, [setCurrentRunsheet]);
 
   return null;
 };

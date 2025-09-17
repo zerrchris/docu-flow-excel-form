@@ -912,6 +912,15 @@ function loadRunsheet(runsheet) {
     'activeRunsheet': runsheet // Store for popup
   });
   
+  // Notify main app of runsheet change to trigger refresh
+  window.postMessage({
+    type: 'EXTENSION_RUNSHEET_CHANGED',
+    runsheetId: runsheet.id,
+    runsheet: runsheet,
+    source: 'runsheet-extension'
+  }, '*');
+  console.log('🚨 Extension: Notified main app of runsheet change:', runsheet.name);
+  
   // Destroy existing frame and recreate with new data
   if (runsheetFrame) {
     runsheetFrame.remove();
