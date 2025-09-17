@@ -5060,7 +5060,13 @@ async function linkScreenshotToSpecificRow(rowIndex, blob, filename) {
     if (currentViewMode === 'full') {
       const content = document.querySelector('#runsheetpro-runsheet-frame .frame-content');
       if (content) {
+        // Clear and rebuild to ensure buttons reflect the new state
+        content.innerHTML = '';
         createFullRunsheetView(content);
+        // Update any dependent UI
+        setTimeout(() => {
+          try { updateRowNavigationUI && updateRowNavigationUI(); } catch {}
+        }, 0);
       }
     }
     
