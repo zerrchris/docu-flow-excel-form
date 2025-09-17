@@ -4706,24 +4706,54 @@ try {
   console.warn('🔧 RunsheetPro Extension: storage.onChanged listener failed', e);
 }
 
-// Initialize when page loads
+// Initialize when page loads - Handle both initial load and navigation
 try {
   console.log('🔧 RunsheetPro Extension: Starting initialization...');
   console.log('🔧 RunsheetPro Extension: Document ready state:', document.readyState);
+  
+  // Use initializeExtensionWithStateRestore instead of init for proper persistence
+  const initializeExtension = () => {
+    console.log('🔧 RunsheetPro Extension: Initializing with state restoration');
+    if (typeof initializeExtensionWithStateRestore !== 'undefined') {
+      initializeExtensionWithStateRestore();
+    } else {
+      // Fallback to regular init if persistent state not available
+      init();
+    }
+  };
+  
+  // Handle page navigation by listening to pageshow event (covers back/forward navigation)
+  window.addEventListener('pageshow', (event) => {
+    console.log('🔧 RunsheetPro Extension: Page shown (navigation detected), reinitializing...');
+    setTimeout(initializeExtension, 100);
+  });
   
   // Force a small delay to ensure page is fully loaded
   setTimeout(() => {
     if (document.readyState === 'loading') {
       console.log('🔧 RunsheetPro Extension: Adding DOMContentLoaded listener');
       document.addEventListener('DOMContentLoaded', () => {
-        console.log('🔧 RunsheetPro Extension: DOMContentLoaded fired, calling init()');
-        setTimeout(init, 100); // Small delay to ensure DOM is ready
+        console.log('🔧 RunsheetPro Extension: DOMContentLoaded fired, calling init with state restore');
+        setTimeout(initializeExtension, 100); // Small delay to ensure DOM is ready
       });
     } else {
-      console.log('🔧 RunsheetPro Extension: Document ready, calling init() immediately');
-      init();
+      console.log('🔧 RunsheetPro Extension: Document ready, calling init with state restore immediately');
+      initializeExtension();
     }
   }, 100);
+  
+  // Listen for page unload to save state before navigation
+  window.addEventListener('beforeunload', () => {
+    console.log('🔧 RunsheetPro Extension: Page unloading, saving state...');
+    if (typeof saveExtensionState !== 'undefined') {
+      saveExtensionState();
+    }
+    // Also save current form data if frame is open
+    if (runsheetFrame && runsheetFrame.style.display !== 'none' && typeof saveCurrentFormData !== 'undefined') {
+      saveCurrentFormData();
+    }
+  });
+  
 } catch (error) {
   console.error('🔧 RunsheetPro Extension: Critical initialization error:', error);
   console.error('🔧 RunsheetPro Extension: Error stack:', error.stack);
