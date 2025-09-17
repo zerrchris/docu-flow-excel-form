@@ -6615,7 +6615,7 @@ ${extractionFields}`
                 tableLayout: 'fixed', 
                 width: `${getTotalTableWidth()}px`,
                 position: 'relative',
-                borderCollapse: 'separate',
+                borderCollapse: 'collapse',
                 borderSpacing: '0'
               }}
              >
@@ -6889,10 +6889,10 @@ ${extractionFields}`
                       return (
                            <td
                             key={`${rowIndex}-${column}`}
-                             className={`border-r border-b border-border last:border-r-0 relative cursor-text transition-all duration-200 group-hover:bg-muted/20
-                               ${isEditing ? 'p-0 z-20' : 'p-0'}
-                               ${cellValidationErrors[`${rowIndex}-${column}`] ? 'border-2 border-red-400 bg-red-50 dark:bg-red-900/20' : ''}
-                             `}
+                              className={`border-r border-b border-border relative cursor-text transition-all duration-200 group-hover:bg-muted/20
+                                ${isEditing ? 'p-0 z-20' : 'p-0'}
+                                ${cellValidationErrors[`${rowIndex}-${column}`] ? 'border-2 border-red-400 bg-red-50 dark:bg-red-900/20' : ''}
+                              `}
                              style={{ 
                                width: `${getColumnWidth(column)}px`, 
                                minWidth: `${getColumnWidth(column)}px`,
@@ -7004,7 +7004,7 @@ ${extractionFields}`
                        return (
                           <td
                            key={`${rowIndex}-${column}`}
-                            className={`border-b border-border p-0 cursor-text overflow-hidden`}
+                            className={`border-r border-b border-border p-0 cursor-text overflow-hidden`}
                             style={{ 
                                width: "350px", 
                                minWidth: "350px",
@@ -7105,8 +7105,8 @@ ${extractionFields}`
                      })()}
                     
                          {/* Actions column - Document management */}
-                       <td 
-                         className="p-0 overflow-hidden"
+                        <td 
+                          className="border-b border-border p-0 overflow-hidden"
                          style={{ 
                            width: "480px", 
                            minWidth: "480px",
