@@ -758,26 +758,31 @@ async function addRowToSheet() {
         firstInput.focus();
       }
       
-      console.log('🔧 RunsheetPro Extension: Row added successfully to index:', nextRowIndex);
+      console.log('🔧 RunsheetPro Extension: Row added successfully to index (server):', result.row_index, ' (predicted):', nextRowIndex);
       
-      // Update the local activeRunsheet data with the new row
+      // Update the local activeRunsheet data with the new row (use server-confirmed index)
+      const targetIndex = (typeof result.row_index === 'number') ? result.row_index : nextRowIndex;
       if (!activeRunsheet.data) {
         activeRunsheet.data = [];
       }
       
       // Ensure the data array has enough rows
-      while (activeRunsheet.data.length <= nextRowIndex) {
+      while (activeRunsheet.data.length <= targetIndex) {
         const emptyRow = {};
         activeRunsheet.columns.forEach(col => emptyRow[col] = '');
         activeRunsheet.data.push(emptyRow);
       }
       
-      // Update the specific row with the new data
-      activeRunsheet.data[nextRowIndex] = { ...activeRunsheet.data[nextRowIndex], ...rowData };
+      // Update the specific row with the new data and attached screenshot URL (if any)
+      const updatedRow = { ...activeRunsheet.data[targetIndex], ...rowData };
+      if (screenshotUrl) {
+        updatedRow['screenshot_url'] = screenshotUrl;
+      }
+      activeRunsheet.data[targetIndex] = updatedRow;
       
       // Update the global current row tracking to the next empty row
       if (window.currentDisplayRowIndex !== undefined) {
-        window.currentDisplayRowIndex = nextRowIndex + 1;
+        window.currentDisplayRowIndex = targetIndex + 1;
       }
       
       // Clear any saved form data since we just submitted it
