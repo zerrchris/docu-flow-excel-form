@@ -2127,7 +2127,7 @@ function createFullRunsheetView(content) {
         width: auto !important;
         vertical-align: top !important;
         position: relative !important;
-        white-space: nowrap !important;
+        cursor: text !important;
       `;
       
       // Create editable input/textarea for each cell
@@ -2303,6 +2303,14 @@ function createFullRunsheetView(content) {
       inputElement.addEventListener('click', () => {
         inputElement.focus();
         inputElement.select();
+      });
+      
+      // Make entire cell clickable to focus input
+      td.addEventListener('click', (e) => {
+        if (e.target === td) {
+          inputElement.focus();
+          inputElement.select();
+        }
       });
       
       td.appendChild(inputElement);
