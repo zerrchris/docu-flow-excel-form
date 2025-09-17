@@ -1942,92 +1942,6 @@ function createSingleEntryView(content) {
         lastTextarea.focus();
       }
     } else if (e.key === 'Tab' && !e.shiftKey) {
-      // Tab moves to screenshot button
-      e.preventDefault();
-      const screenshotBtn = document.querySelector('.table-action-area .screenshot-btn');
-      if (screenshotBtn) {
-        screenshotBtn.focus();
-      }
-    }
-  });
-  
-  // Screenshot dropdown container
-  const screenshotContainer = document.createElement('div');
-  screenshotContainer.style.cssText = `
-    position: relative !important;
-    flex-shrink: 0 !important;
-  `;
-  
-  // Screenshot button (no dropdown - goes directly to snip options)
-  const screenshotBtn = document.createElement('button');
-  screenshotBtn.className = 'screenshot-btn';
-  screenshotBtn.innerHTML = '📸 Screenshot';
-  screenshotBtn.style.cssText = `
-    background: linear-gradient(135deg, hsl(215 80% 40%), hsl(230 60% 60%)) !important;
-    color: white !important;
-    border: none !important;
-    border-radius: 6px !important;
-    padding: 8px 12px !important;
-    font-size: 12px !important;
-    cursor: pointer !important;
-    font-weight: 500 !important;
-    transition: all 0.2s ease !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 4px !important;
-    white-space: nowrap !important;
-    flex-shrink: 0 !important;
-  `;
-  screenshotBtn.tabIndex = 0;
-  screenshotBtn.title = 'Choose screenshot method';
-  
-  // Screenshot dropdown menu
-  const screenshotDropdown = document.createElement('div');
-  screenshotDropdown.style.cssText = `
-    position: absolute !important;
-    bottom: 100% !important;
-    left: 0 !important;
-    right: 0 !important;
-    background: white !important;
-    border: 1px solid hsl(var(--border, 214 32% 91%)) !important;
-    border-radius: 6px !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
-    z-index: 1000 !important;
-    display: none !important;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-    margin-bottom: 4px !important;
-  `;
-  
-  screenshotDropdown.innerHTML = `
-    <div style="padding: 8px 0;">
-      <button class="screenshot-option" data-type="area" style="width: 100%; text-align: left; padding: 8px 12px; border: none; background: none; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 8px;">
-        🎯 <span><strong>Area Capture</strong><br><small style="color: #666; font-size: 10px;">Select specific area</small></span>
-      </button>
-      <button class="screenshot-option" data-type="single" style="width: 100%; text-align: left; padding: 8px 12px; border: none; background: none; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 8px;">
-        📸 <span><strong>Single Screenshot</strong><br><small style="color: #666; font-size: 10px;">Capture current screen</small></span>
-      </button>
-      <button class="screenshot-option" data-type="session" style="width: 100%; text-align: left; padding: 8px 12px; border: none; background: none; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 8px;">
-        📋 <span><strong>Multi-Page Session</strong><br><small style="color: #666; font-size: 10px;">Capture multiple pages</small></span>
-      </button>
-    </div>
-  `;
-  
-  // Screenshot button click handler - goes directly to snip mode selector
-  screenshotBtn.addEventListener('click', () => {
-    showSnipModeSelector();
-  });
-  
-  // Keyboard navigation for screenshot button
-  screenshotBtn.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      showSnipModeSelector();
-    } else if (e.key === 'Tab' && e.shiftKey) {
-      // Shift+Tab moves back to add row button
-      e.preventDefault();
-      addRowBtn.focus();
-    } else if (e.key === 'Tab' && !e.shiftKey) {
       // Tab wraps to first field
       e.preventDefault();
       const firstCell = dataRow.children[0];
@@ -2038,10 +1952,7 @@ function createSingleEntryView(content) {
     }
   });
   
-  screenshotContainer.appendChild(screenshotBtn);
-  
   actionArea.appendChild(addRowBtn);
-  actionArea.appendChild(screenshotContainer);
   
   // Create container that holds table and action area side by side with no extra space
   const tableContainer = document.createElement('div');
