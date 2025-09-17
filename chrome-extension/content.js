@@ -3715,10 +3715,11 @@ function createSnipOverlay() {
     left: 0 !important;
     width: 100% !important;
     height: 100% !important;
-    background: rgba(0, 0, 0, 0.3) !important;
+    background: transparent !important;
     z-index: 2147483645 !important;
     cursor: crosshair !important;
     user-select: none !important;
+    pointer-events: auto !important;
   `;
   
   let isSelecting = false;
@@ -5557,6 +5558,9 @@ function enableSmartScrollDetection() {
   smartScrollEnabled = true;
   console.log('🔧 RunsheetPro Extension: Smart scroll detection enabled');
   
+  // Allow scrolling through the overlay by making specific elements scrollable
+  makeOverlayScrollable();
+  
   // Remove existing handler
   if (scrollKeyHandler) {
     document.removeEventListener('keydown', scrollKeyHandler);
@@ -5603,6 +5607,9 @@ function disableSmartScrollDetection() {
   
   // Remove mouse wheel detection
   disableMouseWheelScrollDetection();
+  
+  // Clean up scroll overlay modifications
+  cleanupScrollOverlay();
 }
 
 function findBestScrollableElement(startElement) {
@@ -5771,5 +5778,198 @@ function cleanupSnipMode() {
     snipSelection = null;
   }
   
+  // Clean up scroll overlay modifications
+  cleanupScrollOverlay();
+  
   console.log('🔧 RunsheetPro Extension: Snip mode cleaned up with smart scroll disabled');
+}
+
+// Make the overlay allow scrolling through to underlying elements
+function makeOverlayScrollable() {
+  if (!snipOverlay) return;
+  
+  // Add a visual grid to help with selection while keeping transparency
+  const gridOverlay = document.createElement('div');
+  gridOverlay.id = 'runsheetpro-grid-overlay';
+  gridOverlay.style.cssText = `
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    background-image: 
+      linear-gradient(rgba(59, 130, 246, 0.1) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(59, 130, 246, 0.1) 1px, transparent 1px) !important;
+    background-size: 50px 50px !important;
+    pointer-events: none !important;
+    z-index: 2147483644 !important;
+    opacity: 0.3 !important;
+  `;
+  
+  document.body.appendChild(gridOverlay);
+  
+  // Enable scroll passthrough for iframes and document viewers
+  document.addEventListener('wheel', handleScrollPassthrough, { passive: false });
+  document.addEventListener('keydown', handleKeyScrollPassthrough, true);
+}
+
+// Handle scroll events to pass through to underlying elements
+function handleScrollPassthrough(e) {
+  if (!isSnipMode || snipMode !== 'scroll') return;
+  
+  // Find the element under the cursor
+  const elementUnderCursor = document.elementFromPoint(e.clientX, e.clientY);
+  if (!elementUnderCursor) return;
+  
+  // Find scrollable parent
+  const scrollableElement = findBestScrollableElement(elementUnderCursor);
+  
+  if (scrollableElement && scrollableElement !== document.documentElement && scrollableElement !== document.body) {
+    // Temporarily allow pointer events on the scrollable element
+    const originalPointerEvents = scrollableElement.style.pointerEvents;
+    scrollableElement.style.pointerEvents = 'auto';
+    
+    // Focus the element for scroll events
+    if (scrollableElement.focus && typeof scrollableElement.focus === 'function') {
+      try {
+        scrollableElement.focus();
+      } catch (err) {
+        // Ignore focus errors
+      }
+    }
+    
+    // Restore pointer events after a short delay
+    setTimeout(() => {
+      scrollableElement.style.pointerEvents = originalPointerEvents;
+    }, 100);
+    
+    console.log('🔧 Enabling scroll for element:', scrollableElement);
+  }
+}
+
+// Handle keyboard scroll passthrough
+function handleKeyScrollPassthrough(e) {
+  if (!isSnipMode || snipMode !== 'scroll') return;
+  
+  const scrollKeys = ['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', 'Space'];
+  if (!scrollKeys.includes(e.key)) return;
+  
+  // Find focused element or element under cursor
+  const focusedElement = document.activeElement;
+  const scrollableElement = findBestScrollableElement(focusedElement);
+  
+  if (scrollableElement && isDocumentViewer(scrollableElement)) {
+    // Let the document viewer handle the scroll
+    console.log('🔧 Allowing keyboard scroll for document viewer:', scrollableElement);
+    // Don't prevent default - let it pass through
+    return;
+  }
+}
+
+// Clean up scroll overlay modifications
+function cleanupScrollOverlay() {
+  // Remove grid overlay
+  const gridOverlay = document.getElementById('runsheetpro-grid-overlay');
+  if (gridOverlay) {
+    gridOverlay.remove();
+  }
+  
+  // Remove event listeners
+  document.removeEventListener('wheel', handleScrollPassthrough);
+  document.removeEventListener('keydown', handleKeyScrollPassthrough, true);
+}
+
+// Make the overlay allow scrolling through to underlying elements
+function makeOverlayScrollable() {
+  if (!snipOverlay) return;
+  
+  // Add a visual grid to help with selection while keeping transparency
+  const gridOverlay = document.createElement('div');
+  gridOverlay.id = 'runsheetpro-grid-overlay';
+  gridOverlay.style.cssText = `
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    background-image: 
+      linear-gradient(rgba(59, 130, 246, 0.1) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(59, 130, 246, 0.1) 1px, transparent 1px) !important;
+    background-size: 50px 50px !important;
+    pointer-events: none !important;
+    z-index: 2147483644 !important;
+    opacity: 0.3 !important;
+  `;
+  
+  document.body.appendChild(gridOverlay);
+  
+  // Enable scroll passthrough for iframes and document viewers
+  document.addEventListener('wheel', handleScrollPassthrough, { passive: false });
+  document.addEventListener('keydown', handleKeyScrollPassthrough, true);
+}
+
+// Handle scroll events to pass through to underlying elements
+function handleScrollPassthrough(e) {
+  if (!isSnipMode || snipMode !== 'scroll') return;
+  
+  // Find the element under the cursor
+  const elementUnderCursor = document.elementFromPoint(e.clientX, e.clientY);
+  if (!elementUnderCursor) return;
+  
+  // Find scrollable parent
+  const scrollableElement = findBestScrollableElement(elementUnderCursor);
+  
+  if (scrollableElement && scrollableElement !== document.documentElement && scrollableElement !== document.body) {
+    // Temporarily allow pointer events on the scrollable element
+    const originalPointerEvents = scrollableElement.style.pointerEvents;
+    scrollableElement.style.pointerEvents = 'auto';
+    
+    // Focus the element for scroll events
+    if (scrollableElement.focus && typeof scrollableElement.focus === 'function') {
+      try {
+        scrollableElement.focus();
+      } catch (err) {
+        // Ignore focus errors
+      }
+    }
+    
+    // Restore pointer events after a short delay
+    setTimeout(() => {
+      scrollableElement.style.pointerEvents = originalPointerEvents;
+    }, 100);
+    
+    console.log('🔧 Enabling scroll for element:', scrollableElement);
+  }
+}
+
+// Handle keyboard scroll passthrough
+function handleKeyScrollPassthrough(e) {
+  if (!isSnipMode || snipMode !== 'scroll') return;
+  
+  const scrollKeys = ['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', 'Space'];
+  if (!scrollKeys.includes(e.key)) return;
+  
+  // Find focused element or element under cursor
+  const focusedElement = document.activeElement;
+  const scrollableElement = findBestScrollableElement(focusedElement);
+  
+  if (scrollableElement && isDocumentViewer(scrollableElement)) {
+    // Let the document viewer handle the scroll
+    console.log('🔧 Allowing keyboard scroll for document viewer:', scrollableElement);
+    // Don't prevent default - let it pass through
+    return;
+  }
+}
+
+// Clean up scroll overlay modifications
+function cleanupScrollOverlay() {
+  // Remove grid overlay
+  const gridOverlay = document.getElementById('runsheetpro-grid-overlay');
+  if (gridOverlay) {
+    gridOverlay.remove();
+  }
+  
+  // Remove event listeners
+  document.removeEventListener('wheel', handleScrollPassthrough);
+  document.removeEventListener('keydown', handleKeyScrollPassthrough, true);
 }
