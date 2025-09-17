@@ -9,7 +9,6 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle, AlertTriangle, Edit3, Save, X, RefreshCw, FileText, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { SubjectLandsQuickFill } from '@/components/SubjectLandsQuickFill';
 
 interface ExtractedField {
   key: string;
@@ -80,20 +79,6 @@ const EnhancedDataVerificationDialog: React.FC<EnhancedDataVerificationDialogPro
         : field
     ));
   }, []);
-
-  const handleSubjectLandsApply = useCallback((text: string, templateName: string) => {
-    const subjectLandsIndex = fields.findIndex(field => 
-      field.key.toLowerCase().includes('subject') && field.key.toLowerCase().includes('land')
-    );
-    
-    if (subjectLandsIndex !== -1) {
-      updateField(subjectLandsIndex, text);
-      toast({
-        title: "Subject Lands Applied",
-        description: `Template "${templateName}" has been applied to the Subject Lands field`
-      });
-    }
-  }, [fields, updateField, toast]);
 
   const handleConfirm = useCallback(() => {
     const finalData = fields.reduce((acc, field) => {
@@ -239,41 +224,33 @@ const EnhancedDataVerificationDialog: React.FC<EnhancedDataVerificationDialogPro
                     const originalIndex = fields.findIndex(f => f.key === field.key);
                     return (
                       <div key={field.key} className="space-y-2">
-                         <div className="flex items-center justify-between">
-                           <Label htmlFor={`empty-field-${originalIndex}`} className="text-sm font-medium">
-                             {field.key}
-                           </Label>
-                           <div className="flex items-center gap-2">
-                             {field.isEdited && <Badge variant="outline" className="text-xs text-blue-600">Added</Badge>}
-                             {(field.key.toLowerCase().includes('subject') && field.key.toLowerCase().includes('land')) && (
-                               <SubjectLandsQuickFill 
-                                 onApplyTemplate={handleSubjectLandsApply}
-                                 disabled={isLoading}
-                               />
-                             )}
-                           </div>
-                         </div>
-                         <Input
-                           id={`empty-field-${originalIndex}`}
-                           value={field.value}
-                           onChange={(e) => updateField(originalIndex, e.target.value)}
-                           placeholder={`Enter ${field.key.toLowerCase()}...`}
-                           className="bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800"
-                         />
-                       </div>
-                     );
-                   })}
-                 </div>
-                 <p className="text-xs text-orange-600 dark:text-orange-400 mt-2">
-                   These fields were not found in the document. You can fill them manually or leave them empty.
-                 </p>
-               </div>
-             )}
-           </div>
-         </ScrollArea>
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor={`empty-field-${originalIndex}`} className="text-sm font-medium">
+                            {field.key}
+                          </Label>
+                          {field.isEdited && <Badge variant="outline" className="text-xs text-blue-600">Added</Badge>}
+                        </div>
+                        <Input
+                          id={`empty-field-${originalIndex}`}
+                          value={field.value}
+                          onChange={(e) => updateField(originalIndex, e.target.value)}
+                          placeholder={`Enter ${field.key.toLowerCase()}...`}
+                          className="bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800"
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-orange-600 dark:text-orange-400 mt-2">
+                  These fields were not found in the document. You can fill them manually or leave them empty.
+                </p>
+              </div>
+            )}
+          </div>
+        </ScrollArea>
 
-         {/* Footer */}
-         <DialogFooter className="gap-2 flex-shrink-0 pt-4 border-t">
+        {/* Footer */}
+        <DialogFooter className="gap-2 flex-shrink-0 pt-4 border-t">
           <Button variant="outline" onClick={onClose}>
             <X className="h-4 w-4 mr-1" />
             Cancel

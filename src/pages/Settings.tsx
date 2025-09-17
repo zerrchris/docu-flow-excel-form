@@ -16,15 +16,13 @@ import {
   CreditCard,
   Crown,
   Users,
-  AlertTriangle,
-  FileText
+  AlertTriangle
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { useToast } from '@/hooks/use-toast';
 import LogoMark from '@/components/LogoMark';
 import AuthButton from '@/components/AuthButton';
-import { SubjectLandsManager } from '@/components/SubjectLandsManager';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 interface UserProfile {
@@ -410,22 +408,6 @@ const Settings: React.FC = () => {
                   </Button>
                 </>
               )}
-            </CardContent>
-          </Card>
-
-          {/* Subject Lands Templates */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Subject Lands Templates
-              </CardTitle>
-              <CardDescription>
-                Manage your predefined subject lands text for quick application during document analysis
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <SubjectLandsManager />
             </CardContent>
           </Card>
 
