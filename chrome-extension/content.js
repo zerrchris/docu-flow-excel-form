@@ -3894,6 +3894,13 @@ async function finishSnipping() {
     window.currentCapturedSnip = finalBlob;
     window.currentSnipFilename = `snip_session_${Date.now()}.png`;
     
+    // If we're in quickview mode, immediately link to the selected row
+    if (currentViewMode === 'full' && currentRowIndex !== undefined) {
+      await linkScreenshotToSpecificRow(currentRowIndex, finalBlob, window.currentSnipFilename);
+      cleanupSnipMode();
+      return;
+    }
+    
     // Update the Document File Name field in the UI
     const input = document.querySelector(`input[data-column="Document File Name"]`);
     if (input) {
