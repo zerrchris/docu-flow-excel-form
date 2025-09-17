@@ -2487,7 +2487,67 @@ function createFullRunsheetView(content) {
 
   table.appendChild(tbody);
   tableContainer.appendChild(table);
+  
+  // Add "Add Rows" button below the table
+  const addRowsContainer = document.createElement('div');
+  addRowsContainer.style.cssText = `
+    padding: 16px !important;
+    text-align: center !important;
+    border-top: 1px solid hsl(var(--border, 214 32% 91%)) !important;
+  `;
+  
+  const addRowsBtn = document.createElement('button');
+  addRowsBtn.innerHTML = '➕ Add 5 More Rows';
+  addRowsBtn.title = 'Add 5 empty rows to continue working';
+  addRowsBtn.style.cssText = `
+    background: hsl(var(--primary, 215 80% 40%)) !important;
+    color: white !important;
+    border: 1px solid hsl(var(--primary, 215 80% 40%)) !important;
+    padding: 8px 16px !important;
+    border-radius: 6px !important;
+    cursor: pointer !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    transition: all 0.2s ease !important;
+  `;
+  
+  // Hover effects
+  addRowsBtn.addEventListener('mouseenter', () => {
+    addRowsBtn.style.background = 'hsl(var(--primary, 215 80% 35%)) !important';
+  });
+  
+  addRowsBtn.addEventListener('mouseleave', () => {
+    addRowsBtn.style.background = 'hsl(var(--primary, 215 80% 40%)) !important';
+  });
+  
+  // Click handler to add more rows
+  addRowsBtn.addEventListener('click', async () => {
+    try {
+      // Add 5 empty rows to the active runsheet data
+      if (!activeRunsheet.data) activeRunsheet.data = [];
+      
+      for (let i = 0; i < 5; i++) {
+        activeRunsheet.data.push({}); // Add empty row
+      }
+      
+      // Refresh the quick view to show the new rows
+      const content = document.querySelector('#runsheetpro-runsheet-frame .frame-content');
+      if (content) {
+        content.innerHTML = '';
+        createFullRunsheetView(content);
+      }
+      
+      showNotification('✅ Added 5 new rows to continue working!', 'success');
+      
+    } catch (error) {
+      console.error('Error adding rows:', error);
+      showNotification('Failed to add rows: ' + error.message, 'error');
+    }
+  });
+  
+  addRowsContainer.appendChild(addRowsBtn);
   fullViewContainer.appendChild(tableContainer);
+  fullViewContainer.appendChild(addRowsContainer);
   content.appendChild(fullViewContainer);
 }
 
