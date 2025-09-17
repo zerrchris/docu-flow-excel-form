@@ -5343,9 +5343,6 @@ function showSnipPreview() {
     overflow: auto !important;
     background: #f8f9fa !important;
     position: relative !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
     padding: 20px !important;
   `;
 
