@@ -1,5 +1,25 @@
 // RunsheetPro Runsheet Assistant - Content Script
 
+// Suppress external script errors (jQuery, Bootstrap, etc.)
+const originalError = window.onerror;
+window.onerror = function(message, source, lineno, colno, error) {
+  // Suppress jQuery/Bootstrap syntax errors from external scripts
+  if (message && message.includes && (
+    message.includes('Syntax error, unrecognized expression') ||
+    message.includes('jquery') ||
+    message.includes('bootstrap')
+  )) {
+    console.warn('🔧 RunsheetPro Extension: Suppressed external script error');
+    return true; // Prevent default error handling
+  }
+  
+  // Call original error handler for other errors
+  if (originalError) {
+    return originalError.apply(this, arguments);
+  }
+  return false;
+};
+
 // IMMEDIATE TEST - This should appear in console if script loads
 console.log('🔧 RUNSHEETPRO EXTENSION LOADED 🔧');
 
@@ -957,7 +977,7 @@ function createRunsheetFrame() {
   let startHeight = 0;
   
   resizeHandle.addEventListener('mousedown', (e) => {
-    console.log('Resize handle mousedown');
+    console.log('🔧 Resize handle mousedown');
     isResizing = true;
     startY = e.clientY;
     startHeight = parseInt(window.getComputedStyle(runsheetFrame).height);
@@ -969,7 +989,6 @@ function createRunsheetFrame() {
   const handleMouseMove = (e) => {
     if (!isResizing) return;
     
-    console.log('Resizing frame');
     const deltaY = startY - e.clientY;
     const newHeight = Math.max(150, Math.min(600, startHeight + deltaY));
     
@@ -982,7 +1001,7 @@ function createRunsheetFrame() {
   
   const handleMouseUp = () => {
     if (isResizing) {
-      console.log('Resize complete');
+      console.log('🔧 Resize complete');
       isResizing = false;
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
