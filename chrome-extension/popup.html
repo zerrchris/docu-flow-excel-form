@@ -65,17 +65,19 @@
       border-color: #9ca3af;
     }
     .btn.primary {
-      background: #3b82f6;
-      color: #ffffff;
-      border-color: #3b82f6;
+      background: hsl(215 80% 40%);
+      color: hsl(210 40% 98%);
+      border-color: hsl(215 80% 40%);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
     .btn.primary:hover {
-      background: #2563eb;
-      border-color: #2563eb;
+      background: hsl(215 80% 35%);
+      border-color: hsl(215 80% 35%);
+      box-shadow: 0 10px 30px -10px hsl(215 80% 40% / 0.3);
     }
     .info-box {
-      background: #e8f4f8;
-      border: 1px solid #3498db;
+      background: hsl(215 80% 95%);
+      border: 1px solid hsl(215 80% 40%);
       border-radius: 6px;
       padding: 12px;
       margin-bottom: 16px;
@@ -83,10 +85,10 @@
     }
     .info-box p {
       margin: 4px 0;
-      color: #2c3e50;
+      color: hsl(222 47% 11%);
     }
     .info-box strong {
-      color: #2980b9;
+      color: hsl(215 80% 40%);
     }
   </style>
 </head>
