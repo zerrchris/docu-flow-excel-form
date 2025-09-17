@@ -1895,12 +1895,11 @@ function createSingleEntryView(content) {
   actionArea.style.cssText = `
     display: flex !important;
     gap: 8px !important;
-    padding: 0 8px !important;
+    padding: 8px !important;
     align-items: center !important;
     justify-content: flex-start !important;
     flex-shrink: 0 !important;
-    height: 100% !important;
-    min-height: 50px !important;
+    min-height: 32px !important;
   `;
   
   // Add Row button
