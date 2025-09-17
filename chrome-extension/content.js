@@ -1607,6 +1607,13 @@ function createSingleEntryView(content) {
       
       screenshotBtn.addEventListener('click', (e) => {
         e.stopPropagation();
+        
+        // Prevent clicking if already in snip mode
+        if (isSnipMode) {
+          e.preventDefault();
+          return;
+        }
+        
         // Check if this is a view snip button or screenshot button
         if (screenshotBtn.classList.contains('view-snip')) {
           showSnipPreview();
@@ -2739,7 +2746,12 @@ function setupFrameEventListeners() {
   // Screenshot button
   const screenshotBtn = document.getElementById('screenshot-btn');
   if (screenshotBtn) {
-    screenshotBtn.addEventListener('click', () => {
+    screenshotBtn.addEventListener('click', (e) => {
+      // Prevent clicking if already in snip mode
+      if (isSnipMode) {
+        e.preventDefault();
+        return;
+      }
       startSnipMode();
     });
   }
