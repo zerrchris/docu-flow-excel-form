@@ -4897,94 +4897,11 @@ async function analyzeCurrentScreenshot() {
 }
 
 // Function to view current screenshot
-// Removed duplicate viewCurrentScreenshot function - using unified showSnipPreview function
+// Function to view current screenshot - DEPRECATED
+// This function has been replaced by showSnipPreview() for consistency
 function deletedViewCurrentScreenshot() {
-  // This function has been replaced by showSnipPreview() for consistency
+  console.log('🔧 OLD FUNCTION CALLED - redirecting to showSnipPreview');
   showSnipPreview();
-  
-  // Create modal to view screenshot
-  const overlay = document.createElement('div');
-  overlay.style.cssText = `
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 100vw !important;
-    height: 100vh !important;
-    background: rgba(0, 0, 0, 0.8) !important;
-    z-index: 2147483647 !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-  `;
-  
-  const modal = document.createElement('div');
-  modal.style.cssText = `
-    background: white !important;
-    border-radius: 12px !important;
-    padding: 20px !important;
-    max-width: 90vw !important;
-    max-height: 90vh !important;
-    overflow: auto !important;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3) !important;
-  `;
-  
-  const img = document.createElement('img');
-  img.src = window.currentCapturedSnip;
-  img.style.cssText = `
-    max-width: 100% !important;
-    max-height: 70vh !important;
-    border: 1px solid #ddd !important;
-    border-radius: 8px !important;
-  `;
-  
-  const buttonContainer = document.createElement('div');
-  buttonContainer.style.cssText = `
-    display: flex !important;
-    gap: 12px !important;
-    justify-content: center !important;
-    margin-top: 20px !important;
-  `;
-  
-  const closeBtn = document.createElement('button');
-  closeBtn.textContent = 'Close';
-  closeBtn.style.cssText = `
-    padding: 8px 16px !important;
-    background: #6b7280 !important;
-    color: white !important;
-    border: none !important;
-    border-radius: 6px !important;
-    cursor: pointer !important;
-  `;
-  
-  const retakeBtn = document.createElement('button');
-  retakeBtn.textContent = '🔄 Retake Screenshot';
-  retakeBtn.style.cssText = `
-    padding: 8px 16px !important;
-    background: #f59e0b !important;
-    color: white !important;
-    border: none !important;
-    border-radius: 6px !important;
-    cursor: pointer !important;
-  `;
-  
-  closeBtn.addEventListener('click', () => overlay.remove());
-  retakeBtn.addEventListener('click', () => {
-    overlay.remove();
-    retakeScreenshot();
-  });
-  
-  // Close on overlay click
-  overlay.addEventListener('click', (e) => {
-    if (e.target === overlay) overlay.remove();
-  });
-  
-  buttonContainer.appendChild(closeBtn);
-  buttonContainer.appendChild(retakeBtn);
-  modal.appendChild(img);
-  modal.appendChild(buttonContainer);
-  overlay.appendChild(modal);
-  document.body.appendChild(overlay);
 }
 
 // Function to retake screenshot
@@ -5002,8 +4919,6 @@ function retakeScreenshot() {
   
   showNotification('Previous screenshot cleared. Take a new screenshot.', 'info');
 }
-
-// Removed duplicate viewCurrentScreenshot function - now using unified showSnipPreview function
 
 // Fill form fields with extracted data from AI analysis
 function fillFormWithExtractedData(extractedData) {
@@ -5191,28 +5106,37 @@ function updateTableWidth() {
 }
 
 function showSnipPreview() {
+  console.log('🔧 showSnipPreview called, currentRowIndex:', currentRowIndex);
+  
   if (!activeRunsheet || !activeRunsheet.data || currentRowIndex >= activeRunsheet.data.length) {
     showNotification('No snip data available', 'error');
     return;
   }
 
   const currentRow = activeRunsheet.data[currentRowIndex];
+  console.log('🔧 Current row data:', currentRow);
+  
   let snipUrl = null;
 
   // Check for stored screenshot URL first
   if (currentRow && currentRow.screenshot_url) {
     snipUrl = currentRow.screenshot_url;
+    console.log('🔧 Found screenshot_url:', snipUrl);
   }
   // Then check for current captured snip (blob format)
   else if (window.currentCapturedSnip) {
     // Convert blob to data URL for display
     snipUrl = window.currentCapturedSnip;
+    console.log('🔧 Found currentCapturedSnip:', typeof snipUrl);
   }
 
   if (!snipUrl) {
+    console.log('🔧 No snip URL found');
     showNotification('No linked snip found for this row', 'error');
     return;
   }
+
+  console.log('🔧 Creating document viewer for:', snipUrl);
 
   // Create modal overlay
   const modal = document.createElement('div');
@@ -5359,6 +5283,16 @@ function showSnipPreview() {
     user-select: none !important;
     transform-origin: center center !important;
   `;
+
+  // Add loading and error handling
+  img.onload = () => {
+    console.log('🔧 Image loaded successfully');
+  };
+  
+  img.onerror = () => {
+    console.error('🔧 Failed to load image:', snipUrl);
+    img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2Y3ZjdmNyIvPjx0ZXh0IHg9IjEwMCIgeT0iNTAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OTk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlIG5vdCBmb3VuZDwvdGV4dD48L3N2Zz4=';
+  };
 
   // Zoom functionality
   let currentZoom = 1;
