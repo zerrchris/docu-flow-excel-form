@@ -2658,23 +2658,33 @@ function setupFrameEventListeners() {
 // Check if there's unsaved data in single entry mode
 function hasUnsavedData() {
   if (currentViewMode !== 'single') return false;
-  
-  const dataRow = document.querySelector('.data-row');
-  if (!dataRow) return false;
-  
-  // Check if any textarea has content
-  const textareas = dataRow.querySelectorAll('textarea');
+
+  // Look for the editable single-entry row
+  const editableRow = document.querySelector('#runsheetpro-runsheet-frame .editable-row');
+
+  // If the editable row isn't found, fall back to any textareas inside the frame
+  const scope = editableRow || document.querySelector('#runsheetpro-runsheet-frame');
+  if (!scope) return false;
+
+  // Any non-empty textarea counts as unsaved data
+  const textareas = scope.querySelectorAll('textarea');
   for (const textarea of textareas) {
-    if (textarea.value.trim()) {
+    if (textarea.value && textarea.value.trim()) {
       return true;
     }
   }
-  
-  // Check if there's a linked screenshot that hasn't been added to sheet
-  if (currentScreenshotBlob && !screenshotAddedToSheet) {
+
+  // If a screenshot was captured but not yet added to the sheet, warn as well
+  if (window.currentCapturedSnip && !screenshotAddedToSheet) {
     return true;
   }
-  
+
+  // If Document File Name has a value but not yet added (rare in single view), treat as unsaved
+  const docInput = scope.querySelector('input[type="hidden"][data-column="Document File Name"]');
+  if (docInput && docInput.value && docInput.value.trim() && !screenshotAddedToSheet) {
+    return true;
+  }
+
   return false;
 }
 
