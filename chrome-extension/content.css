@@ -79,8 +79,7 @@
 
 /* Runsheet Table - Matching EditableSpreadsheet styling */
 .runsheet-table {
-  width: max-content !important; /* Allow table to expand beyond container */
-  min-width: 100% !important;
+  width: fit-content !important; /* Only as wide as content */
   border-collapse: separate !important;
   border-spacing: 0 !important;
   height: 100% !important;
@@ -90,8 +89,7 @@
 
 .table-row {
   display: flex !important;
-  width: max-content !important; /* Allow row to expand with content */
-  min-width: 100% !important;
+  width: fit-content !important; /* Only as wide as content */
   flex-shrink: 0 !important;
 }
 
