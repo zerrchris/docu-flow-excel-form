@@ -281,11 +281,16 @@ async function initializeExtensionWithStateRestore() {
       await checkAuth();
     }
     
-    // Create the UI
-    createRunsheetButton();
+    // Check if extension is hidden first
+    await checkHiddenState();
     
-    // If we have an active runsheet, show the frame
-    if (activeRunsheet && userSession) {
+    // Create the UI only if not hidden
+    if (!isExtensionHidden) {
+      createRunsheetButton();
+    }
+    
+    // If we have an active runsheet, show the frame (unless hidden)
+    if (activeRunsheet && userSession && !isExtensionHidden) {
       createRunsheetFrame();
       if (runsheetFrame) {
         runsheetFrame.style.display = 'block';

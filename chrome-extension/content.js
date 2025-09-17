@@ -40,6 +40,7 @@ let userSession = null;
 let currentViewMode = 'single'; // 'single' or 'full'
 let currentRowIndex = 0; // Track current row being edited
 let screenshotAddedToSheet = false; // Track if current screenshot has been added to sheet
+let isExtensionHidden = false; // Track if extension is hidden
 
 // Snip mode variables
 let isSnipMode = false;
@@ -112,7 +113,7 @@ function createRunsheetButton() {
     user-select: none !important;
   `;
   runsheetButton.innerHTML = '⚡';
-  runsheetButton.title = 'RunsheetPro Runsheet Assistant';
+  runsheetButton.title = 'RunsheetPro Runsheet Assistant - Click to activate';
   console.log('🔧 RunsheetPro Extension: Button HTML and styles set, about to add event listeners');
   
   // Hover effects
@@ -150,6 +151,12 @@ function createRunsheetButton() {
       }
     }
   });
+
+  // Add right-click context menu for hide/unhide
+  runsheetButton.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    showHideContextMenu(e);
+  });
   console.log('🔧 RunsheetPro Extension: All event listeners added, proceeding to DOM append');
   
   console.log('🔧 RunsheetPro Extension: About to append button to document.body');
@@ -177,6 +184,176 @@ function createRunsheetButton() {
     showSignInPopup();
   });
   document.body.appendChild(debugButton);
+}
+
+// Show hide/unhide context menu
+function showHideContextMenu(event) {
+  // Remove any existing context menu
+  const existingMenu = document.getElementById('runsheetpro-context-menu');
+  if (existingMenu) {
+    existingMenu.remove();
+  }
+
+  const contextMenu = document.createElement('div');
+  contextMenu.id = 'runsheetpro-context-menu';
+  contextMenu.style.cssText = `
+    position: fixed !important;
+    background: hsl(var(--background, 0 0% 100%)) !important;
+    border: 1px solid hsl(var(--border, 214 32% 91%)) !important;
+    border-radius: 6px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    z-index: 2147483647 !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    font-size: 14px !important;
+    color: hsl(var(--foreground, 222 47% 11%)) !important;
+    min-width: 160px !important;
+  `;
+
+  const hideOption = document.createElement('div');
+  hideOption.style.cssText = `
+    padding: 8px 12px !important;
+    cursor: pointer !important;
+    border-bottom: 1px solid hsl(var(--border, 214 32% 91%)) !important;
+  `;
+  hideOption.innerHTML = '🙈 Hide Extension';
+  hideOption.addEventListener('click', hideExtension);
+  hideOption.addEventListener('mouseenter', () => {
+    hideOption.style.background = 'hsl(var(--accent, 210 40% 96%))';
+  });
+  hideOption.addEventListener('mouseleave', () => {
+    hideOption.style.background = 'transparent';
+  });
+
+  const settingsOption = document.createElement('div');
+  settingsOption.style.cssText = `
+    padding: 8px 12px !important;
+    cursor: pointer !important;
+  `;
+  settingsOption.innerHTML = '⚙️ Extension Settings';
+  settingsOption.addEventListener('click', () => {
+    chrome.runtime.openOptionsPage();
+    contextMenu.remove();
+  });
+  settingsOption.addEventListener('mouseenter', () => {
+    settingsOption.style.background = 'hsl(var(--accent, 210 40% 96%))';
+  });
+  settingsOption.addEventListener('mouseleave', () => {
+    settingsOption.style.background = 'transparent';
+  });
+
+  contextMenu.appendChild(hideOption);
+  contextMenu.appendChild(settingsOption);
+
+  // Position the menu
+  const rect = runsheetButton.getBoundingClientRect();
+  contextMenu.style.left = (rect.left - 160) + 'px';
+  contextMenu.style.top = (rect.top - 60) + 'px';
+
+  document.body.appendChild(contextMenu);
+
+  // Close menu when clicking elsewhere
+  setTimeout(() => {
+    document.addEventListener('click', function closeMenu() {
+      contextMenu.remove();
+      document.removeEventListener('click', closeMenu);
+    });
+  }, 100);
+}
+
+// Hide extension but keep it logged in
+function hideExtension() {
+  isExtensionHidden = true;
+  
+  // Hide all extension UI elements
+  if (runsheetButton) {
+    runsheetButton.style.display = 'none';
+  }
+  if (runsheetFrame) {
+    runsheetFrame.style.display = 'none';
+  }
+  
+  // Create minimal restore button
+  createRestoreButton();
+  
+  // Save hidden state
+  chrome.storage.local.set({ extensionHidden: true });
+  
+  showNotification('Extension hidden. Double-click the small dot to restore.', 'info');
+}
+
+// Create small restore button
+function createRestoreButton() {
+  const restoreButton = document.createElement('div');
+  restoreButton.id = 'runsheetpro-restore-button';
+  restoreButton.style.cssText = `
+    position: fixed !important;
+    bottom: 20px !important;
+    right: 20px !important;
+    width: 20px !important;
+    height: 20px !important;
+    background: hsl(var(--primary, 215 80% 40%)) !important;
+    border-radius: 50% !important;
+    cursor: pointer !important;
+    z-index: 2147483646 !important;
+    opacity: 0.7 !important;
+    transition: all 0.2s ease !important;
+    border: 2px solid hsl(var(--background, 0 0% 100%)) !important;
+  `;
+  restoreButton.title = 'RunsheetPro - Double-click to restore';
+  
+  // Hover effect
+  restoreButton.addEventListener('mouseenter', () => {
+    restoreButton.style.opacity = '1';
+    restoreButton.style.transform = 'scale(1.2)';
+  });
+  
+  restoreButton.addEventListener('mouseleave', () => {
+    restoreButton.style.opacity = '0.7';
+    restoreButton.style.transform = 'scale(1)';
+  });
+  
+  // Double-click to restore
+  restoreButton.addEventListener('dblclick', restoreExtension);
+  
+  document.body.appendChild(restoreButton);
+}
+
+// Restore extension from hidden state
+function restoreExtension() {
+  isExtensionHidden = false;
+  
+  // Remove restore button
+  const restoreButton = document.getElementById('runsheetpro-restore-button');
+  if (restoreButton) {
+    restoreButton.remove();
+  }
+  
+  // Show main extension UI
+  if (runsheetButton) {
+    runsheetButton.style.display = 'flex';
+  }
+  
+  // Clear hidden state
+  chrome.storage.local.remove('extensionHidden');
+  
+  showNotification('Extension restored!', 'success');
+}
+
+// Check for hidden state on load
+async function checkHiddenState() {
+  try {
+    const result = await chrome.storage.local.get('extensionHidden');
+    if (result.extensionHidden) {
+      isExtensionHidden = true;
+      // Don't show main button, just show restore button
+      if (runsheetButton) {
+        runsheetButton.style.display = 'none';
+      }
+      createRestoreButton();
+    }
+  } catch (error) {
+    console.error('Error checking hidden state:', error);
+  }
 }
 
 // Show sign-in popup
@@ -3241,6 +3418,9 @@ async function init() {
   
   console.log('🔧 RunsheetPro Extension: Extension is enabled, continuing initialization');
   
+  // Check if extension is hidden first
+  await checkHiddenState();
+  
   // Use state restoration system if available
   if (typeof initializeExtensionWithStateRestore === 'function') {
     console.log('🔧 RunsheetPro Extension: Using advanced state restoration');
@@ -3248,9 +3428,11 @@ async function init() {
   } else {
     console.log('🔧 RunsheetPro Extension: Using basic initialization');
     
-    // Always create the runsheet button first
-    createRunsheetButton();
-    console.log('🔧 RunsheetPro Extension: Button creation attempted');
+    // Only create button if not hidden
+    if (!isExtensionHidden) {
+      createRunsheetButton();
+      console.log('🔧 RunsheetPro Extension: Button creation attempted');
+    }
     
     // Check authentication after button is created
     const isAuthenticated = await checkAuth();
