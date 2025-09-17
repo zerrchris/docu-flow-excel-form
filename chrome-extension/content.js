@@ -4815,8 +4815,11 @@ function updateScreenshotIndicator(hasScreenshot) {
     indicator.title = actuallyHasScreenshot ? 'Screenshot available for this row' : '';
   }
   
-  if (analyzeBtn) {
+  // Show analyze button in single entry mode when screenshot exists
+  if (analyzeBtn && currentViewMode === 'single') {
     analyzeBtn.style.display = actuallyHasScreenshot ? 'inline-block' : 'none';
+  } else if (analyzeBtn) {
+    analyzeBtn.style.display = 'none';
   }
   
   // Only show header buttons in single entry mode, not in quick view
