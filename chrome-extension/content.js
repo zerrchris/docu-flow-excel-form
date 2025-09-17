@@ -1446,7 +1446,7 @@ function createSingleEntryView(content) {
         }
         const currentRow = activeRunsheet.data[currentRowIndex];
         return currentRow && ((currentRow.screenshot_url && currentRow.screenshot_url.trim() !== '' && currentRow.screenshot_url !== 'N/A') || 
-                             (window.capturedSnip && window.capturedSnip.imageUrl));
+                             window.currentCapturedSnip);
       };
 
       // Function to switch between upload and document modes
@@ -4954,9 +4954,10 @@ function showSnipPreview() {
   if (currentRow && currentRow.screenshot_url) {
     snipUrl = currentRow.screenshot_url;
   }
-  // Then check for current captured snip
-  else if (window.capturedSnip && window.capturedSnip.imageUrl) {
-    snipUrl = window.capturedSnip.imageUrl;
+  // Then check for current captured snip (blob format)
+  else if (window.currentCapturedSnip) {
+    // Convert blob to data URL for display
+    snipUrl = window.currentCapturedSnip;
   }
 
   if (!snipUrl) {
