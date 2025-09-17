@@ -758,7 +758,7 @@ async function addRowToSheet() {
       
       // Mark screenshot as added to sheet if one was included
       if (screenshotUrl) {
-        window.screenshotAddedToSheet = true;
+        screenshotAddedToSheet = true;
       }
       
       // If a document was created, fire an event for the main app to refresh its document map
@@ -1047,7 +1047,6 @@ function createRunsheetFrame() {
       ${currentViewMode === 'single' ? '<button id="screenshot-btn" class="control-btn" style="background: green !important; color: white !important;">📷 Screenshot Options</button>' : ''}
       ${currentViewMode === 'single' ? '<button id="view-screenshot-btn" class="control-btn" style="background: blue !important; color: white !important; display: none;">👁️ View Screenshot</button>' : ''}
       ${currentViewMode === 'single' ? '<button id="retake-screenshot-btn" class="control-btn" style="background: orange !important; color: white !important; display: none;">🔄 Retake</button>' : ''}
-      ${currentViewMode === 'single' ? '<button id="analyze-screenshot-btn" class="control-btn" style="background: purple !important; color: white !important; display: none;">🔍 Analyze</button>' : ''}
       ${currentViewMode === 'single' ? '<button id="open-app-btn" class="control-btn">🚀 Open in App</button>' : ''}
       ${currentViewMode === 'single' ? '<button id="select-runsheet-btn" class="control-btn">📄 Select Sheet</button>' : ''}
       <button id="view-mode-btn" class="control-btn">${currentViewMode === 'single' ? '📋 Quick View' : '📝 Save & Close'}</button>
@@ -1608,13 +1607,6 @@ function createSingleEntryView(content) {
       
       screenshotBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        
-        // Prevent clicking if already in snip mode
-        if (isSnipMode) {
-          e.preventDefault();
-          return;
-        }
-        
         // Check if this is a view snip button or screenshot button
         if (screenshotBtn.classList.contains('view-snip')) {
           showSnipPreview();
@@ -2747,12 +2739,7 @@ function setupFrameEventListeners() {
   // Screenshot button
   const screenshotBtn = document.getElementById('screenshot-btn');
   if (screenshotBtn) {
-    screenshotBtn.addEventListener('click', (e) => {
-      // Prevent clicking if already in snip mode
-      if (isSnipMode) {
-        e.preventDefault();
-        return;
-      }
+    screenshotBtn.addEventListener('click', () => {
       startSnipMode();
     });
   }
@@ -2773,13 +2760,6 @@ function setupFrameEventListeners() {
     });
   }
   
-  // Analyze screenshot button
-  const analyzeScreenshotBtn = document.getElementById('analyze-screenshot-btn');
-  if (analyzeScreenshotBtn) {
-    analyzeScreenshotBtn.addEventListener('click', () => {
-      analyzeCurrentScreenshot();
-    });
-  }
   // Remove old row navigation event listeners (no longer needed)
   // Single entry view is for adding new data only
   
@@ -2839,48 +2819,26 @@ function hasUnsavedData() {
   const scope = editableRow || document.querySelector('#runsheetpro-runsheet-frame');
   if (!scope) return false;
 
-  // Check if we have meaningful data that hasn't been saved
-  let hasRealData = false;
-
-  // Check textareas for meaningful content (not just whitespace)
+  // Any non-empty textarea counts as unsaved data
   const textareas = scope.querySelectorAll('textarea');
   for (const textarea of textareas) {
-    const value = textarea.value && textarea.value.trim();
-    if (value) {
-      // Only consider it unsaved if it's meaningful content and not placeholder text
-      const isPlaceholder = textarea.placeholder && value === textarea.placeholder.trim();
-      if (!isPlaceholder) {
-        hasRealData = true;
-        break;
-      }
+    if (textarea.value && textarea.value.trim()) {
+      return true;
     }
   }
 
-  // Check input fields for meaningful content
-  const inputs = scope.querySelectorAll('input[type="text"], input:not([type])');
-  for (const input of inputs) {
-    const value = input.value && input.value.trim();
-    if (value) {
-      const isPlaceholder = input.placeholder && value === input.placeholder.trim();
-      if (!isPlaceholder) {
-        hasRealData = true;
-        break;
-      }
-    }
-  }
-
-  // If a screenshot was captured but not yet added to the sheet
-  if (window.currentCapturedSnip && !window.screenshotAddedToSheet) {
-    hasRealData = true;
-  }
-
-  // Only check Document File Name if we have other data or a screenshot
-  const docInput = scope.querySelector('input[type="hidden"][data-column="Document File Name"]');
-  if (docInput && docInput.value && docInput.value.trim() && !screenshotAddedToSheet && hasRealData) {
+  // If a screenshot was captured but not yet added to the sheet, warn as well
+  if (window.currentCapturedSnip && !screenshotAddedToSheet) {
     return true;
   }
 
-  return hasRealData;
+  // If Document File Name has a value but not yet added (rare in single view), treat as unsaved
+  const docInput = scope.querySelector('input[type="hidden"][data-column="Document File Name"]');
+  if (docInput && docInput.value && docInput.value.trim() && !screenshotAddedToSheet) {
+    return true;
+  }
+
+  return false;
 }
 
 // Show warning dialog for unsaved data
@@ -2953,50 +2911,14 @@ function showUnsavedDataWarning(action, callback) {
   
   // Event handlers
   document.getElementById('save-and-continue').addEventListener('click', async () => {
-    try {
-      // Add current data to sheet first
-      await addRowToSheet();
-      // Clear the screenshot flag to prevent dialog from reappearing
-      window.screenshotAddedToSheet = true;
-      // Clear any captured snip data
-      if (window.currentCapturedSnip) {
-        window.currentCapturedSnip = null;
-        window.currentSnipFilename = null;
-      }
-      // Remove dialog AFTER successful save
-      dialog.remove();
-      // Then proceed with the action
-      callback();
-    } catch (error) {
-      console.error('Error saving data:', error);
-      // Still remove dialog even if save fails
-      dialog.remove();
-      callback();
-    }
+    dialog.remove();
+    // Add current data to sheet first
+    await addRowToSheet();
+    // Then proceed with the action
+    callback();
   });
   
   document.getElementById('continue-without-saving').addEventListener('click', () => {
-    // Clear all form data and screenshot state
-    const inputs = document.querySelectorAll('#runsheetpro-runsheet-frame input, #runsheetpro-runsheet-frame textarea');
-    inputs.forEach(input => {
-      if (input.type !== 'hidden') {
-        input.value = '';
-      }
-    });
-    
-    // Clear screenshot state
-    window.screenshotAddedToSheet = true;
-    if (window.currentCapturedSnip) {
-      window.currentCapturedSnip = null;
-      window.currentSnipFilename = null;
-      updateScreenshotIndicator(false);
-    }
-    
-    // Clear saved form data
-    if (typeof chrome !== 'undefined' && chrome.storage) {
-      chrome.storage.local.remove(['extension_form_data']);
-    }
-    
     dialog.remove();
     callback();
   });
@@ -4136,11 +4058,6 @@ async function captureSelectedArea(left, top, width, height) {
           if (snipMode === 'navigate') {
             console.log('🔧 RunsheetPro Extension: Navigate mode - hiding crosshairs and showing nav panel');
             hideSnipModeForNavigation();
-            // Show the navigation panel again
-            const navPanel = document.getElementById('runsheetpro-nav-controls');
-            if (navPanel) {
-              navPanel.style.display = 'flex';
-            }
           }
           
           // Handle single mode - process with AI analysis if available
@@ -4383,7 +4300,7 @@ function createNavigationControlPanel() {
     border-radius: 4px !important;
     border: 1px solid #e5e7eb !important;
   `;
-  counter.textContent = `Snips captured: ${(snipMode === 'navigate' || snipMode === 'scroll') ? snipSession.captures.length : capturedSnips.length}`;
+  counter.textContent = `Snips captured: ${capturedSnips.length}`;
   
   // Snip Again button
   const snipAgainButton = document.createElement('button');
@@ -4453,29 +4370,19 @@ function createNavigationControlPanel() {
 
 // Resume snip mode after navigation
 function resumeSnipMode() {
-  console.log('🔧 RunsheetPro Extension: Resuming snip mode');
-  
   // Restore captured snips from session
   if (snipSession.active && snipSession.captures.length > 0) {
     capturedSnips = [...snipSession.captures];
-    console.log('🔧 RunsheetPro Extension: Restored', capturedSnips.length, 'captured snips for resume');
   }
   
-  // Set global snip mode flag
-  isSnipMode = true;
-  
-  // Always recreate the overlay on a new page since DOM elements don't persist
+  // Show the crosshairs overlay for selection
   if (snipOverlay) {
-    snipOverlay.remove();
-  }
-  createSnipOverlay();
-  
-  // Hide the navigation panel temporarily while snipping
-  const navPanel = document.getElementById('runsheetpro-nav-controls');
-  if (navPanel) {
-    navPanel.style.display = 'none';
+    snipOverlay.style.display = 'block';
+  } else {
+    createSnipOverlay();
   }
   
+  // Don't create a separate control panel - session persists with navigation panel
   showNotification('Ready for next snip! Drag to select area.', 'info');
 }
 
@@ -4933,18 +4840,13 @@ try {
 
 // Update screenshot indicator in header and control buttons
 function updateScreenshotIndicator(hasScreenshot) {
-  // If hasScreenshot is explicitly passed, use that value
-  // Otherwise, check for current captured snip or stored screenshot
-  let actuallyHasScreenshot;
+  // Check for current captured snip first, then check stored screenshot
+  const hasCapturedSnip = !!window.currentCapturedSnip;
+  const hasStoredScreenshot = activeRunsheet && activeRunsheet.data && activeRunsheet.data[currentRowIndex] && 
+    (activeRunsheet.data[currentRowIndex]['Document File Name'] || activeRunsheet.data[currentRowIndex]['screenshot_url']);
   
-  if (hasScreenshot !== undefined) {
-    actuallyHasScreenshot = hasScreenshot;
-  } else {
-    const hasCapturedSnip = !!window.currentCapturedSnip;
-    const hasStoredScreenshot = activeRunsheet && activeRunsheet.data && activeRunsheet.data[currentRowIndex] && 
-      (activeRunsheet.data[currentRowIndex]['Document File Name'] || activeRunsheet.data[currentRowIndex]['screenshot_url']);
-    actuallyHasScreenshot = hasCapturedSnip || hasStoredScreenshot;
-  }
+  // Only show screenshot-related buttons if we actually have a screenshot
+  const actuallyHasScreenshot = hasCapturedSnip || hasStoredScreenshot;
   
   const indicator = document.getElementById('screenshot-indicator');
   const analyzeBtn = document.getElementById('analyze-screenshot-btn');
@@ -4957,13 +4859,8 @@ function updateScreenshotIndicator(hasScreenshot) {
     indicator.title = actuallyHasScreenshot ? 'Screenshot available for this row' : '';
   }
   
-  // Analyze button should only show in single entry mode when there's a screenshot
   if (analyzeBtn) {
-    if (currentViewMode === 'single' && actuallyHasScreenshot) {
-      analyzeBtn.style.display = 'inline-block';
-    } else {
-      analyzeBtn.style.display = 'none';
-    }
+    analyzeBtn.style.display = actuallyHasScreenshot ? 'inline-block' : 'none';
   }
   
   // Only show header buttons in single entry mode, not in quick view
