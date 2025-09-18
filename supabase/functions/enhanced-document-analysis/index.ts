@@ -49,6 +49,12 @@ serve(async (req) => {
     }
 
     const { document_data, runsheet_id, document_name, extraction_preferences } = await req.json();
+    
+    console.log('📋 Extraction preferences received:', {
+      columns: extraction_preferences?.columns?.length || 0,
+      hasInstructions: !!extraction_preferences?.column_instructions,
+      instructionsKeys: extraction_preferences?.column_instructions ? Object.keys(extraction_preferences.column_instructions) : []
+    });
 
     // Comprehensive document format validation
     const validateDocumentData = (data: string): { isValid: boolean; error?: string; fileType?: string } => {
@@ -150,7 +156,11 @@ serve(async (req) => {
             content: `You are an expert document analyst specializing in real estate and legal documents. Analyze the provided document and extract structured data in JSON format.
 
 EXTRACTION REQUIREMENTS:
-${extraction_preferences?.columns ? `- Extract these specific fields: ${extraction_preferences.columns.join(', ')}` : '- Extract common document fields like dates, names, addresses, amounts, document types, etc.'}
+${extraction_preferences?.columns ? `- Extract these specific fields with their detailed instructions:
+${extraction_preferences.columns.map(col => {
+  const instruction = extraction_preferences?.column_instructions?.[col];
+  return instruction ? `  * ${col}: ${instruction}` : `  * ${col}: Extract this field value`;
+}).join('\n')}` : '- Extract common document fields like dates, names, addresses, amounts, document types, etc.'}
 
 CRITICAL FOCUS AREAS:
 - Mineral rights, mineral reservations, or mineral exceptions

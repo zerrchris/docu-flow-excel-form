@@ -158,7 +158,26 @@ const ImprovedDocumentAnalysis: React.FC<ImprovedDocumentAnalysisProps> = ({
       await new Promise(resolve => setTimeout(resolve, 500)); // Simulate validation
       updateStep('validation', 'completed', 'Document format validated');
 
-      // Step 3: AI Analysis
+      // Step 3: Get extraction preferences with column instructions
+      updateStep('ai-analysis', 'in-progress', 'Loading extraction preferences...');
+      
+      // Get user's extraction preferences including column instructions
+      const { data: extractionPrefs } = await supabase
+        .from('user_extraction_preferences')
+        .select('columns, column_instructions')
+        .eq('is_default', true)
+        .maybeSingle();
+
+      // Use extraction preferences if available, otherwise use available columns
+      const extractionColumns = extractionPrefs?.columns || availableColumns;
+      const columnInstructions = extractionPrefs?.column_instructions || {};
+
+      console.log('🔧 Using extraction preferences:', {
+        columns: extractionColumns,
+        instructions: columnInstructions
+      });
+
+      // Step 4: AI Analysis
       updateStep('ai-analysis', 'in-progress', 'AI is analyzing document content...');
       
       const { data: { session } } = await supabase.auth.getSession();
@@ -170,7 +189,8 @@ const ImprovedDocumentAnalysis: React.FC<ImprovedDocumentAnalysisProps> = ({
           runsheet_id: runsheetId,
           document_name: selectedFile.name,
           extraction_preferences: {
-            columns: availableColumns,
+            columns: extractionColumns,
+            column_instructions: columnInstructions,
             use_vision: useVision
           }
         }
