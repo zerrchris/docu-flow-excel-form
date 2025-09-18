@@ -5526,6 +5526,9 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   const analyzeDocumentAndPopulateRow = async (file: File, targetRowIndex: number, forceOverwrite: boolean = false) => {
     try {
       console.log('🔍 Starting document analysis for:', file.name, 'type:', file.type, 'size:', file.size);
+      console.log('🔍 Target row index:', targetRowIndex, 'Force overwrite:', forceOverwrite);
+      console.log('🔍 Current runsheet ID:', currentRunsheetId);
+      console.log('🔍 Available columns:', columns);
       
       // Check for empty or corrupted files
       if (file.size === 0) {
@@ -5973,10 +5976,22 @@ ${extractionFields}`
 
 
     } catch (error) {
-      console.error('Document analysis error:', error);
+      console.error('🔍 Document analysis error details:', {
+        error: error,
+        message: error?.message,
+        stack: error?.stack,
+        fileName: file?.name,
+        fileType: file?.type,
+        rowIndex: targetRowIndex,
+        runsheetId: currentRunsheetId
+      });
+      
+      // Show specific error message to user
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      
       toast({
         title: "Analysis failed",
-        description: "Failed to analyze document. Please try again.",
+        description: `Error: ${errorMessage}. Please check the console for more details.`,
         variant: "destructive",
       });
     }
