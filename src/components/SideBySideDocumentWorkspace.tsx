@@ -12,7 +12,7 @@ import { ArrowLeft, Sparkles, RotateCcw, FileText, Wand2, AlertTriangle, Setting
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import PDFViewerWithFallback from './PDFViewerWithFallback';
+
 import ReExtractDialog from './ReExtractDialog';
 import { ExtractionPreferencesService } from '@/services/extractionPreferences';
 import ColumnPreferencesDialog from './ColumnPreferencesDialog';
@@ -783,7 +783,7 @@ Return only the filename, nothing else.`,
                     </p>
                   )}
                 </div>
-                {documentRecord && !documentRecord.content_type?.includes('pdf') && (
+                {documentRecord && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -817,76 +817,70 @@ Return only the filename, nothing else.`,
                 </Card>
               ) : documentRecord ? (
                 <div className="h-full w-full">
-                  {documentRecord.content_type?.includes('pdf') ? (
-                    <PDFViewerWithFallback 
-                      file={null}
-                      previewUrl={DocumentService.getDocumentUrlSync(documentRecord.file_path)}
-                    />
-                      ) : (
-                      <div className="h-full w-full relative overflow-hidden">
-                        <div 
-                          className="h-full w-full overflow-auto scrollbar-thin scrollbar-thumb-muted-foreground/30 scrollbar-track-transparent"
-                          onWheel={(e) => {
-                            if (!imageFitToWidth) {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              
-                              const container = e.currentTarget;
-                              const img = container.querySelector('img');
-                              if (!img) return;
-                              
-                              // Calculate scaled dimensions and bounds
-                              const scaledWidth = img.naturalWidth * imageZoom;
-                              const scaledHeight = img.naturalHeight * imageZoom;
-                              const containerWidth = container.clientWidth;
-                              const containerHeight = container.clientHeight;
-                              
-                              // Only allow scroll if zoomed content is larger than container
-                              const canScrollX = scaledWidth > containerWidth;
-                              const canScrollY = scaledHeight > containerHeight;
-                              
-                              // For wheel events, handle zoom first
-                              if (e.ctrlKey || e.metaKey) {
-                                const delta = e.deltaY > 0 ? -0.1 : 0.1;
-                                setImageZoom(prev => Math.max(0.25, Math.min(4, prev + delta)));
-                                return;
-                              }
-                              
-                              // Handle pan/scroll with proper bounds
-                              if (canScrollY && Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-                                const newScrollTop = container.scrollTop + e.deltaY;
-                                const maxScrollTop = Math.max(0, scaledHeight - containerHeight);
-                                container.scrollTop = Math.max(0, Math.min(maxScrollTop, newScrollTop));
-                              }
-                              
-                              if (canScrollX && Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
-                                const newScrollLeft = container.scrollLeft + e.deltaX;
-                                const maxScrollLeft = Math.max(0, scaledWidth - containerWidth);
-                                container.scrollLeft = Math.max(0, Math.min(maxScrollLeft, newScrollLeft));
-                              }
-                            }
-                          }}
-                        >
-                          <img 
-                            src={DocumentService.getDocumentUrlSync(documentRecord.file_path)}
-                            alt={documentRecord.stored_filename}
-                            className={`transition-all duration-200 ease-out select-none ${
-                              imageFitToWidth ? 'w-full h-auto object-contain' : 'max-w-none object-contain cursor-zoom-in'
-                            }`}
-                            style={{ 
-                              minHeight: imageFitToWidth ? 'auto' : '100%',
-                              transformOrigin: 'center',
-                              transform: imageZoom !== 1 ? `scale(${imageZoom})` : 'none'
-                            }}
-                            onClick={() => {
-                              if (!imageFitToWidth) {
-                                setImageZoom(prev => prev === 1 ? 2 : prev === 2 ? 0.5 : 1);
-                              }
-                            }}
-                          />
-                        </div>
-                      </div>
-                  )}
+                  {/* Always use image viewer since PDFs are converted to images */}
+                  <div className="h-full w-full relative overflow-hidden">
+                    <div 
+                      className="h-full w-full overflow-auto scrollbar-thin scrollbar-thumb-muted-foreground/30 scrollbar-track-transparent"
+                      onWheel={(e) => {
+                        if (!imageFitToWidth) {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          
+                          const container = e.currentTarget;
+                          const img = container.querySelector('img');
+                          if (!img) return;
+                          
+                          // Calculate scaled dimensions and bounds
+                          const scaledWidth = img.naturalWidth * imageZoom;
+                          const scaledHeight = img.naturalHeight * imageZoom;
+                          const containerWidth = container.clientWidth;
+                          const containerHeight = container.clientHeight;
+                          
+                          // Only allow scroll if zoomed content is larger than container
+                          const canScrollX = scaledWidth > containerWidth;
+                          const canScrollY = scaledHeight > containerHeight;
+                          
+                          // For wheel events, handle zoom first
+                          if (e.ctrlKey || e.metaKey) {
+                            const delta = e.deltaY > 0 ? -0.1 : 0.1;
+                            setImageZoom(prev => Math.max(0.25, Math.min(4, prev + delta)));
+                            return;
+                          }
+                          
+                          // Handle pan/scroll with proper bounds
+                          if (canScrollY && Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+                            const newScrollTop = container.scrollTop + e.deltaY;
+                            const maxScrollTop = Math.max(0, scaledHeight - containerHeight);
+                            container.scrollTop = Math.max(0, Math.min(maxScrollTop, newScrollTop));
+                          }
+                          
+                          if (canScrollX && Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+                            const newScrollLeft = container.scrollLeft + e.deltaX;
+                            const maxScrollLeft = Math.max(0, scaledWidth - containerWidth);
+                            container.scrollLeft = Math.max(0, Math.min(maxScrollLeft, newScrollLeft));
+                          }
+                        }
+                      }}
+                    >
+                      <img 
+                        src={DocumentService.getDocumentUrlSync(documentRecord.file_path)}
+                        alt={documentRecord.stored_filename}
+                        className={`transition-all duration-200 ease-out select-none ${
+                          imageFitToWidth ? 'w-full h-auto object-contain' : 'max-w-none object-contain cursor-zoom-in'
+                        }`}
+                        style={{ 
+                          minHeight: imageFitToWidth ? 'auto' : '100%',
+                          transformOrigin: 'center',
+                          transform: imageZoom !== 1 ? `scale(${imageZoom})` : 'none'
+                        }}
+                        onClick={() => {
+                          if (!imageFitToWidth) {
+                            setImageZoom(prev => prev === 1 ? 2 : prev === 2 ? 0.5 : 1);
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <Card className="h-full flex items-center justify-center m-4">

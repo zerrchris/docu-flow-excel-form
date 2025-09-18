@@ -10,7 +10,7 @@ import { DocumentService } from '@/services/documentService';
 import { ExtractionPreferencesService } from '@/services/extractionPreferences';
 import { ColumnWidthPreferencesService } from '@/services/columnWidthPreferences';
 import { useActiveRunsheet } from '@/hooks/useActiveRunsheet';
-import PDFViewerWithFallback from './PDFViewerWithFallback';
+
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -46,7 +46,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
   const [documentRecord, setDocumentRecord] = useState<any | undefined>(undefined);
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
-  const [isPdf, setIsPdf] = useState(false);
+  
   const [fitToWidth, setFitToWidth] = useState(true); // Default to fit-to-width for images
   const [localRowData, setLocalRowData] = useState(rowData);
   const [editingColumn, setEditingColumn] = useState<string | null>(null);
@@ -132,7 +132,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
           const url = await DocumentService.getDocumentUrl(document.file_path);
           setDocumentUrl(url);
           setDocumentName(document.original_filename);
-          setIsPdf(document.content_type === 'application/pdf' || document.original_filename.toLowerCase().endsWith('.pdf'));
+          // PDFs are converted to images, so no special handling needed
         } else {
           setError(`No document found for row ${rowIndex}`);
         }
@@ -646,26 +646,23 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
         </div>
         
         <div className="flex items-center space-x-2">
-          {!isPdf && (
-            <>
-              <Button variant="outline" size="sm" onClick={handleZoomOut} disabled={isAnalyzing}>
-                <ZoomOut className="h-4 w-4" />
-              </Button>
-              <span className="text-sm font-medium">{Math.round(zoom * 100)}%</span>
-              <Button variant="outline" size="sm" onClick={handleZoomIn} disabled={isAnalyzing}>
-                <ZoomIn className="h-4 w-4" />
-              </Button>
-              <Button 
-                variant={fitToWidth ? "default" : "outline"} 
-                size="sm" 
-                onClick={() => setFitToWidth(!fitToWidth)}
-                disabled={isAnalyzing}
-                title="Fit to width"
-              >
-                Fit Width
-              </Button>
-            </>
-          )}
+          {/* Always show image controls since PDFs are converted to images */}
+          <Button variant="outline" size="sm" onClick={handleZoomOut} disabled={isAnalyzing}>
+            <ZoomOut className="h-4 w-4" />
+          </Button>
+          <span className="text-sm font-medium">{Math.round(zoom * 100)}%</span>
+          <Button variant="outline" size="sm" onClick={handleZoomIn} disabled={isAnalyzing}>
+            <ZoomIn className="h-4 w-4" />
+          </Button>
+          <Button 
+            variant={fitToWidth ? "default" : "outline"} 
+            size="sm" 
+            onClick={() => setFitToWidth(!fitToWidth)}
+            disabled={isAnalyzing}
+            title="Fit to width"
+          >
+            Fit Width
+          </Button>
           <Button variant="ghost" size="sm" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
@@ -687,8 +684,6 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                 <div className="flex items-center justify-center h-full text-muted-foreground">
                   {error || 'No document available'}
                 </div>
-              ) : isPdf ? (
-                <PDFViewerWithFallback file={null} previewUrl={documentUrl} />
               ) : (
                 <div className="h-full w-full relative overflow-hidden">
                   <div 
