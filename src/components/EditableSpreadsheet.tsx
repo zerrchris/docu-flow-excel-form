@@ -5736,31 +5736,30 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
           reader.readAsDataURL(combinedImage);
         });
 
-        // 5) Analyze with OpenAI
-        ({ data: analysisResult, error: functionError } = await supabase.functions.invoke('analyze-document', {
+        // 5) Analyze with enhanced document analysis
+        ({ data: analysisResult, error: functionError } = await supabase.functions.invoke('enhanced-document-analysis', {
           body: {
-            imageData: combinedImageData,
-            prompt: `Analyze this document and extract the following information.\n\nIMPORTANT INSTRUCTIONS:\n- "Instrument Number" should be the actual document number (like "2022-817"), NOT a date or time\n- "Book and Page" should be the book/page reference number\n- "Recording Date" should be the date when the document was recorded (may include time)\n- "Document Date" should be the date when the document was created/signed\n- Be very careful to distinguish between dates and document numbers\n\nReturn the data as a JSON object with the exact field names specified:\n\n${extractionFields}`
+            document_data: combinedImageData,
+            runsheet_id: currentRunsheetId,
+            document_name: file.name,
+            extraction_preferences: {
+              columns: extractionPrefs?.columns || columns.filter(col => col !== 'Document File Name'),
+              column_instructions: extractionPrefs?.column_instructions || {}
+            }
           }
         }));
       } else {
-        console.log('🔍 Non-PDF file detected - using OpenAI vision function');
-        console.log('🔍 Calling analyze-document edge function...');
-        ({ data: analysisResult, error: functionError } = await supabase.functions.invoke('analyze-document', {
+        console.log('🔍 Non-PDF file detected - using enhanced document analysis');
+        console.log('🔍 Calling enhanced-document-analysis edge function...');
+        ({ data: analysisResult, error: functionError } = await supabase.functions.invoke('enhanced-document-analysis', {
           body: {
-            imageData,
-            prompt: `Analyze this document and extract the following information.
-
-IMPORTANT INSTRUCTIONS:
-- "Instrument Number" should be the actual document number (like "2022-817"), NOT a date or time
-- "Book and Page" should be the book/page reference number
-- "Recording Date" should be the date when the document was recorded (may include time)
-- "Document Date" should be the date when the document was created/signed
-- Be very careful to distinguish between dates and document numbers
-
-Return the data as a JSON object with the exact field names specified:
-
-${extractionFields}`
+            document_data: imageData,
+            runsheet_id: currentRunsheetId,
+            document_name: file.name,
+            extraction_preferences: {
+              columns: extractionPrefs?.columns || columns.filter(col => col !== 'Document File Name'),
+              column_instructions: extractionPrefs?.column_instructions || {}
+            }
           }
         }));
       }
@@ -5770,37 +5769,29 @@ ${extractionFields}`
         throw new Error(functionError.message || 'Failed to analyze document');
       }
 
-      if (!analysisResult) {
-        console.error('🔍 No analysis result returned');
-        throw new Error('No analysis result returned from server');
+      if (!analysisResult?.success) {
+        throw new Error(analysisResult?.error || 'Analysis failed');
       }
 
-      console.log('🔍 Edge function response:', analysisResult);
-      const generatedText = analysisResult.generatedText || '';
-      
-      console.log('🔍 FULL AI response object:', analysisResult);
-      console.log('🔍 Generated text length:', generatedText.length);
-      console.log('🔍 Generated text content:', generatedText);
-      
-      console.log('🔍 Raw AI response:', generatedText);
-      
-      // Parse the JSON response from AI
-      let extractedData = {};
-      try {
-        extractedData = JSON.parse(generatedText);
-        console.log('🔍 Parsed extracted data:', extractedData);
-      } catch (e) {
-        console.log('🔍 JSON parsing failed, trying to extract JSON from text...');
-        // If JSON parsing fails, try to extract JSON from the text
-        const jsonMatch = generatedText.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          extractedData = JSON.parse(jsonMatch[0]);
-          console.log('🔍 Extracted data from regex match:', extractedData);
-        } else {
-          console.error('🔍 Could not find JSON in response:', generatedText);
-          throw new Error('Could not parse analysis results');
-        }
+      const analysis = analysisResult.analysis;
+      if (!analysis?.extracted_data) {
+        throw new Error('No data extracted from document');
       }
+
+      console.log('🔍 Analysis result:', analysis);
+
+      // Extract the data from the enhanced analysis response
+      const extractedData = analysis.extracted_data;
+      
+      // Convert any non-string values to strings
+      const processedData: Record<string, string> = {};
+      Object.keys(extractedData).forEach(key => {
+        if (extractedData[key] !== null && extractedData[key] !== undefined) {
+          processedData[key] = String(extractedData[key]);
+        }
+      });
+
+      console.log('🔍 Processed extracted data:', processedData);
 
       console.log('🔍 Target row index:', targetRowIndex);
       console.log('🔍 Current data before update:', data);
@@ -5848,13 +5839,13 @@ ${extractionFields}`
         return mapping;
       };
 
-      const keyMapping = createFlexibleMapping(extractedData, columns);
+      const keyMapping = createFlexibleMapping(processedData, columns);
       console.log('🔍 Generated key mapping:', keyMapping);
 
       // Map the extracted data to use column names as keys
       const mappedData: Record<string, string> = {};
       
-      Object.entries(extractedData).forEach(([key, value]) => {
+      Object.entries(processedData).forEach(([key, value]) => {
         const mappedKey = keyMapping[key];
         
         // Only include data for columns that actually exist and have a mapping
@@ -5863,10 +5854,10 @@ ${extractionFields}`
           let stringValue: string;
           if (typeof value === 'object' && value !== null) {
             // If it's an object with Name and Address properties (capitalized)
-            if (typeof value === 'object' && 'Name' in value && 'Address' in value) {
-              stringValue = `${value.Name}; ${value.Address}`;
-            } else if (typeof value === 'object' && 'name' in value && 'address' in value) {
-              stringValue = `${value.name}; ${value.address}`;
+            if (typeof value === 'object' && value && 'Name' in value && 'Address' in value) {
+              stringValue = `${(value as any).Name || ''}; ${(value as any).Address || ''}`;
+            } else if (typeof value === 'object' && value && 'name' in value && 'address' in value) {
+              stringValue = `${(value as any).name || ''}; ${(value as any).address || ''}`;
             } else {
               // For other objects, create a readable string without brackets
               const objStr = JSON.stringify(value);
