@@ -155,6 +155,14 @@ serve(async (req) => {
             role: "system",
             content: `You are an expert document analyst specializing in real estate and legal documents. Analyze the provided document and extract structured data in JSON format.
 
+⚠️ CRITICAL ANTI-HALLUCINATION RULES:
+- NEVER make up, assume, or infer information that is not clearly visible in the document
+- If a field is not present or not clearly readable, mark it as null or empty string
+- If text is unclear or partially obscured, set confidence score to 0.3 or lower
+- ONLY extract information that you can see with high certainty
+- When unsure, err on the side of caution and leave fields empty
+- Document any uncertainty in processing_notes
+
 EXTRACTION REQUIREMENTS:
 ${extraction_preferences?.columns ? `- Extract these specific fields with their detailed instructions:
 ${extraction_preferences.columns.map(col => {
@@ -176,24 +184,25 @@ ${globalInstructions ? `\nGlobal Admin Instructions: ${globalInstructions}\n` : 
 RESPONSE FORMAT: Return ONLY a valid JSON object with:
 {
   "extracted_data": {
-    "field_name": "extracted_value",
+    "field_name": "extracted_value_or_null_if_not_found",
     // ... more fields
   },
   "confidence_scores": {
     "field_name": 0.95,
-    // confidence values from 0-1 for each field
+    // confidence values from 0-1 for each field (0.3 or lower if uncertain)
   },
   "document_type": "detected document type",
   "extraction_summary": "brief summary of what was extracted",
-  "processing_notes": "any notes about extraction quality, mineral rights found, or issues"
+  "processing_notes": "any notes about extraction quality, mineral rights found, issues, or fields that were unclear/not found"
 }
 
-IMPORTANT: 
-- Only include fields that exist in the document
+CRITICAL RULES: 
+- Only include fields that CLEARLY exist and are READABLE in the document
 - Use exact field names from the requirements
-- Confidence scores should reflect text clarity and extraction certainty
-- Be thorough with mineral rights detection
-- Include document type classification`
+- Set confidence scores below 0.3 for any uncertain extractions
+- Be thorough with mineral rights detection but only if actually present
+- Include document type classification
+- If information is not visible or clear, do NOT guess or make assumptions`
           },
           {
             role: "user",
