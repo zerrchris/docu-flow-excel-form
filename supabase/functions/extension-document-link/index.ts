@@ -133,35 +133,15 @@ serve(async (req) => {
     // Determine content type from validation
     const contentType = validation.mimeType || 'image/png';
 
-    // Generate unique filename and ensure extension matches content type
+    // Generate unique filename without extension - we rely on content_type in database
     const timestamp = Date.now();
-    const extForType = (mime: string): string => {
-      const map: Record<string, string> = {
-        'image/jpeg': 'jpg',
-        'image/jpg': 'jpg',
-        'image/png': 'png',
-        'image/webp': 'webp',
-        'image/gif': 'gif',
-        'image/bmp': 'bmp',
-        'image/tiff': 'tiff',
-        'application/pdf': 'pdf',
-        'text/plain': 'txt'
-      };
-      return map[mime] || 'bin';
+    const removeExtension = (name: string): string => {
+      return name.replace(/\.[^./]+$/, '');
     };
 
-    const ensureExt = (name: string, desired: string): string => {
-      const lower = name.toLowerCase();
-      if (lower.endsWith(`.${desired}`)) return name;
-      if (/\.[^./]+$/.test(name)) {
-        return name.replace(/\.[^./]+$/, `.${desired}`);
-      }
-      return `${name}.${desired}`;
-    };
-
-    const baseProvidedName = filename || 'document.png';
-    const adjustedName = ensureExt(baseProvidedName, extForType(contentType));
-    const uniqueFilename = `extension_capture_${timestamp}_${adjustedName}`;
+    const baseProvidedName = filename || 'document';
+    const cleanName = removeExtension(baseProvidedName);
+    const uniqueFilename = `extension_capture_${timestamp}_${cleanName}`;
     const storagePath = `${user.id}/captures/${uniqueFilename}`;
 
     // Upload to Supabase Storage with proper content type
