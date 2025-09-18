@@ -108,6 +108,35 @@ serve(async (req) => {
       // Use original filename exactly as uploaded
       storedFilename = originalFilename;
     }
+
+    // Ensure filename extension matches actual content type
+    const extForType = (mime: string): string | null => {
+      const map: Record<string, string> = {
+        'image/jpeg': 'jpg',
+        'image/jpg': 'jpg',
+        'image/png': 'png',
+        'image/webp': 'webp',
+        'image/gif': 'gif',
+        'image/bmp': 'bmp',
+        'image/tiff': 'tiff',
+        'application/pdf': 'pdf',
+      };
+      return map[mime] || null;
+    };
+
+    const desiredExt = extForType(file.type);
+    if (desiredExt) {
+      const lower = storedFilename.toLowerCase();
+      if (!lower.endsWith(`.${desiredExt}`)) {
+        // Replace existing extension if present; otherwise append
+        if (/\.[^./]+$/.test(storedFilename)) {
+          storedFilename = storedFilename.replace(/\.[^./]+$/, `.${desiredExt}`);
+        } else {
+          storedFilename = `${storedFilename}.${desiredExt}`;
+        }
+      }
+    }
+
     const filePath = `${user.id}/${runsheetId}/${storedFilename}`;
 
     console.log(`Generated filename: ${storedFilename}, path: ${filePath}`);
