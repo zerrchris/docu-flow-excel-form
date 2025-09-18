@@ -128,6 +128,74 @@ export type Database = {
         }
         Relationships: []
       }
+      document_extraction_metadata: {
+        Row: {
+          bbox_height: number | null
+          bbox_width: number | null
+          bbox_x1: number | null
+          bbox_x2: number | null
+          bbox_y1: number | null
+          bbox_y2: number | null
+          confidence_score: number | null
+          created_at: string
+          extracted_value: string | null
+          extraction_method: string | null
+          field_name: string
+          id: string
+          page_number: number
+          row_index: number
+          runsheet_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bbox_height?: number | null
+          bbox_width?: number | null
+          bbox_x1?: number | null
+          bbox_x2?: number | null
+          bbox_y1?: number | null
+          bbox_y2?: number | null
+          confidence_score?: number | null
+          created_at?: string
+          extracted_value?: string | null
+          extraction_method?: string | null
+          field_name: string
+          id?: string
+          page_number?: number
+          row_index: number
+          runsheet_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bbox_height?: number | null
+          bbox_width?: number | null
+          bbox_x1?: number | null
+          bbox_x2?: number | null
+          bbox_y1?: number | null
+          bbox_y2?: number | null
+          confidence_score?: number | null
+          created_at?: string
+          extracted_value?: string | null
+          extraction_method?: string | null
+          field_name?: string
+          id?: string
+          page_number?: number
+          row_index?: number
+          runsheet_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_extraction_metadata_runsheet_id_fkey"
+            columns: ["runsheet_id"]
+            isOneToOne: false
+            referencedRelation: "runsheets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_ocr_data: {
         Row: {
           confidence_score: number | null
@@ -383,6 +451,39 @@ export type Database = {
           data?: Json
           id?: string
           name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      subject_lands_templates: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_default: boolean
+          name: string
+          subject_lands_text: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_default?: boolean
+          name: string
+          subject_lands_text: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_default?: boolean
+          name?: string
+          subject_lands_text?: string
           updated_at?: string
           user_id?: string
         }
