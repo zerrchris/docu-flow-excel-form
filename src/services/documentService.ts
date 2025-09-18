@@ -313,11 +313,48 @@ export class DocumentService {
     useSmartNaming?: boolean
   ): Promise<{ success: boolean; document?: DocumentRecord; error?: string }> {
     try {
+      // Convert PDF to image if needed
+      let processedFile = file;
+      if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+        try {
+          const { convertPDFToImages } = await import('@/utils/pdfToImage');
+          const { createFileFromBlob } = await import('@/utils/pdfToImage');
+          const { combineImages } = await import('@/utils/imageCombiner');
+          
+          console.log('🔧 PDF detected in upload, converting to image:', file.name);
+          
+          // Convert PDF to high-resolution images
+          const pdfPages = await convertPDFToImages(file, 4);
+          
+          if (pdfPages.length > 0) {
+            // Convert all pages to image files
+            const originalName = file.name.replace(/\.pdf$/i, '');
+            const imageFiles: File[] = pdfPages.map((p, idx) => 
+              createFileFromBlob(p.blob, `${originalName}_p${idx + 1}.png`)
+            );
+
+            // Combine into a single tall image for consistent processing
+            const { file: combinedImage } = await combineImages(imageFiles, {
+              type: 'vertical',
+              maxWidth: 2000,
+              quality: 0.95,
+              filename: `${originalName}.jpg` // Preserve original PDF name but as JPG
+            });
+
+            processedFile = combinedImage;
+            console.log('🔧 PDF converted to combined image:', processedFile.name, 'Size:', processedFile.size);
+          }
+        } catch (pdfError) {
+          console.error('🔧 PDF conversion failed, uploading original file:', pdfError);
+          // Continue with original file if conversion fails
+        }
+      }
+
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', processedFile);
       formData.append('runsheetId', runsheetId);
       formData.append('rowIndex', rowIndex.toString());
-      formData.append('originalFilename', file.name);
+      formData.append('originalFilename', file.name); // Keep original filename for reference
       formData.append('useSmartNaming', useSmartNaming ? 'true' : 'false');
 
       // Get auth token for the request
