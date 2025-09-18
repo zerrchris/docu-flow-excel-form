@@ -354,7 +354,8 @@ export class DocumentService {
       formData.append('file', processedFile);
       formData.append('runsheetId', runsheetId);
       formData.append('rowIndex', rowIndex.toString());
-      formData.append('originalFilename', file.name); // Keep original filename for reference
+      // Use the processed file's name if it was converted, otherwise use original
+      formData.append('originalFilename', processedFile.name); 
       formData.append('useSmartNaming', useSmartNaming ? 'true' : 'false');
 
       // Get auth token for the request
