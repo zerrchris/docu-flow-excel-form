@@ -180,7 +180,7 @@ serve(async (req) => {
       stored_filename: storedFilename,
       file_path: filePath,
       file_size: file.size,
-      content_type: file.type,
+      content_type: file.type, // Use the actual file content type (e.g., image/jpeg for converted PDFs)
     };
 
     let documentResult;
