@@ -8107,6 +8107,24 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
           }}
           currentData={data}
         />
+
+        {/* Add CSS to disable interactions when batch dialog is open */}
+        {showBatchAnalysisDialog && (
+          <style>{`
+            .table-container button,
+            .table-container input,
+            .table-container select,
+            .table-container textarea,
+            .table-container [role="button"] {
+              pointer-events: none !important;
+            }
+            /* Keep scrolling enabled */
+            .table-container {
+              pointer-events: auto !important;
+              overflow: auto !important;
+            }
+          `}</style>
+        )}
         
         {/* Batch File Rename Dialog */}
         <BatchFileRenameDialog
