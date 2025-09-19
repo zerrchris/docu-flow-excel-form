@@ -783,13 +783,9 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
 
             // Set this as the active runsheet immediately
             setCurrentRunsheet(newRunsheet.id);
-            setActiveRunsheet({
-              id: newRunsheet.id,
-              name: newRunsheet.name,
-              data: newData,
-              columns: newColumns,
-              columnInstructions: instructions
-            });
+            
+            // The useActiveRunsheet hook will automatically load the data when the ID changes
+            // Don't manually set the spreadsheet state here as it conflicts with the hook
             
             console.log('✅ New runsheet created and set as active:', newRunsheet.id);
             
