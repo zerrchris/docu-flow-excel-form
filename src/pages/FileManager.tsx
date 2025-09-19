@@ -334,32 +334,46 @@ export const FileManager: React.FC = () => {
       if (!user) throw new Error('User not authenticated');
 
       if (currentView === 'runsheets') {
-        // Delete runsheets and their documents
-        const runsheetsToDelete = Array.from(selectedRunsheetIds)
-          .map(id => runsheets.find(r => r.id === id))
-          .filter(Boolean) as Runsheet[];
-
-        for (const runsheet of runsheetsToDelete) {
-          // Delete all associated documents first
-          await DocumentService.deleteDocumentsForRunsheet(runsheet.id);
+        // Optimize bulk runsheet deletion with batch operations
+        const runsheetIdsToDelete = Array.from(selectedRunsheetIds);
+        
+        if (runsheetIdsToDelete.length === 0) return;
+        
+        console.log(`🗑️ Starting bulk deletion of ${runsheetIdsToDelete.length} runsheets`);
+        
+        // Step 1: Batch delete all documents for these runsheets
+        const { error: docsError } = await supabase
+          .from('documents')
+          .delete()
+          .in('runsheet_id', runsheetIdsToDelete);
           
-          // Delete the runsheet
-          const { error } = await supabase
-            .from('runsheets')
-            .delete()
-            .eq('id', runsheet.id);
-
-          if (error) throw error;
-
-          // Clear active runsheet if it's being deleted
-          if (activeRunsheet && activeRunsheet.id === runsheet.id) {
-            clearActiveRunsheet();
-          }
+        if (docsError) {
+          console.error('Error deleting documents in bulk:', docsError);
+          throw docsError;
         }
+        
+        // Step 2: Batch delete all runsheets
+        const { error: runsheetsError } = await supabase
+          .from('runsheets')
+          .delete()
+          .in('id', runsheetIdsToDelete)
+          .eq('user_id', user.id); // Security: only delete user's own runsheets
+          
+        if (runsheetsError) {
+          console.error('Error deleting runsheets in bulk:', runsheetsError);
+          throw runsheetsError;
+        }
+        
+        // Step 3: Clear active runsheet if it's being deleted
+        if (activeRunsheet && runsheetIdsToDelete.includes(activeRunsheet.id)) {
+          clearActiveRunsheet();
+        }
+        
+        console.log(`✅ Successfully deleted ${runsheetIdsToDelete.length} runsheets in bulk`);
 
         toast({
           title: "Bulk Delete Successful",
-          description: `Successfully deleted ${runsheetsToDelete.length} runsheet(s) and their documents.`,
+          description: `Successfully deleted ${runsheetIdsToDelete.length} runsheet(s) and their documents.`,
         });
       } else {
         // Delete files
@@ -379,24 +393,32 @@ export const FileManager: React.FC = () => {
           return;
         }
 
-        for (const file of filesToDelete) {
-          // Delete from database
-          const { error: dbError } = await supabase
-            .from('documents')
-            .delete()
-            .eq('id', file.id);
+        const fileIds = filesToDelete.map(f => f.id);
+        const filePaths = filesToDelete.map(f => f.fullPath);
+        
+        console.log(`🗑️ Starting bulk deletion of ${filesToDelete.length} files`);
 
-          if (dbError) throw dbError;
+        // Batch delete from database
+        const { error: dbError } = await supabase
+          .from('documents')
+          .delete()
+          .in('id', fileIds);
 
-          // Delete from storage
+        if (dbError) throw dbError;
+
+        // Batch delete from storage
+        if (filePaths.length > 0) {
           const { error: storageError } = await supabase.storage
             .from('documents')
-            .remove([file.fullPath]);
+            .remove(filePaths);
 
           if (storageError) {
-            console.warn('Storage deletion failed for:', file.fullPath, storageError);
+            console.warn('Some storage deletions failed:', storageError);
+            // Don't throw - database cleanup succeeded which is most important
           }
         }
+        
+        console.log(`✅ Successfully deleted ${filesToDelete.length} files in bulk`);
 
         toast({
           title: "Bulk Delete Successful",
