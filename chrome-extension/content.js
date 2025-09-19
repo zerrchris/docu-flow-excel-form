@@ -3522,8 +3522,8 @@ function showSnipModeSelector(skipOverwriteCheck = true) {
   });
 }
 
-// Show runsheet selector modal
-async function showRunsheetSelector() {
+// Show runsheet selector modal (alternate implementation)
+async function showRunsheetSelectorAlt() {
   // Remove any existing selector
   const existingSelector = document.getElementById('runsheetpro-runsheet-selector');
   if (existingSelector) {

@@ -73,7 +73,16 @@ const DocumentLinker: React.FC<DocumentLinkerProps> = ({
       }
     } catch (err) {
       console.warn('🔧 DocumentLinker: showPicker/click failed, retrying with click()', err);
-      try { input.click(); } catch {}
+      try { 
+        input.click(); 
+      } catch (retryErr) {
+        console.error('🔧 DocumentLinker: file picker failed completely', retryErr);
+        toast({
+          title: "File picker error",
+          description: "Could not open file picker. Please try again.",
+          variant: "destructive",
+        });
+      }
     }
   }, []);
 

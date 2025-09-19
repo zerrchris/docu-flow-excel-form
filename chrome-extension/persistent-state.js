@@ -331,7 +331,9 @@ async function initializeExtensionWithStateRestore() {
     } else {
       console.log('🔧 RunsheetPro Extension: No active snip session to restore');
     }
-    
+  } catch (error) {
+    console.error('🔧 RunsheetPro Extension: Error during initialization with state restore:', error);
+  }
 }
 
 // Ask user about continuing snip session on different domain
