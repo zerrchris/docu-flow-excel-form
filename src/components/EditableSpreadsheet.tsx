@@ -6535,7 +6535,7 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
                                setNewRunsheetName('');
                                
                                // Set a flag to prevent loading any old runsheet data
-                               sessionStorage.setItem('creating_new_runsheet', 'true');
+                               sessionStorage.setItem('creating_new_runsheet', Date.now().toString());
                                sessionStorage.setItem('new_runsheet_name', finalName);
                                
                                // Navigate to a clean runsheet URL without any parameters

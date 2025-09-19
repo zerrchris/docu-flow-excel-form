@@ -643,7 +643,9 @@ const DocumentProcessor: React.FC = () => {
     }
     
     // Load specific runsheet if ID is provided, no action is specified, and we're not creating a new runsheet
-    if (runsheetId && !loadedRunsheetRef.current && !action && sessionStorage.getItem('creating_new_runsheet') !== 'true') {
+    const creatingFlag = sessionStorage.getItem('creating_new_runsheet');
+    const creatingRecent = !!creatingFlag && (creatingFlag === 'true' || (Date.now() - (parseInt(creatingFlag) || 0) < 5000));
+    if (runsheetId && !loadedRunsheetRef.current && !action && !creatingRecent) {
       console.log('Loading runsheet from URL parameter:', runsheetId);
       loadedRunsheetRef.current = runsheetId;
       
@@ -2539,10 +2541,14 @@ Image: [base64 image data]`;
               missingColumns={highlightMissingColumns ? missingColumns : []}
               initialRunsheetName={location.state?.runsheet?.name}
               initialRunsheetId={
-                // Don't load old runsheet ID if we're creating a new one
-                sessionStorage.getItem('creating_new_runsheet') === 'true' 
-                  ? null 
-                  : (location.state?.runsheetId || searchParams.get('id') || searchParams.get('runsheet'))
+                // Don't load old runsheet ID if we're creating a new runsheet (recent flag)
+                (() => {
+                  const creatingFlag = sessionStorage.getItem('creating_new_runsheet');
+                  const creatingRecent = !!creatingFlag && (creatingFlag === 'true' || (Date.now() - (parseInt(creatingFlag) || 0) < 5000));
+                  return creatingRecent
+                    ? null
+                    : (location.state?.runsheetId || searchParams.get('id') || searchParams.get('runsheet'));
+                })()
               }
               onShowMultipleUpload={() => setShowMultipleFileUpload(true)}
               onDocumentMapChange={handleDocumentMapChange}

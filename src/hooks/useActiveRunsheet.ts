@@ -65,7 +65,7 @@ export const useActiveRunsheet = () => {
       const creatingNew = sessionStorage.getItem('creating_new_runsheet');
       if (creatingNew) {
         const createdTime = parseInt(creatingNew);
-        if (Date.now() - createdTime < 3000) { // 3 seconds
+        if (creatingNew === 'true' || (!isNaN(createdTime) && Date.now() - createdTime < 5000)) { // treat 'true' or recent timestamp as creating
           console.log('🚫 Skipping localStorage load - new runsheet being created');
           return;
         } else {
