@@ -263,13 +263,6 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
           ) : (
             <>
               <div className="space-y-4">
-                <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
-                  <p className="text-sm text-blue-800">
-                    <strong>Safe Mode:</strong> Only analyzing {results.length} empty row{results.length !== 1 ? 's' : ''} with documents. 
-                    Rows with existing data are automatically skipped to prevent overwriting your work.
-                  </p>
-                </div>
-                
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">
