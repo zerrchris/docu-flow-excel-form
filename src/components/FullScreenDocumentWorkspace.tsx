@@ -467,14 +467,14 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
         setLocalRowData(updatedData);
         onUpdateRow(rowIndex, updatedData);
         
-        // Auto-save to runsheet state
-        if (activeRunsheet) {
-          const updatedRunsheetData = [...(activeRunsheet.data || [])];
-          updatedRunsheetData[rowIndex] = updatedData;
-          
-          // Update active runsheet with new data - database-first approach will handle persistence
-          setCurrentRunsheet(activeRunsheet.id); // Trigger refresh
-        }
+        // Force immediate save to prevent data loss
+        window.dispatchEvent(new CustomEvent('forceSaveCurrentRunsheet', {
+          detail: { 
+            rowIndex, 
+            extractedData: updatedData,
+            source: 'document-analysis'
+          }
+        }));
 
         toast({
           title: "Analysis complete",

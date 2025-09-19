@@ -1878,6 +1878,23 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       }
     };
     window.addEventListener('batchAnalysisProgress', handleBatchAnalysisProgress as EventListener);
+    
+    // Listen for force save events from document analysis
+    const handleForceSave = async (event: CustomEvent) => {
+      const { rowIndex, extractedData } = event.detail;
+      console.log('🔧 Force save requested for row', rowIndex, 'with data:', extractedData);
+      
+      if (effectiveRunsheetId) {
+        try {
+          // Trigger immediate database save
+          await saveToDatabase(data, columns, runsheetName, columnInstructions, false);
+          console.log('✅ Force save completed successfully');
+        } catch (error) {
+          console.error('❌ Force save failed:', error);
+        }
+      }
+    };
+    window.addEventListener('forceSaveCurrentRunsheet', handleForceSave as EventListener);
 
     return () => {
       window.removeEventListener('triggerSpreadsheetUpload', handleUploadTrigger);
@@ -1889,6 +1906,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       window.removeEventListener('refreshRunsheetData', handleRefreshRunsheetData as EventListener);
       window.removeEventListener('updateDocumentFilename', handleUpdateDocumentFilename as EventListener);
       window.removeEventListener('batchAnalysisProgress', handleBatchAnalysisProgress as EventListener);
+      window.removeEventListener('forceSaveCurrentRunsheet', handleForceSave as EventListener);
     };
   }, [columns, currentRunsheetId, effectiveRunsheetId]);
 
