@@ -168,12 +168,23 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
   };
 
   const handleBackToRunsheet = () => {
-    // Ensure any pending edits are saved
+    // Ensure any pending edits are applied
+    let updatedData = localRowData;
     if (editingColumn && editingValue !== (localRowData[editingColumn] || '')) {
-      const updatedData = { ...localRowData, [editingColumn]: editingValue };
+      updatedData = { ...localRowData, [editingColumn]: editingValue };
       setLocalRowData(updatedData);
       onUpdateRow(rowIndex, updatedData);
     }
+
+    // Force a final silent save to persist changes when leaving fullscreen
+    window.dispatchEvent(new CustomEvent('forceSaveCurrentRunsheet', {
+      detail: {
+        rowIndex,
+        updatedData,
+        source: 'fullscreen-back'
+      }
+    }));
+
     onClose();
   };
 
