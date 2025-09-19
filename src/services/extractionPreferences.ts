@@ -17,7 +17,7 @@ type ColumnInstructions = Record<string, string>;
 
 export class ExtractionPreferencesService {
   /**
-   * Get user's default extraction preferences
+   * Get user's default extraction preferences, creating them if they don't exist
    */
   static async getDefaultPreferences(): Promise<ExtractionPreference | null> {
     const { data: { user } } = await supabase.auth.getUser();
@@ -38,7 +38,29 @@ export class ExtractionPreferencesService {
       return null;
     }
 
-    console.log('🔍 Loaded default preferences:', data);
+    // If no default preferences exist, create them with sensible defaults
+    if (!data) {
+      console.log('🏁 No default preferences found, creating initial defaults');
+      const defaultColumns = ['Inst Number', 'Book/Page', 'Inst Type', 'Recording Date', 'Document Date', 'Grantor', 'Grantee', 'Legal Description', 'Notes'];
+      const defaultInstructions = {};
+      
+      const success = await this.saveDefaultPreferences(defaultColumns, defaultInstructions);
+      if (success) {
+        // Fetch the newly created preferences
+        const { data: newData } = await supabase
+          .from('user_extraction_preferences')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('is_default', true)
+          .maybeSingle();
+        
+        console.log('✅ Created and loaded new default preferences:', newData);
+        return newData;
+      }
+      return null;
+    }
+
+    console.log('🔍 Loaded existing default preferences:', data);
     return data;
   }
 

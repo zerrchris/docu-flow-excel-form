@@ -777,12 +777,10 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       console.log('🔧 EDITABLE_SPREADSHEET: Received instructions:', instructions);
       console.log('🔧 EDITABLE_SPREADSHEET: Current columns before update:', columns);
       
-      // Fallback to sensible defaults if no columns/instructions were provided
-      const safeColumns = Array.isArray(newColumns) && newColumns.length > 0
-        ? newColumns
-        : ['Inst Number', 'Book/Page', 'Inst Type', 'Recording Date', 'Document Date', 'Grantor', 'Grantee', 'Legal Description', 'Notes'];
+      // Use the columns passed from RunsheetService (which should fetch user preferences)
+      const safeColumns = Array.isArray(newColumns) && newColumns.length > 0 ? newColumns : [];
       const safeInstructions: Record<string, string> = (instructions && typeof instructions === 'object') ? instructions : {};
-      console.log('🔧 EDITABLE_SPREADSHEET: Using safe columns:', safeColumns);
+      console.log('🔧 EDITABLE_SPREADSHEET: Using columns from preferences:', safeColumns);
       
       // Clear any existing emergency draft when creating a new runsheet
       try {
