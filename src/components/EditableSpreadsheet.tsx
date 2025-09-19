@@ -284,6 +284,16 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     if (currentRunsheet && currentRunsheet.id) {
       console.log('🔄 EDITABLE_SPREADSHEET: Syncing with loaded runsheet data');
       
+      // Check if we're in upload mode or just uploaded data - prevent overriding fresh upload
+      const isUploadMode = window.location.search.includes('action=upload');
+      const recentSave = Date.now() - lastSavedAtRef.current < 2000; // Within 2 seconds
+      const hasLocalData = data.length > 0 && data.some(row => Object.values(row).some(val => val?.trim()));
+      
+      if (isUploadMode || (recentSave && hasLocalData)) {
+        console.log('🚫 EDITABLE_SPREADSHEET: Skipping sync - recent upload detected');
+        return;
+      }
+      
       // Update local state with runsheet data
       if (currentRunsheet.columns && currentRunsheet.columns.length > 0) {
         console.log('🔄 EDITABLE_SPREADSHEET: Setting columns from runsheet:', currentRunsheet.columns);
@@ -309,7 +319,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         onColumnInstructionsChange?.(currentRunsheet.columnInstructions);
       }
     }
-  }, [currentRunsheet, onColumnChange, onDataChange, onColumnInstructionsChange, ensureMinimumRows]);
+  }, [currentRunsheet, onColumnChange, onDataChange, onColumnInstructionsChange, ensureMinimumRows, data]);
 
 
   // Function to add rows to reach a specific total
