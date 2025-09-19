@@ -52,8 +52,17 @@ const InlineDocumentViewer: React.FC<InlineDocumentViewerProps> = ({
         console.log('🔧 InlineDocumentViewer: File path from document:', document.file_path);
         
         setDocumentUrl(url);
-        setDocumentName(document.original_filename);
-        setIsPdf(document.content_type === 'application/pdf' || document.original_filename.toLowerCase().endsWith('.pdf'));
+        // Prefer a display name that matches the actual content type
+        const ct = document.content_type || '';
+        const extFromCT = ct.startsWith('image/') ? (ct === 'image/jpeg' ? '.jpg' : ct === 'image/png' ? '.png' : '') : (ct === 'application/pdf' ? '.pdf' : '');
+        // If original filename extension mismatches the content type (e.g., converted PDF to image), fix the displayed name
+        const baseName = (document.stored_filename && document.stored_filename.trim() !== '')
+          ? document.stored_filename
+          : (document.original_filename || '').replace(/\.[^./]+$/, '');
+        const displayName = baseName + (extFromCT || '');
+        setDocumentName(displayName || document.original_filename || 'document');
+        // Detect PDF strictly by content type to avoid false positives
+        setIsPdf(ct === 'application/pdf');
         setError(null);
       } else {
         // Check if there's a pending document for this row

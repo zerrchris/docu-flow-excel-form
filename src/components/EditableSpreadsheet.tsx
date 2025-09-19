@@ -7836,10 +7836,14 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
               fields={columns}
               onClose={closeAllWorkspaces}
               onUpdateRow={(rowIndex, rowData) => {
+                console.log('🔄 EDITABLE_SPREADSHEET: onUpdateRow (FullScreen) row', rowIndex, rowData);
                 const newData = [...data];
                 newData[rowIndex] = rowData;
                 setData(newData);
                 onDataChange?.(newData);
+                // Persist immediately to avoid realtime overwrite
+                console.log('🔄 EDITABLE_SPREADSHEET: Triggering immediate save after full-screen update');
+                saveToDatabase(newData, columns, runsheetName, columnInstructions, true);
               }}
               columnWidths={columnWidths}
               columnAlignments={columnAlignments}
