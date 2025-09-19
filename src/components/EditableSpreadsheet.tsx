@@ -1855,9 +1855,14 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         let nextDataSnapshot: Record<string, string>[] | null = null;
         setData(currentData => {
           const newData = [...currentData];
-          if (newData[rowIndex]) {
-            newData[rowIndex] = { ...newData[rowIndex], ...extractedData };
+          // Ensure the target row exists
+          while (newData.length <= rowIndex) {
+            const emptyRow: Record<string, string> = {};
+            columns.forEach(col => { emptyRow[col] = ''; });
+            newData.push(emptyRow);
           }
+          // Merge extracted data into the row
+          newData[rowIndex] = { ...newData[rowIndex], ...extractedData };
           nextDataSnapshot = newData;
           return newData;
         });
