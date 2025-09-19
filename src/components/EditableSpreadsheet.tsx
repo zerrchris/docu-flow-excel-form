@@ -6626,13 +6626,20 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
                          onColumnChange(DEFAULT_COLUMNS);
                          onColumnInstructionsChange?.(DEFAULT_EXTRACTION_INSTRUCTIONS);
                          
-                         setShowNameNewRunsheetDialog(false);
-                         setNewRunsheetName('');
-                         
-                         toast({
-                           title: "New runsheet created",
-                           description: `"${finalName}" is ready for your data.`,
-                         });
+                          setShowNameNewRunsheetDialog(false);
+                          setNewRunsheetName('');
+                          
+                          // Set a flag to prevent loading any old runsheet data
+                          sessionStorage.setItem('creating_new_runsheet', Date.now().toString());
+                          sessionStorage.setItem('new_runsheet_name', finalName);
+                          
+                          // Navigate to a clean runsheet URL without any parameters
+                          navigate('/runsheet', { replace: true, state: {} });
+                          
+                          toast({
+                            title: "New runsheet created",
+                            description: `"${finalName}" is ready for your data.`,
+                          });
                       }}
                       disabled={!newRunsheetName.trim()}
                     >
