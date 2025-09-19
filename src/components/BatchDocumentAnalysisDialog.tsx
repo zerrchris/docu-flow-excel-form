@@ -53,13 +53,20 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
   const [skipRowsWithData, setSkipRowsWithData] = useState(true);
   const [currentJobId, setCurrentJobId] = useState<string | null>(null);
 
-  // Helper function to check if a row has data
+  // Helper function to check if a row has data (excluding system columns)
   const hasRowData = (rowIndex: number): boolean => {
     if (!currentData || !currentData[rowIndex]) return false;
     const rowData = currentData[rowIndex];
-    return Object.values(rowData).some(value => 
-      value && typeof value === 'string' && value.trim() !== ''
-    );
+    
+    // System columns that shouldn't count as "data" for batch analysis
+    const systemColumns = ['Document File Name', 'document_filename', 'filename'];
+    
+    return Object.entries(rowData).some(([key, value]) => {
+      // Skip system columns
+      if (systemColumns.includes(key)) return false;
+      // Check if there's actual user data
+      return value && typeof value === 'string' && value.trim() !== '';
+    });
   };
 
   // Initialize results when dialog opens and check for existing job
@@ -77,7 +84,13 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
         
         // Only include rows that have documents AND no existing data
         documentMap.forEach((doc, rowIndex) => {
-          if (!hasRowData(rowIndex)) {
+          const hasData = hasRowData(rowIndex);
+          console.log(`🔧 Row ${rowIndex} - hasData: ${hasData}`, {
+            rowData: currentData?.[rowIndex],
+            systemColumnsExcluded: ['Document File Name', 'document_filename', 'filename']
+          });
+          
+          if (!hasData) {
             initialResults.push({
               rowIndex,
               documentName: doc.stored_filename,
@@ -86,6 +99,7 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
           }
         });
         
+        console.log(`🔧 Batch Analysis: Found ${initialResults.length} empty rows out of ${documentMap.size} document rows`);
         setResults(initialResults.sort((a, b) => a.rowIndex - b.rowIndex));
         setProgress(0);
       }
