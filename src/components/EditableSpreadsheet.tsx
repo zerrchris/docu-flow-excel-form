@@ -64,6 +64,7 @@ import RunsheetNameDialog from './RunsheetNameDialog';
 import { convertPDFToImages, createFileFromBlob } from '@/utils/pdfToImage';
 import { combineImages } from '@/utils/imageCombiner';
 import { backgroundAnalyzer } from '@/utils/backgroundAnalyzer';
+import { syncService } from '@/utils/syncService';
 
 
 import type { User } from '@supabase/supabase-js';
@@ -1993,7 +1994,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
           const batchAnalysisRunning = backgroundAnalyzer.getJobStatus()?.status === 'running';
           const suppressActive = now < suppressRealtimeUntilRef.current;
 
-          if (isProcessingUploadRef.current || withinSelfEcho || isSameAsLastSaved || creatingRecent || batchAnalysisRunning || suppressActive) {
+          if (syncService.isUploadInProgress() || withinSelfEcho || isSameAsLastSaved || creatingRecent || batchAnalysisRunning || suppressActive) {
             console.log('🚫 Skipping realtime update (self-echo/upload in progress/batch analysis running/suppressed)');
             return;
           }
@@ -3734,6 +3735,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         sessionStorage.setItem('creating_new_runsheet', Date.now().toString());
         sessionStorage.setItem('new_runsheet_name', uniqueName);
         isProcessingUploadRef.current = true;
+        syncService.setUploadInProgress(true);
         lastSavedAtRef.current = Date.now();
         try { lastSavedDataHashRef.current = JSON.stringify(newData); } catch {}
 
@@ -3750,7 +3752,10 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         console.error('Failed to save uploaded runsheet:', error);
       } finally {
         // Allow realtime again after a short grace period
-        setTimeout(() => { isProcessingUploadRef.current = false; }, 1500);
+        setTimeout(() => { 
+          isProcessingUploadRef.current = false; 
+          syncService.setUploadInProgress(false);
+        }, 1500);
       }
     }, 100); // Small delay to ensure state updates are complete
 
