@@ -1997,6 +1997,21 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
             return;
           }
 
+          // Stale/destructive update protection
+          const countFilled = (rows: Record<string, string>[]) => rows.reduce((acc, row) => acc + Object.values(row || {}).filter(v => typeof v === 'string' && v.trim() !== '').length, 0);
+          const currentSnapshot = dataRef.current || [];
+          const currentFilled = countFilled(currentSnapshot);
+          const newFilled = countFilled(newData);
+          const payloadUpdatedAt = payload.new?.updated_at ? Date.parse(payload.new.updated_at as string) : 0;
+          const staleByTime = !!payloadUpdatedAt && !!lastSavedAtRef.current && (payloadUpdatedAt < (lastSavedAtRef.current - 250));
+          const destructive = currentFilled > 0 && (newData.length === 0 || newFilled + 3 < currentFilled);
+
+          if (staleByTime || destructive) {
+            console.warn('🚫 Ignoring realtime update (stale or destructive).', { staleByTime, destructive, currentFilled, newFilled });
+            suppressRealtimeUntilRef.current = Date.now() + 5000;
+            return;
+          }
+
           // Use a ref to get current data to avoid stale closures
           setData(currentData => {
             if (JSON.stringify(newData) !== JSON.stringify(currentData)) {
