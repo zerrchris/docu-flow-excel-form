@@ -5129,6 +5129,36 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     }
   }, [isDragging, selectedRange, columns, isScrolling]);
 
+  // Auto-scroll during drag selection
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!isDragging) return;
+
+    const scrollContainer = document.querySelector('.table-container');
+    if (!scrollContainer) return;
+
+    const rect = scrollContainer.getBoundingClientRect();
+    const scrollSpeed = 10;
+    const edgeThreshold = 50; // pixels from edge to trigger scroll
+
+    // Auto-scroll horizontally
+    if (e.clientX < rect.left + edgeThreshold) {
+      // Near left edge - scroll left
+      scrollContainer.scrollLeft = Math.max(0, scrollContainer.scrollLeft - scrollSpeed);
+    } else if (e.clientX > rect.right - edgeThreshold) {
+      // Near right edge - scroll right
+      scrollContainer.scrollLeft += scrollSpeed;
+    }
+
+    // Auto-scroll vertically
+    if (e.clientY < rect.top + edgeThreshold) {
+      // Near top edge - scroll up
+      scrollContainer.scrollTop = Math.max(0, scrollContainer.scrollTop - scrollSpeed);
+    } else if (e.clientY > rect.bottom - edgeThreshold) {
+      // Near bottom edge - scroll down
+      scrollContainer.scrollTop += scrollSpeed;
+    }
+  }, [isDragging]);
+
   const handleMouseUp = useCallback(() => {
     setIsDragging(false);
   }, []);
@@ -5444,12 +5474,22 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     return `${borders.join(' ')} ${removeBorders.join(' ')} ${borderColor} ${borderStyle}`;
   }, [selectedRange, copiedRange, isCellInRange]);
 
-  // Global mouse up event listener
+  // Global mouse up event listener and auto-scroll during drag
   useEffect(() => {
     const handleGlobalMouseUp = () => setIsDragging(false);
+    
+    // Add mouse move listener for auto-scroll during drag
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+    }
+    
     document.addEventListener('mouseup', handleGlobalMouseUp);
-    return () => document.removeEventListener('mouseup', handleGlobalMouseUp);
-  }, []);
+    
+    return () => {
+      document.removeEventListener('mouseup', handleGlobalMouseUp);
+      document.removeEventListener('mousemove', handleMouseMove);
+    };
+  }, [isDragging, handleMouseMove]);
 
   // Fixed copy/paste keyboard shortcuts and Shift+Arrow selection
   useEffect(() => {
