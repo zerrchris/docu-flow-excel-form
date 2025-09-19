@@ -410,7 +410,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   const [showBatchAnalysisDialog, setShowBatchAnalysisDialog] = useState(false);
   const [showBatchRenameDialog, setShowBatchRenameDialog] = useState(false);
   const [showImprovedAnalysis, setShowImprovedAnalysis] = useState(false);
-  const [showDocumentFileNameColumn, setShowDocumentFileNameColumn] = useState(true);
+  // Removed showDocumentFileNameColumn state - no longer needed
   
   // Runsheet naming dialog state
   const [showNameDialog, setShowNameDialog] = useState(false);
@@ -3859,9 +3859,9 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   const getTotalTableWidth = () => {
     const rowActionsWidth = 60; // Narrower row actions column width (no drag handle)
     const dataColumnsWidth = columns.reduce((total, column) => total + getColumnWidth(column), 0);
-    const documentFileNameWidth = showDocumentFileNameColumn ? 350 : 0;
+    // Removed documentFileNameWidth - no longer needed
     const actionsColumnWidth = 480; // Reduced width for actions column to minimize unnecessary space
-    return rowActionsWidth + dataColumnsWidth + documentFileNameWidth + actionsColumnWidth;
+    return rowActionsWidth + dataColumnsWidth + actionsColumnWidth;
   };
 
   // Column resize handlers
@@ -6917,24 +6917,7 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
                     </th>
                   ))}
                  
-                  {/* Document File Name column header - conditionally visible */}
-                  {showDocumentFileNameColumn && (
-                       <th
-                        className="font-bold text-center border-r border-b border-border relative p-0 bg-background sticky top-0"
-                       style={{ 
-                         width: "200px", 
-                         minWidth: "200px",
-                         backgroundColor: 'hsl(var(--background))',
-                         position: 'sticky',
-                         top: '0px',
-                         zIndex: 999
-                       }}
-                     >
-                     <div className="w-full h-full px-4 py-2 flex flex-col items-center justify-center">
-                       <span className="font-bold">Document File Name</span>
-                     </div>
-                    </th>
-                  )}
+                   {/* Document File Name column header removed - using DocumentLinker instead */}
                   
                    {/* Actions column header - not draggable */}
                        <th
@@ -6948,25 +6931,16 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
                          zIndex: 999
                        }}
                      >
-                    <div className="w-full h-full px-4 py-2 flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowDocumentFileNameColumn(!showDocumentFileNameColumn)}
-                        className="h-8 text-xs flex-1"
-                      >
-                        {showDocumentFileNameColumn ? <EyeOff className="h-3 w-3 mr-1" /> : <Eye className="h-3 w-3 mr-1" />}
-                        {showDocumentFileNameColumn ? 'Hide' : 'Show'} File Name Column
-                      </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setShowDocumentNamingDialog(true)}
-                          className="h-8 text-xs flex-1"
-                        >
-                         <Sparkles className="h-3 w-3 mr-1 text-purple-600" />
-                          Smart File Name Settings
-                       </Button>
+                     <div className="w-full h-full px-4 py-2 flex gap-2">
+                         <Button
+                           variant="outline"
+                           size="sm"
+                           onClick={() => setShowDocumentNamingDialog(true)}
+                           className="h-8 text-xs flex-1"
+                         >
+                          <Sparkles className="h-3 w-3 mr-1 text-purple-600" />
+                           Smart File Name Settings
+                        </Button>
                     </div>
                   </th>
                 </tr>
@@ -6980,7 +6954,7 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
                            {/* Show inline document viewer above this row if it's selected */}
                           {inlineViewerRow === rowIndex && (
                          <tr>
-                           <td colSpan={1 + columns.length + (showDocumentFileNameColumn ? 1 : 0) + 1} className="p-0 border-0">
+                            <td colSpan={1 + columns.length + 1} className="p-0 border-0">
                              <InlineDocumentViewer
                                runsheetId={effectiveRunsheetId}
                                rowIndex={rowIndex}
@@ -7149,121 +7123,7 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
                      );
                     })}
                     
-                     {/* Document File Name column - conditionally visible */}
-                     {showDocumentFileNameColumn && (() => {
-                       const column = 'Document File Name';
-                       const isSelected = selectedCell?.rowIndex === rowIndex && selectedCell?.column === column;
-                       const isEditing = editingCell?.rowIndex === rowIndex && editingCell?.column === column;
-                       const columnIndex = columns.length; // This column comes after all regular columns
-                       const isInRange = isCellInRange(rowIndex, columnIndex);
-                       const isInCopiedRange = copiedRange && 
-                         rowIndex >= Math.min(copiedRange.start.rowIndex, copiedRange.end.rowIndex) &&
-                         rowIndex <= Math.max(copiedRange.start.rowIndex, copiedRange.end.rowIndex) &&
-                         columnIndex >= Math.min(copiedRange.start.columnIndex, copiedRange.end.columnIndex) &&
-                         columnIndex <= Math.max(copiedRange.start.columnIndex, copiedRange.end.columnIndex);
-                       
-                       return (
-                          <td
-                           key={`${rowIndex}-${column}`}
-                            className={`border-b border-border p-0 cursor-text overflow-hidden`}
-                            style={{ 
-                               width: "350px", 
-                               minWidth: "350px",
-                               maxWidth: "350px",
-                               height: isEditing ? 'auto' : `${getRowHeight(rowIndex)}px`,
-                               minHeight: isEditing ? 'auto' : `${getRowHeight(rowIndex)}px`
-                            }}
-                            onClick={(e) => handleCellClick(rowIndex, column, e)}
-                            onDoubleClick={(e) => handleCellDoubleClick(rowIndex, column, e)}
-                           tabIndex={isSelected ? 0 : -1}
-                         >
-                           {isEditing ? (
-                               <Textarea
-                                 ref={textareaRef}
-                                 value={cellValue}
-                                 onChange={(e) => setCellValue(e.target.value)}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter' && !e.shiftKey) {
-                                      e.preventDefault();
-                                      saveEdit();
-                                     
-                                     // For Document File Name column, only auto-advance if there are documents in both current and next row
-                                     const currentDocument = documentMap.get(rowIndex);
-                                     const nextRowIndex = rowIndex + 1;
-                                     const nextDocument = documentMap.get(nextRowIndex);
-                                     
-                                     if (currentDocument && nextDocument && nextRowIndex < data.length) {
-                                       // Both current and next row have documents - auto-advance
-                                       setTimeout(() => {
-                                         selectCell(nextRowIndex, 'Document File Name');
-                                         setTimeout(() => {
-                                           const nextRowData = data[nextRowIndex];
-                                           const nextCellValue = nextDocument.stored_filename || nextRowData['Document File Name'] || '';
-                                           startEditing(nextRowIndex, 'Document File Name', nextCellValue, undefined, 'none');
-                                         }, 10);
-                                       }, 10);
-                                     }
-                                     // If no documents in current/next row, just save and stop editing
-                                   } else if (e.key === 'Escape') {
-                                     e.preventDefault();
-                                     cancelEdit();
-                                   } else if (e.key === 'Tab') {
-                                     e.preventDefault();
-                                     saveEdit();
-                                     // Move to actions column (no next cell for Document File Name)
-                                   }
-                                 }}
-                                 onBlur={(e) => {
-                                   // Use setTimeout to ensure blur happens after any potential click events
-                                   setTimeout(() => {
-                                     // Only cancel if we're still in editing mode (revert to original value)
-                                     if (editingCell && editingCell.rowIndex === rowIndex && editingCell.column === column) {
-                                       cancelEdit();
-                                     }
-                                   }, 10);
-                                 }}
-                                 className="w-full h-full resize-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent"
-                                 style={{ 
-                                   minHeight: '100%',
-                                   height: '100%',
-                                   overflow: 'hidden',
-                                   padding: '8px 12px'
-                                 }}
-                                onInput={(e) => {
-                                  // Auto-resize textarea based on content
-                                  const target = e.target as HTMLTextAreaElement;
-                                  target.style.height = 'auto';
-                                  target.style.height = Math.max(60, target.scrollHeight) + 'px';
-                                }}
-                                autoFocus
-                              />
-                           ) : (
-                               <div
-                                 data-cell={`${rowIndex}-${column}`}
-                                  className={`w-full h-full min-h-[2rem] py-2 px-3 flex items-center transition-colors select-none overflow-hidden ${(isInRange || isInCopiedRange) ? '' : 'rounded-sm'}
-                                    ${(isInRange || isInCopiedRange)
-                                      ? `bg-primary/5 ${getRangeBorderStyle(rowIndex, columnIndex)}`
-                                      : isSelected && !selectedRange && !copiedRange
-                                      ? 'bg-primary/20 border-2 border-primary ring-2 ring-primary/20' 
-                                      : 'hover:bg-muted/50 border-2 border-transparent'
-                                    }`}
-                                  onMouseDown={(e) => handleCellMouseDown(e, rowIndex, column)}
-                                  onMouseEnter={() => handleMouseEnter(rowIndex, column)}
-                                  onMouseUp={handleMouseUp}
-                                  onKeyDown={(e) => handleKeyDown(e, rowIndex, column)}
-                                  tabIndex={isSelected ? 0 : -1}
-                                  title={documentMap.get(rowIndex)?.stored_filename || row[column] || ''}
-                               >
-                                   <span 
-                                     className="truncate block w-full text-left"
-                                   >
-                                    {documentMap.get(rowIndex)?.stored_filename || row[column] || ''}
-                                  </span>
-                               </div>
-                           )}
-                          </td>
-                       );
-                     })()}
+                      {/* Document File Name column removed - use DocumentLinker for file naming */}
                     
                          {/* Actions column - Document management */}
                        <td 
