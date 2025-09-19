@@ -137,42 +137,56 @@ export function useImmediateSave({
           if (!silent) console.log('✅ Updated existing runsheet');
         }
       } else {
-        // Check for existing runsheet with same name
-        const { data: existingRunsheet, error: checkError } = await supabase
-          .from('runsheets')
-          .select('id')
-          .eq('user_id', userId)
-          .eq('name', runsheetName.trim())
-          .maybeSingle();
-
-        if (checkError && checkError.code !== 'PGRST116') {
-          throw checkError;
-        }
-
-        if (existingRunsheet) {
-          // Update existing runsheet
-          const { data: updateResult, error } = await supabase
+        // Check for existing runsheet with same name and generate unique name if needed
+        let finalName = runsheetName.trim();
+        let attempt = 1;
+        const maxAttempts = 10;
+        
+        while (attempt <= maxAttempts) {
+          const { data: existingRunsheet, error: checkError } = await supabase
             .from('runsheets')
-            .update(runsheetData)
-            .eq('id', existingRunsheet.id)
+            .select('id')
             .eq('user_id', userId)
-            .select('*')
-            .single();
+            .eq('name', finalName)
+            .maybeSingle();
 
-          if (error) throw error;
-          result = updateResult;
-          if (!silent) console.log('✅ Updated existing runsheet by name');
-        } else {
-          // Create new runsheet
-          const { data: insertResult, error } = await supabase
-            .from('runsheets')
-            .insert(runsheetData)
-            .select('*')
-            .single();
+          if (checkError && checkError.code !== 'PGRST116') {
+            throw checkError;
+          }
 
-          if (error) throw error;
-          result = insertResult;
-          if (!silent) console.log('✅ Created new runsheet');
+          if (existingRunsheet) {
+            // Update existing runsheet
+            const { data: updateResult, error } = await supabase
+              .from('runsheets')
+              .update({
+                ...runsheetData,
+                name: finalName
+              })
+              .eq('id', existingRunsheet.id)
+              .eq('user_id', userId)
+              .select('*')
+              .single();
+
+            if (error) throw error;
+            result = updateResult;
+            if (!silent) console.log('✅ Updated existing runsheet by name');
+            break;
+          } else {
+            // Create new runsheet with unique name
+            const { data: insertResult, error } = await supabase
+              .from('runsheets')
+              .insert({
+                ...runsheetData,
+                name: finalName
+              })
+              .select('*')
+              .single();
+
+            if (error) throw error;
+            result = insertResult;
+            if (!silent) console.log('✅ Created new runsheet');
+            break;
+          }
         }
       }
 
@@ -243,40 +257,49 @@ export function useImmediateSave({
         updated_at: new Date().toISOString(),
       };
 
-      // Check for existing runsheet with same name
-      const { data: existingRunsheet, error: checkError } = await supabase
-        .from('runsheets')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('name', runsheetName.trim())
-        .maybeSingle();
-
-      if (checkError && checkError.code !== 'PGRST116') {
-        throw checkError;
-      }
-
-      let result;
-      if (existingRunsheet) {
-        const { data: updateResult, error } = await supabase
+      // Check for existing runsheet with same name and generate unique name if needed
+      let finalName = runsheetName.trim();
+      let attempt = 1;
+      const maxAttempts = 10;
+      
+      while (attempt <= maxAttempts) {
+        const { data: existingRunsheet, error: checkError } = await supabase
           .from('runsheets')
-          .update(runsheetData)
-          .eq('id', existingRunsheet.id)
+          .select('id')
           .eq('user_id', userId)
-          .select('*')
-          .single();
-        if (error) throw error;
-        result = updateResult;
-        if (!silent) console.log('✅ Updated existing runsheet by name (new save)');
-      } else {
-        const { data: insertResult, error } = await supabase
-          .from('runsheets')
-          .insert(runsheetData)
-          .select('*')
-          .single();
-        if (error) throw error;
-        result = insertResult;
-        if (!silent) console.log('✅ Created new runsheet (new save)');
+          .eq('name', finalName)
+          .maybeSingle();
+
+        if (checkError && checkError.code !== 'PGRST116') {
+          throw checkError;
+        }
+
+        if (existingRunsheet) {
+          // Name exists, try with suffix
+          finalName = `${runsheetName.trim()} (${attempt})`;
+          attempt++;
+        } else {
+          // Name is available, break out of loop
+          break;
+        }
       }
+
+      if (attempt > maxAttempts) {
+        throw new Error('Could not generate a unique runsheet name');
+      }
+
+      
+      const { data: insertResult, error } = await supabase
+        .from('runsheets')
+        .insert({
+          ...runsheetData,
+          name: finalName
+        })
+        .select('*')
+        .single();
+      if (error) throw error;
+      const result = insertResult;
+      if (!silent) console.log('✅ Created new runsheet (new save)');
 
       if (!silent) {
         onSaveSuccess?.(result);

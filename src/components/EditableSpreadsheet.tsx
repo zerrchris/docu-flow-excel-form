@@ -843,11 +843,42 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
             return;
           }
 
+          // Check if a runsheet with this name already exists and generate a unique name
+          let finalName = name;
+          let attempt = 1;
+          const maxAttempts = 10;
+          
+          while (attempt <= maxAttempts) {
+            const { data: existingRunsheet, error: checkError } = await supabase
+              .from('runsheets')
+              .select('id')
+              .eq('user_id', user.id)
+              .eq('name', finalName)
+              .maybeSingle();
+
+            if (checkError && checkError.code !== 'PGRST116') {
+              throw checkError;
+            }
+
+            if (!existingRunsheet) {
+              // Name is available, break out of loop
+              break;
+            }
+
+            // Name exists, try with suffix
+            finalName = `${name} (${attempt})`;
+            attempt++;
+          }
+
+          if (attempt > maxAttempts) {
+            throw new Error('Could not generate a unique runsheet name');
+          }
+
           const { data: newRunsheet, error } = await supabase
             .from('runsheets')
             .insert({
               user_id: user.id,
-              name: name,
+              name: finalName,
               columns: newColumns,
               data: newData,
               column_instructions: instructions
@@ -859,10 +890,16 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
 
           // Set this as the active runsheet immediately
           setCurrentRunsheet(newRunsheet.id);
+          
+          // Update the local state to match what was saved
+          setRunsheetName(newRunsheet.name);
+          setData((newRunsheet.data as Record<string, string>[]) || newData);
+          setColumns((newRunsheet.columns as string[]) || newColumns);
+          setColumnInstructions((newRunsheet.column_instructions as Record<string, string>) || instructions);
 
           toast({
             title: "New runsheet created",
-            description: `"${name}" is ready for your data.`,
+            description: `"${finalName}" is ready for your data.`,
           });
           
           // The useActiveRunsheet hook will automatically load the data when the ID changes
