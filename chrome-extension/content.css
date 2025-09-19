@@ -494,3 +494,93 @@ body {
 .table-cell textarea::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--muted-foreground, 215 16% 47%)) !important;
 }
+
+/* =============================================================================
+   SIGN-IN POPUP STYLES
+   ============================================================================= */
+
+#runsheetpro-signin-popup {
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  background: hsl(var(--background, 0 0% 100%)) !important;
+  border: 1px solid hsl(var(--border, 214 32% 91%)) !important;
+  border-radius: var(--radius, 0.5rem) !important;
+  padding: 24px !important;
+  box-shadow: var(--shadow-elegant, 0 10px 30px -10px hsl(215 80% 40% / 0.3)) !important;
+  z-index: 2147483647 !important;
+  width: 350px !important;
+  max-width: 90vw !important;
+  max-height: 90vh !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif !important;
+  color: hsl(var(--foreground, 222 47% 11%)) !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Sign-in form styling */
+#runsheetpro-signin-popup form {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 16px !important;
+}
+
+#runsheetpro-signin-popup input {
+  width: 100% !important;
+  padding: 8px 12px !important;
+  border: 1px solid hsl(var(--border, 214 32% 91%)) !important;
+  border-radius: var(--radius, 0.5rem) !important;
+  font-size: 14px !important;
+  font-family: inherit !important;
+  background: hsl(var(--background, 0 0% 100%)) !important;
+  color: hsl(var(--foreground, 222 47% 11%)) !important;
+  box-sizing: border-box !important;
+  transition: var(--transition-smooth, all 0.3s cubic-bezier(0.4, 0, 0.2, 1)) !important;
+}
+
+#runsheetpro-signin-popup input:focus {
+  outline: none !important;
+  border-color: hsl(var(--primary, 215 80% 40%)) !important;
+  box-shadow: 0 0 0 2px hsl(var(--primary, 215 80% 40%) / 0.2) !important;
+}
+
+#runsheetpro-signin-popup label {
+  display: block !important;
+  margin-bottom: 4px !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  color: hsl(var(--foreground, 222 47% 11%)) !important;
+}
+
+#runsheetpro-signin-popup .btn-gradient {
+  background: var(--gradient-primary, linear-gradient(135deg, hsl(215 80% 40%), hsl(230 60% 60%))) !important;
+  box-shadow: var(--shadow-primary, 0 10px 30px -10px hsl(215 80% 40% / 0.3)) !important;
+}
+
+#runsheetpro-signin-popup .btn-gradient:hover {
+  box-shadow: 0 20px 40px -10px hsl(var(--primary, 215 80% 40%) / 0.4) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* Dark mode support for sign-in popup */
+@media (prefers-color-scheme: dark) {
+  #runsheetpro-signin-popup {
+    background: hsl(var(--background, 215 30% 12%)) !important;
+    border-color: hsl(var(--border, 215 25% 25%)) !important;
+    color: hsl(var(--foreground, 210 40% 98%)) !important;
+  }
+  
+  #runsheetpro-signin-popup input {
+    background: hsl(var(--background, 215 30% 12%)) !important;
+    border-color: hsl(var(--border, 215 25% 25%)) !important;
+    color: hsl(var(--foreground, 210 40% 98%)) !important;
+  }
+  
+  #runsheetpro-signin-popup label {
+    color: hsl(var(--foreground, 210 40% 98%)) !important;
+  }
+}

@@ -193,13 +193,20 @@ function showSignInPopup() {
     transform: translate(-50%, -50%) !important;
     background: hsl(var(--background, 0 0% 100%)) !important;
     border: 1px solid hsl(var(--border, 214 32% 91%)) !important;
-    border-radius: 8px !important;
+    border-radius: var(--radius, 0.5rem) !important;
     padding: 24px !important;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
+    box-shadow: var(--shadow-elegant, 0 10px 30px -10px hsl(215 80% 40% / 0.3)) !important;
     z-index: 2147483647 !important;
     width: 350px !important;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    max-width: 90vw !important;
+    max-height: 90vh !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif !important;
     color: hsl(var(--foreground, 222 47% 11%)) !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
   `;
 
   // Create overlay
@@ -210,8 +217,14 @@ function showSignInPopup() {
     left: 0 !important;
     right: 0 !important;
     bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
     background: rgba(0, 0, 0, 0.5) !important;
     z-index: 2147483646 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    backdrop-filter: blur(2px) !important;
   `;
 
   dialog.innerHTML = `
@@ -228,7 +241,7 @@ function showSignInPopup() {
         <label style="display: block; margin-bottom: 4px; font-size: 14px; font-weight: 500;">Password</label>
         <input type="password" id="signin-password" required style="width: 100%; padding: 8px 12px; border: 1px solid hsl(var(--border, 214 32% 91%)); border-radius: 6px; font-size: 14px;">
       </div>
-      <button type="submit" id="signin-submit" style="padding: 10px; background: hsl(var(--primary, 215 80% 40%)); color: hsl(var(--primary-foreground, 210 40% 98%)); border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">
+      <button type="submit" id="signin-submit" class="btn-gradient" style="padding: 10px; background: var(--gradient-primary, linear-gradient(135deg, hsl(215 80% 40%), hsl(230 60% 60%))); color: hsl(var(--primary-foreground, 210 40% 98%)); border: none; border-radius: var(--radius, 0.5rem); cursor: pointer; font-size: 14px; font-weight: 500; transition: var(--transition-smooth, all 0.3s cubic-bezier(0.4, 0, 0.2, 1)); box-shadow: var(--shadow-primary, 0 10px 30px -10px hsl(215 80% 40% / 0.3));">
         Sign In
       </button>
       <div id="signin-error" style="display: none; color: hsl(var(--destructive, 0 84% 60%)); font-size: 12px; text-align: center;"></div>
