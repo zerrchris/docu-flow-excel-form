@@ -4001,6 +4001,8 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     const startWidth = getColumnWidth(column);
     setResizing({ column, startX, startWidth });
     setIsDraggingResize(false); // Will be set to true if mouse moves
+    // Suppress realtime while resizing to prevent stale overwrites
+    suppressRealtimeUntilRef.current = Date.now() + 4000;
   };
 
   // Row resize handlers
@@ -4033,6 +4035,8 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
           newWidth,
           currentRunsheetId
         );
+        // Keep realtime suppressed while actively resizing to avoid stale overwrites
+        suppressRealtimeUntilRef.current = Date.now() + 3000;
       }
       
       if (resizingRow) {
