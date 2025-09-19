@@ -2859,6 +2859,9 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       title: "Runsheet loaded",
       description: `"${runsheet.name}" has been loaded successfully.`,
     });
+
+    // Set this as the active runsheet globally so the page reflects the selection
+    setCurrentRunsheet(runsheet.id);
   };
 
   // Load a specific runsheet by ID (for URL parameter functionality)
