@@ -57,6 +57,7 @@ export class DocumentService {
 
   /**
    * Get public URL for a document with error handling
+   * For batch processing, use getDocumentUrlFast instead
    */
   static async getDocumentUrl(filePath: string): Promise<string> {
     // If the path is already a full URL, return it as-is
@@ -65,26 +66,20 @@ export class DocumentService {
     }
     
     try {
-      // First, check if the file exists
-      const { data: fileData, error: fileError } = await supabase.storage
-        .from('documents')
-        .list(filePath.substring(0, filePath.lastIndexOf('/')), {
-          search: filePath.substring(filePath.lastIndexOf('/') + 1)
-        });
-
-      if (fileError || !fileData || fileData.length === 0) {
-        console.error('File not found:', filePath, fileError);
-        throw new Error(`File not found: ${filePath}`);
-      }
-
-      // Generate signed URL for better security and reliability
+      // For interactive use, still provide signed URLs for security
+      // But skip the file existence check to reduce latency
       const { data, error } = await supabase.storage
         .from('documents')
         .createSignedUrl(filePath, 3600); // 1 hour expiry
 
       if (error || !data?.signedUrl) {
         console.error('Failed to generate signed URL:', error);
-        throw new Error(`Failed to generate signed URL: ${error?.message || 'Unknown error'}`);
+        // Fallback to public URL if signed URL fails
+        const { data: publicData } = supabase.storage
+          .from('documents')
+          .getPublicUrl(filePath);
+        
+        return publicData.publicUrl;
       }
 
       return data.signedUrl;
@@ -97,6 +92,23 @@ export class DocumentService {
       
       return data.publicUrl;
     }
+  }
+
+  /**
+   * Fast document URL getter for batch processing - uses public URLs only
+   */
+  static getDocumentUrlFast(filePath: string): string {
+    // If the path is already a full URL, return it as-is
+    if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
+      return filePath;
+    }
+    
+    // Generate public URL directly - no network calls needed
+    const { data } = supabase.storage
+      .from('documents')
+      .getPublicUrl(filePath);
+    
+    return data.publicUrl;
   }
 
   /**

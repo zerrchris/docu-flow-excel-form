@@ -12,6 +12,8 @@ interface AnalysisJob {
   currentIndex: number;
   status: 'running' | 'paused' | 'completed' | 'error';
   results: AnalysisResult[];
+  documentCache: Map<string, string>; // Cache for downloaded document blobs
+  lastSaveIndex: number; // Track when we last saved to batch saves
 }
 
 interface AnalysisResult {
@@ -63,7 +65,9 @@ export class BackgroundAnalyzer {
         rowIndex,
         documentName: doc.stored_filename,
         status: 'pending'
-      }))
+      })),
+      documentCache: new Map(),
+      lastSaveIndex: -1
     };
 
     this.currentJob = job;
@@ -98,7 +102,7 @@ export class BackgroundAnalyzer {
             };
           } else {
             // Perform analysis
-            const extractedData = await this.analyzeDocument(document, job.columns, job.columnInstructions);
+            const extractedData = await this.analyzeDocument(document, job.columns, job.columnInstructions, job.documentCache);
             
             if (extractedData && Object.keys(extractedData).length > 0) {
               // Update the data
@@ -121,8 +125,11 @@ export class BackgroundAnalyzer {
                 };
               }
 
-              // Save to database
-              await this.saveProgress(job);
+              // Batch saves - only save every 5 documents or on completion
+              if (job.currentIndex - job.lastSaveIndex >= 4 || job.currentIndex >= job.documentMap.length - 1) {
+                await this.saveProgress(job);
+                job.lastSaveIndex = job.currentIndex;
+              }
               
               job.results[job.currentIndex] = {
                 ...job.results[job.currentIndex],
@@ -145,12 +152,14 @@ export class BackgroundAnalyzer {
         this.saveJobToStorage(job);
         this.notifyCallbacks();
         
-        // Small delay to prevent overwhelming the system
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Reduced delay - only add minimal pause for UI updates
+        await new Promise(resolve => setTimeout(resolve, 50));
       }
 
       if (job.currentIndex >= job.documentMap.length) {
         job.status = 'completed';
+        // Final save to ensure all data is persisted
+        await this.saveProgress(job);
       }
     } catch (error) {
       job.status = 'error';
@@ -165,56 +174,49 @@ export class BackgroundAnalyzer {
   private async analyzeDocument(
     document: DocumentRecord, 
     columns: string[], 
-    columnInstructions: Record<string, string>
+    columnInstructions: Record<string, string>,
+    documentCache: Map<string, string>
   ): Promise<Record<string, string> | null> {
-    const documentUrl = await DocumentService.getDocumentUrl(document.file_path);
-    const isPdf = document.content_type === 'application/pdf' || document.stored_filename.toLowerCase().endsWith('.pdf');
-    
     const extractionFields = columns.map(col => 
       `${col}: ${columnInstructions[col] || 'Extract this field'}`
     ).join('\n');
 
     try {
-      let analysisResult;
+      let imageData: string;
       
-      if (isPdf) {
-        const response = await fetch(documentUrl);
-        const blob = await response.blob();
-        const reader = new FileReader();
-        const pdfData = await new Promise<string>((resolve) => {
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.readAsDataURL(blob);
-        });
-        
-        const { data, error } = await supabase.functions.invoke('analyze-document', {
-          body: {
-            prompt: `Extract information from this document for the following fields and return as valid JSON:\n${extractionFields}\n\nReturn only a JSON object with field names as keys and extracted values as values. Do not include any markdown, explanations, or additional text.`,
-            imageData: pdfData,
-            fileName: document.stored_filename
-          },
-        });
-        
-        if (error) throw error;
-        analysisResult = data;
+      // Check cache first
+      const cacheKey = document.file_path;
+      if (documentCache.has(cacheKey)) {
+        imageData = documentCache.get(cacheKey)!;
       } else {
+        // Use public URL directly to avoid signed URL overhead
+        const { data } = supabase.storage
+          .from('documents')
+          .getPublicUrl(document.file_path);
+        const documentUrl = data.publicUrl;
+        
         const response = await fetch(documentUrl);
         const blob = await response.blob();
         const reader = new FileReader();
-        const imageData = await new Promise<string>((resolve) => {
+        imageData = await new Promise<string>((resolve) => {
           reader.onloadend = () => resolve(reader.result as string);
           reader.readAsDataURL(blob);
         });
-
-        const { data, error } = await supabase.functions.invoke('analyze-document', {
-          body: {
-            prompt: `Extract information from this document for the following fields and return as valid JSON:\n${extractionFields}\n\nReturn only a JSON object with field names as keys and extracted values as values. Do not include any markdown, explanations, or additional text.`,
-            imageData
-          },
-        });
         
-        if (error) throw error;
-        analysisResult = data;
+        // Cache the converted data for potential reuse
+        documentCache.set(cacheKey, imageData);
       }
+
+      const { data, error } = await supabase.functions.invoke('analyze-document', {
+        body: {
+          prompt: `Extract information from this document for the following fields and return as valid JSON:\n${extractionFields}\n\nReturn only a JSON object with field names as keys and extracted values as values. Do not include any markdown, explanations, or additional text.`,
+          imageData,
+          fileName: document.stored_filename
+        },
+      });
+      
+      if (error) throw error;
+      const analysisResult = data;
 
       if (analysisResult?.generatedText) {
         let extractedData = {};
@@ -280,13 +282,26 @@ export class BackgroundAnalyzer {
   }
 
   private saveJobToStorage(job: AnalysisJob) {
-    localStorage.setItem('background_analysis_job', JSON.stringify(job));
+    // Exclude cache from storage to avoid localStorage bloat
+    const jobToStore = {
+      ...job,
+      documentCache: undefined // Don't persist cache
+    };
+    localStorage.setItem('background_analysis_job', JSON.stringify(jobToStore));
   }
 
   private loadJobFromStorage(): AnalysisJob | null {
     try {
       const stored = localStorage.getItem('background_analysis_job');
-      return stored ? JSON.parse(stored) : null;
+      if (!stored) return null;
+      
+      const job = JSON.parse(stored);
+      // Restore cache as empty Map
+      if (job) {
+        job.documentCache = new Map();
+        job.lastSaveIndex = job.lastSaveIndex || -1;
+      }
+      return job;
     } catch (error) {
       console.error('Error loading job from storage:', error);
       return null;
