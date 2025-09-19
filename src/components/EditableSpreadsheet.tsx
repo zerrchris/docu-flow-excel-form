@@ -3524,11 +3524,18 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     // Auto-save the runsheet with imported data and set as active
     setTimeout(async () => {
       try {
+        // Prevent old location.state or effects from overriding this fresh upload
+        sessionStorage.setItem('creating_new_runsheet', Date.now().toString());
+        sessionStorage.setItem('new_runsheet_name', uniqueName);
+
         const result = await saveToDatabase(newData, finalHeaders, uniqueName, columnInstructions, false);
         if (result && result.id) {
           // Set this as the active runsheet so it displays properly
           setCurrentRunsheet(result.id);
           console.log('✅ Set uploaded runsheet as active:', result.id);
+
+          // Navigate to a clean URL with empty state to avoid old state reapplying
+          navigate('/runsheet', { replace: true, state: {} });
         }
       } catch (error) {
         console.error('Failed to save uploaded runsheet:', error);
