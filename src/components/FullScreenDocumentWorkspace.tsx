@@ -144,6 +144,11 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
       }
     };
 
+    if (!runsheetId) {
+      // Wait until we have a valid runsheet ID to load the document
+      return;
+    }
+    
     loadDocument();
   }, [runsheetId, rowIndex]);
 

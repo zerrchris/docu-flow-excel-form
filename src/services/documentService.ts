@@ -65,31 +65,59 @@ export class DocumentService {
       return filePath;
     }
     
-    try {
-      // For interactive use, still provide signed URLs for security
-      // But skip the file existence check to reduce latency
+    const trySigned = async (path: string) => {
       const { data, error } = await supabase.storage
         .from('documents')
-        .createSignedUrl(filePath, 3600); // 1 hour expiry
+        .createSignedUrl(path, 3600);
+      if (error || !data?.signedUrl) return null;
+      return data.signedUrl;
+    };
 
-      if (error || !data?.signedUrl) {
-        console.error('Failed to generate signed URL:', error);
-        // Fallback to public URL if signed URL fails
-        const { data: publicData } = supabase.storage
+    try {
+      // First attempt: signed URL for the exact path
+      const signed = await trySigned(filePath);
+      if (signed) return signed;
+
+      console.error('Failed to generate signed URL (exact path). Attempting fallback resolution.');
+
+      // Fallback 1: try to resolve by listing the folder and matching filename variants
+      const parts = filePath.split('/');
+      if (parts.length >= 3) {
+        const folder = `${parts[0]}/${parts[1]}`;
+        const baseName = parts.slice(2).join('/');
+        const { data: list, error: listError } = await supabase.storage
           .from('documents')
-          .getPublicUrl(filePath);
-        
-        return publicData.publicUrl;
+          .list(folder, { limit: 1000 });
+
+        if (!listError && Array.isArray(list)) {
+          // Find best match: exact, startsWith, or without/with extension
+          const candidate = list.find((f) => f.name === baseName)
+            || list.find((f) => f.name.startsWith(baseName))
+            || list.find((f) => baseName.startsWith(f.name));
+          if (candidate) {
+            const resolvedPath = `${folder}/${candidate.name}`;
+            const signedResolved = await trySigned(resolvedPath);
+            if (signedResolved) return signedResolved;
+            // As last resort, return public URL for resolved path
+            const { data: pubResolved } = supabase.storage
+              .from('documents')
+              .getPublicUrl(resolvedPath);
+            return pubResolved.publicUrl;
+          }
+        }
       }
 
-      return data.signedUrl;
+      // Final fallback: public URL for original path
+      const { data: publicData } = supabase.storage
+        .from('documents')
+        .getPublicUrl(filePath);
+      return publicData.publicUrl;
     } catch (error) {
       console.error('Error generating document URL:', error);
-      // Fallback to public URL if signed URL fails
+      // Final fallback to public URL if signed URL fails
       const { data } = supabase.storage
         .from('documents')
         .getPublicUrl(filePath);
-      
       return data.publicUrl;
     }
   }

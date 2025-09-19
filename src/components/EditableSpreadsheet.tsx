@@ -410,10 +410,10 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   const expandedRowParam = searchParams.get('expanded');
   const sideBySideRowParam = searchParams.get('sidebyside');
   const [fullScreenWorkspace, setFullScreenWorkspace] = useState<{ runsheetId: string; rowIndex: number } | null>(
-    expandedRowParam ? { runsheetId: currentRunsheetId || '', rowIndex: parseInt(expandedRowParam) } : null
+    expandedRowParam ? { runsheetId: effectiveRunsheetId || '', rowIndex: parseInt(expandedRowParam) } : null
   );
   const [sideBySideWorkspace, setSideBySideWorkspace] = useState<{ runsheetId: string; rowIndex: number } | null>(
-    sideBySideRowParam ? { runsheetId: currentRunsheetId || '', rowIndex: parseInt(sideBySideRowParam) } : null
+    sideBySideRowParam ? { runsheetId: effectiveRunsheetId || '', rowIndex: parseInt(sideBySideRowParam) } : null
   );
   const [showBatchAnalysisDialog, setShowBatchAnalysisDialog] = useState(false);
   const [showBatchRenameDialog, setShowBatchRenameDialog] = useState(false);
@@ -430,7 +430,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   
   // Helper functions to manage workspace state and URL parameters
   const openFullScreenWorkspace = useCallback((rowIndex: number) => {
-    const newWorkspace = { runsheetId: currentRunsheetId || '', rowIndex };
+    const newWorkspace = { runsheetId: effectiveRunsheetId || '', rowIndex };
     setFullScreenWorkspace(newWorkspace);
     
     // Update URL parameters
@@ -441,10 +441,10 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     
     // Close side-by-side if open
     setSideBySideWorkspace(null);
-  }, [currentRunsheetId, searchParams, setSearchParams]);
+  }, [effectiveRunsheetId, searchParams, setSearchParams]);
   
   const openSideBySideWorkspace = useCallback((rowIndex: number) => {
-    const newWorkspace = { runsheetId: currentRunsheetId || '', rowIndex };
+    const newWorkspace = { runsheetId: effectiveRunsheetId || '', rowIndex };
     setSideBySideWorkspace(newWorkspace);
     
     // Update URL parameters
@@ -455,7 +455,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     
     // Close full screen if open
     setFullScreenWorkspace(null);
-  }, [currentRunsheetId, searchParams, setSearchParams]);
+  }, [effectiveRunsheetId, searchParams, setSearchParams]);
   
   const closeAllWorkspaces = useCallback(() => {
     setFullScreenWorkspace(null);
