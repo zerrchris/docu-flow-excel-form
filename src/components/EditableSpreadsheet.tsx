@@ -6309,109 +6309,6 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
               </DropdownMenuContent>
             </DropdownMenu>
             
-            {/* Upload Multiple Files Button */}
-            {onShowMultipleUpload && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onShowMultipleUpload}
-                className="gap-2"
-              >
-                <FileStack className="h-4 w-4" />
-                Multiple Files
-              </Button>
-            )}
-            
-            {/* Batch Analysis Button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={async () => {
-                console.log('🧠 Brain button clicked - Debug info:');
-                console.log('currentRunsheet:', currentRunsheet);
-                console.log('currentRunsheetId:', currentRunsheetId);
-                console.log('effectiveRunsheetId:', effectiveRunsheetId);
-                console.log('documentMap size:', documentMap.size);
-                
-                if (!effectiveRunsheetId) {
-                  toast({
-                    title: "No runsheet selected",
-                    description: "Please save your runsheet before analyzing documents.",
-                    variant: "destructive",
-                  });
-                  return;
-                }
-                
-                let mapToCheck = documentMap;
-                // Refresh document map before opening dialog
-                if (effectiveRunsheetId) {
-                  try {
-                    console.log('🧠 Refreshing document map for runsheet:', effectiveRunsheetId);
-                    const updatedDocumentMap = await DocumentService.getDocumentMapForRunsheet(effectiveRunsheetId);
-                    updateDocumentMap(updatedDocumentMap);
-                    mapToCheck = updatedDocumentMap;
-                    console.log('🧠 Updated document map size:', mapToCheck.size);
-                  } catch (error) {
-                    console.error('Error refreshing document map:', error);
-                    toast({
-                      title: "Error loading documents",
-                      description: "Could not load linked documents. Please try again.",
-                      variant: "destructive",
-                    });
-                    return;
-                  }
-                }
-                
-                if (mapToCheck.size === 0) {
-                  toast({
-                    title: "Nothing to analyze",
-                    description: "No documents are linked to this runsheet yet.",
-                    variant: "default",
-                  });
-                  return;
-                }
-                
-                setShowBatchAnalysisDialog(true);
-              }}
-              className="gap-2"
-            >
-              <Brain className="h-4 w-4" />
-              Analyze All
-            </Button>
-            
-            {/* Batch File Rename Button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={async () => {
-                let mapToCheck = documentMap;
-                // Refresh document map before opening dialog
-                if (currentRunsheetId) {
-                  try {
-                    const updatedDocumentMap = await DocumentService.getDocumentMapForRunsheet(currentRunsheetId);
-                    updateDocumentMap(updatedDocumentMap);
-                    mapToCheck = updatedDocumentMap;
-                  } catch (error) {
-                    console.error('Error refreshing document map:', error);
-                  }
-                }
-                
-                if (mapToCheck.size === 0) {
-                  toast({
-                    title: "Nothing to rename",
-                    description: "No documents are linked to this runsheet yet.",
-                    variant: "default",
-                  });
-                  return;
-                }
-                
-                setShowBatchRenameDialog(true);
-              }}
-              className="gap-2"
-            >
-              <FileEdit className="h-4 w-4" />
-              Rename Files
-            </Button>
             
             {/* Add Rows Button */}
             <DropdownMenu open={addRowsDropdownOpen} onOpenChange={setAddRowsDropdownOpen}>
@@ -6931,16 +6828,86 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
                          zIndex: 999
                        }}
                      >
-                     <div className="w-full h-full px-4 py-2 flex gap-2">
+                      <div className="w-full h-full px-4 py-2 flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowDocumentNamingDialog(true)}
+                            className="h-8 text-xs"
+                          >
+                           <Sparkles className="h-3 w-3 mr-1 text-purple-600" />
+                            Smart File Name Settings
+                         </Button>
+                         
+                         {/* Upload Multiple Files Button */}
+                         {onShowMultipleUpload && (
+                           <Button
+                             variant="outline"
+                             size="sm"
+                             onClick={onShowMultipleUpload}
+                             className="h-8 text-xs gap-1"
+                           >
+                             <FileStack className="h-3 w-3" />
+                             Multiple Files
+                           </Button>
+                         )}
+                         
+                         {/* Batch Analysis Button */}
                          <Button
                            variant="outline"
                            size="sm"
-                           onClick={() => setShowDocumentNamingDialog(true)}
-                           className="h-8 text-xs flex-1"
+                           onClick={async () => {
+                             console.log('🧠 Brain button clicked - Debug info:');
+                             console.log('currentRunsheet:', currentRunsheet);
+                             console.log('currentRunsheetId:', currentRunsheetId);
+                             console.log('effectiveRunsheetId:', effectiveRunsheetId);
+                             console.log('documentMap size:', documentMap.size);
+                             
+                             if (!effectiveRunsheetId) {
+                               toast({
+                                 title: "No runsheet selected",
+                                 description: "Please save your runsheet before analyzing documents.",
+                                 variant: "destructive",
+                               });
+                               return;
+                             }
+                             
+                             let mapToCheck = documentMap;
+                             // Refresh document map before opening dialog
+                             if (effectiveRunsheetId) {
+                               try {
+                                 console.log('🧠 Refreshing document map for runsheet:', effectiveRunsheetId);
+                                 const updatedDocumentMap = await DocumentService.getDocumentMapForRunsheet(effectiveRunsheetId);
+                                 updateDocumentMap(updatedDocumentMap);
+                                 mapToCheck = updatedDocumentMap;
+                                 console.log('🧠 Updated document map size:', mapToCheck.size);
+                               } catch (error) {
+                                 console.error('Error refreshing document map:', error);
+                                 toast({
+                                   title: "Error loading documents",
+                                   description: "Could not load linked documents. Please try again.",
+                                   variant: "destructive",
+                                 });
+                                 return;
+                               }
+                             }
+                             
+                             if (mapToCheck.size === 0) {
+                               toast({
+                                 title: "Nothing to analyze",
+                                 description: "No documents are linked to this runsheet yet.",
+                                 variant: "default",
+                               });
+                               return;
+                             }
+                             
+                             setShowBatchAnalysisDialog(true);
+                           }}
+                           className="h-8 text-xs gap-1"
                          >
-                          <Sparkles className="h-3 w-3 mr-1 text-purple-600" />
-                           Smart File Name Settings
-                        </Button>
+                           <Brain className="h-3 w-3" />
+                           Analyze All
+                         </Button>
                     </div>
                   </th>
                 </tr>
