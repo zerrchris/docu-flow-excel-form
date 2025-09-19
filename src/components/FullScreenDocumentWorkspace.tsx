@@ -768,25 +768,25 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                    {documentUrl && !isLoading && !error && (
                      <>
                        {isAnalyzing ? (
-                         <Button
-                           variant="outline"
-                           size="sm"
-                           onClick={() => {
-                             if (abortController) {
-                               abortController.abort();
-                             }
-                             setIsAnalyzing(false);
-                             setAbortController(null);
-                             toast({
-                               title: "Analysis cancelled",
-                               description: "Document analysis was cancelled.",
-                             });
-                           }}
-                           className="gap-2 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                           title="Cancel document analysis"
-                         >
-                           Cancel Analysis
-                         </Button>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => {
+                              if (abortController) {
+                                abortController.abort();
+                              }
+                              setIsAnalyzing(false);
+                              setAbortController(null);
+                              toast({
+                                title: "Analysis cancelled",
+                                description: "Document analysis was cancelled.",
+                              });
+                            }}
+                            className="gap-2"
+                            title="Cancel document analysis"
+                          >
+                            Cancel Analysis
+                          </Button>
                        ) : (
                          <Button
                            variant="outline"

@@ -553,7 +553,7 @@ const DataForm: React.FC<DataFormProps> = ({
           
           {isAnalyzing && onCancelAnalysis && (
             <Button
-              variant="outline"
+              variant="secondary"
               onClick={onCancelAnalysis}
               className="w-full sm:w-auto"
             >

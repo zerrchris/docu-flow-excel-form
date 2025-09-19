@@ -564,8 +564,8 @@ Return only the filename, nothing else.`,
                                 description: "Document analysis was cancelled.",
                               });
                             }}
-                            variant="outline"
-                            className="flex items-center gap-2 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                             variant="secondary"
+                             className="flex items-center gap-2"
                             size="sm"
                           >
                             Cancel Analysis
