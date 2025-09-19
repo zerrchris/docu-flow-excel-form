@@ -6763,7 +6763,8 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
           {/* Fixed table wrapper for proper sticky behavior */}
           <div 
             style={{ 
-              width: `${getTotalTableWidth()}px`,
+              minWidth: `${getTotalTableWidth()}px`,
+              width: 'fit-content',
               position: 'relative',
               height: 'fit-content',
               minHeight: '100%'
@@ -6774,7 +6775,8 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
               className="border-collapse w-full table-fixed" 
               style={{ 
                 tableLayout: 'fixed', 
-                width: `${getTotalTableWidth()}px`,
+                minWidth: `${getTotalTableWidth()}px`,
+                width: 'fit-content',
                 position: 'relative',
                 borderCollapse: 'separate',
                 borderSpacing: '0'
