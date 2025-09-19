@@ -53,6 +53,15 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
   const [skipRowsWithData, setSkipRowsWithData] = useState(true);
   const [currentJobId, setCurrentJobId] = useState<string | null>(null);
 
+  // Helper function to check if a row has data
+  const hasRowData = (rowIndex: number): boolean => {
+    if (!currentData || !currentData[rowIndex]) return false;
+    const rowData = currentData[rowIndex];
+    return Object.values(rowData).some(value => 
+      value && typeof value === 'string' && value.trim() !== ''
+    );
+  };
+
   // Initialize results when dialog opens and check for existing job
   useEffect(() => {
     if (isOpen && documentMap.size > 0) {
@@ -65,18 +74,23 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
         setProgress((existingJob.currentIndex / existingJob.documentMap.length) * 100);
       } else {
         const initialResults: BatchAnalysisResult[] = [];
+        
+        // Only include rows that have documents AND no existing data
         documentMap.forEach((doc, rowIndex) => {
-          initialResults.push({
-            rowIndex,
-            documentName: doc.stored_filename,
-            status: 'pending'
-          });
+          if (!hasRowData(rowIndex)) {
+            initialResults.push({
+              rowIndex,
+              documentName: doc.stored_filename,
+              status: 'pending'
+            });
+          }
         });
+        
         setResults(initialResults.sort((a, b) => a.rowIndex - b.rowIndex));
         setProgress(0);
       }
     }
-  }, [isOpen, documentMap, runsheetId]);
+  }, [isOpen, documentMap, runsheetId, currentData]);
 
   // Subscribe to background analyzer progress
   useEffect(() => {
@@ -110,24 +124,33 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
 
 
   const startBatchAnalysis = async () => {
-    if (documentMap.size === 0) {
+    if (results.length === 0) {
       toast({
-        title: "No documents to analyze",
-        description: "There are no documents linked to this runsheet.",
-        variant: "destructive"
+        title: "No empty rows to analyze",
+        description: "All rows with documents already contain data.",
+        variant: "default"
       });
       return;
     }
 
     try {
+      // Create a filtered document map with only empty rows
+      const filteredDocumentMap = new Map<number, DocumentRecord>();
+      results.forEach(result => {
+        const doc = documentMap.get(result.rowIndex);
+        if (doc) {
+          filteredDocumentMap.set(result.rowIndex, doc);
+        }
+      });
+
       const jobId = await backgroundAnalyzer.startAnalysis(
         runsheetId,
         runsheetName,
         columns,
         columnInstructions,
-        documentMap,
+        filteredDocumentMap, // Use filtered map instead of full documentMap
         currentData,
-        skipRowsWithData
+        true // Always skip rows with data since we've pre-filtered
       );
       
       setCurrentJobId(jobId);
@@ -135,7 +158,7 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
       
       toast({
         title: "Analysis started",
-        description: "Document analysis is running in the background. You can navigate to other tabs.",
+        description: `Analyzing ${results.length} empty row${results.length !== 1 ? 's' : ''} with documents.`,
       });
     } catch (error) {
       console.error('Failed to start batch analysis:', error);
@@ -216,24 +239,21 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
           </DialogHeader>
 
         <div className="flex-1 space-y-4 overflow-hidden">
-          {documentMap.size === 0 ? (
+          {results.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>No documents found in this runsheet.</p>
-              <p className="text-sm">Link some documents first, then try batch analysis.</p>
+              <p className="font-medium">No empty rows with documents found</p>
+              <p className="text-sm">All rows with documents already contain data, so there's nothing to analyze.</p>
+              <p className="text-sm mt-2">This prevents accidentally overwriting your existing work.</p>
             </div>
           ) : (
             <>
               <div className="space-y-4">
-                <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="skip-existing" 
-                    checked={skipRowsWithData}
-                    onCheckedChange={(checked) => setSkipRowsWithData(checked === true)}
-                  />
-                  <Label htmlFor="skip-existing" className="text-sm">
-                    Skip rows that already have data (recommended)
-                  </Label>
+                <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+                  <p className="text-sm text-blue-800">
+                    <strong>Safe Mode:</strong> Only analyzing {results.length} empty row{results.length !== 1 ? 's' : ''} with documents. 
+                    Rows with existing data are automatically skipped to prevent overwriting your work.
+                  </p>
                 </div>
                 
                 <div className="space-y-2">
