@@ -152,6 +152,16 @@ const DocumentProcessor: React.FC = () => {
     loadUser();
   }, []);
 
+  // When navigated with a newly uploaded runsheet in location.state, set it as active
+  useEffect(() => {
+    const stateAny = location.state as any;
+    const uploaded = stateAny?.runsheet;
+    if (uploaded?.id) {
+      console.log('📥 DocumentProcessor: setting uploaded runsheet as active', uploaded.id);
+      setCurrentRunsheet(uploaded.id);
+    }
+  }, [location.state, setCurrentRunsheet]);
+
   // Check for backup data when runsheet changes
   useEffect(() => {
     if (activeRunsheet?.id && currentUser) {

@@ -526,7 +526,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   const isProcessingUploadRef = useRef<boolean>(false);
   
   // Immediate save system like Google Sheets - no debouncing, save on every change
-  const { saveToDatabase, isSaving: immediateSaving } = useImmediateSave({
+  const { saveToDatabase, saveAsNewRunsheet, isSaving: immediateSaving } = useImmediateSave({
     runsheetId: currentRunsheet?.id || currentRunsheetId,
     userId: user?.id,
     onSaveStart: () => {
@@ -1824,30 +1824,42 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         (payload) => {
           console.log('🔄 Real-time runsheet update received:', payload);
           
-          // Only update if the change came from a different source (e.g., extension or another tab)
           const newData = payload.new?.data as Record<string, string>[];
-          if (newData) {
-            // Use a ref to get current data to avoid stale closures
-            setData(currentData => {
-              if (JSON.stringify(newData) !== JSON.stringify(currentData)) {
-                console.log('🔄 Applying real-time data update');
-                onDataChange?.(newData);
-                
-                // Show a subtle notification only if there are significant changes
-                const hasSignificantChanges = checkForSignificantChanges(currentData, newData);
-                if (hasSignificantChanges) {
-                  // Use a brief, less intrusive notification
-                  toast({
-                    title: "Synced",
-                    description: "Data updated from another source",
-                    duration: 2000, // Shorter duration
-                  });
-                }
-                return newData;
-              }
-              return currentData;
-            });
+          if (!newData) return;
+
+          // Suppress self-echo or immediate post-upload overrides
+          const now = Date.now();
+          const withinSelfEcho = now - lastSavedAtRef.current < 3000;
+          const newDataHash = (() => { try { return JSON.stringify(newData); } catch { return null; } })();
+          const isSameAsLastSaved = newDataHash && newDataHash === lastSavedDataHashRef.current;
+          const creatingFlag = sessionStorage.getItem('creating_new_runsheet');
+          const creatingRecent = !!creatingFlag && (creatingFlag === 'true' || (now - (parseInt(creatingFlag) || 0) < 5000));
+
+          if (isProcessingUploadRef.current || withinSelfEcho || isSameAsLastSaved || creatingRecent) {
+            console.log('🚫 Skipping realtime update (self-echo/upload in progress)');
+            return;
           }
+
+          // Use a ref to get current data to avoid stale closures
+          setData(currentData => {
+            if (JSON.stringify(newData) !== JSON.stringify(currentData)) {
+              console.log('🔄 Applying real-time data update');
+              onDataChange?.(newData);
+              
+              // Show a subtle notification only if there are significant changes
+              const hasSignificantChanges = checkForSignificantChanges(currentData, newData);
+              if (hasSignificantChanges) {
+                // Use a brief, less intrusive notification
+                toast({
+                  title: "Synced",
+                  description: "Data updated from another source",
+                  duration: 2000, // Shorter duration
+                });
+              }
+              return newData;
+            }
+            return currentData;
+          });
         }
       )
       .subscribe((status) => {
@@ -3548,8 +3560,11 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         // Prevent old location.state or effects from overriding this fresh upload
         sessionStorage.setItem('creating_new_runsheet', Date.now().toString());
         sessionStorage.setItem('new_runsheet_name', uniqueName);
+        isProcessingUploadRef.current = true;
+        lastSavedAtRef.current = Date.now();
+        try { lastSavedDataHashRef.current = JSON.stringify(newData); } catch {}
 
-        const result = await saveToDatabase(newData, finalHeaders, uniqueName, columnInstructions, false);
+        const result = await saveAsNewRunsheet(newData, finalHeaders, uniqueName, columnInstructions, false);
         if (result && result.id) {
           // Set this as the active runsheet so it displays properly
           setCurrentRunsheet(result.id);
@@ -3560,6 +3575,9 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         }
       } catch (error) {
         console.error('Failed to save uploaded runsheet:', error);
+      } finally {
+        // Allow realtime again after a short grace period
+        setTimeout(() => { isProcessingUploadRef.current = false; }, 1500);
       }
     }, 100); // Small delay to ensure state updates are complete
 
