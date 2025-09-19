@@ -137,6 +137,13 @@ export const useActiveRunsheet = () => {
           dataLength: Array.isArray(data.data) ? data.data.length : 0,
           columnInstructions: data.column_instructions
         });
+        
+        console.log('🔧 ACTIVE_RUNSHEET: Setting activeRunsheet state with:', {
+          id: data.id,
+          name: data.name,
+          hasData: Array.isArray(data.data) && data.data.length > 0,
+          hasColumns: Array.isArray(data.columns) && data.columns.length > 0
+        });
       } catch (error) {
         console.error('Error loading runsheet:', error);
         setActiveRunsheet(null);

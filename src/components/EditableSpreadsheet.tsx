@@ -143,6 +143,17 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { setActiveRunsheet, clearActiveRunsheet, currentRunsheet, updateRunsheet, setCurrentRunsheet } = useActiveRunsheet();
+  
+  // Debug log when currentRunsheet changes
+  useEffect(() => {
+    console.log('🔧 EDITABLE_SPREADSHEET: currentRunsheet changed:', {
+      hasCurrentRunsheet: !!currentRunsheet,
+      runsheetId: currentRunsheet?.id,
+      runsheetName: currentRunsheet?.name,
+      columnsLength: currentRunsheet?.columns?.length || 0,
+      dataLength: currentRunsheet?.data?.length || 0
+    });
+  }, [currentRunsheet]);
   const [user, setUser] = useState<User | null>(null);
   
   // Track locally which columns need configuration
@@ -267,6 +278,38 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       variant: "default"
     });
   }, [columns, toast]);
+
+  // CRITICAL: Sync local state with currentRunsheet when it loads
+  useEffect(() => {
+    if (currentRunsheet && currentRunsheet.id) {
+      console.log('🔄 EDITABLE_SPREADSHEET: Syncing with loaded runsheet data');
+      
+      // Update local state with runsheet data
+      if (currentRunsheet.columns && currentRunsheet.columns.length > 0) {
+        console.log('🔄 EDITABLE_SPREADSHEET: Setting columns from runsheet:', currentRunsheet.columns);
+        setColumns(currentRunsheet.columns);
+        onColumnChange?.(currentRunsheet.columns);
+      }
+      
+      if (currentRunsheet.data) {
+        console.log('🔄 EDITABLE_SPREADSHEET: Setting data from runsheet, length:', currentRunsheet.data.length);
+        const minRowsData = ensureMinimumRows(currentRunsheet.data, currentRunsheet.columns || []);
+        setData(minRowsData);
+        onDataChange?.(minRowsData);
+      }
+      
+      if (currentRunsheet.name) {
+        console.log('🔄 EDITABLE_SPREADSHEET: Setting runsheet name:', currentRunsheet.name);
+        setRunsheetName(currentRunsheet.name);
+      }
+      
+      if (currentRunsheet.columnInstructions) {
+        console.log('🔄 EDITABLE_SPREADSHEET: Setting column instructions');
+        setColumnInstructions(currentRunsheet.columnInstructions);
+        onColumnInstructionsChange?.(currentRunsheet.columnInstructions);
+      }
+    }
+  }, [currentRunsheet, onColumnChange, onDataChange, onColumnInstructionsChange, ensureMinimumRows]);
 
 
   // Function to add rows to reach a specific total
