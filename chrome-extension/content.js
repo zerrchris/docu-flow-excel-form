@@ -1829,6 +1829,11 @@ function createSingleEntryView(content) {
         textarea.style.boxShadow = '0 0 0 2px hsl(var(--primary, 215 80% 40%) / 0.2)';
         textarea.style.borderRadius = '2px';
         autoResize();
+        
+        // Auto-select all text when focused
+        setTimeout(() => {
+          textarea.select();
+        }, 10);
       });
       
       textarea.addEventListener('blur', () => {
@@ -1848,6 +1853,14 @@ function createSingleEntryView(content) {
         if (document.activeElement !== textarea) {
           textarea.style.background = 'transparent';
         }
+      });
+      
+      // Auto-select text when clicked
+      textarea.addEventListener('click', () => {
+        textarea.focus();
+        setTimeout(() => {
+          textarea.select();
+        }, 10);
       });
       
       // Handle keyboard navigation like EditableSpreadsheet
