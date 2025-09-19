@@ -7870,10 +7870,15 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
             columnInstructions={columnInstructions}
             documentRecord={documentMap.get(sideBySideWorkspace.rowIndex)}
             onDataUpdate={(rowIndex, rowData) => {
+              console.log('🔄 EDITABLE_SPREADSHEET: onDataUpdate called for row', rowIndex, 'with data:', rowData);
               const newData = [...data];
               newData[rowIndex] = rowData;
               setData(newData);
               onDataChange?.(newData);
+              
+              // Trigger immediate save to prevent real-time sync from overwriting
+              console.log('🔄 EDITABLE_SPREADSHEET: Triggering immediate save after data update');
+              saveToDatabase(newData, columns, runsheetName, columnInstructions, true);
             }}
             onClose={closeAllWorkspaces}
           />

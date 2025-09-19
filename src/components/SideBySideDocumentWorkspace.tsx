@@ -235,9 +235,11 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
         // Immediately sync changes back to parent component
         onDataUpdate(rowIndex, updatedRowData);
         
+        console.log('✅ SIDE-BY-SIDE: Successfully added to row', rowIndex, 'with data:', updatedRowData);
+        
         toast({
           title: "Document analyzed",
-          description: `Extracted data from ${documentRecord.stored_filename}`,
+          description: `Successfully added to row ${rowIndex + 1}`,
         });
       } else {
         toast({
