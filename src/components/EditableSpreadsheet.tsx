@@ -859,22 +859,22 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       sessionStorage.setItem('creating_new_runsheet', Date.now().toString());
       
       setTimeout(async () => {
-        try {
-          const { data: { user } } = await supabase.auth.getUser();
-          if (!user) {
-            toast({
-              title: "Sign in required",
-              description: "Please sign in to create a runsheet.",
-              variant: "destructive"
-            });
-            return;
-          }
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          toast({
+            title: "Sign in required",
+            description: "Please sign in to create a runsheet.",
+            variant: "destructive"
+          });
+          return;
+        }
 
-          // Check if a runsheet with this name already exists and generate a unique name
-          let finalName = name;
-          let attempt = 1;
-          const maxAttempts = 10;
-          
+        // Check if a runsheet with this name already exists and generate a unique name
+        let finalName = name;
+        let attempt = 1;
+        const maxAttempts = 10;
+        
+        try {
           while (attempt <= maxAttempts) {
             const { data: existingRunsheet, error: checkError } = await supabase
               .from('runsheets')
@@ -935,11 +935,31 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
           console.log('✅ New runsheet created and set as active:', newRunsheet.id);
         } catch (error) {
           console.error('Failed to create new runsheet:', error);
-          toast({
-            title: "Error creating runsheet",
-            description: error instanceof Error ? `Failed to save new runsheet: ${error.message}` : "Failed to save new runsheet. Please try again.",
-            variant: "destructive"
-          });
+          
+          // Only show error if we actually failed - check if runsheet was created
+          const { data: existingRunsheet } = await supabase
+            .from('runsheets')
+            .select('id, name')
+            .eq('user_id', user.id)
+            .eq('name', finalName)
+            .maybeSingle();
+          
+          if (!existingRunsheet) {
+            // Runsheet wasn't created, show error
+            toast({
+              title: "Error creating runsheet",
+              description: error instanceof Error ? `Failed to save new runsheet: ${error.message}` : "Failed to save new runsheet. Please try again.",
+              variant: "destructive"
+            });
+          } else {
+            // Runsheet was actually created successfully, just set it as active
+            console.log('✅ Runsheet was created successfully despite error, setting as active:', existingRunsheet.id);
+            setCurrentRunsheet(existingRunsheet.id);
+            toast({
+              title: "New runsheet created",
+              description: `"${finalName}" is ready for your data.`,
+            });
+          }
         } finally {
           // Clear the creation flag
           sessionStorage.removeItem('creating_new_runsheet');
