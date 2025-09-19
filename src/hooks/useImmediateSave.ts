@@ -48,15 +48,17 @@ export function useImmediateSave({
     columnInstructions: Record<string, string>,
     silent: boolean = false  // Default to false for backwards compatibility
   ): Promise<any> => {
-    if (!userId || !runsheetName.trim() || columns.length === 0) {
+    const trimmedName = runsheetName.trim();
+
+    if (!userId || !trimmedName || columns.length === 0) {
       console.log('⚠️ Skipping save - missing required data');
       return null;
     }
 
     // Skip save for default/untitled names
     const forbiddenNames = ['Untitled Runsheet', 'untitled runsheet', 'Untitled', 'untitled'];
-    if (forbiddenNames.includes(runsheetName.trim())) {
-      console.log('🚫 Skipping save - forbidden runsheet name:', runsheetName);
+    if (forbiddenNames.includes(trimmedName)) {
+      console.log('🚫 Skipping save - forbidden runsheet name:', trimmedName);
       return null;
     }
 
@@ -79,13 +81,13 @@ export function useImmediateSave({
         runsheetId,
         dataLength: data.length,
         columnsLength: columns.length,
-        runsheetName
+        runsheetName: trimmedName
       });
     }
 
     try {
       const runsheetData = {
-        name: runsheetName.trim(),
+        name: trimmedName,
         columns,
         data,
         column_instructions: columnInstructions,
