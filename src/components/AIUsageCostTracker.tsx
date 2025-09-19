@@ -15,36 +15,39 @@ export const AIUsageCostTracker: React.FC<AIUsageCostTrackerProps> = ({ classNam
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadUsageCosts();
-    
-    // Set up real-time subscription for new usage
-    const subscription = supabase
-      .channel('ai_usage_realtime')
-      .on('postgres_changes', 
-        { 
-          event: 'INSERT', 
-          schema: 'public', 
-          table: 'ai_usage_analytics',
-          filter: `user_id=eq.${getCurrentUserId()}`
-        }, 
-        (payload) => {
-          const newCost = payload.new.estimated_cost_usd || 0;
-          setSessionCost(prev => prev + newCost);
-          setTodayCost(prev => prev + newCost);
-          setMonthCost(prev => prev + newCost);
-        }
-      )
-      .subscribe();
+    const setupRealtimeSubscription = async () => {
+      await loadUsageCosts();
+      
+      // Get current user ID first
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      
+      // Set up real-time subscription for new usage with resolved user ID
+      const subscription = supabase
+        .channel('ai_usage_realtime')
+        .on('postgres_changes', 
+          { 
+            event: 'INSERT', 
+            schema: 'public', 
+            table: 'ai_usage_analytics',
+            filter: `user_id=eq.${user.id}`
+          }, 
+          (payload) => {
+            const newCost = payload.new.estimated_cost_usd || 0;
+            setSessionCost(prev => prev + newCost);
+            setTodayCost(prev => prev + newCost);
+            setMonthCost(prev => prev + newCost);
+          }
+        )
+        .subscribe();
 
-    return () => {
-      subscription.unsubscribe();
+      return () => {
+        subscription.unsubscribe();
+      };
     };
-  }, []);
 
-  const getCurrentUserId = () => {
-    // This should be replaced with actual user ID from auth context
-    return supabase.auth.getUser().then(({ data }) => data.user?.id);
-  };
+    setupRealtimeSubscription();
+  }, []);
 
   const loadUsageCosts = async () => {
     try {

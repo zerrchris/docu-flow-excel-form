@@ -372,7 +372,7 @@ export interface AnalysisProgress {
 
 export const backgroundAnalyzer = BackgroundAnalyzer.getInstance();
 
-// Auto-resume on page load and prevent unload during analysis
+// Auto-resume intentionally disabled to prevent unexpected background operations on page load
 if (typeof window !== 'undefined') {
   // Resume analysis on page load with better logging
   window.addEventListener('load', () => {

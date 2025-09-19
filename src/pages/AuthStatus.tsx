@@ -169,7 +169,7 @@ const AuthStatus = () => {
               <Button 
                 className="mt-3" 
                 size="sm"
-                onClick={() => window.location.href = '/sign-in'}
+                onClick={() => window.location.href = '/signin'}
               >
                 Go to Sign In
               </Button>
