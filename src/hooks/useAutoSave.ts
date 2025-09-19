@@ -1,4 +1,4 @@
-import { useCallback, useRef, useEffect } from 'react';
+import { useCallback, useRef, useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -37,7 +37,7 @@ export function useAutoSave({
 }: AutoSaveOptions): AutoSaveResult {
   const { toast } = useToast();
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const isSavingRef = useRef(false);
+  const [isSaving, setIsSaving] = useState(false);
   const lastSavedStateRef = useRef<string>('');
 
   // Calculate current state hash for comparison
@@ -90,7 +90,7 @@ export function useAutoSave({
       return;
     }
 
-    isSavingRef.current = true;
+    setIsSaving(true);
     onSaveStart?.();
 
     try {
@@ -172,7 +172,7 @@ export function useAutoSave({
         variant: "destructive",
       });
     } finally {
-      isSavingRef.current = false;
+      setIsSaving(false);
     }
   }, [userId, runsheetName, columns, data, columnInstructions, runsheetId, getCurrentStateHash, onSaveStart, onSaveSuccess, onSaveError, toast]);
 
@@ -215,7 +215,7 @@ export function useAutoSave({
   return {
     save,
     forceSave,
-    isSaving: isSavingRef.current,
+    isSaving,
     saveToLocalStorage,
     loadFromLocalStorage
   };
