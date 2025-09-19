@@ -1399,7 +1399,13 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
 
   // Set initial runsheet ID if provided, or sync with restored active runsheet
   useEffect(() => {
-    if (initialRunsheetId) {
+    // Do not override a newly created runsheet
+    const creatingFlag = sessionStorage.getItem('creating_new_runsheet');
+    const creatingRecent = !!creatingFlag && (creatingFlag === 'true' || (Date.now() - (parseInt(creatingFlag) || 0) < 5000));
+    if (creatingRecent) return;
+
+    // Only set from initialRunsheetId when we don't already have a current one
+    if (initialRunsheetId && !currentRunsheetId) {
       setCurrentRunsheetId(initialRunsheetId);
     } else if (currentRunsheet?.id && !currentRunsheetId) {
       // Sync with restored active runsheet from localStorage on mount
