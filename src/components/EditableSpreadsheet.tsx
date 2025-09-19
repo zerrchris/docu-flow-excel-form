@@ -1918,18 +1918,25 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     
     // Listen for force save events from document analysis
     const handleForceSave = async (event: CustomEvent) => {
-      const { rowIndex, extractedData } = event.detail;
-      console.log('🔧 Force save requested for row', rowIndex, 'with data:', extractedData);
+      const { rowIndex, updatedData, extractedData } = event.detail || {};
+      console.log('🔧 Force save requested for row', rowIndex, 'with data:', updatedData || extractedData);
       
       if (effectiveRunsheetId) {
         try {
+          // Use latest data snapshot to avoid stale overwrites and merge incoming row if provided
+          const snapshot = [...dataRef.current];
+          const incoming = updatedData || extractedData;
+          if (typeof rowIndex === 'number' && incoming && typeof incoming === 'object') {
+            snapshot[rowIndex] = incoming;
+          }
+
           // Mark last save and suppress realtime to prevent loops/overwrite
           lastSavedAtRef.current = Date.now();
-          try { lastSavedDataHashRef.current = JSON.stringify(data); } catch {}
+          try { lastSavedDataHashRef.current = JSON.stringify(snapshot); } catch {}
           suppressRealtimeUntilRef.current = Date.now() + 6000;
 
           // Trigger immediate database save (silent)
-          await saveToDatabase(data, columns, runsheetName, columnInstructions, true);
+          await saveToDatabase(snapshot, columns, runsheetName, columnInstructions, true);
           console.log('✅ Force save completed successfully');
         } catch (error) {
           console.error('❌ Force save failed:', error);
