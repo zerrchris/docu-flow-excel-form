@@ -3751,6 +3751,10 @@ function startSnipModeWithMode(mode = 'single', skipOverwriteCheck = false) {
   }
   
   createSnipOverlay();
+  
+  // Disable other extension interactions during snip mode
+  disableExtensionInteractions();
+  
   if (mode !== 'single') {
     createSnipControlPanel();
   }
@@ -3781,8 +3785,8 @@ function createSnipOverlay() {
     left: 0 !important;
     width: 100% !important;
     height: 100% !important;
-    background: transparent !important;
-    z-index: 2147483645 !important;
+    background: rgba(0, 0, 0, 0.02) !important;
+    z-index: 2147483647 !important;
     cursor: crosshair !important;
     user-select: none !important;
     pointer-events: auto !important;
@@ -5878,6 +5882,36 @@ function disableMouseWheelScrollDetection() {
   }
 }
 
+// Disable extension interactions during snip mode
+function disableExtensionInteractions() {
+  // Disable runsheet button
+  if (runsheetButton) {
+    runsheetButton.style.pointerEvents = 'none';
+    runsheetButton.style.opacity = '0.5';
+  }
+  
+  // Disable runsheet frame interactions
+  if (runsheetFrame && runsheetFrame.style.display !== 'none') {
+    runsheetFrame.style.pointerEvents = 'none';
+    runsheetFrame.style.opacity = '0.7';
+  }
+}
+
+// Re-enable extension interactions after snip mode
+function enableExtensionInteractions() {
+  // Re-enable runsheet button
+  if (runsheetButton) {
+    runsheetButton.style.pointerEvents = 'auto';
+    runsheetButton.style.opacity = '1';
+  }
+  
+  // Re-enable runsheet frame interactions
+  if (runsheetFrame) {
+    runsheetFrame.style.pointerEvents = 'auto';
+    runsheetFrame.style.opacity = '1';
+  }
+}
+
 // Update cleanup function to disable smart scroll
 function cleanupSnipMode() {
   isSnipMode = false;
@@ -5886,6 +5920,9 @@ function cleanupSnipMode() {
   
   // Disable smart scrolling
   disableSmartScrollDetection();
+  
+  // Re-enable extension interactions
+  enableExtensionInteractions();
   
   // Remove overlays and UI
   if (snipOverlay) {
