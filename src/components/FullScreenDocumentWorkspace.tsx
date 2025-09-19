@@ -157,14 +157,14 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
     setLocalRowData(updatedData);
     onUpdateRow(rowIndex, updatedData);
     
-    // Auto-save to runsheet state to prevent data loss on navigation
-    if (activeRunsheet) {
-      const updatedRunsheetData = [...(activeRunsheet.data || [])];
-      updatedRunsheetData[rowIndex] = updatedData;
-      
-      // Update active runsheet with new data - database-first approach will handle persistence
-      setCurrentRunsheet(activeRunsheet.id); // Trigger refresh
-    }
+    // Trigger a silent, immediate save via the spreadsheet to prevent data loss
+    window.dispatchEvent(new CustomEvent('forceSaveCurrentRunsheet', {
+      detail: {
+        rowIndex,
+        updatedData,
+        source: 'fullscreen-edit'
+      }
+    }));
   };
 
   const handleBackToRunsheet = () => {
