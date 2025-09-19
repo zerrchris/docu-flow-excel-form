@@ -696,9 +696,9 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
   const errorFiles = files.filter(f => f.status === 'error').length;
 
   return (
-    <div className="w-full h-full min-h-0 flex flex-col">
-      <Card className={`flex-1 min-h-0 flex flex-col overflow-hidden ${files.length === 0 ? 'h-auto' : ''}`}>
-        <ScrollArea className={`${files.length === 0 ? 'h-auto' : 'h-full'} p-6`}>
+    <div className="w-full h-full min-h-0 flex flex-col max-h-[85vh]">
+      <Card className="flex-1 min-h-0 flex flex-col overflow-hidden">
+        <ScrollArea className="h-full p-6">
           <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold">Upload Multiple Files</h3>
@@ -859,14 +859,33 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
                   >
                     Done
                   </Button>
-                ) : (
-                  <Button
-                    onClick={uploadFiles}
-                    disabled={isUploading || files.every(f => f.status === 'success')}
-                  >
-                    {isUploading ? 'Uploading...' : `Upload ${pendingFiles} Files`}
-                  </Button>
-                )}
+                 ) : (
+                   <>
+                     {isUploading && (
+                       <Button
+                         onClick={() => {
+                           setIsUploading(false);
+                           setIsProcessing(false);
+                           syncService.setUploadInProgress(false);
+                           toast({
+                             title: "Upload cancelled",
+                             description: "File upload has been cancelled.",
+                           });
+                         }}
+                         variant="destructive"
+                         size="sm"
+                       >
+                         Cancel Upload
+                       </Button>
+                     )}
+                     <Button
+                       onClick={uploadFiles}
+                       disabled={isUploading || files.every(f => f.status === 'success')}
+                     >
+                       {isUploading ? 'Uploading...' : `Upload ${pendingFiles} Files`}
+                     </Button>
+                   </>
+                 )}
               </div>
             </div>
           )}

@@ -240,7 +240,7 @@ export const RunsheetFileUpload: React.FC<RunsheetFileUploadProps> = ({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 max-h-[80vh] overflow-hidden flex flex-col">
       {!showPreview ? (
         <>
           {/* File Drop Zone */}
@@ -316,7 +316,7 @@ export const RunsheetFileUpload: React.FC<RunsheetFileUploadProps> = ({
           )}
 
           {/* Action Buttons */}
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-end gap-2 shrink-0">
             <Button variant="outline" onClick={onCancel} disabled={isProcessing}>
               Cancel
             </Button>
@@ -344,8 +344,8 @@ export const RunsheetFileUpload: React.FC<RunsheetFileUploadProps> = ({
               </div>
 
               {/* Preview Table */}
-              <div className="border rounded-md overflow-hidden">
-                <div className="overflow-x-auto max-h-64">
+              <div className="border rounded-md overflow-hidden flex-1 min-h-0">
+                <div className="overflow-auto max-h-96">
                   <table className="w-full text-sm">
                     <tbody>
                       {previewData?.map((row, rowIndex) => {
@@ -392,7 +392,7 @@ export const RunsheetFileUpload: React.FC<RunsheetFileUploadProps> = ({
           </Card>
 
           {/* Action Buttons */}
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-end gap-2 shrink-0">
             <Button variant="outline" onClick={clearFile}>
               Back
             </Button>
