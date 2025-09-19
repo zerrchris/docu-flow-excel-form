@@ -525,6 +525,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   const lastSavedDataHashRef = useRef<string | null>(null);
   const lastSyncToastAtRef = useRef<number>(0);
   const isProcessingUploadRef = useRef<boolean>(false);
+  const suppressRealtimeUntilRef = useRef<number>(0);
   
   // Immediate save system like Google Sheets - no debouncing, save on every change
   const { saveToDatabase, saveAsNewRunsheet, isSaving: immediateSaving } = useImmediateSave({
@@ -1848,13 +1849,27 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       const { rowIndex, extractedData } = event.detail;
       if (effectiveRunsheetId && extractedData) {
         console.log('🧠 Batch analysis progress: updating row', rowIndex, 'with data:', extractedData);
+        // Suppress realtime briefly to avoid overwrite races
+        suppressRealtimeUntilRef.current = Date.now() + 4000;
+
+        let nextDataSnapshot: Record<string, string>[] | null = null;
         setData(currentData => {
           const newData = [...currentData];
           if (newData[rowIndex]) {
             newData[rowIndex] = { ...newData[rowIndex], ...extractedData };
           }
+          nextDataSnapshot = newData;
           return newData;
         });
+
+        // Persist immediately so server state matches UI
+        if (nextDataSnapshot) {
+          try {
+            saveToDatabase(nextDataSnapshot, columns, runsheetName, columnInstructions, true);
+          } catch (e) {
+            console.error('Failed to persist batch analysis progress:', e);
+          }
+        }
       }
     };
     window.addEventListener('batchAnalysisProgress', handleBatchAnalysisProgress as EventListener);
@@ -1903,9 +1918,10 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
           const creatingRecent = !!creatingFlag && (creatingFlag === 'true' || (now - (parseInt(creatingFlag) || 0) < 5000));
 
           const batchAnalysisRunning = backgroundAnalyzer.getJobStatus()?.status === 'running';
+          const suppressActive = now < suppressRealtimeUntilRef.current;
 
-          if (isProcessingUploadRef.current || withinSelfEcho || isSameAsLastSaved || creatingRecent || batchAnalysisRunning) {
-            console.log('🚫 Skipping realtime update (self-echo/upload in progress/batch analysis running)');
+          if (isProcessingUploadRef.current || withinSelfEcho || isSameAsLastSaved || creatingRecent || batchAnalysisRunning || suppressActive) {
+            console.log('🚫 Skipping realtime update (self-echo/upload in progress/batch analysis running/suppressed)');
             return;
           }
 
