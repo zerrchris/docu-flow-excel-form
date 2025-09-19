@@ -536,6 +536,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   const isProcessingUploadRef = useRef<boolean>(false);
   const suppressRealtimeUntilRef = useRef<number>(0);
   const dataRef = useRef<Record<string, string>[]>(data);
+  const recentEditedRowsRef = useRef<Map<number, { timestamp: number; row: Record<string, string> }>>(new Map());
   
   // Immediate save system like Google Sheets - no debouncing, save on every change
   const { saveToDatabase, saveAsNewRunsheet, isSaving: immediateSaving } = useImmediateSave({
@@ -2017,20 +2018,40 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
           // Use a ref to get current data to avoid stale closures
           setData(currentData => {
             if (JSON.stringify(newData) !== JSON.stringify(currentData)) {
-              console.log('🔄 Applying real-time data update');
-              onDataChange?.(newData);
+              // Merge protection: preserve fields from rows edited very recently
+              const nowTs = Date.now();
+              const merged = [...newData];
+              try {
+                recentEditedRowsRef.current.forEach((meta, idx) => {
+                  if (nowTs - meta.timestamp <= 12000) {
+                    const localRow = meta.row || {};
+                    const remoteRow = merged[idx] || {};
+                    const mergedRow: Record<string, string> = { ...remoteRow };
+                    const cols = (columns && columns.length ? columns : Object.keys(localRow));
+                    cols.forEach(col => {
+                      const v = localRow[col];
+                      if (typeof v === 'string' && v.trim() !== '') {
+                        mergedRow[col] = v;
+                      }
+                    });
+                    merged[idx] = mergedRow;
+                  }
+                });
+              } catch {}
+
+              console.log('🔄 Applying real-time data update (merged with recent local edits)');
+              onDataChange?.(merged);
               
               // Show a subtle notification only if there are significant changes
-              const hasSignificantChanges = checkForSignificantChanges(currentData, newData);
+              const hasSignificantChanges = checkForSignificantChanges(currentData, merged);
               if (hasSignificantChanges) {
-                // Use a brief, less intrusive notification
                 toast({
                   title: "Synced",
                   description: "Data updated from another source",
-                  duration: 2000, // Shorter duration
+                  duration: 2000,
                 });
               }
-              return newData;
+              return merged;
             }
             return currentData;
           });
@@ -6303,6 +6324,15 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
       console.log('🔍 onDataChange callback exists:', !!onDataChange);
       onDataChange?.(newData);
       console.log('🔍 onDataChange called');
+      // Track recent local edit for merge protection against realtime overwrites
+      try {
+        recentEditedRowsRef.current.set(targetRowIndex, { timestamp: Date.now(), row: newData[targetRowIndex] });
+        // Prune old entries
+        const nowTs = Date.now();
+        for (const [idx, meta] of recentEditedRowsRef.current) {
+          if (nowTs - meta.timestamp > 60000) recentEditedRowsRef.current.delete(idx);
+        }
+      } catch {}
       
       // Reset the brain analysis flag after a brief delay
       setTimeout(() => setIsProcessingBrainAnalysis(false), 1000);
