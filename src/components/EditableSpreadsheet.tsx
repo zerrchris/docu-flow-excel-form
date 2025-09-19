@@ -811,50 +811,59 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       sessionStorage.setItem('creating_new_runsheet', Date.now().toString());
       
       setTimeout(async () => {
-        if (user) {
-          try {
-            const { data: newRunsheet, error } = await supabase
-              .from('runsheets')
-              .insert({
-                user_id: user.id,
-                name: name,
-                columns: newColumns,
-                data: newData,
-                column_instructions: instructions
-              })
-              .select()
-              .single();
-
-            if (error) throw error;
-
-            // Set this as the active runsheet immediately
-            setCurrentRunsheet(newRunsheet.id);
-            
-            // The useActiveRunsheet hook will automatically load the data when the ID changes
-            // Don't manually set the spreadsheet state here as it conflicts with the hook
-            
-            console.log('✅ New runsheet created and set as active:', newRunsheet.id);
-            
-            // Clear the creation flag
-            sessionStorage.removeItem('creating_new_runsheet');
-          } catch (error) {
-            console.error('Failed to create new runsheet:', error);
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) {
             toast({
-              title: "Error creating runsheet",
-              description: "Failed to save new runsheet. Please try again.",
+              title: "Sign in required",
+              description: "Please sign in to create a runsheet.",
               variant: "destructive"
             });
+            return;
           }
+
+          const { data: newRunsheet, error } = await supabase
+            .from('runsheets')
+            .insert({
+              user_id: user.id,
+              name: name,
+              columns: newColumns,
+              data: newData,
+              column_instructions: instructions
+            })
+            .select()
+            .single();
+
+          if (error) throw error;
+
+          // Set this as the active runsheet immediately
+          setCurrentRunsheet(newRunsheet.id);
+
+          toast({
+            title: "New runsheet created",
+            description: `"${name}" is ready for your data.`,
+          });
+          
+          // The useActiveRunsheet hook will automatically load the data when the ID changes
+          // Don't manually set the spreadsheet state here as it conflicts with the hook
+          
+          console.log('✅ New runsheet created and set as active:', newRunsheet.id);
+        } catch (error) {
+          console.error('Failed to create new runsheet:', error);
+          toast({
+            title: "Error creating runsheet",
+            description: "Failed to save new runsheet. Please try again.",
+            variant: "destructive"
+          });
+        } finally {
+          // Clear the creation flag
+          sessionStorage.removeItem('creating_new_runsheet');
         }
       }, 100);
       
       // Mark as having unsaved changes so auto-save picks it up as fallback
       setHasUnsavedChanges(true);
       
-      toast({
-        title: "New runsheet created",
-        description: `"${name}" is ready for your data.`,
-      });
     };
 
     console.log('🔧 EDITABLE_SPREADSHEET: Setting up createNewRunsheetFromDashboard event listener');
