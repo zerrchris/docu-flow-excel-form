@@ -523,6 +523,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   const lastSavedAtRef = useRef<number>(0);
   const lastSavedDataHashRef = useRef<string | null>(null);
   const lastSyncToastAtRef = useRef<number>(0);
+  const isProcessingUploadRef = useRef<boolean>(false);
   
   // Immediate save system like Google Sheets - no debouncing, save on every change
   const { saveToDatabase, isSaving: immediateSaving } = useImmediateSave({

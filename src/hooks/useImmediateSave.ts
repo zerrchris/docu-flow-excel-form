@@ -18,6 +18,13 @@ interface ImmediateSaveResult {
     columnInstructions: Record<string, string>,
     silent?: boolean  // New parameter for silent saves
   ) => Promise<any>;
+  saveAsNewRunsheet: (
+    data: Record<string, string>[], 
+    columns: string[], 
+    runsheetName: string, 
+    columnInstructions: Record<string, string>,
+    silent?: boolean
+  ) => Promise<any>;
   isSaving: boolean;
   isSilentSaving: boolean;  // New state for background saves
 }
@@ -200,8 +207,105 @@ export function useImmediateSave({
     }
   }, [userId, runsheetId, onSaveStart, onSaveSuccess, onSaveError, toast]);
 
+  // Save as a brand-new runsheet, ignoring any existing runsheetId
+  const saveAsNewRunsheet = useCallback(async (
+    data: Record<string, string>[],
+    columns: string[],
+    runsheetName: string,
+    columnInstructions: Record<string, string>,
+    silent: boolean = false
+  ): Promise<any> => {
+    if (!userId || !runsheetName.trim() || columns.length === 0) {
+      console.log('⚠️ Skipping save (new) - missing required data');
+      return null;
+    }
+
+    if (isSavingRef.current || isSilentSavingRef.current) {
+      console.log('⏳ Save already in progress, skipping (new)...');
+      return null;
+    }
+
+    if (silent) {
+      isSilentSavingRef.current = true;
+    } else {
+      isSavingRef.current = true;
+      onSaveStart?.();
+      console.log('💾 Saving as NEW runsheet:', { dataLength: data.length, columnsLength: columns.length, runsheetName });
+    }
+
+    try {
+      const runsheetData = {
+        name: runsheetName.trim(),
+        columns,
+        data,
+        column_instructions: columnInstructions,
+        user_id: userId,
+        updated_at: new Date().toISOString(),
+      };
+
+      // Check for existing runsheet with same name
+      const { data: existingRunsheet, error: checkError } = await supabase
+        .from('runsheets')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('name', runsheetName.trim())
+        .maybeSingle();
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        throw checkError;
+      }
+
+      let result;
+      if (existingRunsheet) {
+        const { data: updateResult, error } = await supabase
+          .from('runsheets')
+          .update(runsheetData)
+          .eq('id', existingRunsheet.id)
+          .eq('user_id', userId)
+          .select('*')
+          .single();
+        if (error) throw error;
+        result = updateResult;
+        if (!silent) console.log('✅ Updated existing runsheet by name (new save)');
+      } else {
+        const { data: insertResult, error } = await supabase
+          .from('runsheets')
+          .insert(runsheetData)
+          .select('*')
+          .single();
+        if (error) throw error;
+        result = insertResult;
+        if (!silent) console.log('✅ Created new runsheet (new save)');
+      }
+
+      if (!silent) {
+        onSaveSuccess?.(result);
+      }
+      return result;
+    } catch (error) {
+      console.error('❌ Database save (new) failed:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save to database';
+      if (!silent) {
+        onSaveError?.(errorMessage);
+        toast({
+          title: 'Save failed',
+          description: 'Changes could not be saved. Please check your connection.',
+          variant: 'destructive'
+        });
+      }
+      throw error;
+    } finally {
+      if (silent) {
+        isSilentSavingRef.current = false;
+      } else {
+        isSavingRef.current = false;
+      }
+    }
+  }, [userId, onSaveStart, onSaveSuccess, onSaveError, toast]);
+
   return {
     saveToDatabase,
+    saveAsNewRunsheet,
     isSaving: isSavingRef.current,
     isSilentSaving: isSilentSavingRef.current
   };
