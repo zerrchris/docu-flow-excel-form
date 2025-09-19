@@ -6828,16 +6828,58 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
                          zIndex: 999
                        }}
                      >
-                      <div className="w-full h-full px-4 py-2 flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setShowDocumentNamingDialog(true)}
-                            className="h-8 text-xs"
-                          >
-                           <Sparkles className="h-3 w-3 mr-1 text-purple-600" />
-                            Smart File Name Settings
-                         </Button>
+                       <div className="w-full h-full px-4 py-2 flex gap-2">
+                           {/* File Name Management Dropdown */}
+                           <DropdownMenu>
+                             <DropdownMenuTrigger asChild>
+                               <Button
+                                 variant="outline"
+                                 size="sm"
+                                 className="h-8 text-xs gap-1"
+                               >
+                                <Sparkles className="h-3 w-3 text-purple-600" />
+                                 File Name Tools
+                                 <ChevronDown className="h-3 w-3" />
+                              </Button>
+                             </DropdownMenuTrigger>
+                             <DropdownMenuContent align="start" className="bg-background border shadow-lg z-50">
+                               <DropdownMenuItem 
+                                 onClick={() => setShowDocumentNamingDialog(true)}
+                               >
+                                 <Sparkles className="h-4 w-4 mr-2 text-purple-600" />
+                                 Smart File Name Settings
+                               </DropdownMenuItem>
+                               <DropdownMenuItem 
+                                 onClick={async () => {
+                                   let mapToCheck = documentMap;
+                                   // Refresh document map before opening dialog
+                                   if (currentRunsheetId) {
+                                     try {
+                                       const updatedDocumentMap = await DocumentService.getDocumentMapForRunsheet(currentRunsheetId);
+                                       updateDocumentMap(updatedDocumentMap);
+                                       mapToCheck = updatedDocumentMap;
+                                     } catch (error) {
+                                       console.error('Error refreshing document map:', error);
+                                     }
+                                   }
+                                   
+                                   if (mapToCheck.size === 0) {
+                                     toast({
+                                       title: "Nothing to rename",
+                                       description: "No documents are linked to this runsheet yet.",
+                                       variant: "default",
+                                     });
+                                     return;
+                                   }
+                                   
+                                   setShowBatchRenameDialog(true);
+                                 }}
+                               >
+                                 <FileEdit className="h-4 w-4 mr-2" />
+                                 Rename All Files
+                               </DropdownMenuItem>
+                             </DropdownMenuContent>
+                           </DropdownMenu>
                          
                          {/* Upload Multiple Files Button */}
                          {onShowMultipleUpload && (
