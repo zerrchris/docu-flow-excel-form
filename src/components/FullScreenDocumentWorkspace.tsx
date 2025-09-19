@@ -51,6 +51,17 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
   const [localRowData, setLocalRowData] = useState(rowData);
   const [editingColumn, setEditingColumn] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState<string>('');
+
+  // Keep localRowData in sync with props when parent data changes (e.g., after autosave or navigation)
+  useEffect(() => {
+    // Avoid clobbering in-progress edits; update when not editing or when local is empty
+    const isEditing = !!editingColumn;
+    const localIsEmpty = !localRowData || Object.keys(localRowData || {}).length === 0;
+    const changed = JSON.stringify(localRowData) !== JSON.stringify(rowData);
+    if (changed && (!isEditing || localIsEmpty)) {
+      setLocalRowData(rowData);
+    }
+  }, [rowData, editingColumn]);
   const [localColumnWidths, setLocalColumnWidths] = useState(columnWidths);
   const [resizing, setResizing] = useState<{column: string, startX: number, startWidth: number} | null>(null);
   const [focusedColumn, setFocusedColumn] = useState<string | null>(null);
