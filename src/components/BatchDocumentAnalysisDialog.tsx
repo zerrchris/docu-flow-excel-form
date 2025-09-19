@@ -190,7 +190,7 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
     <Dialog open={isOpen} onOpenChange={onClose} modal={false}>
       <DialogPrimitive.Portal>
         {/* Custom semi-transparent overlay that allows interaction */}
-        <div className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[1px]" />
+        <div className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[1px] pointer-events-none" />
         
         {/* Fixed positioned dialog content */}
         <div className={cn(
@@ -211,7 +211,7 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
               Batch Document Analysis
             </DialogTitle>
             <DialogDescription>
-              Analyze all linked documents in this runsheet to automatically extract data. You can scroll the runsheet below to watch the magic happen!
+              Analyze all linked documents in this runsheet to automatically extract data.
             </DialogDescription>
           </DialogHeader>
 
