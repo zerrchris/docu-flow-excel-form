@@ -777,6 +777,13 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       console.log('🔧 EDITABLE_SPREADSHEET: Received instructions:', instructions);
       console.log('🔧 EDITABLE_SPREADSHEET: Current columns before update:', columns);
       
+      // Fallback to sensible defaults if no columns/instructions were provided
+      const safeColumns = Array.isArray(newColumns) && newColumns.length > 0
+        ? newColumns
+        : ['Inst Number', 'Book/Page', 'Inst Type', 'Recording Date', 'Document Date', 'Grantor', 'Grantee', 'Legal Description', 'Notes'];
+      const safeInstructions: Record<string, string> = (instructions && typeof instructions === 'object') ? instructions : {};
+      console.log('🔧 EDITABLE_SPREADSHEET: Using safe columns:', safeColumns);
+      
       // Clear any existing emergency draft when creating a new runsheet
       try {
         localStorage.removeItem('runsheet-emergency-draft');
@@ -790,7 +797,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       console.log('🔧 EDITABLE_SPREADSHEET: Set runsheet name to:', name);
       setData(Array.from({ length: 100 }, () => {
         const row: Record<string, string> = {};
-        newColumns.forEach((col: string) => row[col] = '');
+        safeColumns.forEach((col: string) => row[col] = '');
         return row;
       }));
       // Clear current state first - AGGRESSIVELY clear localStorage to prevent restoration
@@ -812,17 +819,17 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       // Create new data with the columns
       const newData = Array.from({ length: 100 }, () => {
         const row: Record<string, string> = {};
-        newColumns.forEach((col: string) => row[col] = '');
+        safeColumns.forEach((col: string) => row[col] = '');
         return row;
       });
       console.log('🔧 EDITABLE_SPREADSHEET: Setting data with new columns, data sample:', newData[0]);
       
       // Set all the new state
       setData(newData);
-      setColumns(newColumns);
-      setColumnInstructions(instructions);
+      setColumns(safeColumns);
+      setColumnInstructions(safeInstructions);
       onDataChange?.(newData);
-      onColumnChange(newColumns);
+      onColumnChange(safeColumns);
       
       // CRITICAL: Immediately save the new runsheet to database to get a proper ID
       // This prevents the localStorage active runsheet from taking over
@@ -879,9 +886,9 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
             .insert({
               user_id: user.id,
               name: finalName,
-              columns: newColumns,
+              columns: safeColumns,
               data: newData,
-              column_instructions: instructions
+              column_instructions: safeInstructions
             })
             .select()
             .single();
@@ -910,7 +917,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
           console.error('Failed to create new runsheet:', error);
           toast({
             title: "Error creating runsheet",
-            description: "Failed to save new runsheet. Please try again.",
+            description: error instanceof Error ? `Failed to save new runsheet: ${error.message}` : "Failed to save new runsheet. Please try again.",
             variant: "destructive"
           });
         } finally {
