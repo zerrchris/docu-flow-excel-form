@@ -3521,9 +3521,18 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       onColumnInstructionsChange?.({});
     }
 
-    // Auto-save the runsheet with imported data
-    setTimeout(() => {
-      saveImmediately(); // Use the new immediate save system instead
+    // Auto-save the runsheet with imported data and set as active
+    setTimeout(async () => {
+      try {
+        const result = await saveToDatabase(newData, finalHeaders, uniqueName, columnInstructions, false);
+        if (result && result.id) {
+          // Set this as the active runsheet so it displays properly
+          setCurrentRunsheet(result.id);
+          console.log('✅ Set uploaded runsheet as active:', result.id);
+        }
+      } catch (error) {
+        console.error('Failed to save uploaded runsheet:', error);
+      }
     }, 100); // Small delay to ensure state updates are complete
 
     toast({
