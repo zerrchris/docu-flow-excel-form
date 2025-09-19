@@ -4044,11 +4044,23 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       const wasResizing = resizing !== null;
       setResizing(null);
       setResizingRow(null);
-      
-      // Clear drag state after a brief delay only if we were actually resizing
-      if (wasResizing && isDraggingResize) {
-        setTimeout(() => setIsDraggingResize(false), 150);
-      } else {
+      setIsDraggingResize(false);
+    };
+
+    // Handle mouse leave from the document to exit resize mode
+    const handleMouseLeave = () => {
+      if (resizing || resizingRow) {
+        setResizing(null);
+        setResizingRow(null);
+        setIsDraggingResize(false);
+      }
+    };
+
+    // Handle escape key to exit resize mode
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && (resizing || resizingRow)) {
+        setResizing(null);
+        setResizingRow(null);
         setIsDraggingResize(false);
       }
     };
@@ -4056,12 +4068,17 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     if (resizing || resizingRow) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
+      document.addEventListener('mouseleave', handleMouseLeave);
+      document.addEventListener('keydown', handleKeyDown);
+      
       return () => {
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
+        document.removeEventListener('mouseleave', handleMouseLeave);
+        document.removeEventListener('keydown', handleKeyDown);
       };
     }
-  }, [resizing, resizingRow, isDraggingResize, getColumnWidth, getMinimumColumnWidth, currentRunsheetId, getRowHeight]);
+  }, [resizing, resizingRow, getMinimumColumnWidth, currentRunsheetId, getRowHeight]);
 
 
   // Runsheet name editing functions
