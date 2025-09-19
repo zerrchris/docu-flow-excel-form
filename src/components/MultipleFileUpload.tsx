@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Upload, X, FileText, Image, FileIcon, CheckCircle, AlertCircle } from 'lucide-react';
+import { Upload, X, FileText, Image, FileIcon, CheckCircle, AlertCircle, Loader2, XCircle } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import { DocumentService } from '@/services/documentService';
 import { useActiveRunsheet } from '@/hooks/useActiveRunsheet';
@@ -45,6 +45,7 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
   const [isUploading, setIsUploading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [abortController, setAbortController] = useState<AbortController | null>(null);
   const [currentRunsheetData, setCurrentRunsheetData] = useState<{
     id: string;
     name: string;
@@ -115,62 +116,101 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
     const hasPDFs = fileArray.some(file => isPDF(file));
     if (hasPDFs) {
       setIsProcessing(true);
+      // Create abort controller for cancellation
+      const controller = new AbortController();
+      setAbortController(controller);
     }
     
     const processedFiles: File[] = [];
     
-    for (const file of fileArray) {
-      if (isPDF(file)) {
-        try {
-          console.log('🔧 Converting PDF to image:', file.name);
-          
-          // Add timeout to prevent hanging
-          const conversionPromise = convertPDFToImages(file, 4); // High resolution
-          const timeoutPromise = new Promise<never>((_, reject) => 
-            setTimeout(() => reject(new Error('PDF conversion timeout after 30 seconds')), 30000)
-          );
-          
-          const pdfPages = await Promise.race([conversionPromise, timeoutPromise]);
-          
-          if (pdfPages.length === 0) {
-            throw new Error('PDF conversion failed - no pages extracted');
-          }
-
-          // Convert all pages to image files
-          const originalName = file.name.replace(/\.pdf$/i, '');
-          const imageFiles: File[] = pdfPages.map((p, idx) => 
-            createFileFromBlob(p.blob, `${originalName}_p${idx + 1}.png`)
-          );
-
-          // Combine into a single tall image for consistent processing
-          const { combineImages } = await import('@/utils/imageCombiner');
-          const { file: combinedImage } = await combineImages(imageFiles, {
-            type: 'vertical',
-            maxWidth: 2000,
-            quality: 0.95,
-            filename: `${originalName}.jpg` // Preserve original PDF name
-          });
-
-          console.log('🔧 PDF converted to combined image:', combinedImage.name, 'Size:', combinedImage.size);
-          
-          processedFiles.push(combinedImage);
-        } catch (error) {
-          console.error('🔧 PDF conversion failed for', file.name, ':', error);
-          toast({
-            title: "PDF conversion failed",
-            description: `Failed to convert ${file.name}. Please try uploading as an image instead.`,
-            variant: "destructive"
-          });
-          // Skip this file - don't add it to processedFiles
+    try {
+      for (const file of fileArray) {
+        // Check for cancellation
+        if (abortController?.signal.aborted) {
+          throw new Error('PDF processing was cancelled');
         }
-      } else {
-        // Non-PDF files are added as-is
-        processedFiles.push(file);
+        
+        if (isPDF(file)) {
+          try {
+            console.log('🔧 Converting PDF to image:', file.name);
+            
+            // Add timeout to prevent hanging and check for abort signal
+            const conversionPromise = convertPDFToImages(file, 4); // High resolution
+            const timeoutPromise = new Promise<never>((_, reject) => 
+              setTimeout(() => reject(new Error('PDF conversion timeout after 30 seconds')), 30000)
+            );
+            const abortPromise = new Promise<never>((_, reject) => {
+              if (abortController?.signal) {
+                abortController.signal.addEventListener('abort', () => {
+                  reject(new Error('PDF processing was cancelled'));
+                });
+              }
+            });
+            
+            const pdfPages = await Promise.race([conversionPromise, timeoutPromise, abortPromise]);
+            
+            if (pdfPages.length === 0) {
+              throw new Error('PDF conversion failed - no pages extracted');
+            }
+
+            // Convert all pages to image files
+            const originalName = file.name.replace(/\.pdf$/i, '');
+            const imageFiles: File[] = pdfPages.map((p, idx) => 
+              createFileFromBlob(p.blob, `${originalName}_p${idx + 1}.png`)
+            );
+
+            // Combine into a single tall image for consistent processing
+            const { combineImages } = await import('@/utils/imageCombiner');
+            const { file: combinedImage } = await combineImages(imageFiles, {
+              type: 'vertical',
+              maxWidth: 2000,
+              quality: 0.95,
+              filename: `${originalName}.jpg` // Preserve original PDF name
+            });
+
+            console.log('🔧 PDF converted to combined image:', combinedImage.name, 'Size:', combinedImage.size);
+            
+            processedFiles.push(combinedImage);
+          } catch (error) {
+            if (error instanceof Error && error.message.includes('cancelled')) {
+              throw error; // Re-throw cancellation errors
+            }
+            console.error('🔧 PDF conversion failed for', file.name, ':', error);
+            toast({
+              title: "PDF conversion failed",
+              description: `Failed to convert ${file.name}. Please try uploading as an image instead.`,
+              variant: "destructive"
+            });
+            // Skip this file - don't add it to processedFiles
+          }
+        } else {
+          // Non-PDF files are added as-is
+          processedFiles.push(file);
+        }
       }
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('cancelled')) {
+        toast({
+          title: "Processing cancelled",
+          description: "PDF processing was cancelled by user.",
+          variant: "default"
+        });
+      }
+      throw error;
+    } finally {
+      setIsProcessing(false);
+      setAbortController(null);
     }
     
-    setIsProcessing(false);
     return processedFiles;
+  };
+
+  const cancelProcessing = () => {
+    if (abortController) {
+      abortController.abort();
+      setAbortController(null);
+      setIsProcessing(false);
+    }
   };
 
   const handleFileSelect = useCallback(async (selectedFiles: FileList) => {
@@ -710,6 +750,30 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
             </p>
           )}
 
+          {/* PDF Processing Status */}
+          {isProcessing && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+              <div className="flex items-center space-x-2">
+                <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                <span className="text-sm font-medium text-blue-800">Processing PDFs...</span>
+              </div>
+              <p className="text-xs text-blue-700">
+                Converting PDF files to high-quality images for optimal analysis. Large files may take a few minutes.
+              </p>
+              {abortController && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={cancelProcessing}
+                  className="h-8 text-xs"
+                >
+                  <XCircle className="h-3 w-3 mr-1" />
+                  Cancel Processing
+                </Button>
+              )}
+            </div>
+          )}
+
           <div
             className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
               isDragOver 
@@ -732,10 +796,21 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
               variant="outline"
               onClick={() => fileInputRef.current?.click()}
               disabled={isUploading || isProcessing || files.some(f => f.status === 'uploading')}
+              className="flex items-center space-x-2"
             >
-              {isProcessing ? 'Processing PDFs...' : 
-               isUploading || files.some(f => f.status === 'uploading') ? 'Uploading...' : 
-               'Browse Files'}
+              {isProcessing ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Processing PDFs...</span>
+                </>
+              ) : isUploading || files.some(f => f.status === 'uploading') ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Uploading...</span>
+                </>
+              ) : (
+                'Browse Files'
+              )}
             </Button>
             
             <input
