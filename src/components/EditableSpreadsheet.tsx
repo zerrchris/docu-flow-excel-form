@@ -6291,6 +6291,8 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
       
       // Mark this update as a brain button analysis to prevent sync conflicts
       setIsProcessingBrainAnalysis(true);
+      // Suppress realtime overwrites briefly while we persist changes
+      suppressRealtimeUntilRef.current = Date.now() + 3000;
       
       setData(newData);
       console.log('🔍 setData called with:', newData);
@@ -6330,29 +6332,13 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
         }
       }, 500);
 
-      // Silent save to prevent data loss from brain analysis
+      // Persist changes using immediate save (silent) to avoid realtime reverting
       if (currentRunsheetId && runsheetName) {
-        console.log('🔍 Brain analysis: Performing silent save to persist changes');
         try {
-          // Use silent save to avoid showing notifications but ensure persistence
-          const saveResult = await supabase.functions.invoke('save-runsheet', {
-            body: {
-              runsheet_id: currentRunsheetId,
-              name: runsheetName,
-              columns,
-              data: newData,
-              column_instructions: columnInstructions,
-              silent: true
-            }
-          });
-          
-          if (saveResult.error) {
-            console.error('🔍 Silent save after brain analysis failed:', saveResult.error);
-          } else {
-            console.log('🔍 Silent save after brain analysis completed successfully');
-          }
-        } catch (silentSaveError) {
-          console.error('🔍 Silent save after brain analysis error:', silentSaveError);
+          await saveToDatabase(newData, columns, runsheetName, columnInstructions, true);
+          console.log('🔍 Brain analysis: Silent immediate save completed');
+        } catch (e) {
+          console.error('🔍 Brain analysis: Silent immediate save failed', e);
         }
       }
 
