@@ -1823,6 +1823,9 @@ function createSingleEntryView(content) {
         }
       });
       
+      // Track if this is the first interaction with the textarea
+      let isFirstClick = true;
+      
       textarea.addEventListener('focus', () => {
         textarea.style.background = 'hsl(var(--background, 0 0% 100%))';
         textarea.style.border = '2px solid hsl(var(--primary, 215 80% 40%))';
@@ -1830,10 +1833,13 @@ function createSingleEntryView(content) {
         textarea.style.borderRadius = '2px';
         autoResize();
         
-        // Auto-select all text when focused
-        setTimeout(() => {
-          textarea.select();
-        }, 10);
+        // Auto-select all text only on first focus
+        if (isFirstClick) {
+          setTimeout(() => {
+            textarea.select();
+            isFirstClick = false;
+          }, 10);
+        }
       });
       
       textarea.addEventListener('blur', () => {
@@ -1841,6 +1847,7 @@ function createSingleEntryView(content) {
         textarea.style.border = '2px solid transparent';
         textarea.style.boxShadow = 'none';
         textarea.style.borderRadius = '0';
+        isFirstClick = true; // Reset for next focus
       });
       
       textarea.addEventListener('mouseenter', () => {
@@ -1855,12 +1862,17 @@ function createSingleEntryView(content) {
         }
       });
       
-      // Auto-select text when clicked
-      textarea.addEventListener('click', () => {
-        textarea.focus();
-        setTimeout(() => {
-          textarea.select();
-        }, 10);
+      // Handle click events for natural text selection
+      textarea.addEventListener('click', (e) => {
+        if (isFirstClick) {
+          // First click - focus and select all
+          textarea.focus();
+          setTimeout(() => {
+            textarea.select();
+            isFirstClick = false;
+          }, 10);
+        }
+        // For subsequent clicks, let browser handle natural cursor placement
       });
       
       // Handle keyboard navigation like EditableSpreadsheet
@@ -2361,24 +2373,47 @@ function createFullRunsheetView(content) {
         }
       });
       
-      // Handle focus events to select text
+      // Track if this is the first interaction with the input
+      let isFirstClick = true;
+      
+      // Handle focus events to select text only on first focus
       inputElement.addEventListener('focus', () => {
-        setTimeout(() => {
-          inputElement.select();
-        }, 10);
+        if (isFirstClick) {
+          setTimeout(() => {
+            inputElement.select();
+            isFirstClick = false;
+          }, 10);
+        }
       });
       
-      // Single click to start editing and select text
-      inputElement.addEventListener('click', () => {
-        inputElement.focus();
-        inputElement.select();
+      // Handle blur to reset first click state
+      inputElement.addEventListener('blur', () => {
+        isFirstClick = true;
+      });
+      
+      // Handle click events for natural text selection
+      inputElement.addEventListener('click', (e) => {
+        if (isFirstClick) {
+          // First click - focus and select all
+          inputElement.focus();
+          setTimeout(() => {
+            inputElement.select();
+            isFirstClick = false;
+          }, 10);
+        }
+        // For subsequent clicks, let browser handle natural cursor placement
       });
       
       // Make entire cell clickable to focus input
       td.addEventListener('click', (e) => {
         if (e.target === td) {
           inputElement.focus();
-          inputElement.select();
+          if (isFirstClick) {
+            setTimeout(() => {
+              inputElement.select();
+              isFirstClick = false;
+            }, 10);
+          }
         }
       });
       
