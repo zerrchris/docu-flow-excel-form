@@ -1903,8 +1903,13 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       
       if (effectiveRunsheetId) {
         try {
-          // Trigger immediate database save
-          await saveToDatabase(data, columns, runsheetName, columnInstructions, false);
+          // Mark last save and suppress realtime to prevent loops/overwrite
+          lastSavedAtRef.current = Date.now();
+          try { lastSavedDataHashRef.current = JSON.stringify(data); } catch {}
+          suppressRealtimeUntilRef.current = Date.now() + 6000;
+
+          // Trigger immediate database save (silent)
+          await saveToDatabase(data, columns, runsheetName, columnInstructions, true);
           console.log('✅ Force save completed successfully');
         } catch (error) {
           console.error('❌ Force save failed:', error);
@@ -7837,7 +7842,11 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
                 newData[rowIndex] = rowData;
                 setData(newData);
                 onDataChange?.(newData);
-                // Persist immediately to avoid realtime overwrite
+                // Mark last save and suppress realtime to avoid overwrite races
+                lastSavedAtRef.current = Date.now();
+                try { lastSavedDataHashRef.current = JSON.stringify(newData); } catch {}
+                suppressRealtimeUntilRef.current = Date.now() + 6000;
+                // Persist immediately (silent) to avoid realtime overwrite
                 console.log('🔄 EDITABLE_SPREADSHEET: Triggering immediate save after full-screen update');
                 saveToDatabase(newData, columns, runsheetName, columnInstructions, true);
               }}
@@ -7875,8 +7884,11 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
               newData[rowIndex] = rowData;
               setData(newData);
               onDataChange?.(newData);
-              
-              // Trigger immediate save to prevent real-time sync from overwriting
+              // Mark last save and suppress realtime to avoid overwrite races
+              lastSavedAtRef.current = Date.now();
+              try { lastSavedDataHashRef.current = JSON.stringify(newData); } catch {}
+              suppressRealtimeUntilRef.current = Date.now() + 6000;
+              // Trigger immediate save (silent) to prevent real-time sync from overwriting
               console.log('🔄 EDITABLE_SPREADSHEET: Triggering immediate save after data update');
               saveToDatabase(newData, columns, runsheetName, columnInstructions, true);
             }}
