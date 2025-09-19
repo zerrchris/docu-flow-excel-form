@@ -282,45 +282,52 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
 
   // CRITICAL: Sync local state with currentRunsheet when it loads
   useEffect(() => {
-    if (currentRunsheet && currentRunsheet.id) {
-      console.log('🔄 EDITABLE_SPREADSHEET: Syncing with loaded runsheet data');
-      
-      // Check if we're in upload mode or just uploaded data - prevent overriding fresh upload
-      const isUploadMode = window.location.search.includes('action=upload');
-      const recentSave = Date.now() - lastSavedAtRef.current < 2000; // Within 2 seconds
-      const hasLocalData = data.length > 0 && data.some(row => Object.values(row).some(val => val?.trim()));
-      
-      if (isUploadMode || (recentSave && hasLocalData)) {
-        console.log('🚫 EDITABLE_SPREADSHEET: Skipping sync - recent upload detected');
-        return;
-      }
-      
-      // Update local state with runsheet data
-      if (currentRunsheet.columns && currentRunsheet.columns.length > 0) {
-        console.log('🔄 EDITABLE_SPREADSHEET: Setting columns from runsheet:', currentRunsheet.columns);
-        setColumns(currentRunsheet.columns);
-        onColumnChange?.(currentRunsheet.columns);
-      }
-      
-      if (currentRunsheet.data) {
-        console.log('🔄 EDITABLE_SPREADSHEET: Setting data from runsheet, length:', currentRunsheet.data.length);
-        const minRowsData = ensureMinimumRows(currentRunsheet.data, currentRunsheet.columns || []);
-        setData(minRowsData);
-        onDataChange?.(minRowsData);
-      }
-      
-      if (currentRunsheet.name) {
-        console.log('🔄 EDITABLE_SPREADSHEET: Setting runsheet name:', currentRunsheet.name);
-        setRunsheetName(currentRunsheet.name);
-      }
-      
-      if (currentRunsheet.columnInstructions) {
-        console.log('🔄 EDITABLE_SPREADSHEET: Setting column instructions');
-        setColumnInstructions(currentRunsheet.columnInstructions);
-        onColumnInstructionsChange?.(currentRunsheet.columnInstructions);
-      }
+    if (!currentRunsheet || !currentRunsheet.id) return;
+
+    // Skip if we're temporarily suppressing realtime to avoid overwriting fresh local edits
+    const now = Date.now();
+    if (now < suppressRealtimeUntilRef.current) {
+      console.log('🚫 EDITABLE_SPREADSHEET: Skipping sync - realtime suppressed');
+      return;
     }
-  }, [currentRunsheet, onColumnChange, onDataChange, onColumnInstructionsChange, ensureMinimumRows, data]);
+
+    console.log('🔄 EDITABLE_SPREADSHEET: Syncing with loaded runsheet data');
+
+    // Check if we're in upload mode or just uploaded data - prevent overriding fresh upload
+    const isUploadMode = window.location.search.includes('action=upload');
+    const recentSave = Date.now() - lastSavedAtRef.current < 5000; // Within 5 seconds
+    const localHasData = dataRef.current.length > 0 && dataRef.current.some(row => Object.values(row).some(val => val?.trim()));
+
+    if (isUploadMode || (recentSave && localHasData)) {
+      console.log('🚫 EDITABLE_SPREADSHEET: Skipping sync - recent local save detected');
+      return;
+    }
+
+    // Update local state with runsheet data
+    if (currentRunsheet.columns && currentRunsheet.columns.length > 0) {
+      console.log('🔄 EDITABLE_SPREADSHEET: Setting columns from runsheet:', currentRunsheet.columns);
+      setColumns(currentRunsheet.columns);
+      onColumnChange?.(currentRunsheet.columns);
+    }
+    
+    if (currentRunsheet.data) {
+      console.log('🔄 EDITABLE_SPREADSHEET: Setting data from runsheet, length:', currentRunsheet.data.length);
+      const minRowsData = ensureMinimumRows(currentRunsheet.data, currentRunsheet.columns || []);
+      setData(minRowsData);
+      onDataChange?.(minRowsData);
+    }
+    
+    if (currentRunsheet.name) {
+      console.log('🔄 EDITABLE_SPREADSHEET: Setting runsheet name:', currentRunsheet.name);
+      setRunsheetName(currentRunsheet.name);
+    }
+    
+    if (currentRunsheet.columnInstructions) {
+      console.log('🔄 EDITABLE_SPREADSHEET: Setting column instructions');
+      setColumnInstructions(currentRunsheet.columnInstructions);
+      onColumnInstructionsChange?.(currentRunsheet.columnInstructions);
+    }
+  }, [currentRunsheet, onColumnChange, onDataChange, onColumnInstructionsChange, ensureMinimumRows]);
 
 
   // Function to add rows to reach a specific total
@@ -1851,7 +1858,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     window.addEventListener('updateDocumentFilename', handleUpdateDocumentFilename as EventListener);
     
     // Listen for batch analysis progress for immediate UI updates
-    const handleBatchAnalysisProgress = (event: CustomEvent) => {
+    const handleBatchAnalysisProgress = async (event: CustomEvent) => {
       const { rowIndex, extractedData } = event.detail;
       if (effectiveRunsheetId && extractedData) {
         console.log('🧠 Batch analysis progress: updating row', rowIndex, 'with data:', extractedData);
