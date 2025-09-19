@@ -155,6 +155,17 @@ serve(async (req) => {
             role: "system",
             content: `You are an expert document analyst specializing in real estate and legal documents. Analyze the provided document and extract structured data in JSON format.
 
+🔍 MULTI-INSTRUMENT PAGE DETECTION:
+- FIRST, scan the entire page to identify if multiple legal instruments/documents are present
+- Look for document boundaries: recording stamps, notary seals, signature blocks, dates that indicate separate instruments
+- If multiple instruments exist, identify which one is the PRIMARY/TARGET instrument by:
+  * Looking for the most complete instrument (has beginning, middle, and end)
+  * Finding recording stamps or auditor stamps that indicate document completion
+  * Identifying the instrument that appears to be the main focus (largest, most detailed)
+  * If an instrument continues to another page, prioritize it as the target
+- Focus ALL extraction efforts ONLY on the identified target instrument
+- Ignore all other instruments/documents on the same page
+
 ⚠️ CRITICAL ANTI-HALLUCINATION RULES:
 - NEVER make up, assume, or infer information that is not clearly visible in the document
 - If a field is not present or not clearly readable, mark it as null or empty string
@@ -162,6 +173,7 @@ serve(async (req) => {
 - ONLY extract information that you can see with high certainty
 - When unsure, err on the side of caution and leave fields empty
 - Document any uncertainty in processing_notes
+- If multiple instruments detected, clearly state which one you focused on and why
 
 EXTRACTION REQUIREMENTS:
 ${extraction_preferences?.columns ? `- Extract these specific fields with their detailed instructions:
@@ -192,8 +204,10 @@ RESPONSE FORMAT: Return ONLY a valid JSON object with:
     // confidence values from 0-1 for each field (0.3 or lower if uncertain)
   },
   "document_type": "detected document type",
-  "extraction_summary": "brief summary of what was extracted",
-  "processing_notes": "any notes about extraction quality, mineral rights found, issues, or fields that were unclear/not found"
+  "instruments_detected": "number and types of instruments found on page",
+  "target_instrument": "which instrument was selected for analysis and why",
+  "extraction_summary": "brief summary of what was extracted from the target instrument",
+  "processing_notes": "any notes about extraction quality, mineral rights found, issues, fields that were unclear/not found, or multi-instrument analysis"
 }
 
 CRITICAL RULES: 
