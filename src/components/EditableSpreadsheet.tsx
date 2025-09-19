@@ -526,6 +526,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   const lastSyncToastAtRef = useRef<number>(0);
   const isProcessingUploadRef = useRef<boolean>(false);
   const suppressRealtimeUntilRef = useRef<number>(0);
+  const dataRef = useRef<Record<string, string>[]>(data);
   
   // Immediate save system like Google Sheets - no debouncing, save on every change
   const { saveToDatabase, saveAsNewRunsheet, isSaving: immediateSaving } = useImmediateSave({
@@ -582,6 +583,11 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       console.error('Immediate save error:', error);
     }
   });
+
+  // Keep a live ref of the latest data to avoid stale saves from event handlers
+  useEffect(() => {
+    dataRef.current = data;
+  }, [data]);
 
   // Regular save function for manual saves (shows UI feedback)
   const saveImmediately = useCallback(async () => {
@@ -1870,7 +1876,11 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
         // Persist immediately so server state matches UI
         if (nextDataSnapshot) {
           try {
-            saveToDatabase(nextDataSnapshot, columns, runsheetName, columnInstructions, true);
+            // Mark last save and suppress realtime to prevent loops
+            lastSavedAtRef.current = Date.now();
+            try { lastSavedDataHashRef.current = JSON.stringify(nextDataSnapshot); } catch {}
+            suppressRealtimeUntilRef.current = Date.now() + 6000;
+            await saveToDatabase(nextDataSnapshot, columns, runsheetName, columnInstructions, true);
           } catch (e) {
             console.error('Failed to persist batch analysis progress:', e);
           }
