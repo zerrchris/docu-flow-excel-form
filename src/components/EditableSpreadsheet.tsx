@@ -6296,7 +6296,7 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
       // Mark this update as a brain button analysis to prevent sync conflicts
       setIsProcessingBrainAnalysis(true);
       // Suppress realtime overwrites briefly while we persist changes
-      suppressRealtimeUntilRef.current = Date.now() + 3000;
+      suppressRealtimeUntilRef.current = Date.now() + 6000;
       
       setData(newData);
       console.log('🔍 setData called with:', newData);
@@ -6325,12 +6325,14 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
       // Force re-render by setting data again after a brief delay to ensure persistence
       setTimeout(() => {
         console.log('🔍 Brain analysis safeguard: Ensuring data persistence');
-        console.log('🔍 Current data state after timeout:', data);
-        console.log('🔍 Expected row data:', newData[targetRowIndex]);
-        if (JSON.stringify(data[targetRowIndex]) !== JSON.stringify(newData[targetRowIndex])) {
-          console.log('🚨 Brain analysis: Data mismatch detected, restoring row data!');
-          const safeData = [...data];
-          safeData[targetRowIndex] = newData[targetRowIndex];
+        const latest = dataRef.current;
+        const expectedRow = newData[targetRowIndex];
+        if (!latest || !expectedRow) return;
+        const currentRow = latest[targetRowIndex];
+        if (JSON.stringify(currentRow) !== JSON.stringify(expectedRow)) {
+          console.log('🚨 Brain analysis: Data mismatch detected, restoring row data (non-destructive)!');
+          const safeData = [...latest];
+          safeData[targetRowIndex] = expectedRow;
           setData(safeData);
           onDataChange?.(safeData);
         }
@@ -6339,6 +6341,9 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
       // Persist changes using immediate save (silent) to avoid realtime reverting
       if (currentRunsheetId && runsheetName) {
         try {
+          // Mark last save to avoid self-echo and keep hash current
+          lastSavedAtRef.current = Date.now();
+          try { lastSavedDataHashRef.current = JSON.stringify(newData); } catch {}
           await saveToDatabase(newData, columns, runsheetName, columnInstructions, true);
           console.log('🔍 Brain analysis: Silent immediate save completed');
         } catch (e) {
