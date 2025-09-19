@@ -190,9 +190,8 @@ export function useImmediateSave({
         }
       }
 
-      if (!silent) {
-        onSaveSuccess?.(result);
-      }
+      // Always call onSaveSuccess, but let the callback know if it was silent
+      onSaveSuccess?.(result);
       return result;
       
     } catch (error) {

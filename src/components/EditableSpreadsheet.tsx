@@ -544,6 +544,13 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       setAutoSaveStatus('saved');
       setLastAutoSaveTime(new Date());
       
+      // CRITICAL: Update lastSavedState to prevent auto-save oscillation
+      // This fixes the issue where silent saves don't update the change detection baseline
+      const savedState = JSON.stringify({ data, columns, runsheetName, columnInstructions });
+      setLastSavedState(savedState);
+      setLastSaveTime(new Date());
+      onUnsavedChanges?.(false);
+      
       // Update current runsheet ID if this was a new runsheet or converted from temporary
       if ((!currentRunsheetId || currentRunsheetId.startsWith('temp-')) && result?.id) {
         console.log('🔄 Updating runsheet ID from', currentRunsheetId, 'to', result.id);
