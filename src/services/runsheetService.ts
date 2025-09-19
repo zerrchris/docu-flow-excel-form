@@ -43,8 +43,18 @@ export class RunsheetService {
     try {
       // Get user preferences for initial columns (same as Dashboard)
       const preferences = await ExtractionPreferencesService.getDefaultPreferences();
-      const initialColumns = columns || preferences?.columns || this.DEFAULT_COLUMNS;
-      const initialInstructions = columnInstructions || preferences?.column_instructions || {};
+      console.log('🔍 RUNSHEET_SERVICE: Loaded preferences:', preferences);
+      
+      // Ensure we have valid columns - preferences.columns should be an array
+      const preferencesColumns = Array.isArray(preferences?.columns) && preferences.columns.length > 0 
+        ? preferences.columns 
+        : this.DEFAULT_COLUMNS;
+      
+      const initialColumns = columns || preferencesColumns;
+      const initialInstructions = columnInstructions || (preferences?.column_instructions as Record<string, string>) || {};
+      
+      console.log('🔧 RUNSHEET_SERVICE: Using columns:', initialColumns);
+      console.log('🔧 RUNSHEET_SERVICE: Using instructions:', initialInstructions);
 
       const finalName = name.trim();
       
