@@ -509,6 +509,11 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   const [showInsertionPreview, setShowInsertionPreview] = useState(false);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
+  // Realtime sync controls to avoid self-echo and toast spam
+  const lastSavedAtRef = useRef<number>(0);
+  const lastSavedDataHashRef = useRef<string | null>(null);
+  const lastSyncToastAtRef = useRef<number>(0);
+  
   // Immediate save system like Google Sheets - no debouncing, save on every change
   const { saveToDatabase, isSaving: immediateSaving } = useImmediateSave({
     runsheetId: currentRunsheet?.id || currentRunsheetId,
@@ -516,6 +521,11 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     onSaveStart: () => {
       setAutoSaveStatus('saving');
       setAutoSaveError('');
+      // Mark last save time and snapshot to ignore self-echo realtime updates
+      try {
+        lastSavedAtRef.current = Date.now();
+        lastSavedDataHashRef.current = JSON.stringify(data);
+      } catch {}
     },
     onSaveSuccess: (result) => {
       // Update state to reflect successful save like Google Sheets
@@ -4335,6 +4345,9 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       console.log('💾 Saving cell edit silently in background');
       if (runsheetName && runsheetName !== 'Untitled Runsheet' && user) {
         try {
+          // Mark last save to ignore self-echo realtime updates
+          lastSavedAtRef.current = Date.now();
+          try { lastSavedDataHashRef.current = JSON.stringify(newData); } catch {}
           await saveToDatabase(newData, columns, runsheetName, columnInstructions, true); // Silent save
           console.log('✅ Cell edit saved to database silently');
         } catch (error) {
@@ -4477,6 +4490,9 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
 
         // Save to database
         if (runsheetName && runsheetName !== 'Untitled Runsheet' && user) {
+          // Mark last save to ignore self-echo realtime updates
+          lastSavedAtRef.current = Date.now();
+          try { lastSavedDataHashRef.current = JSON.stringify(newData); } catch {}
           await saveToDatabase(newData, columns, runsheetName, columnInstructions, true);
         }
 
@@ -5433,6 +5449,9 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     console.log('💾 Saving row deletion silently in background');
     if (runsheetName && runsheetName !== 'Untitled Runsheet' && user) {
       try {
+        // Mark last save to ignore self-echo realtime updates
+        lastSavedAtRef.current = Date.now();
+        try { lastSavedDataHashRef.current = JSON.stringify(newData); } catch {}
         await saveToDatabase(newData, columns, runsheetName, columnInstructions, true); // Silent save
         console.log('✅ Row deletion saved to database silently');
         setHasUnsavedChanges(false);
