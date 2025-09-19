@@ -137,19 +137,22 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
       setError(null);
       
       try {
+        console.log(`🔍 FullScreenWorkspace: Loading document for runsheet ${runsheetId}, rowIndex ${rowIndex} (display row ${rowIndex + 1})`);
         const document = await DocumentService.getDocumentForRow(runsheetId, rowIndex);
         if (document) {
+          console.log(`✅ FullScreenWorkspace: Found document for row ${rowIndex + 1}:`, document);
           setDocumentRecord(document);
           const url = await DocumentService.getDocumentUrl(document.file_path);
           setDocumentUrl(url);
           setDocumentName(document.original_filename);
           // PDFs are converted to images, so no special handling needed
         } else {
-          setError(`No document found for row ${rowIndex}`);
+          console.warn(`⚠️ FullScreenWorkspace: No document found for row ${rowIndex + 1} (rowIndex ${rowIndex})`);
+          setError(`No document found for row ${rowIndex + 1}. The document may have been moved or deleted.`);
         }
       } catch (error) {
         console.error('Error loading document:', error);
-        setError('Failed to load document');
+        setError(`Failed to load document for row ${rowIndex + 1}. Please try refreshing the page.`);
       } finally {
         setIsLoading(false);
       }
@@ -157,6 +160,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
 
     if (!runsheetId) {
       // Wait until we have a valid runsheet ID to load the document
+      console.log('🔍 FullScreenWorkspace: Waiting for valid runsheet ID');
       return;
     }
     

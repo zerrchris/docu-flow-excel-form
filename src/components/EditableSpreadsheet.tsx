@@ -7444,12 +7444,14 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
                                 console.log('🧠 Analysis completed, new data state:', data);
                               }
                            }}
-                           onOpenWorkspace={() => {
-                             console.log('🔧 EditableSpreadsheet: Opening full screen workspace for rowIndex:', rowIndex, '(display row:', rowIndex + 1, ')');
-                             console.log('🔧 EditableSpreadsheet: Row data:', row);
-                             console.log('🔧 EditableSpreadsheet: Document for this row:', documentMap.get(rowIndex));
-                             openFullScreenWorkspace(rowIndex);
-                            }}
+                            onOpenWorkspace={() => {
+                              console.log('🔧 EditableSpreadsheet: Opening full screen workspace for rowIndex:', rowIndex, '(display row:', rowIndex + 1, ')');
+                              console.log('🔧 EditableSpreadsheet: Row data:', row);
+                              console.log('🔧 EditableSpreadsheet: Document for this row:', documentMap.get(rowIndex));
+                              console.log('🔧 EditableSpreadsheet: All documents in map:', Array.from(documentMap.entries()));
+                              console.log('🔧 EditableSpreadsheet: Current runsheet ID:', currentRunsheetId);
+                              openFullScreenWorkspace(rowIndex);
+                             }}
                             onOpenSideBySide={() => {
                               console.log('🔧 EditableSpreadsheet: Opening side-by-side workspace for rowIndex:', rowIndex);
                               openSideBySideWorkspace(rowIndex);
