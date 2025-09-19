@@ -189,8 +189,25 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
   return (
     <Dialog open={isOpen} onOpenChange={onClose} modal={false}>
       <DialogPrimitive.Portal>
-        {/* Custom semi-transparent overlay that allows interaction */}
-        <div className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[1px] pointer-events-none" />
+        {/* Custom semi-transparent overlay that blocks interactions but allows scrolling */}
+        <div 
+          className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[1px]"
+          onWheel={(e) => {
+            // Allow scroll events to pass through by stopping propagation here
+            // but let the event continue to the background
+            e.stopPropagation();
+          }}
+          onClick={(e) => e.preventDefault()}
+          onMouseDown={(e) => e.preventDefault()}
+          onMouseUp={(e) => e.preventDefault()}
+          onDoubleClick={(e) => e.preventDefault()}
+          onContextMenu={(e) => e.preventDefault()}
+          style={{ 
+            // Allow scroll events to pass through while blocking other interactions
+            pointerEvents: 'auto',
+            overflowY: 'auto'
+          }}
+        />
         
         {/* Fixed positioned dialog content */}
         <div className={cn(
