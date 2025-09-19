@@ -4070,15 +4070,24 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       }
     };
 
-    const handleMouseUp = () => {
+    const handleMouseUp = (e: MouseEvent) => {
+      console.log('🔧 Mouse up detected, clearing resize state');
       const wasResizing = resizing !== null;
+      const wasResizingRow = resizingRow !== null;
+      
+      // Force clear all resize states
       setResizing(null);
       setResizingRow(null);
       setIsDraggingResize(false);
+      
+      // Stop event propagation to prevent any further resize activity
+      e.stopPropagation();
+      e.preventDefault();
     };
 
     // Handle mouse leave from the document to exit resize mode
-    const handleMouseLeave = () => {
+    const handleMouseLeave = (e: MouseEvent) => {
+      console.log('🔧 Mouse leave detected, clearing resize state');
       if (resizing || resizingRow) {
         setResizing(null);
         setResizingRow(null);
@@ -4089,25 +4098,32 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     // Handle escape key to exit resize mode
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && (resizing || resizingRow)) {
+        console.log('🔧 Escape key pressed, clearing resize state');
         setResizing(null);
         setResizingRow(null);
         setIsDraggingResize(false);
       }
     };
 
-    if (resizing || resizingRow) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      document.addEventListener('mouseleave', handleMouseLeave);
-      document.addEventListener('keydown', handleKeyDown);
-      
-      return () => {
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
-        document.removeEventListener('mouseleave', handleMouseLeave);
-        document.removeEventListener('keydown', handleKeyDown);
-      };
-    }
+    // Always add event listeners globally to catch all mouse events
+    // This prevents the "stuck resize" issue
+    document.addEventListener('mousemove', handleMouseMove, { passive: false });
+    document.addEventListener('mouseup', handleMouseUp, { passive: false });
+    document.addEventListener('mouseleave', handleMouseLeave, { passive: false });
+    document.addEventListener('keydown', handleKeyDown, { passive: false });
+    
+    // Also add specific window events for extra coverage
+    window.addEventListener('mouseup', handleMouseUp, { passive: false });
+    window.addEventListener('blur', handleMouseLeave, { passive: false });
+    
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('mouseleave', handleMouseLeave);
+      document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('blur', handleMouseLeave);
+    };
   }, [resizing, resizingRow, getMinimumColumnWidth, currentRunsheetId, getRowHeight]);
 
 
