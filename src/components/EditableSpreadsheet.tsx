@@ -7993,7 +7993,9 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
                 // Mark last save and suppress realtime to avoid overwrite races
                 lastSavedAtRef.current = Date.now();
                 try { lastSavedDataHashRef.current = JSON.stringify(newData); } catch {}
-                suppressRealtimeUntilRef.current = Date.now() + 6000;
+                suppressRealtimeUntilRef.current = Date.now() + 8000;
+                // Track recent local edit for merge protection
+                try { recentEditedRowsRef.current.set(rowIndex, { timestamp: Date.now(), row: rowData }); } catch {}
                 // Persist immediately (silent) to avoid realtime overwrite
                 console.log('🔄 EDITABLE_SPREADSHEET: Triggering immediate save after full-screen update');
                 saveToDatabase(newData, columns, runsheetName, columnInstructions, true);
@@ -8035,7 +8037,9 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
               // Mark last save and suppress realtime to avoid overwrite races
               lastSavedAtRef.current = Date.now();
               try { lastSavedDataHashRef.current = JSON.stringify(newData); } catch {}
-              suppressRealtimeUntilRef.current = Date.now() + 6000;
+              suppressRealtimeUntilRef.current = Date.now() + 8000;
+              // Track recent local edit for merge protection
+              try { recentEditedRowsRef.current.set(rowIndex, { timestamp: Date.now(), row: rowData }); } catch {}
               // Trigger immediate save (silent) to prevent real-time sync from overwriting
               console.log('🔄 EDITABLE_SPREADSHEET: Triggering immediate save after data update');
               saveToDatabase(newData, columns, runsheetName, columnInstructions, true);
