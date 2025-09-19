@@ -162,6 +162,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   const [isLoadingRunsheet, setIsLoadingRunsheet] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isProcessingBrainAnalysis, setIsProcessingBrainAnalysis] = useState(false);
   const [showOpenDialog, setShowOpenDialog] = useState(false);
   const [showUploadWarningDialog, setShowUploadWarningDialog] = useState(false);
   const [savedRunsheets, setSavedRunsheets] = useState<any[]>([]);
@@ -6264,17 +6265,26 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
       };
       
       console.log('🔍 Row data after update:', newData[targetRowIndex]);
+      console.log('🔍 Full updated data array:', newData);
+      
+      // Mark this update as a brain button analysis to prevent sync conflicts
+      setIsProcessingBrainAnalysis(true);
       
       setData(newData);
       console.log('🔍 setData called with:', newData);
       console.log('🔍 onDataChange callback exists:', !!onDataChange);
       onDataChange?.(newData);
       console.log('🔍 onDataChange called');
+      
+      // Reset the brain analysis flag after a brief delay
+      setTimeout(() => setIsProcessingBrainAnalysis(false), 1000);
 
       // Show success message with details
       const populatedFields = Object.keys(cleanMappedData);
       console.log('🔍 About to show success toast for populated fields:', populatedFields);
       console.log('🔍 Clean mapped data:', cleanMappedData);
+      console.log('🔍 Final data state after analysis:', newData);
+      console.log('🔍 Specific row after analysis:', newData[targetRowIndex]);
       
       toast({
         title: "Document analyzed successfully",
@@ -6283,6 +6293,20 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
       });
       
       console.log('🔍 Analysis completed successfully for row:', targetRowIndex);
+      
+      // Force re-render by setting data again after a brief delay to ensure persistence
+      setTimeout(() => {
+        console.log('🔍 Brain analysis safeguard: Ensuring data persistence');
+        console.log('🔍 Current data state after timeout:', data);
+        console.log('🔍 Expected row data:', newData[targetRowIndex]);
+        if (JSON.stringify(data[targetRowIndex]) !== JSON.stringify(newData[targetRowIndex])) {
+          console.log('🚨 Brain analysis: Data mismatch detected, restoring row data!');
+          const safeData = [...data];
+          safeData[targetRowIndex] = newData[targetRowIndex];
+          setData(safeData);
+          onDataChange?.(safeData);
+        }
+      }, 500);
 
 
     } catch (error) {
@@ -7021,12 +7045,13 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
                          <Button
                            variant="outline"
                            size="sm"
-                           onClick={async () => {
-                             console.log('🧠 Brain button clicked - Debug info:');
-                             console.log('currentRunsheet:', currentRunsheet);
-                             console.log('currentRunsheetId:', currentRunsheetId);
-                             console.log('effectiveRunsheetId:', effectiveRunsheetId);
-                             console.log('documentMap size:', documentMap.size);
+                            onClick={async () => {
+                              console.log('🧠 BATCH Brain button clicked - Debug info:');
+                              console.log('currentRunsheet:', currentRunsheet);
+                              console.log('currentRunsheetId:', currentRunsheetId);
+                              console.log('effectiveRunsheetId:', effectiveRunsheetId);
+                              console.log('documentMap size:', documentMap.size);
+                              console.log('current data length:', data.length);
                              
                              if (!effectiveRunsheetId) {
                                toast({
@@ -7351,25 +7376,31 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
                              return newMap;
                            })());
                          }}
-                         onAnalyzeDocument={async (file, filename) => {
-                           console.log('🔧 EditableSpreadsheet: onAnalyzeDocument called for row:', rowIndex);
-                           
-                           // Check if row has existing data (excluding Document File Name column)
-                           const rowData = data[rowIndex];
-                           const hasExistingData = columns.some(col => 
-                             rowData[col] && 
-                             rowData[col].trim() !== ''
-                           );
+                          onAnalyzeDocument={async (file, filename) => {
+                            console.log('🧠 INDIVIDUAL ROW Brain button clicked for row:', rowIndex);
+                            console.log('🧠 File:', file.name, 'Filename:', filename);
+                            console.log('🧠 Current data state before analysis:', data);
+                            console.log('🧠 Row data before analysis:', data[rowIndex]);
+                            
+                            // Check if row has existing data (excluding Document File Name column)
+                            const rowData = data[rowIndex];
+                            const hasExistingData = columns.some(col => 
+                              rowData[col] && 
+                              rowData[col].trim() !== ''
+                            );
 
-                             if (hasExistingData) {
-                               // Show warning dialog for rows with existing data
-                               setPendingAnalysis({ file, filename, rowIndex });
-                               setShowAnalyzeWarningDialog(true);
-                             } else {
-                               // For empty rows, proceed directly with analysis
-                               await analyzeDocumentAndPopulateRow(file, rowIndex);
-                             }
-                          }}
+                              if (hasExistingData) {
+                                console.log('🧠 Row has existing data, showing warning dialog');
+                                // Show warning dialog for rows with existing data
+                                setPendingAnalysis({ file, filename, rowIndex });
+                                setShowAnalyzeWarningDialog(true);
+                              } else {
+                                console.log('🧠 Row is empty, proceeding with direct analysis');
+                                // For empty rows, proceed directly with analysis
+                                await analyzeDocumentAndPopulateRow(file, rowIndex);
+                                console.log('🧠 Analysis completed, new data state:', data);
+                              }
+                           }}
                            onOpenWorkspace={() => {
                              console.log('🔧 EditableSpreadsheet: Opening full screen workspace for rowIndex:', rowIndex, '(display row:', rowIndex + 1, ')');
                              console.log('🔧 EditableSpreadsheet: Row data:', row);
