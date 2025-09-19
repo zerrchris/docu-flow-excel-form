@@ -48,6 +48,19 @@ export class RunsheetService {
 
       const finalName = name.trim();
       
+      // Queue a pending creation request to survive navigation race conditions
+      try {
+        const payload = {
+          name: finalName,
+          columns: initialColumns,
+          instructions: initialInstructions,
+          ts: Date.now()
+        };
+        sessionStorage.setItem('pending_new_runsheet', JSON.stringify(payload));
+      } catch (e) {
+        console.error('Failed to set pending_new_runsheet in service:', e);
+      }
+      
       // Navigate to runsheet first (same as Dashboard)
       navigate('/runsheet');
       

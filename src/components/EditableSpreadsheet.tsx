@@ -738,6 +738,9 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     
     // Handle new runsheet creation from Dashboard
     const handleDashboardNewRunsheet = (event: CustomEvent) => {
+      // If a pending request exists (from Dashboard/service), clear it now
+      try { sessionStorage.removeItem('pending_new_runsheet'); } catch {}
+      
       // Check if we're in upload mode - if so, ignore this event
       const isUploadMode = window.location.search.includes('action=upload');
       const preventCreation = sessionStorage.getItem('prevent_default_runsheet_creation');
@@ -856,6 +859,29 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
 
     console.log('🔧 EDITABLE_SPREADSHEET: Setting up createNewRunsheetFromDashboard event listener');
     window.addEventListener('createNewRunsheetFromDashboard', handleDashboardNewRunsheet as EventListener);
+    
+    // After listener is ready, handle any pending creation request stored in sessionStorage
+    try {
+      const pending = sessionStorage.getItem('pending_new_runsheet');
+      if (pending) {
+        const payload = JSON.parse(pending);
+        const withinWindow = !payload.ts || (Date.now() - payload.ts < 15000);
+        if (withinWindow) {
+          console.log('⏪ Restoring pending new runsheet request from sessionStorage');
+          const event = new CustomEvent('createNewRunsheetFromDashboard', { detail: {
+            name: payload.name,
+            columns: payload.columns,
+            instructions: payload.instructions
+          }});
+          window.dispatchEvent(event);
+        } else {
+          console.log('⏱️ Pending new runsheet request expired, ignoring');
+        }
+        sessionStorage.removeItem('pending_new_runsheet');
+      }
+    } catch (e) {
+      console.error('Failed to process pending_new_runsheet:', e);
+    }
     
     // Handle new runsheet start from DocumentProcessor - but ONLY for actual new runsheets
     const handleStartNewRunsheet = (event: CustomEvent) => {

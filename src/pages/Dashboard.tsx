@@ -65,6 +65,19 @@ const Dashboard: React.FC = () => {
 
       const finalName = newRunsheetName.trim();
       
+      // Queue a pending creation request in case the navigation is slow
+      try {
+        const payload = {
+          name: finalName,
+          columns: initialColumns,
+          instructions: preferences?.column_instructions || {},
+          ts: Date.now()
+        };
+        sessionStorage.setItem('pending_new_runsheet', JSON.stringify(payload));
+      } catch (e) {
+        console.error('Failed to set pending_new_runsheet:', e);
+      }
+      
       // Navigate to runsheet and trigger the same new runsheet creation as the + button
       navigate('/runsheet');
       
