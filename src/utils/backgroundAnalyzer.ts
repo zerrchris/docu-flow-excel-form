@@ -278,17 +278,27 @@ export class BackgroundAnalyzer {
   private async saveProgress(job: AnalysisJob) {
     try {
       console.log('🔧 BackgroundAnalyzer: Saving progress with', job.currentData.length, 'rows');
-      
+
+      // Ensure we associate the save with the authenticated user
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData?.user?.id;
+      if (!userId) {
+        console.warn('BackgroundAnalyzer: No authenticated user found. Skipping save to prevent orphaned data.');
+        return;
+      }
+
+      // Edge function expects the runsheet payload at the root with snake_case keys
+      const payload = {
+        name: job.runsheetName,
+        columns: job.columns,
+        data: job.currentData,
+        column_instructions: job.columnInstructions,
+        user_id: userId,
+        updated_at: new Date().toISOString(),
+      };
+
       await supabase.functions.invoke('save-runsheet', {
-        body: {
-          runsheetId: job.runsheetId,
-          runsheetData: {
-            name: job.runsheetName, // Use actual runsheet name, not ID
-            columns: job.columns,
-            data: job.currentData,
-            columnInstructions: job.columnInstructions
-          }
-        }
+        body: payload,
       });
       
       console.log('🔧 BackgroundAnalyzer: Progress saved successfully');
