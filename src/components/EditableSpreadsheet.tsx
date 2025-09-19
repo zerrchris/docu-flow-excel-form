@@ -6503,56 +6503,32 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
                                'Notes': 'Extract any special conditions, considerations, or additional relevant information'
                              };
                              
-                             // Create the new runsheet
                              const finalName = newRunsheetName.trim();
                              
-                             // Clear active runsheet and current state
-                             clearActiveRunsheet();
-                             setCurrentRunsheetId(null);
-                             updateDocumentMap(new Map());
+                             // Close dialog first
+                             setShowNameNewRunsheetDialog(false);
+                             setNewRunsheetName('');
                              
-                             // Set up new runsheet
-                             setRunsheetName(finalName);
-                              setData(Array.from({ length: 100 }, () => {
-                               const row: Record<string, string> = {};
-                               DEFAULT_COLUMNS.forEach(col => row[col] = '');
-                               return row;
-                             }));
-                             setColumns(DEFAULT_COLUMNS);
-                             setColumnInstructions(DEFAULT_EXTRACTION_INSTRUCTIONS);
-                             setSelectedCell(null);
-                             setEditingCell(null);
-                             setCellValue('');
-                             setSelectedRange(null);
-                             setHasUnsavedChanges(false);
-                             setLastSavedState('');
-                             setLastSaveTime(null);
+                             // Set a flag to prevent loading any old runsheet data
+                             sessionStorage.setItem('creating_new_runsheet', Date.now().toString());
+                             sessionStorage.setItem('new_runsheet_name', finalName);
                              
-                             // Update parent components
-                              onDataChange?.(Array.from({ length: 100 }, () => {
-                               const row: Record<string, string> = {};
-                               DEFAULT_COLUMNS.forEach(col => row[col] = '');
-                               return row;
-                             }));
-                             onColumnChange(DEFAULT_COLUMNS);
-                             onColumnInstructionsChange?.(DEFAULT_EXTRACTION_INSTRUCTIONS);
+                             // Navigate to a clean runsheet URL without any parameters
+                             navigate('/runsheet', { replace: true, state: {} });
                              
-                               setShowNameNewRunsheetDialog(false);
-                               setNewRunsheetName('');
-                               
-                               // Set a flag to prevent loading any old runsheet data
-                               sessionStorage.setItem('creating_new_runsheet', Date.now().toString());
-                               sessionStorage.setItem('new_runsheet_name', finalName);
-                               
-                               // Navigate to a clean runsheet URL without any parameters
-                               navigate('/runsheet', { replace: true, state: {} });
-                               
-                               toast({
-                                 title: "New runsheet created",
-                                 description: `"${finalName}" is ready for your data.`,
+                             // Dispatch the same event that Dashboard uses to trigger the proper save
+                             setTimeout(() => {
+                               const event = new CustomEvent('createNewRunsheetFromDashboard', {
+                                 detail: {
+                                   name: finalName,
+                                   columns: DEFAULT_COLUMNS,
+                                   instructions: DEFAULT_EXTRACTION_INSTRUCTIONS
+                                 }
                                });
-                          }
-                        }}
+                               window.dispatchEvent(event);
+                             }, 100);
+                           }
+                         }}
                         autoFocus
                       />
                     </div>
@@ -6592,54 +6568,30 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
                            'Notes': 'Extract any special conditions, considerations, or additional relevant information'
                          };
                          
-                         // Create the new runsheet
                          const finalName = newRunsheetName.trim();
                          
-                         // Clear active runsheet and current state
-                         clearActiveRunsheet();
-                         setCurrentRunsheetId(null);
-                         updateDocumentMap(new Map());
+                         // Close dialog first
+                         setShowNameNewRunsheetDialog(false);
+                         setNewRunsheetName('');
                          
-                         // Set up new runsheet
-                         setRunsheetName(finalName);
-                         setData(Array.from({ length: 100 }, () => {
-                           const row: Record<string, string> = {};
-                           DEFAULT_COLUMNS.forEach(col => row[col] = '');
-                           return row;
-                         }));
-                         setColumns(DEFAULT_COLUMNS);
-                         setColumnInstructions(DEFAULT_EXTRACTION_INSTRUCTIONS);
-                         setSelectedCell(null);
-                         setEditingCell(null);
-                         setCellValue('');
-                         setSelectedRange(null);
-                         setHasUnsavedChanges(false);
-                         setLastSavedState('');
-                         setLastSaveTime(null);
+                         // Set a flag to prevent loading any old runsheet data
+                         sessionStorage.setItem('creating_new_runsheet', Date.now().toString());
+                         sessionStorage.setItem('new_runsheet_name', finalName);
                          
-                         // Update parent components
-                         onDataChange?.(Array.from({ length: 100 }, () => {
-                           const row: Record<string, string> = {};
-                           DEFAULT_COLUMNS.forEach(col => row[col] = '');
-                           return row;
-                         }));
-                         onColumnChange(DEFAULT_COLUMNS);
-                         onColumnInstructionsChange?.(DEFAULT_EXTRACTION_INSTRUCTIONS);
+                         // Navigate to a clean runsheet URL without any parameters
+                         navigate('/runsheet', { replace: true, state: {} });
                          
-                          setShowNameNewRunsheetDialog(false);
-                          setNewRunsheetName('');
-                          
-                          // Set a flag to prevent loading any old runsheet data
-                          sessionStorage.setItem('creating_new_runsheet', Date.now().toString());
-                          sessionStorage.setItem('new_runsheet_name', finalName);
-                          
-                          // Navigate to a clean runsheet URL without any parameters
-                          navigate('/runsheet', { replace: true, state: {} });
-                          
-                          toast({
-                            title: "New runsheet created",
-                            description: `"${finalName}" is ready for your data.`,
-                          });
+                         // Dispatch the same event that Dashboard uses to trigger the proper save
+                         setTimeout(() => {
+                           const event = new CustomEvent('createNewRunsheetFromDashboard', {
+                             detail: {
+                               name: finalName,
+                               columns: DEFAULT_COLUMNS,
+                               instructions: DEFAULT_EXTRACTION_INSTRUCTIONS
+                             }
+                           });
+                           window.dispatchEvent(event);
+                         }, 100);
                       }}
                       disabled={!newRunsheetName.trim()}
                     >
