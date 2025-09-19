@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { trackAIUsage, extractTokensFromResponse } from '../_shared/ai-usage-tracker.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -245,6 +246,25 @@ CRITICAL RULES:
     }
 
     const aiResult = await openaiResponse.json();
+    
+    // Track AI usage for billing
+    const tokenData = extractTokensFromResponse(aiResult);
+    await trackAIUsage(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      {
+        user_id: user.id,
+        function_name: 'enhanced-document-analysis',
+        model_used: 'gpt-4o',
+        input_tokens: tokenData.input_tokens,
+        output_tokens: tokenData.output_tokens,
+        total_tokens: tokenData.total_tokens,
+        request_payload: { document_name, extraction_preferences },
+        response_payload: aiResult,
+        success: true
+      }
+    );
+    
     let analysisResult;
     
     try {
@@ -262,6 +282,23 @@ CRITICAL RULES:
       }
     } catch (parseError) {
       console.error('Failed to parse AI response:', parseError);
+      
+      // Track failed usage
+      await trackAIUsage(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+        {
+          user_id: user.id,
+          function_name: 'enhanced-document-analysis',
+          model_used: 'gpt-4o',
+          input_tokens: tokenData.input_tokens,
+          output_tokens: tokenData.output_tokens,
+          total_tokens: tokenData.total_tokens,
+          success: false,
+          error_message: `Parse error: ${parseError.message}`
+        }
+      );
+      
       throw new Error('Failed to parse document analysis results');
     }
 
