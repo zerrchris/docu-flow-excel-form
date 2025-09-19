@@ -670,6 +670,14 @@ const MultipleFileUpload: React.FC<MultipleFileUploadProps> = ({
         variant: "default"
       });
 
+      // Force refresh the runsheet data to show the uploaded documents immediately
+      setTimeout(() => {
+        console.log('🔧 Dispatching refreshRunsheetData event after upload completion');
+        window.dispatchEvent(new CustomEvent('refreshRunsheetData', {
+          detail: { runsheetId }
+        }));
+      }, 200); // Small delay to ensure all document events are processed
+
       if (onUploadComplete) {
         onUploadComplete(successCount);
       }
