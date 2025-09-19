@@ -63,6 +63,7 @@ import ReExtractDialog from './ReExtractDialog';
 import RunsheetNameDialog from './RunsheetNameDialog';
 import { convertPDFToImages, createFileFromBlob } from '@/utils/pdfToImage';
 import { combineImages } from '@/utils/imageCombiner';
+import { backgroundAnalyzer } from '@/utils/backgroundAnalyzer';
 
 
 import type { User } from '@supabase/supabase-js';
@@ -1841,6 +1842,22 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     window.addEventListener('openGoogleDrivePicker', handleOpenGoogleDrivePicker);
     window.addEventListener('refreshRunsheetData', handleRefreshRunsheetData as EventListener);
     window.addEventListener('updateDocumentFilename', handleUpdateDocumentFilename as EventListener);
+    
+    // Listen for batch analysis progress for immediate UI updates
+    const handleBatchAnalysisProgress = (event: CustomEvent) => {
+      const { rowIndex, extractedData } = event.detail;
+      if (effectiveRunsheetId && extractedData) {
+        console.log('🧠 Batch analysis progress: updating row', rowIndex, 'with data:', extractedData);
+        setData(currentData => {
+          const newData = [...currentData];
+          if (newData[rowIndex]) {
+            newData[rowIndex] = { ...newData[rowIndex], ...extractedData };
+          }
+          return newData;
+        });
+      }
+    };
+    window.addEventListener('batchAnalysisProgress', handleBatchAnalysisProgress as EventListener);
 
     return () => {
       window.removeEventListener('triggerSpreadsheetUpload', handleUploadTrigger);
@@ -1851,8 +1868,9 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       window.removeEventListener('openGoogleDrivePicker', handleOpenGoogleDrivePicker);
       window.removeEventListener('refreshRunsheetData', handleRefreshRunsheetData as EventListener);
       window.removeEventListener('updateDocumentFilename', handleUpdateDocumentFilename as EventListener);
+      window.removeEventListener('batchAnalysisProgress', handleBatchAnalysisProgress as EventListener);
     };
-  }, [columns, currentRunsheetId]);
+  }, [columns, currentRunsheetId, effectiveRunsheetId]);
 
   // Real-time synchronization for runsheet data changes
   useEffect(() => {
@@ -1884,8 +1902,10 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
           const creatingFlag = sessionStorage.getItem('creating_new_runsheet');
           const creatingRecent = !!creatingFlag && (creatingFlag === 'true' || (now - (parseInt(creatingFlag) || 0) < 5000));
 
-          if (isProcessingUploadRef.current || withinSelfEcho || isSameAsLastSaved || creatingRecent) {
-            console.log('🚫 Skipping realtime update (self-echo/upload in progress)');
+          const batchAnalysisRunning = backgroundAnalyzer.getJobStatus()?.status === 'running';
+
+          if (isProcessingUploadRef.current || withinSelfEcho || isSameAsLastSaved || creatingRecent || batchAnalysisRunning) {
+            console.log('🚫 Skipping realtime update (self-echo/upload in progress/batch analysis running)');
             return;
           }
 
@@ -7841,6 +7861,7 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
           isOpen={showBatchAnalysisDialog}
           onClose={() => setShowBatchAnalysisDialog(false)}
           runsheetId={effectiveRunsheetId}
+          runsheetName={currentRunsheet?.name || runsheetName}
           columns={columns}
           columnInstructions={columnInstructions}
           documentMap={documentMap}

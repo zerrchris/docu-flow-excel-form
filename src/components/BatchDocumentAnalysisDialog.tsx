@@ -24,6 +24,7 @@ interface BatchDocumentAnalysisDialogProps {
   isOpen: boolean;
   onClose: () => void;
   runsheetId: string;
+  runsheetName: string;
   columns: string[];
   columnInstructions: Record<string, string>;
   documentMap: Map<number, DocumentRecord>;
@@ -35,6 +36,7 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
   isOpen,
   onClose,
   runsheetId,
+  runsheetName,
   columns,
   columnInstructions,
   documentMap,
@@ -118,6 +120,7 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
     try {
       const jobId = await backgroundAnalyzer.startAnalysis(
         runsheetId,
+        runsheetName,
         columns,
         columnInstructions,
         documentMap,

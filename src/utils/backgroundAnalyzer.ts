@@ -4,6 +4,7 @@ import { DocumentService, type DocumentRecord } from '@/services/documentService
 interface AnalysisJob {
   id: string;
   runsheetId: string;
+  runsheetName: string;
   columns: string[];
   columnInstructions: Record<string, string>;
   documentMap: [number, DocumentRecord][];
@@ -39,6 +40,7 @@ export class BackgroundAnalyzer {
 
   async startAnalysis(
     runsheetId: string,
+    runsheetName: string,
     columns: string[],
     columnInstructions: Record<string, string>,
     documentMap: Map<number, DocumentRecord>,
@@ -54,6 +56,7 @@ export class BackgroundAnalyzer {
     const job: AnalysisJob = {
       id: jobId,
       runsheetId,
+      runsheetName,
       columns,
       columnInstructions,
       documentMap: documentArray,
@@ -125,11 +128,20 @@ export class BackgroundAnalyzer {
                 };
               }
 
-              // Batch saves - only save every 5 documents or on completion
-              if (job.currentIndex - job.lastSaveIndex >= 4 || job.currentIndex >= job.documentMap.length - 1) {
-                await this.saveProgress(job);
-                job.lastSaveIndex = job.currentIndex;
-              }
+              // Batch saves - save immediately after each document to prevent data loss
+              // This ensures extracted data is persisted quickly and visible in UI
+              await this.saveProgress(job);
+              job.lastSaveIndex = job.currentIndex;
+              
+              // Dispatch immediate UI update event
+              window.dispatchEvent(new CustomEvent('batchAnalysisProgress', {
+                detail: { 
+                  rowIndex, 
+                  extractedData,
+                  currentIndex: job.currentIndex,
+                  total: job.documentMap.length
+                }
+              }));
               
               job.results[job.currentIndex] = {
                 ...job.results[job.currentIndex],
@@ -265,19 +277,24 @@ export class BackgroundAnalyzer {
 
   private async saveProgress(job: AnalysisJob) {
     try {
+      console.log('🔧 BackgroundAnalyzer: Saving progress with', job.currentData.length, 'rows');
+      
       await supabase.functions.invoke('save-runsheet', {
         body: {
           runsheetId: job.runsheetId,
           runsheetData: {
-            name: job.runsheetId,
+            name: job.runsheetName, // Use actual runsheet name, not ID
             columns: job.columns,
             data: job.currentData,
             columnInstructions: job.columnInstructions
           }
         }
       });
+      
+      console.log('🔧 BackgroundAnalyzer: Progress saved successfully');
     } catch (error) {
       console.error('Failed to save progress:', error);
+      throw error; // Propagate error to handle it properly
     }
   }
 
