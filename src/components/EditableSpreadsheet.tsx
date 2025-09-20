@@ -421,6 +421,14 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   const [showBatchRenameDialog, setShowBatchRenameDialog] = useState(false);
   const [showImprovedAnalysis, setShowImprovedAnalysis] = useState(false);
   // Removed showDocumentFileNameColumn state - no longer needed
+
+  // When batch analysis starts, blur any focused element to prevent unintended edits
+  useEffect(() => {
+    if (showBatchAnalysisDialog) {
+      const active = document.activeElement as HTMLElement | null;
+      active?.blur?.();
+    }
+  }, [showBatchAnalysisDialog]);
   
   // Runsheet naming dialog state
   const [showNameDialog, setShowNameDialog] = useState(false);
@@ -6921,7 +6929,7 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
             if (containerRef.current !== node) containerRef.current = node;
             if (tableContainerRef.current !== node) tableContainerRef.current = node;
           }}
-          className={`border rounded-md bg-background relative h-[750px] mx-6 overflow-auto transition-all duration-200 ${
+          className={`table-container border rounded-md bg-background relative h-[750px] mx-6 overflow-auto transition-all duration-200 ${
             isScrolling ? 'scroll-smooth' : ''
           }`}
           style={{ 
@@ -8150,20 +8158,21 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
 
         {/* Add CSS to disable interactions when batch dialog is open */}
         {showBatchAnalysisDialog && (
-          <style>{`
-            .table-container button,
-            .table-container input,
-            .table-container select,
-            .table-container textarea,
-            .table-container [role="button"] {
-              pointer-events: none !important;
-            }
-            /* Keep scrolling enabled */
-            .table-container {
-              pointer-events: auto !important;
-              overflow: auto !important;
-            }
-          `}</style>
+          <>
+            <style>{`
+              /* Disable all interactions inside the table while allowing scroll */
+              .table-container * {
+                pointer-events: none !important;
+              }
+              .table-container {
+                pointer-events: auto !important;
+                overflow: auto !important;
+              }
+            `}</style>
+            <div className="pointer-events-none fixed top-4 right-4 z-50 bg-primary/10 text-primary-foreground/90 backdrop-blur-sm border border-primary/20 rounded-md px-3 py-2 text-xs shadow-sm">
+              Batch analysis in progress — editing disabled. Scroll to follow progress.
+            </div>
+          </>
         )}
         
         {/* Batch File Rename Dialog */}
