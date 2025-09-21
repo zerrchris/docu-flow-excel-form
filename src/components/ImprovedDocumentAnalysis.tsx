@@ -14,14 +14,11 @@ import {
   Upload,
   Brain,
   Target,
-  Clock,
-  Users
+  Clock
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import AdvancedDataVerificationDialog from './AdvancedDataVerificationDialog';
-import MultiInstrumentAnalysisDialog from './MultiInstrumentAnalysisDialog';
-import { DocumentService } from '@/services/documentService';
 
 interface ImprovedDocumentAnalysisProps {
   runsheetId: string;
@@ -58,10 +55,8 @@ const ImprovedDocumentAnalysis: React.FC<ImprovedDocumentAnalysisProps> = ({
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showVerificationDialog, setShowVerificationDialog] = useState(false);
-  const [showMultiInstrumentDialog, setShowMultiInstrumentDialog] = useState(false);
   const [analysisSteps, setAnalysisSteps] = useState<AnalysisStep[]>([]);
   const [analysisProgress, setAnalysisProgress] = useState(0);
-  const [extractionPrefs, setExtractionPrefs] = useState<{ columns: string[]; column_instructions: Record<string, string> } | null>(null);
   const { toast } = useToast();
 
   const initializeAnalysisSteps = () => {
@@ -167,22 +162,15 @@ const ImprovedDocumentAnalysis: React.FC<ImprovedDocumentAnalysisProps> = ({
       updateStep('ai-analysis', 'in-progress', 'Loading extraction preferences...');
       
       // Get user's extraction preferences including column instructions
-      const { data: extractionPrefsData } = await supabase
+      const { data: extractionPrefs } = await supabase
         .from('user_extraction_preferences')
         .select('columns, column_instructions')
         .eq('is_default', true)
         .maybeSingle();
 
-      // Store preferences in state for multi-instrument dialog
-      const prefsToUse = {
-        columns: extractionPrefsData?.columns || availableColumns,
-        column_instructions: (extractionPrefsData?.column_instructions as Record<string, string>) || {}
-      };
-      setExtractionPrefs(prefsToUse);
-
       // Use extraction preferences if available, otherwise use available columns
-      const extractionColumns = prefsToUse.columns;
-      const columnInstructions = prefsToUse.column_instructions;
+      const extractionColumns = extractionPrefs?.columns || availableColumns;
+      const columnInstructions = extractionPrefs?.column_instructions || {};
 
       console.log('🔧 Using extraction preferences:', {
         columns: extractionColumns,
@@ -372,35 +360,23 @@ const ImprovedDocumentAnalysis: React.FC<ImprovedDocumentAnalysisProps> = ({
             </div>
 
             {selectedFile && !isAnalyzing && !analysisResult && (
-              <div className="space-y-3">
-                <div className="flex gap-3">
-                  <Button
-                    onClick={() => performAnalysis(false)}
-                    className="flex-1"
-                    disabled={!selectedFile}
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    Smart Analysis
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => performAnalysis(true)}
-                    className="flex-1"
-                    disabled={!selectedFile}
-                  >
-                    <Eye className="h-4 w-4 mr-2" />
-                    Vision Analysis
-                  </Button>
-                </div>
-                
+              <div className="flex gap-3">
                 <Button
-                  onClick={() => setShowMultiInstrumentDialog(true)}
-                  variant="secondary"
-                  className="w-full"
+                  onClick={() => performAnalysis(false)}
+                  className="flex-1"
                   disabled={!selectedFile}
                 >
-                  <Users className="h-4 w-4 mr-2" />
-                  Multi-Instrument Analysis
+                  <FileText className="h-4 w-4 mr-2" />
+                  Smart Analysis
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => performAnalysis(true)}
+                  className="flex-1"
+                  disabled={!selectedFile}
+                >
+                  <Eye className="h-4 w-4 mr-2" />
+                  Vision Analysis
                 </Button>
               </div>
             )}
@@ -523,25 +499,6 @@ const ImprovedDocumentAnalysis: React.FC<ImprovedDocumentAnalysisProps> = ({
           availableColumns={availableColumns}
           currentRunsheetData={currentRunsheetData}
           onRetryAnalysis={retryAnalysis}
-        />
-      )}
-
-      {/* Multi-Instrument Analysis Dialog */}
-      {showMultiInstrumentDialog && (
-        <MultiInstrumentAnalysisDialog
-          isOpen={showMultiInstrumentDialog}
-          onClose={() => setShowMultiInstrumentDialog(false)}
-          selectedFile={selectedFile}
-          runsheetId={runsheetId}
-          availableColumns={availableColumns}
-          columnInstructions={extractionPrefs?.column_instructions || {}}
-          onInstrumentsConfirmed={(instruments) => {
-            console.log('Instruments confirmed:', instruments);
-            onDataPopulated?.();
-            setShowMultiInstrumentDialog(false);
-            setSelectedFile(null);
-            setAnalysisResult(null);
-          }}
         />
       )}
     </>

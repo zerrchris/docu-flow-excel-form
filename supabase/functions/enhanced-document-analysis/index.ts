@@ -78,11 +78,10 @@ serve(async (req) => {
       }
 
       // Specific error messages for common unsupported formats
-      // Support PDFs now that we have proper conversion
       if (data.includes('data:application/pdf')) {
-        console.log('✅ Enhanced analysis: PDF format detected and accepted');
         return { 
-          isValid: true,
+          isValid: false, 
+          error: 'PDF format detected. Please convert PDF pages to image format (PNG/JPEG) for enhanced AI analysis.',
           fileType: 'pdf'
         };
       }
@@ -237,7 +236,7 @@ RESPONSE FORMAT: Return ONLY a valid JSON object with:
       {
         user_id: user.id,
         function_name: 'enhanced-document-analysis',
-        model_used: 'gpt-4o-mini',
+        model_used: 'gpt-4o',
         input_tokens: tokenData.input_tokens,
         output_tokens: tokenData.output_tokens,
         total_tokens: tokenData.total_tokens,
@@ -272,7 +271,7 @@ RESPONSE FORMAT: Return ONLY a valid JSON object with:
         {
           user_id: user.id,
           function_name: 'enhanced-document-analysis',
-          model_used: 'gpt-4o-mini',
+          model_used: 'gpt-4o',
           input_tokens: tokenData.input_tokens,
           output_tokens: tokenData.output_tokens,
           total_tokens: tokenData.total_tokens,

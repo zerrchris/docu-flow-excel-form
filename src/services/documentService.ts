@@ -12,11 +12,6 @@ export interface DocumentRecord {
   content_type: string;
   created_at: string;
   updated_at: string;
-  // Multi-instrument support
-  is_page_range?: boolean;
-  page_start?: number;
-  page_end?: number;
-  parent_document_id?: string;
 }
 
 export class DocumentService {
@@ -63,9 +58,8 @@ export class DocumentService {
   /**
    * Get public URL for a document with error handling
    * For batch processing, use getDocumentUrlFast instead
-   * For page range documents, this returns the parent document URL
    */
-  static async getDocumentUrl(filePath: string, pageStart?: number, pageEnd?: number): Promise<string> {
+  static async getDocumentUrl(filePath: string): Promise<string> {
     // If the path is already a full URL, return it as-is
     if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
       return filePath;
@@ -125,63 +119,6 @@ export class DocumentService {
         .from('documents')
         .getPublicUrl(filePath);
       return data.publicUrl;
-    }
-  }
-
-  /**
-   * Analyze document for multiple instruments
-   */
-  static async analyzeMultiInstrument(
-    file: File,
-    runsheetId: string,
-    availableColumns: string[],
-    columnInstructions?: Record<string, string>,
-    documentId?: string
-  ): Promise<{ success: boolean; analysis?: any; error?: string }> {
-    try {
-      // Convert file to base64
-      const base64Data = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        return { success: false, error: 'Not authenticated' };
-      }
-
-      const response = await supabase.functions.invoke('analyze-multi-instrument-document', {
-        body: {
-          documentData: base64Data,
-          fileName: file.name,
-          runsheetId,
-          availableColumns,
-          columnInstructions: columnInstructions || {},
-          documentId
-        }
-      });
-
-      if (response.error) {
-        return { success: false, error: response.error.message };
-      }
-
-      if (!response.data?.success) {
-        return { success: false, error: response.data?.error || 'Analysis failed' };
-      }
-
-      return {
-        success: true,
-        analysis: response.data.analysis
-      };
-
-    } catch (error) {
-      console.error('Error in multi-instrument analysis:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Analysis failed'
-      };
     }
   }
 

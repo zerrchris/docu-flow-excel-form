@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { Plus, Trash2, Check, X, ArrowUp, ArrowDown, Save, FolderOpen, Download, Upload, AlignLeft, AlignCenter, AlignRight, Cloud, ChevronDown, FileText, Archive, ExternalLink, AlertTriangle, FileStack, Settings, Eye, EyeOff, Sparkles, Bug, AlertCircle, Brain, FileEdit, Users } from 'lucide-react';
+import { Plus, Trash2, Check, X, ArrowUp, ArrowDown, Save, FolderOpen, Download, Upload, AlignLeft, AlignCenter, AlignRight, Cloud, ChevronDown, FileText, Archive, ExternalLink, AlertTriangle, FileStack, Settings, Eye, EyeOff, Sparkles, Bug, AlertCircle, Brain, FileEdit } from 'lucide-react';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -53,8 +53,6 @@ import ColumnPreferencesDialog from './ColumnPreferencesDialog';
 import FullScreenDocumentWorkspace from './FullScreenDocumentWorkspace';
 import SideBySideDocumentWorkspace from './SideBySideDocumentWorkspace';
 import { BatchDocumentAnalysisDialog } from './BatchDocumentAnalysisDialog';
-import { BatchMultiInstrumentDialog } from './BatchMultiInstrumentDialog';
-import { BatchUploadDropdown } from './BatchUploadDropdown';
 import { BatchFileRenameDialog } from './BatchFileRenameDialog';
 import { BackgroundAnalysisIndicator } from './BackgroundAnalysisIndicator';
 import ImprovedDocumentAnalysis from './ImprovedDocumentAnalysis';
@@ -445,7 +443,6 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     sideBySideRowParam ? { runsheetId: effectiveRunsheetId || '', rowIndex: parseInt(sideBySideRowParam) } : null
   );
   const [showBatchAnalysisDialog, setShowBatchAnalysisDialog] = useState(false);
-  const [showBatchMultiInstrumentDialog, setShowBatchMultiInstrumentDialog] = useState(false);
   const [showBatchRenameDialog, setShowBatchRenameDialog] = useState(false);
   const [showImprovedAnalysis, setShowImprovedAnalysis] = useState(false);
   // Removed showDocumentFileNameColumn state - no longer needed
@@ -7145,60 +7142,54 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
                                  Smart File Name Settings
                                </DropdownMenuItem>
                                <DropdownMenuItem 
-                                  onClick={async () => {
-                                    let mapToCheck = documentMap;
-                                    // Refresh document map before opening dialog
-                                    if (currentRunsheetId) {
-                                      try {
-                                        const updatedDocumentMap = await DocumentService.getDocumentMapForRunsheet(currentRunsheetId);
-                                        updateDocumentMap(updatedDocumentMap);
-                                        mapToCheck = updatedDocumentMap;
-                                      } catch (error) {
-                                        console.error('Error refreshing document map:', error);
-                                      }
-                                    }
-                                    
-                                    if (mapToCheck.size === 0) {
-                                      toast({
-                                        title: "Nothing to rename",
-                                        description: "No documents are linked to this runsheet yet.",
-                                        variant: "default",
-                                      });
-                                      return;
-                                    }
-                                    
-                                    setShowBatchRenameDialog(true);
-                                  }}
-                                >
-                                  <FileEdit className="h-4 w-4 mr-2" />
-                                  Rename All Files
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          
-                          {/* Batch Upload Dropdown - combines Multiple Files and Multi-Instrument */}
-                          <BatchUploadDropdown
-                            onMultipleFiles={onShowMultipleUpload}
-                            onMultiInstrument={async () => {
-                              console.log('🔍 BATCH Multi-Instrument button clicked');
-                              
-                              if (!effectiveRunsheetId) {
-                                toast({
-                                  title: "No runsheet selected",
-                                  description: "Please save your runsheet before analyzing documents.",
-                                  variant: "destructive",
-                                });
-                                return;
-                              }
-                              
-                              setShowBatchMultiInstrumentDialog(true);
-                            }}
-                          />
-                          
-                          {/* Batch Analysis Button */}
-                          <Button
-                            variant="outline"
-                            size="sm"
+                                 onClick={async () => {
+                                   let mapToCheck = documentMap;
+                                   // Refresh document map before opening dialog
+                                   if (currentRunsheetId) {
+                                     try {
+                                       const updatedDocumentMap = await DocumentService.getDocumentMapForRunsheet(currentRunsheetId);
+                                       updateDocumentMap(updatedDocumentMap);
+                                       mapToCheck = updatedDocumentMap;
+                                     } catch (error) {
+                                       console.error('Error refreshing document map:', error);
+                                     }
+                                   }
+                                   
+                                   if (mapToCheck.size === 0) {
+                                     toast({
+                                       title: "Nothing to rename",
+                                       description: "No documents are linked to this runsheet yet.",
+                                       variant: "default",
+                                     });
+                                     return;
+                                   }
+                                   
+                                   setShowBatchRenameDialog(true);
+                                 }}
+                               >
+                                 <FileEdit className="h-4 w-4 mr-2" />
+                                 Rename All Files
+                               </DropdownMenuItem>
+                             </DropdownMenuContent>
+                           </DropdownMenu>
+                         
+                         {/* Upload Multiple Files Button */}
+                         {onShowMultipleUpload && (
+                           <Button
+                             variant="outline"
+                             size="sm"
+                             onClick={onShowMultipleUpload}
+                             className="h-8 text-xs gap-1"
+                           >
+                             <FileStack className="h-3 w-3" />
+                             Multiple Files
+                           </Button>
+                         )}
+                         
+                         {/* Batch Analysis Button */}
+                         <Button
+                           variant="outline"
+                           size="sm"
                             onClick={async () => {
                               console.log('🧠 BATCH Brain button clicked - Debug info:');
                               console.log('currentRunsheet:', currentRunsheet);
@@ -7246,13 +7237,13 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
                              }
                              
                              setShowBatchAnalysisDialog(true);
-                            }}
-                            className="h-8 text-xs gap-1"
-                          >
-                            <Brain className="h-3 w-3" />
-                            Analyze All
-                          </Button>
-                     </div>
+                           }}
+                           className="h-8 text-xs gap-1"
+                         >
+                           <Brain className="h-3 w-3" />
+                           Analyze All
+                         </Button>
+                    </div>
                   </th>
                 </tr>
              </thead>
@@ -8187,23 +8178,6 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
             onDataChange?.(newData);
           }}
           currentData={data}
-        />
-
-        {/* Batch Multi-Instrument Analysis Dialog */}
-        <BatchMultiInstrumentDialog
-          isOpen={showBatchMultiInstrumentDialog}
-          onClose={() => setShowBatchMultiInstrumentDialog(false)}
-          runsheetId={effectiveRunsheetId}
-          availableColumns={columns}
-          columnInstructions={columnInstructions}
-          onBatchComplete={() => {
-            // Refresh the runsheet data
-            onDataChange?.(data);
-            toast({
-              title: "Multi-Instrument Analysis Complete",
-              description: "All selected instruments have been added to your runsheet.",
-            });
-          }}
         />
 
         {/* Add CSS to disable interactions when batch dialog is open */}

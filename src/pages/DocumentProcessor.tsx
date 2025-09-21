@@ -1421,11 +1421,11 @@ Image: [base64 image data]`;
             // Upload the file to storage to get a real storage path
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
-              // Use the original filename instead of adding "analyzed_" prefix
-              const originalName = targetFile.name.replace(/\.[^.]*$/, '');
+              // Generate a unique filename
+              const timestamp = Date.now();
               const fileExtension = targetFile.name.split('.').pop() || '';
-              const fileName = `${originalName}.${fileExtension}`;
-              const filePath = `${user.id}/documents/${fileName}`;
+              const fileName = `analyzed_${timestamp}.${fileExtension}`;
+              const filePath = `${user.id}/analyzed/${fileName}`;
               
               // Upload to storage
               const { data: uploadData, error: uploadError } = await supabase.storage
