@@ -54,6 +54,7 @@ serve(async (req) => {
     const requestBody = await req.json();
     const { 
       documentData,
+      multiPageData = [],
       documentId, 
       fileName, 
       filePath,
@@ -66,6 +67,8 @@ serve(async (req) => {
 
     // Get document data if not provided
     let imageData = documentData;
+    let allPageImages: string[] = [];
+    
     if (!imageData && (documentId || filePath)) {
       console.log('📥 Fetching document from storage...');
       try {
@@ -89,19 +92,40 @@ serve(async (req) => {
           const response = await fetch(signedUrl);
           if (!response.ok) throw new Error('Failed to fetch document');
           const blob = await response.blob();
-          const arrayBuffer = await blob.arrayBuffer();
-          const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
-          imageData = `data:${blob.type};base64,${base64}`;
+          
+          // Check if it's a PDF
+          if (blob.type === 'application/pdf' || fileName?.toLowerCase().endsWith('.pdf')) {
+            console.log('📄 Converting PDF to multiple images...');
+            
+            // For PDF, we need to convert to multiple images
+            // This is a simplified version - in production you'd use a proper PDF library
+            const arrayBuffer = await blob.arrayBuffer();
+            const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+            const pdfDataUrl = `data:${blob.type};base64,${base64}`;
+            
+            // For now, we'll send the PDF as-is and let the AI analyze it
+            // TODO: Implement proper PDF-to-image conversion in the edge function
+            imageData = pdfDataUrl;
+            allPageImages = [pdfDataUrl]; // Single page for now
+          } else {
+            // Regular image
+            const arrayBuffer = await blob.arrayBuffer();
+            const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+            imageData = `data:${blob.type};base64,${base64}`;
+            allPageImages = [imageData];
+          }
         }
       } catch (error) {
         console.error('❌ Failed to fetch document:', error);
         throw new Error('Failed to retrieve document for analysis');
       }
+    } else if (imageData) {
+      allPageImages = [imageData];
     }
 
-    if (!imageData) {
-      throw new Error('No document data available for analysis');
-    }
+    // Use multiple pages if available, otherwise single image
+    const imagesToAnalyze = multiPageData.length > 0 ? multiPageData : [imageData];
+    const totalPages = imagesToAnalyze.length;
 
     // Comprehensive prompt for multi-instrument detection
     const analysisPrompt = `You are an expert document analyst specializing in detecting multiple legal instruments within a single PDF document. Your task is to analyze this document and identify all separate instruments it contains.
@@ -192,15 +216,15 @@ IMPORTANT RULES:
             content: [
               {
                 type: 'text',
-                text: `Analyze this document for multiple instruments. Document name: ${fileName}`
+                text: `Analyze this ${totalPages}-page document for multiple instruments. Document name: ${fileName}`
               },
-              {
+              ...imagesToAnalyze.map((imageUrl, index) => ({
                 type: 'image_url',
                 image_url: {
-                  url: imageData,
+                  url: imageUrl,
                   detail: 'high'
                 }
-              }
+              }))
             ]
           }
         ],
@@ -227,7 +251,7 @@ IMPORTANT RULES:
       input_tokens: tokenData.input_tokens,
       output_tokens: tokenData.output_tokens,
       total_tokens: tokenData.total_tokens,
-      request_payload: { fileName, hasDocumentData: !!documentData },
+      request_payload: { fileName, hasDocumentData: !!documentData, totalPages, hasMultiPageData: multiPageData.length > 0 },
       response_payload: { analysisLength: analysisText?.length || 0 },
       success: true
     });

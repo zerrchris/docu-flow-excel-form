@@ -131,11 +131,12 @@ export const BatchMultiInstrumentDialog: React.FC<BatchMultiInstrumentDialogProp
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Authentication required');
 
-      // For large PDFs, convert to optimized images first
+      // For large PDFs, convert to optimized images first and send multiple pages
       let documentData;
       let fileToAnalyze = uploadedDocument.file_path;
+      let multiPageData: string[] = [];
 
-      // Check if it's a PDF and get the file for conversion
+      // Check if it's a PDF and convert to multiple images
       if (isPDF({ name: uploadedDocument.original_filename, type: 'application/pdf' } as File)) {
         try {
           // Get the file from storage
@@ -148,14 +149,20 @@ export const BatchMultiInstrumentDialog: React.FC<BatchMultiInstrumentDialogProp
             const blob = await response.blob();
             const file = new File([blob], uploadedDocument.original_filename, { type: 'application/pdf' });
             
-            // Convert PDF to optimized images (smaller scale for analysis)
+            // Convert PDF to multiple optimized images
+            console.log('🔄 Converting PDF to multiple pages for analysis...');
             const pdfPages = await convertPDFToImages(file, 2); // Lower scale for analysis
             
             if (pdfPages.length > 0) {
-              // Use the first page as a representative image
-              const canvas = pdfPages[0].canvas;
-              // Compress the image for analysis
-              documentData = canvas.toDataURL('image/jpeg', 0.7);
+              // Use all pages, but prioritize first few for analysis
+              multiPageData = pdfPages.slice(0, 10).map(page => 
+                page.canvas.toDataURL('image/jpeg', 0.7)
+              );
+              
+              // Use first page as primary image for backward compatibility
+              documentData = multiPageData[0];
+              
+              console.log(`🔄 Converted ${pdfPages.length} pages, using ${multiPageData.length} for analysis`);
             }
           }
         } catch (pdfError) {
@@ -166,6 +173,7 @@ export const BatchMultiInstrumentDialog: React.FC<BatchMultiInstrumentDialogProp
       const response = await supabase.functions.invoke('analyze-multi-instrument-document', {
         body: {
           documentData,
+          multiPageData, // Send all page images
           documentId: uploadedDocument.id,
           fileName: uploadedDocument.original_filename,
           filePath: fileToAnalyze,
