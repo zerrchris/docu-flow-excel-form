@@ -58,6 +58,7 @@ export const BatchMultiInstrumentDialog: React.FC<BatchMultiInstrumentDialogProp
   const [analysis, setAnalysis] = useState<MultiInstrumentAnalysis | null>(null);
   const [selectedInstruments, setSelectedInstruments] = useState<number[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [showUploader, setShowUploader] = useState(true);
   const { toast } = useToast();
 
   const handleDocumentUploaded = async (uploadedCount: number) => {
@@ -72,6 +73,7 @@ export const BatchMultiInstrumentDialog: React.FC<BatchMultiInstrumentDialogProp
       
       if (documents && documents.length > 0) {
         setUploadedDocument(documents[0]);
+        setShowUploader(false);
         setError(null);
       }
     }
@@ -230,7 +232,7 @@ export const BatchMultiInstrumentDialog: React.FC<BatchMultiInstrumentDialogProp
         <ScrollArea className="max-h-[60vh]">
           <div className="space-y-6">
             {/* Document Upload Step */}
-            {!uploadedDocument && (
+            {showUploader && !uploadedDocument && (
               <Card>
                 <CardContent className="pt-6">
                   <div className="text-center space-y-4">
@@ -247,8 +249,11 @@ export const BatchMultiInstrumentDialog: React.FC<BatchMultiInstrumentDialogProp
                       <MultipleFileUpload
                         onUploadComplete={handleDocumentUploaded}
                         onClose={() => {
-                          // Close button should trigger document analysis step
-                          // The handleDocumentUploaded already sets the uploaded document
+                          setShowUploader(false);
+                          if (!uploadedDocument) {
+                            // Attempt to fetch the latest uploaded document
+                            handleDocumentUploaded(1);
+                          }
                         }}
                         runsheetData={{ id: runsheetId, name: 'Current Runsheet', data: [] }}
                       />
