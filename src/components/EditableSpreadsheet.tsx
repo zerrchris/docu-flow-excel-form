@@ -307,8 +307,9 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
 
     // If server data is not newer than our last save, don't override local
     const serverUpdatedAt = currentRunsheet.updated_at ? Date.parse(currentRunsheet.updated_at) : 0;
-    if (lastSavedAtRef.current > 0 && serverUpdatedAt && serverUpdatedAt <= lastSavedAtRef.current) {
-      console.log('🚫 EDITABLE_SPREADSHEET: Skipping sync - server not newer than local', { serverUpdatedAt, lastSavedAt: lastSavedAtRef.current });
+    const localBarrier = Math.max(lastSavedAtRef.current, lastServerAppliedAtRef.current);
+    if (serverUpdatedAt && serverUpdatedAt <= localBarrier + 500) {
+      console.log('🚫 EDITABLE_SPREADSHEET: Skipping sync - server not newer than local/applied', { serverUpdatedAt, lastSavedAt: lastSavedAtRef.current, lastServerAppliedAt: lastServerAppliedAtRef.current });
       return;
     }
 
@@ -349,6 +350,9 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       setColumnInstructions(currentRunsheet.columnInstructions);
       onColumnInstructionsChange?.(currentRunsheet.columnInstructions);
     }
+
+    // Mark the latest server version we've applied
+    lastServerAppliedAtRef.current = serverUpdatedAt || Date.now();
   }, [currentRunsheet, onColumnChange, onDataChange, onColumnInstructionsChange, ensureMinimumRows]);
 
 
@@ -565,6 +569,8 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   const suppressRealtimeUntilRef = useRef<number>(0);
   const dataRef = useRef<Record<string, string>[]>(data);
   const recentEditedRowsRef = useRef<Map<number, { timestamp: number; row: Record<string, string> }>>(new Map());
+  // Track latest server version we've applied to avoid out-of-order overwrites
+  const lastServerAppliedAtRef = useRef<number>(0);
   
   // Immediate save system like Google Sheets - no debouncing, save on every change
   const { saveToDatabase, saveAsNewRunsheet, isSaving: immediateSaving } = useImmediateSave({
@@ -2064,11 +2070,12 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
           const currentFilled = countFilled(currentSnapshot);
           const newFilled = countFilled(newData);
           const payloadUpdatedAt = payload.new?.updated_at ? Date.parse(payload.new.updated_at as string) : 0;
-          const staleByTime = !!payloadUpdatedAt && !!lastSavedAtRef.current && (payloadUpdatedAt < (lastSavedAtRef.current - 250));
+          const localBarrier = Math.max(lastSavedAtRef.current, lastServerAppliedAtRef.current);
+          const staleByTime = !!payloadUpdatedAt && (payloadUpdatedAt <= localBarrier + 1000); // require strictly newer by 1s
           const destructive = currentFilled > 0 && (newData.length === 0 || newFilled + 3 < currentFilled);
 
           if (staleByTime || destructive) {
-            console.warn('🚫 Ignoring realtime update (stale or destructive).', { staleByTime, destructive, currentFilled, newFilled });
+            console.warn('🚫 Ignoring realtime update (stale or destructive).', { staleByTime, destructive, currentFilled, newFilled, payloadUpdatedAt, lastSavedAt: lastSavedAtRef.current, lastServerAppliedAt: lastServerAppliedAtRef.current });
             suppressRealtimeUntilRef.current = Date.now() + 5000;
             return;
           }
