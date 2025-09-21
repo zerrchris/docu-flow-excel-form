@@ -297,7 +297,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
 
     // Check if we're in upload mode or just uploaded data - prevent overriding fresh upload
     const isUploadMode = window.location.search.includes('action=upload');
-    const recentSave = Date.now() - lastSavedAtRef.current < 5000; // Within 5 seconds
+    const recentSave = Date.now() - lastSavedAtRef.current < 8000; // Within 8 seconds
     const localHasData = dataRef.current.length > 0 && dataRef.current.some(row => Object.values(row).some(val => val?.trim()));
 
     if (isUploadMode || (recentSave && localHasData)) {
@@ -315,8 +315,28 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     if (currentRunsheet.data) {
       console.log('🔄 EDITABLE_SPREADSHEET: Setting data from runsheet, length:', currentRunsheet.data.length);
       const minRowsData = ensureMinimumRows(currentRunsheet.data, currentRunsheet.columns || []);
-      setData(minRowsData);
-      onDataChange?.(minRowsData);
+      // Merge protection: preserve recently edited local rows to prevent flicker
+      const nowTs = Date.now();
+      const merged = [...minRowsData];
+      try {
+        recentEditedRowsRef.current.forEach((meta, idx) => {
+          if (nowTs - meta.timestamp <= 12000) {
+            const localRow = meta.row || {};
+            const remoteRow = merged[idx] || {};
+            const mergedRow = { ...remoteRow } as Record<string, string>;
+            const cols = (currentRunsheet.columns && currentRunsheet.columns.length ? currentRunsheet.columns : Object.keys(localRow));
+            cols.forEach(col => {
+              const v = localRow[col];
+              if (typeof v === 'string' && v.trim() !== '') {
+                mergedRow[col] = v;
+              }
+            });
+            merged[idx] = mergedRow;
+          }
+        });
+      } catch {}
+      setData(merged);
+      onDataChange?.(merged);
     }
     
     if (currentRunsheet.name) {
