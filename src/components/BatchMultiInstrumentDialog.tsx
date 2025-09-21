@@ -77,15 +77,29 @@ export const BatchMultiInstrumentDialog: React.FC<BatchMultiInstrumentDialogProp
     }
   };
 
-  const convertFileToBase64 = async (url: string): Promise<string> => {
-    const response = await fetch(url);
-    const blob = await response.blob();
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
+  const convertFileToBase64 = async (filePath: string): Promise<string> => {
+    try {
+      // Get signed URL for the document
+      const { data } = await supabase.storage
+        .from('documents')
+        .createSignedUrl(filePath, 60); // 1 minute expiry
+
+      if (!data?.signedUrl) {
+        throw new Error('Failed to get document URL');
+      }
+
+      const response = await fetch(data.signedUrl);
+      const blob = await response.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.error('Error converting file to base64:', error);
+      throw error;
+    }
   };
 
   const analyzeDocument = async () => {
@@ -96,7 +110,7 @@ export const BatchMultiInstrumentDialog: React.FC<BatchMultiInstrumentDialogProp
 
     try {
       // Convert document to base64
-      const documentData = await convertFileToBase64(uploadedDocument.file_url);
+      const documentData = await convertFileToBase64(uploadedDocument.file_path);
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Authentication required');
