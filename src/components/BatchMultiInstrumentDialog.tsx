@@ -246,6 +246,10 @@ export const BatchMultiInstrumentDialog: React.FC<BatchMultiInstrumentDialogProp
                     <div className="max-w-md mx-auto">
                       <MultipleFileUpload
                         onUploadComplete={handleDocumentUploaded}
+                        onClose={() => {
+                          // Close button should trigger document analysis step
+                          // The handleDocumentUploaded already sets the uploaded document
+                        }}
                         runsheetData={{ id: runsheetId, name: 'Current Runsheet', data: [] }}
                       />
                     </div>
