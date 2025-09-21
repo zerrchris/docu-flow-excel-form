@@ -4585,6 +4585,12 @@ async function processSnipWithAI(blob, metadata = {}) {
         };
 
         window.EnhancedSnipWorkflow.showEnhancedPreview(result);
+        
+        // Clean up snip session after successful processing
+        if (typeof cleanupSnipSession === 'function') {
+          cleanupSnipSession();
+        }
+        
         return result;
       } else {
         throw new Error(result.error || 'Analysis failed');

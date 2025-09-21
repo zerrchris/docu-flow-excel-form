@@ -71,6 +71,11 @@ window.EnhancedSnipWorkflow = {
       
       this.hideProcessingIndicator();
       
+      // Clean up snip session after successful processing
+      if (typeof cleanupSnipSession === 'function') {
+        cleanupSnipSession();
+      }
+      
       return {
         success: true,
         analysis: analysisResult.analysis,
