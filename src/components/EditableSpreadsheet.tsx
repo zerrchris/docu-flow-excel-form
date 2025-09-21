@@ -305,6 +305,25 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       return;
     }
 
+    // If server data is not newer than our last save, don't override local
+    const serverUpdatedAt = currentRunsheet.updated_at ? Date.parse(currentRunsheet.updated_at) : 0;
+    if (lastSavedAtRef.current > 0 && serverUpdatedAt && serverUpdatedAt <= lastSavedAtRef.current) {
+      console.log('🚫 EDITABLE_SPREADSHEET: Skipping sync - server not newer than local', { serverUpdatedAt, lastSavedAt: lastSavedAtRef.current });
+      return;
+    }
+
+    // Prevent destructive overwrites: if incoming has significantly fewer filled cells, skip
+    const countFilled = (rows: Record<string, string>[]) =>
+      rows.reduce((acc, row) => acc + Object.values(row || {}).filter(v => typeof v === 'string' && v.trim() !== '').length, 0);
+    const incomingData = (currentRunsheet.data as Record<string, string>[]) || [];
+    const currentFilled = countFilled(dataRef.current || []);
+    const incomingFilled = countFilled(incomingData);
+    const destructive = currentFilled > 0 && (incomingData.length === 0 || incomingFilled + 3 < currentFilled);
+    if (destructive) {
+      console.warn('🚫 EDITABLE_SPREADSHEET: Skipping sync - incoming data would be destructive', { currentFilled, incomingFilled });
+      return;
+    }
+
     // Update local state with runsheet data
     if (currentRunsheet.columns && currentRunsheet.columns.length > 0) {
       console.log('🔄 EDITABLE_SPREADSHEET: Setting columns from runsheet:', currentRunsheet.columns);
