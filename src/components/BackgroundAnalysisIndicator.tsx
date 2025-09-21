@@ -9,10 +9,12 @@ import { useToast } from '@/hooks/use-toast';
 
 interface BackgroundAnalysisIndicatorProps {
   onShowDialog: () => void;
+  isMainDialogOpen: boolean;
 }
 
 export const BackgroundAnalysisIndicator: React.FC<BackgroundAnalysisIndicatorProps> = ({
-  onShowDialog
+  onShowDialog,
+  isMainDialogOpen
 }) => {
   const { toast } = useToast();
   const [isVisible, setIsVisible] = useState(false);
@@ -73,7 +75,8 @@ export const BackgroundAnalysisIndicator: React.FC<BackgroundAnalysisIndicatorPr
     }
   };
 
-  if (!isVisible) return null;
+  // Don't show the background indicator if the main dialog is open
+  if (!isVisible || isMainDialogOpen) return null;
 
   return (
     <Card className={cn(

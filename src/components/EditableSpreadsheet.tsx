@@ -8303,9 +8303,10 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
           required={pendingRunsheetData?.required ?? true}
         />
 
-        {/* Background Analysis Indicator - Shows when analysis is running even if dialog is closed */}
+        {/* Background Analysis Indicator - Shows when analysis is running but main dialog is closed */}
         <BackgroundAnalysisIndicator 
           onShowDialog={() => setShowBatchAnalysisDialog(true)}
+          isMainDialogOpen={showBatchAnalysisDialog}
         />
 
       </div>
