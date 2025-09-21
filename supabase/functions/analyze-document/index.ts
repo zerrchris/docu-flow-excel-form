@@ -150,6 +150,25 @@ serve(async (req) => {
     // Extract user_id from auth header for usage tracking
     const authHeader = req.headers.get('authorization');
     let user_id: string | undefined;
+    
+    if (authHeader) {
+      try {
+        // Extract the JWT token and decode it to get user_id
+        const token = authHeader.replace('Bearer ', '');
+        const supabaseAuth = createClient(supabaseUrl, supabaseServiceKey);
+        const { data: { user }, error } = await supabaseAuth.auth.getUser(token);
+        if (user && !error) {
+          user_id = user.id;
+          console.log('✅ Extracted user_id for usage tracking:', user_id);
+        } else {
+          console.log('⚠️ Could not extract user_id from token:', error?.message);
+        }
+      } catch (e) {
+        console.log('❌ Error extracting user_id:', e.message);
+      }
+    } else {
+      console.log('⚠️ No authorization header found');
+    }
 
     if (!prompt || !imageData) {
       return new Response(
