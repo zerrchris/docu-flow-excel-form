@@ -315,28 +315,9 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     if (currentRunsheet.data) {
       console.log('🔄 EDITABLE_SPREADSHEET: Setting data from runsheet, length:', currentRunsheet.data.length);
       const minRowsData = ensureMinimumRows(currentRunsheet.data, currentRunsheet.columns || []);
-      // Merge protection: preserve recently edited local rows to prevent flicker
-      const nowTs = Date.now();
-      const merged = [...minRowsData];
-      try {
-        recentEditedRowsRef.current.forEach((meta, idx) => {
-          if (nowTs - meta.timestamp <= 12000) {
-            const localRow = meta.row || {};
-            const remoteRow = merged[idx] || {};
-            const mergedRow = { ...remoteRow } as Record<string, string>;
-            const cols = (currentRunsheet.columns && currentRunsheet.columns.length ? currentRunsheet.columns : Object.keys(localRow));
-            cols.forEach(col => {
-              const v = localRow[col];
-              if (typeof v === 'string' && v.trim() !== '') {
-                mergedRow[col] = v;
-              }
-            });
-            merged[idx] = mergedRow;
-          }
-        });
-      } catch {}
-      setData(merged);
-      onDataChange?.(merged);
+      setData(minRowsData);
+      dataRef.current = minRowsData;
+      onDataChange?.(minRowsData);
     }
     
     if (currentRunsheet.name) {
@@ -2014,7 +1995,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
 
           // Suppress self-echo or immediate post-upload overrides
           const now = Date.now();
-          const withinSelfEcho = now - lastSavedAtRef.current < 3000;
+          const withinSelfEcho = now - lastSavedAtRef.current < 6000;
           const newDataHash = (() => { try { return JSON.stringify(newData); } catch { return null; } })();
           const isSameAsLastSaved = newDataHash && newDataHash === lastSavedDataHashRef.current;
           const creatingFlag = sessionStorage.getItem('creating_new_runsheet');
@@ -2043,46 +2024,10 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
             return;
           }
 
-          // Use a ref to get current data to avoid stale closures
-          setData(currentData => {
-            if (JSON.stringify(newData) !== JSON.stringify(currentData)) {
-              // Merge protection: preserve fields from rows edited very recently
-              const nowTs = Date.now();
-              const merged = [...newData];
-              try {
-                recentEditedRowsRef.current.forEach((meta, idx) => {
-                  if (nowTs - meta.timestamp <= 12000) {
-                    const localRow = meta.row || {};
-                    const remoteRow = merged[idx] || {};
-                    const mergedRow: Record<string, string> = { ...remoteRow };
-                    const cols = (columns && columns.length ? columns : Object.keys(localRow));
-                    cols.forEach(col => {
-                      const v = localRow[col];
-                      if (typeof v === 'string' && v.trim() !== '') {
-                        mergedRow[col] = v;
-                      }
-                    });
-                    merged[idx] = mergedRow;
-                  }
-                });
-              } catch {}
-
-              console.log('🔄 Applying real-time data update (merged with recent local edits)');
-              onDataChange?.(merged);
-              
-              // Show a subtle notification only if there are significant changes
-              const hasSignificantChanges = checkForSignificantChanges(currentData, merged);
-              if (hasSignificantChanges) {
-                toast({
-                  title: "Synced",
-                  description: "Data updated from another source",
-                  duration: 2000,
-                });
-              }
-              return merged;
-            }
-            return currentData;
-          });
+          // Apply server truth directly
+          setData(newData);
+          dataRef.current = newData;
+          onDataChange?.(newData);
         }
       )
       .subscribe((status) => {
@@ -2098,7 +2043,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       console.log('🔄 Cleaning up real-time subscription');
       supabase.removeChannel(channel);
     };
-  }, [currentRunsheetId, onDataChange, toast]); // Removed 'data' from dependencies
+  }, [currentRunsheetId]); // Keep subscription stable to prevent flicker
 
 
   // Enhanced auto-save functionality with immediate saving
