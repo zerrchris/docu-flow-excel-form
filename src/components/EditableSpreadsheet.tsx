@@ -54,6 +54,7 @@ import FullScreenDocumentWorkspace from './FullScreenDocumentWorkspace';
 import SideBySideDocumentWorkspace from './SideBySideDocumentWorkspace';
 import { BatchDocumentAnalysisDialog } from './BatchDocumentAnalysisDialog';
 import { BatchFileRenameDialog } from './BatchFileRenameDialog';
+import { BackgroundAnalysisIndicator } from './BackgroundAnalysisIndicator';
 import ImprovedDocumentAnalysis from './ImprovedDocumentAnalysis';
 import AdvancedDataVerificationDialog from './AdvancedDataVerificationDialog';
 import ViewportPortal from './ViewportPortal';
@@ -8300,6 +8301,11 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
           description="Choose a descriptive name for your runsheet. This will help you identify it later."
           placeholder="Enter runsheet name..."
           required={pendingRunsheetData?.required ?? true}
+        />
+
+        {/* Background Analysis Indicator - Shows when analysis is running even if dialog is closed */}
+        <BackgroundAnalysisIndicator 
+          onShowDialog={() => setShowBatchAnalysisDialog(true)}
         />
 
       </div>
