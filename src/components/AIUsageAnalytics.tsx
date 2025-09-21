@@ -94,15 +94,17 @@ export const AIUsageAnalytics: React.FC = () => {
 
       // Fetch detailed usage with billing status
       const { data: { user } } = await supabase.auth.getUser();
+      let detailedData: any[] = [];
       if (user) {
-        const { data: detailedData } = await supabase
+        const { data } = await supabase
           .from('ai_usage_analytics')
-          .select('id, function_name, model_used, created_at, estimated_cost_usd, success')
+          .select('id, function_name, model_used, created_at, estimated_cost_usd, success, stripe_reported_at')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false })
           .limit(100);
         
-        setDetailedUsage(detailedData || []);
+        detailedData = data || [];
+        setDetailedUsage(detailedData);
       }
 
       // Calculate summary statistics
@@ -111,11 +113,14 @@ export const AIUsageAnalytics: React.FC = () => {
         const totalTokens = filteredData.reduce((sum, item) => sum + item.total_tokens, 0);
         const totalCost = filteredData.reduce((sum, item) => sum + item.total_estimated_cost, 0);
         
-        // For now, show all usage as pending since we don't have stripe_reported_at yet
-        const pendingBillAmount = detailedUsage
+        // Calculate pending vs billed amounts from detailed data
+        const pendingBillAmount = detailedData
+          .filter(item => !item.stripe_reported_at)
           .reduce((sum, item) => sum + (item.estimated_cost_usd || 0), 0);
         
-        const billedAmount = 0; // Will be updated once stripe_reported_at is added
+        const billedAmount = detailedData
+          .filter(item => item.stripe_reported_at)
+          .reduce((sum, item) => sum + (item.estimated_cost_usd || 0), 0);
         
         // Find most used function and model
         const functionCounts = filteredData.reduce((acc, item) => {
