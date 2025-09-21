@@ -128,6 +128,19 @@ serve(async (req) => {
     let extractedData: any = null
     let method = 'unknown'
 
+    // Force single consistent method: Always use vision for deterministic results
+    // This eliminates the dual-path inconsistency described in the feedback
+    console.log('👁️ Using Vision model approach for consistent results')
+    extractedData = await extractWithVision(fileUrl, fileName, openAIApiKey, columnInstructions, globalInstructions)
+    method = 'vision_only'
+    
+    /* 
+    COMMENTED OUT: Dual-path file search method causes inconsistent results
+    The file search path can give different results than vision because:
+    1. Vector store indexing may not be complete when queried
+    2. File search reads indexed text vs vision re-OCRs images
+    3. This creates non-deterministic behavior
+    
     // Method 1: Try OpenAI File Search for PDFs (best accuracy)
     if (contentType === 'application/pdf' && !useVision) {
       try {
@@ -138,10 +151,7 @@ serve(async (req) => {
         console.log('⚠️ File Search failed, will try vision fallback:', error.message)
       }
     }
-
-    // Method 2: Vision model fallback (for images or when PDF fails)
-    if (!extractedData) {
-      console.log('👁️ Using Vision model approach')
+    */
       extractedData = await extractWithVision(fileUrl, openAIApiKey, columnInstructions, globalInstructions)
       method = 'vision'
     }
@@ -287,7 +297,8 @@ CRITICAL RULES:
         type: 'json_schema',
         json_schema: REAL_ESTATE_SCHEMA
       },
-      temperature: 0.1
+      temperature: 0.0,  // Zero temperature for deterministic results
+      seed: 12345        // Fixed seed for reproducibility
     })
   })
   
@@ -353,7 +364,8 @@ CRITICAL RULES:
         type: 'json_schema',
         json_schema: REAL_ESTATE_SCHEMA
       },
-      temperature: 0.1
+      temperature: 0.0,  // Zero temperature for deterministic results
+      seed: 12345        // Fixed seed for reproducibility
     })
   })
   
