@@ -17,6 +17,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import MultipleFileUpload from './MultipleFileUpload';
+import { convertPDFToImages, isPDF } from '@/utils/pdfToImage';
 
 interface InstrumentBoundary {
   instrumentType: string;
@@ -140,11 +141,44 @@ export const BatchMultiInstrumentDialog: React.FC<BatchMultiInstrumentDialogProp
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Authentication required');
 
+      // For large PDFs, convert to optimized images first
+      let documentData;
+      let fileToAnalyze = uploadedDocument.file_path;
+
+      // Check if it's a PDF and get the file for conversion
+      if (isPDF({ name: uploadedDocument.original_filename, type: 'application/pdf' } as File)) {
+        try {
+          // Get the file from storage
+          const { data: signed } = await supabase.storage
+            .from('documents')
+            .createSignedUrl(uploadedDocument.file_path, 300);
+          
+          if (signed?.signedUrl) {
+            const response = await fetch(signed.signedUrl);
+            const blob = await response.blob();
+            const file = new File([blob], uploadedDocument.original_filename, { type: 'application/pdf' });
+            
+            // Convert PDF to optimized images (smaller scale for analysis)
+            const pdfPages = await convertPDFToImages(file, 2); // Lower scale for analysis
+            
+            if (pdfPages.length > 0) {
+              // Use the first page as a representative image
+              const canvas = pdfPages[0].canvas;
+              // Compress the image for analysis
+              documentData = canvas.toDataURL('image/jpeg', 0.7);
+            }
+          }
+        } catch (pdfError) {
+          console.warn('PDF conversion failed, using original file:', pdfError);
+        }
+      }
+
       const response = await supabase.functions.invoke('analyze-multi-instrument-document', {
         body: {
+          documentData,
           documentId: uploadedDocument.id,
           fileName: uploadedDocument.original_filename,
-          filePath: uploadedDocument.file_path,
+          filePath: fileToAnalyze,
           runsheetId,
           availableColumns,
           columnInstructions
