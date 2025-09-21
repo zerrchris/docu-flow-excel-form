@@ -102,7 +102,7 @@ const ImprovedDocumentAnalysis: React.FC<ImprovedDocumentAnalysisProps> = ({
 
     // Validate file type and size
     const maxSize = 50 * 1024 * 1024; // 50MB
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'application/pdf'];
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'];
 
     if (file.size > maxSize) {
       toast({
@@ -116,7 +116,7 @@ const ImprovedDocumentAnalysis: React.FC<ImprovedDocumentAnalysisProps> = ({
     if (!allowedTypes.includes(file.type)) {
       toast({
         title: "Unsupported format",
-        description: "Please upload an image file (PNG, JPEG, GIF, WebP, BMP) or PDF for Google OCR",
+        description: "Please upload an image file (PNG, JPEG, GIF, WebP, BMP)",
         variant: "destructive"
       });
       return;
@@ -298,115 +298,6 @@ const ImprovedDocumentAnalysis: React.FC<ImprovedDocumentAnalysisProps> = ({
     }
   };
 
-  const performGoogleVisionAnalysis = useCallback(async () => {
-    if (!selectedFile) {
-      toast({
-        title: "No file selected",
-        description: "Please select a document to analyze",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setIsAnalyzing(true);
-    setError(null);
-    setAnalysisResult(null);
-
-    const steps = initializeAnalysisSteps();
-    
-    try {
-      // Step 1: Upload
-      updateStep('upload', 'in-progress', 'Converting file to base64...');
-      const base64Data = await convertFileToBase64(selectedFile);
-      updateStep('upload', 'completed', 'File successfully processed');
-
-      // Step 2: Validation
-      updateStep('validation', 'in-progress', 'Validating document format...');
-      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate validation
-      updateStep('validation', 'completed', 'Document format validated');
-
-      // Step 3: Get extraction preferences
-      updateStep('ai-analysis', 'in-progress', 'Loading extraction preferences...');
-      
-      const { data: extractionPrefs } = await supabase
-        .from('user_extraction_preferences')
-        .select('columns, column_instructions')
-        .eq('is_default', true)
-        .maybeSingle();
-
-      const extractionColumns = extractionPrefs?.columns || availableColumns;
-      const columnInstructions = extractionPrefs?.column_instructions || {};
-
-      // Step 4: Google Vision Analysis
-      updateStep('ai-analysis', 'in-progress', 'Google Vision OCR processing...');
-      
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Authentication required');
-
-      const response = await supabase.functions.invoke('google-vision-pdf-analysis', {
-        body: {
-          document_data: base64Data,
-          runsheet_id: runsheetId,
-          document_name: selectedFile.name,
-          extraction_preferences: {
-            columns: extractionColumns,
-            column_instructions: columnInstructions
-          }
-        }
-      });
-
-      if (response.error) {
-        throw new Error(response.error.message || 'Google Vision analysis failed');
-      }
-
-      if (!response.data?.success) {
-        throw new Error(response.data?.error || 'Google Vision analysis failed');
-      }
-
-      updateStep('ai-analysis', 'completed', 'Google Vision OCR completed successfully');
-
-      // Step 4: Data Extraction
-      updateStep('data-extraction', 'in-progress', 'Structuring OCR data...');
-      const analysis = response.data.analysis;
-      
-      if (!analysis.extracted_data || Object.keys(analysis.extracted_data).length === 0) {
-        throw new Error('No data could be extracted from the document');
-      }
-
-      setAnalysisResult(analysis);
-      updateStep('data-extraction', 'completed', `Extracted ${Object.keys(analysis.extracted_data).length} fields`);
-
-      // Step 5: Verification
-      updateStep('verification', 'in-progress', 'Preparing data verification...');
-      setShowVerificationDialog(true);
-      updateStep('verification', 'completed', 'Ready for user verification');
-
-      toast({
-        title: "Google Vision Analysis Complete",
-        description: `Successfully extracted ${Object.keys(analysis.extracted_data).filter(k => 
-          analysis.extracted_data[k] && analysis.extracted_data[k].toString().trim() !== ''
-        ).length} fields using Google OCR`,
-      });
-
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Google Vision analysis failed';
-      setError(errorMessage);
-      
-      const currentStep = steps.find(s => s.status === 'in-progress');
-      if (currentStep) {
-        updateStep(currentStep.id, 'error', errorMessage);
-      }
-
-      toast({
-        title: "Google Vision Analysis Failed",
-        description: errorMessage,
-        variant: "destructive"
-      });
-    } finally {
-      setIsAnalyzing(false);
-    }
-  }, [selectedFile, runsheetId, availableColumns, toast]);
-
   const retryAnalysis = (useVision?: boolean) => {
     setShowVerificationDialog(false);
     performAnalysis(useVision);
@@ -455,7 +346,7 @@ const ImprovedDocumentAnalysis: React.FC<ImprovedDocumentAnalysisProps> = ({
                     )}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Images: PNG, JPEG, GIF, WebP, BMP | PDFs for Google OCR (MAX. 50MB)
+                    PNG, JPEG, GIF, WebP, BMP (MAX. 50MB)
                   </p>
                 </div>
                 <input 
@@ -463,15 +354,16 @@ const ImprovedDocumentAnalysis: React.FC<ImprovedDocumentAnalysisProps> = ({
                   type="file" 
                   className="hidden" 
                   onChange={handleFileSelect}
-                  accept="image/*,application/pdf"
+                  accept="image/*"
                 />
               </label>
             </div>
 
             {selectedFile && !isAnalyzing && !analysisResult && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="flex gap-3">
                 <Button
                   onClick={() => performAnalysis(false)}
+                  className="flex-1"
                   disabled={!selectedFile}
                 >
                   <FileText className="h-4 w-4 mr-2" />
@@ -480,19 +372,11 @@ const ImprovedDocumentAnalysis: React.FC<ImprovedDocumentAnalysisProps> = ({
                 <Button
                   variant="outline"
                   onClick={() => performAnalysis(true)}
+                  className="flex-1"
                   disabled={!selectedFile}
                 >
                   <Eye className="h-4 w-4 mr-2" />
                   Vision Analysis
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => performGoogleVisionAnalysis()}
-                  disabled={!selectedFile}
-                  className="bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-700"
-                >
-                  <Brain className="h-4 w-4 mr-2" />
-                  Google OCR
                 </Button>
               </div>
             )}
