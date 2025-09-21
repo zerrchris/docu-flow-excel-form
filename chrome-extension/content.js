@@ -836,6 +836,16 @@ async function addRowToSheet() {
       
       // Refresh the current view (both single and full views)
       refreshCurrentView();
+      
+      // End any persistent snip session to prevent it from restoring on navigation
+      if (typeof snipSession !== 'undefined' && snipSession.active && typeof cleanupSnipSession === 'function') {
+        cleanupSnipSession();
+      }
+      // Also remove navigation controls if present
+      const navPanel = document.getElementById('runsheetpro-nav-controls');
+      if (navPanel) {
+        navPanel.remove();
+      }
     } else {
       console.error('Sync result indicates failure:', result);
       throw new Error(result.error || 'Failed to add row');
