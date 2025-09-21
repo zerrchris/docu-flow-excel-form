@@ -605,7 +605,6 @@ Return only the filename, nothing else.`,
                        <div className="flex items-center justify-between">
                           <Label className="text-sm font-medium flex items-center">
                             {columnName}
-                            {wasExtracted && getConfidenceBadge(0.85)}
                           </Label>
                          <div className="flex items-center gap-2">
                            {/* Document File Name specific field with smart rename */}
