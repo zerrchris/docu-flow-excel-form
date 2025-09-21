@@ -1995,7 +1995,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
 
           // Suppress self-echo or immediate post-upload overrides
           const now = Date.now();
-          const withinSelfEcho = now - lastSavedAtRef.current < 6000;
+          const withinSelfEcho = now - lastSavedAtRef.current < 8000;
           const newDataHash = (() => { try { return JSON.stringify(newData); } catch { return null; } })();
           const isSameAsLastSaved = newDataHash && newDataHash === lastSavedDataHashRef.current;
           const creatingFlag = sessionStorage.getItem('creating_new_runsheet');
@@ -6345,8 +6345,8 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
       
       // Mark this update as a brain button analysis to prevent sync conflicts
       setIsProcessingBrainAnalysis(true);
-      // Suppress realtime overwrites briefly while we persist changes
-      suppressRealtimeUntilRef.current = Date.now() + 6000;
+      // Suppress realtime overwrites while we persist changes
+      suppressRealtimeUntilRef.current = Date.now() + 8000;
       
       setData(newData);
       // Immediately update dataRef to ensure force saves have the latest data
@@ -6365,9 +6365,6 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
         }
       } catch {}
       
-      // Reset the brain analysis flag after a brief delay
-      setTimeout(() => setIsProcessingBrainAnalysis(false), 1000);
-
       // Show success message with details
       const populatedFields = Object.keys(cleanMappedData);
       console.log('🔍 About to show success toast for populated fields:', populatedFields);
@@ -6389,11 +6386,13 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
           // Mark last save and suppress realtime to prevent conflicts
           lastSavedAtRef.current = Date.now();
           try { lastSavedDataHashRef.current = JSON.stringify(newData); } catch {}
-          suppressRealtimeUntilRef.current = Date.now() + 4000; // Prevent realtime conflicts
+          suppressRealtimeUntilRef.current = Date.now() + 8000; // Prevent realtime conflicts
           await saveToDatabase(newData, columns, runsheetName, columnInstructions, true);
           console.log('🔍 Brain analysis: Silent save completed successfully');
         } catch (e) {
           console.error('🔍 Brain analysis: Silent save failed', e);
+        } finally {
+          setIsProcessingBrainAnalysis(false);
         }
       }
 
@@ -7430,27 +7429,41 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
                              };
                              console.log('🔧 EditableSpreadsheet: New row data after update:', newData[rowIndex]);
                              setData(newData);
+                             dataRef.current = newData; // keep ref in sync
                              onDataChange?.(newData);
+
+                             // Immediately persist to database to avoid UI/DB drift
+                             if (currentRunsheetId && runsheetName) {
+                               try {
+                                 lastSavedAtRef.current = Date.now();
+                                 try { lastSavedDataHashRef.current = JSON.stringify(newData); } catch {}
+                                 suppressRealtimeUntilRef.current = Date.now() + 4000;
+                                 await saveToDatabase(newData, columns, runsheetName, columnInstructions, true);
+                                 console.log('🔧 Document link saved silently');
+                               } catch (e) {
+                                 console.error('Silent save after document link failed:', e);
+                               }
+                             }
                              
-                              // Immediately refresh document map to ensure consistency
-                              if (currentRunsheetId) {
-                                try {
-                                  console.log('🔧 EditableSpreadsheet: Immediately refreshing document map');
-                                  // Small delay to ensure database write is complete
-                                  setTimeout(async () => {
-                                    try {
-                                      const updatedDocumentMap = await DocumentService.getDocumentMapForRunsheet(currentRunsheetId);
-                                      updateDocumentMap(updatedDocumentMap);
-                                      console.log('🔧 EditableSpreadsheet: Document map refreshed with', updatedDocumentMap.size, 'documents');
-                                    } catch (error) {
-                                      console.error('Error refreshing document map:', error);
-                                    }
-                                  }, 100);
-                                } catch (error) {
-                                  console.error('Error setting up document map refresh:', error);
-                                }
-                              }
-                          }}
+                             // Immediately refresh document map to ensure consistency
+                             if (currentRunsheetId) {
+                               try {
+                                 console.log('🔧 EditableSpreadsheet: Immediately refreshing document map');
+                                 // Small delay to ensure database write is complete
+                                 setTimeout(async () => {
+                                   try {
+                                     const updatedDocumentMap = await DocumentService.getDocumentMapForRunsheet(currentRunsheetId);
+                                     updateDocumentMap(updatedDocumentMap);
+                                     console.log('🔧 EditableSpreadsheet: Document map refreshed with', updatedDocumentMap.size, 'documents');
+                                   } catch (error) {
+                                     console.error('Error refreshing document map:', error);
+                                   }
+                                 }, 100);
+                               } catch (error) {
+                                 console.error('Error setting up document map refresh:', error);
+                               }
+                             }
+                           }}
                          onDocumentRemoved={() => {
                            const newData = [...data];
                            newData[rowIndex] = {
