@@ -1375,8 +1375,18 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     });
     const newData = [...initialData, ...emptyRows];
     
-    // Update data with fresh database data
+    // Update data with fresh database data - but protect recent edits
     setData(prevData => {
+      // Check if we have recent unsaved edits - if so, don't overwrite
+      const now = Date.now();
+      const hasRecentEdits = now - lastSavedAtRef.current < 5000; // Within 5 seconds of last save
+      const hasUnsavedChanges = JSON.stringify({ data: prevData, columns, runsheetName, columnInstructions }) !== lastSavedState;
+      
+      if (hasRecentEdits || hasUnsavedChanges) {
+        console.log('🔒 Protecting recent edits from initialData sync', { hasRecentEdits, hasUnsavedChanges });
+        return prevData;
+      }
+      
       // If the new data has more content than previous, always update
       const newDataHasContent = newData.some(row => 
         Object.values(row).some(value => value && value.trim() !== '' && value !== 'Document File Name')
