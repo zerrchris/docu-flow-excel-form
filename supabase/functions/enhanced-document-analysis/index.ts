@@ -292,7 +292,7 @@ RESPONSE FORMAT: Return ONLY a valid JSON object with:
           user_id: user.id,
           runsheet_id: runsheet_id,
           original_filename: document_name || 'analyzed_document.png',
-          stored_filename: `analyzed_${Date.now()}.png`,
+          stored_filename: document_name || 'analyzed_document.png',
           file_path: document_data, // Store the data URL for now
           row_index: analysisResult.row_index || 0,
           content_type: 'image/png'
