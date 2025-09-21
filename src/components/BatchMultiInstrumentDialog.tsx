@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import MultipleFileUpload from './MultipleFileUpload';
+import { SingleFileUploader } from './SingleFileUploader';
 import { convertPDFToImages, isPDF } from '@/utils/pdfToImage';
 
 interface InstrumentBoundary {
@@ -62,21 +62,11 @@ export const BatchMultiInstrumentDialog: React.FC<BatchMultiInstrumentDialogProp
   const [showUploader, setShowUploader] = useState(true);
   const { toast } = useToast();
 
-  const handleDocumentUploaded = async (uploadedCount: number) => {
-    if (uploadedCount > 0) {
-      // Get the most recently uploaded document for this runsheet
-      const { data: documents } = await supabase
-        .from('documents')
-        .select('*')
-        .eq('runsheet_id', runsheetId)
-        .order('created_at', { ascending: false })
-        .limit(1);
-      
-      if (documents && documents.length > 0) {
-        setUploadedDocument(documents[0]);
-        setShowUploader(false);
-        setError(null);
-      }
+  const handleDocumentUploaded = async (document: any) => {
+    if (document) {
+      setUploadedDocument(document);
+      setShowUploader(false);
+      setError(null);
     }
   };
 
@@ -302,19 +292,13 @@ export const BatchMultiInstrumentDialog: React.FC<BatchMultiInstrumentDialogProp
                         Upload a single PDF document containing multiple legal instruments. The AI will analyze it to detect and create separate runsheet rows for each instrument found.
                       </p>
                     </div>
-                    <div className="max-w-md mx-auto">
-                      <MultipleFileUpload
-                        onUploadComplete={handleDocumentUploaded}
-                        onClose={() => {
-                          setShowUploader(false);
-                          if (!uploadedDocument) {
-                            // Attempt to fetch the latest uploaded document
-                            handleDocumentUploaded(1);
-                          }
-                        }}
-                        runsheetData={{ id: runsheetId, name: 'Current Runsheet', data: [] }}
-                      />
-                    </div>
+                    <SingleFileUploader
+                      onUploadComplete={handleDocumentUploaded}
+                      runsheetId={runsheetId}
+                      acceptedFileTypes=".pdf"
+                      title="Upload Multi-Instrument PDF"
+                      description="Drag and drop your PDF file here or click to browse"
+                    />
                   </div>
                 </CardContent>
               </Card>
