@@ -79,20 +79,46 @@ export const BatchMultiInstrumentDialog: React.FC<BatchMultiInstrumentDialogProp
     }
   };
 
-  const convertFileToBase64 = async (filePath: string): Promise<string> => {
+  const convertFileToBase64 = async (fileRef: string): Promise<string> => {
     try {
-      // Get signed URL for the document
-      const { data } = await supabase.storage
-        .from('documents')
-        .createSignedUrl(filePath, 60); // 1 minute expiry
-
-      if (!data?.signedUrl) {
-        throw new Error('Failed to get document URL');
+      // 1) If it's already a base64 data URL, return as-is
+      if (typeof fileRef === 'string' && fileRef.startsWith('data:')) {
+        return fileRef;
       }
 
-      const response = await fetch(data.signedUrl);
+      // 2) If it's a full URL, fetch it directly
+      if (typeof fileRef === 'string' && /^https?:\/\//i.test(fileRef)) {
+        const resp = await fetch(fileRef);
+        if (!resp.ok) throw new Error('Failed to fetch document');
+        const blob = await resp.blob();
+        return await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      }
+
+      // 3) Otherwise, assume it's a Supabase Storage path
+      const { data: signed } = await supabase.storage
+        .from('documents')
+        .createSignedUrl(fileRef, 300);
+
+      let url = signed?.signedUrl;
+      if (!url) {
+        // Fallback to public URL if bucket/file is public
+        const { data: pub } = await supabase.storage
+          .from('documents')
+          .getPublicUrl(fileRef);
+        url = pub.publicUrl;
+      }
+
+      if (!url) throw new Error('Failed to resolve document URL');
+
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Failed to download document');
       const blob = await response.blob();
-      return new Promise((resolve, reject) => {
+      return await new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result as string);
         reader.onerror = reject;
