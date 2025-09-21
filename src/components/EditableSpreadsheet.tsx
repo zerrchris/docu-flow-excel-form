@@ -8053,6 +8053,8 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
                 const newData = [...data];
                 newData[rowIndex] = rowData;
                 setData(newData);
+                // Immediately update dataRef so force saves have the latest data
+                dataRef.current = newData;
                 onDataChange?.(newData);
                 // Mark last save and suppress realtime to avoid overwrite races
                 lastSavedAtRef.current = Date.now();
