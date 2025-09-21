@@ -1796,6 +1796,18 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       console.log('🔧 EditableSpreadsheet: IDs match:', runsheetId === currentRunsheetId);
       
       if (runsheetId === currentRunsheetId && user) {
+        // Check if we have recent unsaved edits - if so, skip the refresh to avoid rollback
+        const now = Date.now();
+        const hasRecentEdits = now - lastSavedAtRef.current < 3000; // Within 3 seconds of last save
+        const currentState = JSON.stringify({ data, columns, runsheetName, columnInstructions });
+        const hasUnsavedChanges = currentState !== lastSavedState;
+        
+        if (hasRecentEdits || hasUnsavedChanges) {
+          console.log('🔧 EditableSpreadsheet: Skipping refresh due to recent edits or unsaved changes');
+          console.log('🔧 EditableSpreadsheet: Recent edits:', hasRecentEdits, 'Unsaved changes:', hasUnsavedChanges);
+          return;
+        }
+        
         console.log('🔧 EditableSpreadsheet: Runsheet ID matches, refreshing data from database');
         try {
           // Reload the runsheet data from the database
@@ -1811,6 +1823,14 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
           }
 
           if (runsheet) {
+            // Check if the server data is newer than our last save
+            const serverUpdatedAt = new Date(runsheet.updated_at).getTime();
+            if (lastSavedAtRef.current > 0 && serverUpdatedAt <= lastSavedAtRef.current) {
+              console.log('🔧 EditableSpreadsheet: Server data is not newer than local data, skipping refresh');
+              console.log('🔧 EditableSpreadsheet: Server updated:', serverUpdatedAt, 'Last saved:', lastSavedAtRef.current);
+              return;
+            }
+            
             console.log('🔧 EditableSpreadsheet: Successfully refreshed runsheet data');
             console.log('🔧 EditableSpreadsheet: refreshRunsheetData - Current data length:', data.length);
             console.log('🔧 EditableSpreadsheet: refreshRunsheetData - New data from DB:', runsheet.data);
