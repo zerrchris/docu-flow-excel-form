@@ -6384,6 +6384,8 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
       suppressRealtimeUntilRef.current = Date.now() + 6000;
       
       setData(newData);
+      // Immediately update dataRef to ensure force saves have the latest data
+      dataRef.current = newData;
       console.log('🔍 setData called with:', newData);
       console.log('🔍 onDataChange callback exists:', !!onDataChange);
       onDataChange?.(newData);
@@ -6415,33 +6417,18 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
       });
       
       console.log('🔍 Analysis completed successfully for row:', targetRowIndex);
-      
-      // Force re-render by setting data again after a brief delay to ensure persistence
-      setTimeout(() => {
-        console.log('🔍 Brain analysis safeguard: Ensuring data persistence');
-        const latest = dataRef.current;
-        const expectedRow = newData[targetRowIndex];
-        if (!latest || !expectedRow) return;
-        const currentRow = latest[targetRowIndex];
-        if (JSON.stringify(currentRow) !== JSON.stringify(expectedRow)) {
-          console.log('🚨 Brain analysis: Data mismatch detected, restoring row data (non-destructive)!');
-          const safeData = [...latest];
-          safeData[targetRowIndex] = expectedRow;
-          setData(safeData);
-          onDataChange?.(safeData);
-        }
-      }, 500);
 
-      // Persist changes using immediate save (silent) to avoid realtime reverting
+      // Persist changes using immediate save (silent) to avoid realtime conflicts
       if (currentRunsheetId && runsheetName) {
         try {
-          // Mark last save to avoid self-echo and keep hash current
+          // Mark last save and suppress realtime to prevent conflicts
           lastSavedAtRef.current = Date.now();
           try { lastSavedDataHashRef.current = JSON.stringify(newData); } catch {}
+          suppressRealtimeUntilRef.current = Date.now() + 4000; // Prevent realtime conflicts
           await saveToDatabase(newData, columns, runsheetName, columnInstructions, true);
-          console.log('🔍 Brain analysis: Silent immediate save completed');
+          console.log('🔍 Brain analysis: Silent save completed successfully');
         } catch (e) {
-          console.error('🔍 Brain analysis: Silent immediate save failed', e);
+          console.error('🔍 Brain analysis: Silent save failed', e);
         }
       }
 
