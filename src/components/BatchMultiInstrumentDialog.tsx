@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import MultipleFileUpload from './MultipleFileUpload';
+import DocumentUpload from './DocumentUpload';
 import { convertPDFToImages, isPDF } from '@/utils/pdfToImage';
 
 interface InstrumentBoundary {
@@ -62,21 +62,11 @@ export const BatchMultiInstrumentDialog: React.FC<BatchMultiInstrumentDialogProp
   const [showUploader, setShowUploader] = useState(true);
   const { toast } = useToast();
 
-  const handleDocumentUploaded = async (uploadedCount: number) => {
-    if (uploadedCount > 0) {
-      // Get the most recently uploaded document for this runsheet
-      const { data: documents } = await supabase
-        .from('documents')
-        .select('*')
-        .eq('runsheet_id', runsheetId)
-        .order('created_at', { ascending: false })
-        .limit(1);
-      
-      if (documents && documents.length > 0) {
-        setUploadedDocument(documents[0]);
-        setShowUploader(false);
-        setError(null);
-      }
+  const handleDocumentUploaded = async (document: any) => {
+    if (document) {
+      setUploadedDocument(document);
+      setShowUploader(false);
+      setError(null);
     }
   };
 
@@ -299,21 +289,60 @@ export const BatchMultiInstrumentDialog: React.FC<BatchMultiInstrumentDialogProp
                     <div>
                       <h3 className="text-lg font-semibold">Upload Multi-Instrument Document</h3>
                       <p className="text-sm text-muted-foreground mt-1">
-                        Upload a PDF containing multiple legal instruments to detect and create separate runsheet rows for each.
+                        Upload a single PDF document containing multiple legal instruments. The AI will analyze it to detect and create separate runsheet rows for each instrument found.
                       </p>
                     </div>
                     <div className="max-w-md mx-auto">
-                      <MultipleFileUpload
-                        onUploadComplete={handleDocumentUploaded}
-                        onClose={() => {
-                          setShowUploader(false);
-                          if (!uploadedDocument) {
-                            // Attempt to fetch the latest uploaded document
-                            handleDocumentUploaded(1);
-                          }
-                        }}
-                        runsheetData={{ id: runsheetId, name: 'Current Runsheet', data: [] }}
-                      />
+                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                        <input
+                          type="file"
+                          accept=".pdf"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              setIsAnalyzing(true);
+                              try {
+                                // Upload the file
+                                const formData = new FormData();
+                                formData.append('file', file);
+                                formData.append('runsheetId', runsheetId);
+                                formData.append('rowIndex', '0');
+
+                                const { data: { session } } = await supabase.auth.getSession();
+                                const response = await supabase.functions.invoke('store-document', {
+                                  body: formData
+                                });
+
+                                if (response.data?.document) {
+                                  handleDocumentUploaded(response.data.document);
+                                }
+                              } catch (error) {
+                                console.error('Upload failed:', error);
+                                toast({
+                                  title: "Upload Failed",
+                                  description: "Failed to upload document",
+                                  variant: "destructive"
+                                });
+                              } finally {
+                                setIsAnalyzing(false);
+                              }
+                            }
+                          }}
+                          className="hidden"
+                          id="pdf-upload"
+                        />
+                        <label htmlFor="pdf-upload" className="cursor-pointer">
+                          <div className="flex flex-col items-center space-y-2">
+                            <Upload className="h-8 w-8 text-gray-400" />
+                            <p className="text-sm text-gray-600">
+                              Click to upload PDF document
+                            </p>
+                            <p className="text-xs text-gray-400">
+                              PDF files only
+                            </p>
+                          </div>
+                        </label>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
