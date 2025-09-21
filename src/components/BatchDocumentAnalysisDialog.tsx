@@ -224,7 +224,22 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()} modal={false}>
+    <Dialog 
+      open={isOpen} 
+      onOpenChange={(open) => {
+        // Prevent closing if analysis is running
+        if (!open && isAnalyzing) {
+          toast({
+            title: "Analysis in progress",
+            description: "Please wait for the analysis to complete or stop it before closing.",
+            variant: "default"
+          });
+          return;
+        }
+        if (!open) onClose();
+      }} 
+      modal={false}
+    >
       <DialogPrimitive.Portal>
         {/* Custom semi-transparent overlay that allows scrolling */}
         <div className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[1px] pointer-events-none" />
@@ -238,8 +253,23 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
           "sm:rounded-lg flex flex-col"
         )}>
           <DialogPrimitive.Close 
-            onClick={onClose}
-            className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
+            onClick={() => {
+              // Prevent closing if analysis is running
+              if (isAnalyzing) {
+                toast({
+                  title: "Analysis in progress",
+                  description: "Please wait for the analysis to complete or stop it before closing.",
+                  variant: "default"
+                });
+                return;
+              }
+              onClose();
+            }}
+            disabled={isAnalyzing}
+            className={cn(
+              "absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground",
+              isAnalyzing && "opacity-30 cursor-not-allowed"
+            )}
           >
             <X className="h-4 w-4" />
             <span className="sr-only">Close</span>
@@ -329,7 +359,22 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
         </div>
 
         <div className="flex justify-between">
-          <Button variant="outline" onClick={onClose}>
+          <Button 
+            variant="outline" 
+            onClick={() => {
+              // Prevent closing if analysis is running
+              if (isAnalyzing) {
+                toast({
+                  title: "Analysis in progress",
+                  description: "Please wait for the analysis to complete or stop it before closing.",
+                  variant: "default"
+                });
+                return;
+              }
+              onClose();
+            }}
+            disabled={isAnalyzing}
+          >
             Close
           </Button>
           
