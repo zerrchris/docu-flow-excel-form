@@ -161,6 +161,12 @@ export const useActiveRunsheet = () => {
       return;
     }
     
+    // No-op if the ID hasn't changed to prevent churn and listener storms
+    if (globalCurrentRunsheetId === runsheetId) {
+      console.log('ℹ️ setCurrentRunsheet: same ID provided, ignoring', runsheetId);
+      return;
+    }
+    
     globalCurrentRunsheetId = runsheetId;
     saveCurrentIdToSessionStorage();
     notifyListeners();
