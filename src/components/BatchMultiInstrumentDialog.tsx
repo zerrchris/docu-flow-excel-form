@@ -179,7 +179,7 @@ export const BatchMultiInstrumentDialog: React.FC<BatchMultiInstrumentDialogProp
 
       const selectedInstrumentData = selectedInstruments.map(idx => analysis.instruments[idx]);
 
-      const response = await supabase.functions.invoke('create-instrument-rows', {
+      const response = await supabase.functions.invoke('create-separate-instrument-files', {
         body: {
           originalDocumentId: uploadedDocument.id,
           runsheetId,

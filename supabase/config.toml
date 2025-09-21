@@ -34,6 +34,8 @@ verify_jwt = false
 verify_jwt = true
 [functions.create-instrument-rows]
 verify_jwt = true
+[functions.create-separate-instrument-files]
+verify_jwt = true
 [functions.analyze-document-advanced]
 verify_jwt = false
 [functions.analyze-document-claude]
