@@ -302,7 +302,8 @@ serve(async (req) => {
           }
         ],
         max_tokens: 2000,
-        temperature: 0.1,
+        temperature: 0.0,  // Zero temperature for deterministic results
+        seed: 12345,       // Fixed seed for reproducibility  
         response_format: { type: "json_object" }
       }),
     });

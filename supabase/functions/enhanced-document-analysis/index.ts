@@ -150,74 +150,53 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: "gpt-4o",
+        model: "gpt-4o-mini", // Use same model as analyze-document for consistency
         messages: [
           {
             role: "system",
-            content: `You are an expert document analyst specializing in real estate and legal documents. Analyze the provided document and extract structured data in JSON format.
+            content: `You are an expert document analyst specializing in real estate and legal documents. You MUST extract structured data and return ONLY valid JSON format.
 
-🔍 MULTI-INSTRUMENT PAGE DETECTION:
-- FIRST, scan the entire page to identify if multiple legal instruments/documents are present
-- Look for document boundaries: recording stamps, notary seals, signature blocks, dates that indicate separate instruments
-- If multiple instruments exist, identify which one is the PRIMARY/TARGET instrument by:
-  * Looking for the most complete instrument (has beginning, middle, and end)
-  * Finding recording stamps or auditor stamps that indicate document completion
-  * Identifying the instrument that appears to be the main focus (largest, most detailed)
-  * If an instrument continues to another page, prioritize it as the target
-- Focus ALL extraction efforts ONLY on the identified target instrument
-- Ignore all other instruments/documents on the same page
+🔍 ANALYSIS REQUIREMENTS:
+- Scan the document carefully and extract all visible information
+- Focus on consistency - extract the same information the same way every time
+- Be deterministic - same document should produce identical results
 
-⚠️ CRITICAL ANTI-HALLUCINATION RULES:
-- NEVER make up, assume, or infer information that is not clearly visible in the document
-- If a field is not present or not clearly readable, mark it as null or empty string
-- If text is unclear or partially obscured, set confidence score to 0.3 or lower
-- ONLY extract information that you can see with high certainty
-- When unsure, err on the side of caution and leave fields empty
-- Document any uncertainty in processing_notes
-- If multiple instruments detected, clearly state which one you focused on and why
+⚠️ CRITICAL RULES:
+- ALWAYS return valid JSON - never refuse or return text explanations
+- Extract information that is clearly visible in the document
+- For missing fields, use empty string "" (not null)
+- Be consistent with address formats and legal descriptions
+- Extract complete addresses including building numbers and suite details
 
 EXTRACTION REQUIREMENTS:
-${extraction_preferences?.columns ? `- Extract these specific fields with their detailed instructions:
+${extraction_preferences?.columns ? `- Extract these specific fields:
 ${extraction_preferences.columns.map(col => {
   const instruction = extraction_preferences?.column_instructions?.[col];
   return instruction ? `  * ${col}: ${instruction}` : `  * ${col}: Extract this field value`;
 }).join('\n')}` : '- Extract common document fields like dates, names, addresses, amounts, document types, etc.'}
 
-CRITICAL FOCUS AREAS:
-- Mineral rights, mineral reservations, or mineral exceptions
-- Surface rights vs subsurface rights distinctions  
-- Oil, gas, and water rights
-- Any language about "reserving" or "excepting" minerals
-- Phrases like "subject to mineral reservation" or "minerals reserved"
-
-Include ALL mineral-related information in your notes field, even if it seems minor.
+CONSISTENCY GUIDELINES:
+- Always extract full addresses with all visible components (street, building, suite, city, state, zip)
+- Legal descriptions should include all fractions and section details exactly as written
+- Dates should be in MM/DD/YYYY format consistently
+- Names should include all visible name variations (a/k/a, etc.)
 
 ${globalInstructions ? `\nGlobal Admin Instructions: ${globalInstructions}\n` : ''}
 
 RESPONSE FORMAT: Return ONLY a valid JSON object with:
 {
   "extracted_data": {
-    "field_name": "extracted_value_or_null_if_not_found",
-    // ... more fields
+    "field_name": "extracted_value_or_empty_string_if_not_found"
   },
   "confidence_scores": {
-    "field_name": 0.95,
-    // confidence values from 0-1 for each field (0.3 or lower if uncertain)
+    "field_name": 0.95
   },
   "document_type": "detected document type",
   "instruments_detected": "number and types of instruments found on page",
   "target_instrument": "which instrument was selected for analysis and why",
   "extraction_summary": "brief summary of what was extracted from the target instrument",
-  "processing_notes": "any notes about extraction quality, mineral rights found, issues, fields that were unclear/not found, or multi-instrument analysis"
-}
-
-CRITICAL RULES: 
-- Only include fields that CLEARLY exist and are READABLE in the document
-- Use exact field names from the requirements
-- Set confidence scores below 0.3 for any uncertain extractions
-- Be thorough with mineral rights detection but only if actually present
-- Include document type classification
-- If information is not visible or clear, do NOT guess or make assumptions`
+  "processing_notes": "any notes about extraction quality or issues"
+}`
           },
           {
             role: "user",
@@ -236,7 +215,9 @@ CRITICAL RULES:
           }
         ],
         max_tokens: 2000,
-        temperature: 0.1
+        temperature: 0.0,  // Zero temperature for deterministic results
+        seed: 12345,       // Fixed seed for reproducibility
+        response_format: { type: "json_object" }
       }),
     });
 
