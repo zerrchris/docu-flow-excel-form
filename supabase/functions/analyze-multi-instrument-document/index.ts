@@ -53,15 +53,55 @@ serve(async (req) => {
 
     const requestBody = await req.json();
     const { 
-      documentData, 
+      documentData,
+      documentId, 
       fileName, 
+      filePath,
       runsheetId, 
       availableColumns = [],
-      columnInstructions = {},
-      documentId 
+      columnInstructions = {}
     } = requestBody;
 
     console.log('📄 Starting multi-instrument analysis for:', fileName);
+
+    // Get document data if not provided
+    let imageData = documentData;
+    if (!imageData && (documentId || filePath)) {
+      console.log('📥 Fetching document from storage...');
+      try {
+        const pathToUse = filePath || documentId;
+        let signedUrl;
+        
+        // Check if it's already a full URL or base64
+        if (typeof pathToUse === 'string' && pathToUse.startsWith('data:')) {
+          imageData = pathToUse;
+        } else if (typeof pathToUse === 'string' && /^https?:\/\//i.test(pathToUse)) {
+          signedUrl = pathToUse;
+        } else {
+          // Get signed URL from storage
+          const { data } = await supabase.storage
+            .from('documents')
+            .createSignedUrl(pathToUse, 300);
+          signedUrl = data?.signedUrl;
+        }
+
+        if (signedUrl && !imageData) {
+          const response = await fetch(signedUrl);
+          if (!response.ok) throw new Error('Failed to fetch document');
+          const blob = await response.blob();
+          const arrayBuffer = await blob.arrayBuffer();
+          const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+          imageData = `data:${blob.type};base64,${base64}`;
+        }
+      } catch (error) {
+        console.error('❌ Failed to fetch document:', error);
+        throw new Error('Failed to retrieve document for analysis');
+      }
+    }
+
+    if (!imageData) {
+      throw new Error('No document data available for analysis');
+    }
 
     // Comprehensive prompt for multi-instrument detection
     const analysisPrompt = `You are an expert document analyst specializing in detecting multiple legal instruments within a single PDF document. Your task is to analyze this document and identify all separate instruments it contains.
@@ -157,7 +197,7 @@ IMPORTANT RULES:
               {
                 type: 'image_url',
                 image_url: {
-                  url: documentData,
+                  url: imageData,
                   detail: 'high'
                 }
               }

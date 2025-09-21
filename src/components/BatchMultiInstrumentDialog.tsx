@@ -137,20 +137,17 @@ export const BatchMultiInstrumentDialog: React.FC<BatchMultiInstrumentDialogProp
     setError(null);
 
     try {
-      // Convert document to base64
-      const documentData = await convertFileToBase64(uploadedDocument.file_path);
-
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Authentication required');
 
       const response = await supabase.functions.invoke('analyze-multi-instrument-document', {
         body: {
-          documentData,
+          documentId: uploadedDocument.id,
           fileName: uploadedDocument.original_filename,
+          filePath: uploadedDocument.file_path,
           runsheetId,
           availableColumns,
-          columnInstructions,
-          documentId: uploadedDocument.id
+          columnInstructions
         }
       });
 
