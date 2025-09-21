@@ -53,7 +53,7 @@ import ColumnPreferencesDialog from './ColumnPreferencesDialog';
 import FullScreenDocumentWorkspace from './FullScreenDocumentWorkspace';
 import SideBySideDocumentWorkspace from './SideBySideDocumentWorkspace';
 import { BatchDocumentAnalysisDialog } from './BatchDocumentAnalysisDialog';
-import BatchMultiInstrumentDialog from './BatchMultiInstrumentDialog';
+import { BatchMultiInstrumentDialog } from './BatchMultiInstrumentDialog';
 import { BatchFileRenameDialog } from './BatchFileRenameDialog';
 import { BackgroundAnalysisIndicator } from './BackgroundAnalysisIndicator';
 import ImprovedDocumentAnalysis from './ImprovedDocumentAnalysis';
@@ -8232,7 +8232,6 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
           isOpen={showBatchMultiInstrumentDialog}
           onClose={() => setShowBatchMultiInstrumentDialog(false)}
           runsheetId={effectiveRunsheetId}
-          documents={Array.from(documentMap.values())}
           availableColumns={columns}
           columnInstructions={columnInstructions}
           onBatchComplete={() => {
