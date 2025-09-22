@@ -7400,7 +7400,22 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
                                   tabIndex={isSelected ? 0 : -1}
                                   title={cellValidationErrors[`${rowIndex}-${column}`] || undefined}
                                >
-                                 <span className="block w-full break-words overflow-hidden text-sm leading-tight whitespace-pre-wrap">{row[column] || ''}</span>
+                                  <span className="block w-full break-words overflow-hidden text-sm leading-tight whitespace-pre-wrap">{
+                                    (() => {
+                                      const value = row[column];
+                                      if (value === null || value === undefined) return '';
+                                      if (typeof value === 'object') {
+                                        // Handle objects like {reference: "...", "clause text": "...", "clause label": "..."}
+                                        if (value && typeof value === 'object') {
+                                          // Create a readable string representation
+                                          const entries = Object.entries(value);
+                                          return entries.map(([key, val]) => `${key}: ${val}`).join(', ');
+                                        }
+                                        return JSON.stringify(value);
+                                      }
+                                      return String(value);
+                                    })()
+                                  }</span>
                                  
                                  {/* Re-analyze button - appears in bottom right corner on hover */}
                                  {hoveredCell?.rowIndex === rowIndex && hoveredCell?.column === column && 
