@@ -1956,7 +1956,6 @@ function createSingleEntryView(content) {
               }
             }, 50);
           }
-          }
         } else if (e.key === 'Enter' && e.altKey) {
           // Alt+Enter creates line break - allow default behavior and resize
           setTimeout(autoResize, 0);

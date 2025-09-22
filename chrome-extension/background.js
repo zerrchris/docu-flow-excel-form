@@ -77,15 +77,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           return;
         }
 
-        // Inject our scripts in correct order
-        await chrome.scripting.executeScript({
-          target: { tabId },
-          files: ['persistent-state.js'],
-        });
-        await chrome.scripting.executeScript({
-          target: { tabId },
-          files: ['error-handler.js'],
-        });
+        // Inject only the main content script (others are already declared in manifest)
         await chrome.scripting.executeScript({
           target: { tabId },
           files: ['content.js'],
