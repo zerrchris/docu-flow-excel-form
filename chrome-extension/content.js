@@ -1931,8 +1931,8 @@ function createSingleEntryView(content) {
       
       // Handle keyboard navigation like EditableSpreadsheet
       textarea.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.altKey && !e.shiftKey) {
-          // Enter moves to next row in same column
+        if (e.key === 'Enter' && e.ctrlKey && !e.altKey && !e.shiftKey) {
+          // Ctrl+Enter adds new row and moves to next row in same column
           e.preventDefault();
           const currentIndex = Array.from(dataRow.children).indexOf(cell);
           
@@ -2406,6 +2406,12 @@ function createFullRunsheetView(content) {
             }
           }
         } else if (e.key === 'Enter') {
+          // For textareas, allow Enter to create line breaks unless Ctrl is held
+          if (inputElement.tagName.toLowerCase() === 'textarea' && !e.ctrlKey) {
+            // Let Enter create line breaks in textareas
+            return;
+          }
+          
           e.preventDefault();
           // Move to cell below or next row
           const nextRow = currentRow + 1;
