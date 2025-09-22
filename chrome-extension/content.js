@@ -2745,9 +2745,13 @@ async function switchViewMode(newMode) {
   currentViewMode = newMode;
   chrome.storage.local.set({ viewMode: newMode });
   
-  // If leaving Quick View, persist all row changes to DB
+  // If leaving Quick View, persist all row changes to DB and clear any transient snips
   if (prevMode === 'full' && newMode === 'single') {
     try { await persistActiveRunsheetData(); } catch (e) { console.warn('Persist on close failed', e); }
+    // Clear transient screenshot state to avoid false unsaved-data warnings later
+    window.currentCapturedSnip = null;
+    window.currentSnipFilename = null;
+    screenshotAddedToSheet = false;
   }
   
   // Recreate the frame content
