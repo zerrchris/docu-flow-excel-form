@@ -1827,14 +1827,23 @@ function createSingleEntryView(content) {
         resize: none !important;
         border: 2px solid transparent !important;
         transition: all 0.2s ease !important;
-        overflow: hidden !important;
+        overflow-y: hidden !important;
         line-height: 1.4 !important;
       `;
       
-      // Auto-resize textarea height
+      // Auto-resize textarea height with max height constraint
       const autoResize = () => {
         textarea.style.height = 'auto';
-        textarea.style.height = Math.max(32, textarea.scrollHeight) + 'px';
+        const maxHeight = Math.min(200, window.innerHeight * 0.3); // Max 200px or 30% of viewport
+        const newHeight = Math.max(32, Math.min(textarea.scrollHeight, maxHeight));
+        textarea.style.height = newHeight + 'px';
+        
+        // Enable scrolling if content exceeds max height
+        if (textarea.scrollHeight > maxHeight) {
+          textarea.style.overflowY = 'auto';
+        } else {
+          textarea.style.overflowY = 'hidden';
+        }
       };
       
       textarea.addEventListener('input', () => {
