@@ -6115,6 +6115,267 @@ function handleKeyScrollPassthrough(e) {
   }
 }
 
+// Show re-analyze dialog for specific field
+function showReAnalyzeDialog(fieldName) {
+  // Check if there's a linked document
+  const documentInput = document.querySelector('#runsheetpro-runsheet-frame input[data-column="Document File Name"]');
+  if (!documentInput || !documentInput.value.trim()) {
+    showNotification('No document linked to re-analyze', 'error');
+    return;
+  }
+
+  // Get current value for this field
+  let currentValue = '';
+  if (fieldName === 'Document File Name') {
+    currentValue = documentInput.value;
+  } else {
+    const fieldTextarea = document.querySelector(`#runsheetpro-runsheet-frame textarea[data-column="${fieldName}"]`);
+    currentValue = fieldTextarea ? fieldTextarea.value : '';
+  }
+
+  // Remove any existing dialog
+  const existingDialog = document.getElementById('runsheetpro-reanalyze-dialog');
+  if (existingDialog) {
+    existingDialog.remove();
+  }
+
+  // Create overlay
+  const overlay = document.createElement('div');
+  overlay.id = 'runsheetpro-reanalyze-dialog';
+  overlay.style.cssText = `
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    background: rgba(0, 0, 0, 0.5) !important;
+    z-index: 2147483647 !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  `;
+
+  // Create modal
+  const modal = document.createElement('div');
+  modal.style.cssText = `
+    background: white !important;
+    border-radius: 12px !important;
+    padding: 24px !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3) !important;
+    max-width: 500px !important;
+    width: 90vw !important;
+    color: #1f2937 !important;
+    max-height: 80vh !important;
+    overflow-y: auto !important;
+  `;
+
+  modal.innerHTML = `
+    <div style="margin-bottom: 20px;">
+      <h3 style="margin: 0 0 8px 0; font-size: 18px; font-weight: 600; color: #3b82f6; display: flex; align-items: center; gap: 8px;">
+        ✨ Re-extract "${fieldName}"
+      </h3>
+      <p style="margin: 0; color: #6b7280; font-size: 14px;">Provide feedback to improve the extraction for this field.</p>
+    </div>
+    
+    <div style="margin-bottom: 16px;">
+      <label style="display: block; font-weight: 500; margin-bottom: 4px; color: #374151;">Current Value:</label>
+      <div style="background: #f9fafb; border: 1px solid #d1d5db; border-radius: 6px; padding: 12px; font-size: 14px; color: #374151;">
+        ${currentValue ? currentValue : '<em style="color: #9ca3af;">Empty - No data was extracted for this field</em>'}
+      </div>
+    </div>
+    
+    <div style="margin-bottom: 16px;">
+      <label for="feedback-notes" style="display: block; font-weight: 500; margin-bottom: 4px; color: #374151;">What's wrong? Provide feedback:</label>
+      <textarea id="feedback-notes" style="
+        width: 100% !important;
+        min-height: 80px !important;
+        border: 1px solid #d1d5db !important;
+        border-radius: 6px !important;
+        padding: 12px !important;
+        font-size: 14px !important;
+        color: #374151 !important;
+        resize: vertical !important;
+        font-family: inherit !important;
+        outline: none !important;
+        box-sizing: border-box !important;
+      " placeholder="${currentValue ? 
+        "E.g., 'The date should be from the top right corner' or 'Missing the second grantor name'" : 
+        "E.g., 'Look for the property address in the middle section' or 'The date might be stamped at the top'"
+      }"></textarea>
+    </div>
+    
+    <div style="display: flex; gap: 12px; justify-content: flex-end;">
+      <button id="cancel-reanalyze" style="
+        background: transparent;
+        color: #6b7280;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        padding: 8px 16px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+      ">Cancel</button>
+      <button id="submit-reanalyze" style="
+        background: #3b82f6;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        padding: 8px 16px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        opacity: 0.5;
+        pointer-events: none;
+      " disabled>
+        <span>✨ Re-extract Field</span>
+      </button>
+    </div>
+  `;
+
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  const notesTextarea = modal.querySelector('#feedback-notes');
+  const submitBtn = modal.querySelector('#submit-reanalyze');
+  const cancelBtn = modal.querySelector('#cancel-reanalyze');
+
+  // Enable/disable submit button based on input
+  notesTextarea.addEventListener('input', () => {
+    const hasText = notesTextarea.value.trim().length > 0;
+    submitBtn.disabled = !hasText;
+    submitBtn.style.opacity = hasText ? '1' : '0.5';
+    submitBtn.style.pointerEvents = hasText ? 'auto' : 'none';
+  });
+
+  // Handle cancel
+  cancelBtn.addEventListener('click', () => {
+    overlay.remove();
+  });
+
+  // Handle submit
+  submitBtn.addEventListener('click', async () => {
+    const feedback = notesTextarea.value.trim();
+    if (!feedback) return;
+
+    // Disable button and show loading
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span>🔄 Re-extracting...</span>';
+    submitBtn.style.opacity = '0.7';
+
+    try {
+      await performReExtraction(fieldName, feedback, currentValue);
+      overlay.remove();
+    } catch (error) {
+      console.error('Re-extraction failed:', error);
+      showNotification('Re-extraction failed: ' + error.message, 'error');
+      // Re-enable button
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<span>✨ Re-extract Field</span>';
+      submitBtn.style.opacity = '1';
+    }
+  });
+
+  // Close on overlay click
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) {
+      overlay.remove();
+    }
+  });
+
+  // Focus on textarea
+  setTimeout(() => {
+    notesTextarea.focus();
+  }, 100);
+}
+
+// Perform re-extraction with feedback
+async function performReExtraction(fieldName, feedback, currentValue) {
+  try {
+    // Get the linked document info
+    const documentInput = document.querySelector('#runsheetpro-runsheet-frame input[data-column="Document File Name"]');
+    if (!documentInput || !documentInput.value.trim()) {
+      throw new Error('No document found to re-analyze');
+    }
+
+    // Check if user is authenticated
+    if (!userSession || !userSession.access_token) {
+      throw new Error('User not authenticated');
+    }
+
+    // Get the image data from the current screenshot or document
+    let imageData = null;
+    let fileName = documentInput.value;
+
+    // Try to get image data from current screenshot first
+    if (window.currentCapturedSnip) {
+      imageData = window.currentCapturedSnip;
+    } else {
+      // If no current screenshot, we need the stored document data
+      // This would need to be retrieved from storage or the backend
+      throw new Error('No image data available for re-analysis');
+    }
+
+    const requestBody = {
+      imageData: imageData,
+      fileName: fileName,
+      fieldName: fieldName,
+      fieldInstructions: `Extract the ${fieldName} field accurately. ${feedback}`,
+      userNotes: feedback,
+      currentValue: currentValue,
+      fileUrl: null // We're using direct image data
+    };
+
+    console.log('🔧 Performing re-extraction for field:', fieldName);
+
+    const response = await fetch(`https://xnpmrafjjqsissbtempj.supabase.co/functions/v1/re-extract-field`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${userSession.access_token}`
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Re-extraction failed: ${response.status} ${errorText}`);
+    }
+
+    const result = await response.json();
+    
+    if (!result.success) {
+      throw new Error(result.error || 'Re-extraction failed');
+    }
+
+    // Update the field with the new value
+    const extractedValue = result.extractedValue || '';
+    
+    if (fieldName === 'Document File Name') {
+      documentInput.value = extractedValue;
+    } else {
+      const fieldTextarea = document.querySelector(`#runsheetpro-runsheet-frame textarea[data-column="${fieldName}"]`);
+      if (fieldTextarea) {
+        fieldTextarea.value = extractedValue;
+        // Trigger resize
+        fieldTextarea.style.height = 'auto';
+        fieldTextarea.style.height = Math.max(32, fieldTextarea.scrollHeight) + 'px';
+      }
+    }
+
+    // Auto-save the updated data
+    if (typeof saveCurrentFormData === 'function') {
+      saveCurrentFormData();
+    }
+
+    showNotification(`Successfully re-extracted "${fieldName}" with your feedback`, 'success');
+
+  } catch (error) {
+    console.error('Re-extraction error:', error);
+    throw error;
+  }
+}
+
 // Clean up scroll overlay modifications
 function cleanupScrollOverlay() {
   // Remove grid overlay
