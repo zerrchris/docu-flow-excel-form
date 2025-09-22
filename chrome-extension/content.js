@@ -1794,6 +1794,8 @@ function createSingleEntryView(content) {
     display: flex !important;
     width: fit-content !important;
     min-height: 2rem !important;
+    align-items: stretch !important;
+    border-bottom: 1px solid hsl(var(--border, 214 32% 91%)) !important;
   `;
   dataRow.dataset.rowIndex = nextRowIndex;
   
@@ -1805,11 +1807,17 @@ function createSingleEntryView(content) {
     const storedWidth = localStorage.getItem(`runsheetpro-column-width-${colIndex}`) || '120';
     const width = parseInt(storedWidth);
     
-    cell.style.width = `${width}px`;
-    cell.style.minWidth = `${width}px`;
-    cell.style.maxWidth = `${width}px`;
-    cell.style.flex = '0 0 auto';
-    cell.style.position = 'relative';
+    cell.style.cssText = `
+      width: ${width}px !important;
+      min-width: ${width}px !important;
+      max-width: ${width}px !important;
+      flex: 0 0 auto !important;
+      position: relative !important;
+      display: flex !important;
+      align-items: stretch !important;
+      vertical-align: top !important;
+      border-right: 1px solid hsl(var(--border, 214 32% 91%)) !important;
+    `;
     
     // Create textarea instead of input for multi-line support (except for Document File Name)
     if (column === 'Document File Name') {
@@ -1839,26 +1847,25 @@ function createSingleEntryView(content) {
         font-family: inherit !important;
         padding: 8px 12px !important;
         min-height: 2rem !important;
+        max-height: 200px !important;
         resize: none !important;
         border: 2px solid transparent !important;
         transition: all 0.2s ease !important;
-        overflow-y: hidden !important;
+        overflow-y: auto !important;
         line-height: 1.4 !important;
+        box-sizing: border-box !important;
+        flex: 1 !important;
       `;
       
       // Auto-resize textarea height with max height constraint
       const autoResize = () => {
         textarea.style.height = 'auto';
-        const maxHeight = Math.min(200, window.innerHeight * 0.3); // Max 200px or 30% of viewport
-        const newHeight = Math.max(32, Math.min(textarea.scrollHeight, maxHeight));
+        const maxHeight = 200; // Fixed max height for consistency
+        const newHeight = Math.max(32, Math.min(textarea.scrollHeight + 4, maxHeight));
         textarea.style.height = newHeight + 'px';
         
-        // Enable scrolling if content exceeds max height
-        if (textarea.scrollHeight > maxHeight) {
-          textarea.style.overflowY = 'auto';
-        } else {
-          textarea.style.overflowY = 'hidden';
-        }
+        // Always enable scrolling - this ensures content is accessible
+        textarea.style.overflowY = 'auto';
       };
       
       textarea.addEventListener('input', () => {
@@ -2018,6 +2025,8 @@ function createSingleEntryView(content) {
         color: hsl(var(--muted-foreground, 215 16% 47%)) !important;
         font-size: 10px !important;
         font-style: italic !important;
+        flex: 1 !important;
+        min-height: 2rem !important;
       `;
       docCell.textContent = 'File linked via actions →';
       cell.appendChild(docCell);
