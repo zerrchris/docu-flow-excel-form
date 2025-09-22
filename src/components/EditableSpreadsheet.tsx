@@ -6961,7 +6961,7 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
           onScroll={handleScroll}
         >
              <table 
-              className="border-collapse w-full table-fixed" 
+              className="w-full table-fixed" 
               style={{ 
                 tableLayout: 'fixed', 
                 minWidth: `${getTotalTableWidth()}px`,
