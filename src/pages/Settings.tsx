@@ -16,7 +16,8 @@ import {
   CreditCard,
   Crown,
   Users,
-  AlertTriangle
+  AlertTriangle,
+  RefreshCw
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useSubscription } from '@/contexts/SubscriptionContext';
@@ -40,6 +41,7 @@ const Settings: React.FC = () => {
   const [userRole, setUserRole] = useState<'admin' | 'user'>('user');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [syncingUsage, setSyncingUsage] = useState(false);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   
@@ -91,6 +93,30 @@ const Settings: React.FC = () => {
 
     loadUserData();
   }, [navigate]);
+
+  const handleSyncUsage = async () => {
+    setSyncingUsage(true);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('manual-usage-report');
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Usage Synced Successfully",
+        description: `Usage has been reported to your billing. ${data?.details?.length || 0} items processed.`,
+      });
+    } catch (error) {
+      console.error('Error syncing usage:', error);
+      toast({
+        title: "Sync Failed",
+        description: "Failed to sync usage. Please try again or contact support.",
+        variant: "destructive",
+      });
+    } finally {
+      setSyncingUsage(false);
+    }
+  };
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -410,6 +436,55 @@ const Settings: React.FC = () => {
               )}
             </CardContent>
           </Card>
+
+          {/* Usage & Billing */}
+          {subscribed && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CreditCard className="h-5 w-5" />
+                  Usage & Billing
+                </CardTitle>
+                <CardDescription>
+                  Sync your API usage with billing system
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="p-4 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-blue-800 dark:text-blue-200">
+                        Usage Billing Sync
+                      </p>
+                      <p className="text-sm text-blue-600 dark:text-blue-300">
+                        If your usage isn't showing up in billing, click sync to report recent API usage.
+                      </p>
+                    </div>
+                    <RefreshCw className="h-5 w-5 text-blue-600 dark:text-blue-300" />
+                  </div>
+                </div>
+
+                <Button 
+                  variant="outline" 
+                  onClick={handleSyncUsage} 
+                  disabled={syncingUsage}
+                  className="w-full"
+                >
+                  {syncingUsage ? (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                      Syncing Usage...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Sync Usage to Billing
+                    </>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Admin Panel Access */}
           {userRole === 'admin' && (

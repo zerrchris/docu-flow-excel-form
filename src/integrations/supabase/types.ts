@@ -53,6 +53,7 @@ export type Database = {
           output_tokens: number | null
           request_payload: Json | null
           response_payload: Json | null
+          stripe_reported_at: string | null
           success: boolean
           total_tokens: number | null
           user_id: string | null
@@ -68,6 +69,7 @@ export type Database = {
           output_tokens?: number | null
           request_payload?: Json | null
           response_payload?: Json | null
+          stripe_reported_at?: string | null
           success?: boolean
           total_tokens?: number | null
           user_id?: string | null
@@ -83,6 +85,7 @@ export type Database = {
           output_tokens?: number | null
           request_payload?: Json | null
           response_payload?: Json | null
+          stripe_reported_at?: string | null
           success?: boolean
           total_tokens?: number | null
           user_id?: string | null
@@ -240,7 +243,11 @@ export type Database = {
           file_size: number | null
           folder_id: string | null
           id: string
+          is_page_range: boolean | null
           original_filename: string
+          page_end: number | null
+          page_start: number | null
+          parent_document_id: string | null
           row_index: number
           runsheet_id: string | null
           stored_filename: string
@@ -254,7 +261,11 @@ export type Database = {
           file_size?: number | null
           folder_id?: string | null
           id?: string
+          is_page_range?: boolean | null
           original_filename: string
+          page_end?: number | null
+          page_start?: number | null
+          parent_document_id?: string | null
           row_index: number
           runsheet_id?: string | null
           stored_filename: string
@@ -268,7 +279,11 @@ export type Database = {
           file_size?: number | null
           folder_id?: string | null
           id?: string
+          is_page_range?: boolean | null
           original_filename?: string
+          page_end?: number | null
+          page_start?: number | null
+          parent_document_id?: string | null
           row_index?: number
           runsheet_id?: string | null
           stored_filename?: string
@@ -389,6 +404,45 @@ export type Database = {
           id?: string
           prospect?: string
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      multi_instrument_analysis: {
+        Row: {
+          analysis_data: Json | null
+          analysis_status: string
+          created_at: string | null
+          id: string
+          instruments_detected: number
+          original_document_id: string
+          processing_notes: string | null
+          runsheet_id: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          analysis_data?: Json | null
+          analysis_status?: string
+          created_at?: string | null
+          id?: string
+          instruments_detected?: number
+          original_document_id: string
+          processing_notes?: string | null
+          runsheet_id?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          analysis_data?: Json | null
+          analysis_status?: string
+          created_at?: string | null
+          id?: string
+          instruments_detected?: number
+          original_document_id?: string
+          processing_notes?: string | null
+          runsheet_id?: string | null
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: []
@@ -703,6 +757,18 @@ export type Database = {
       }
     }
     Functions: {
+      create_page_range_document: {
+        Args: {
+          p_instrument_name?: string
+          p_original_document_id: string
+          p_page_end: number
+          p_page_start: number
+          p_row_index: number
+          p_runsheet_id: string
+          p_user_id: string
+        }
+        Returns: string
+      }
       generate_document_filename: {
         Args: {
           original_filename: string
