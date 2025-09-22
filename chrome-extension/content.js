@@ -2149,29 +2149,52 @@ function createSingleEntryView(content) {
 function updateTableWidth() {
   const table = document.querySelector('#runsheetpro-runsheet-frame .runsheet-table');
   if (!table) return;
-  
-  // Calculate total width needed for all columns
-  let totalWidth = 0;
+
+  // Normalize each column width (use stored width, else current header width)
   const headerCells = table.querySelectorAll('.header-row .table-cell');
+  let totalWidth = 0;
+
   headerCells.forEach((cell, index) => {
-    const storedWidth = localStorage.getItem(`runsheetpro-column-width-${index}`) || '120';
-    totalWidth += parseInt(storedWidth);
+    let stored = parseInt(localStorage.getItem(`runsheetpro-column-width-${index}`) || '', 10);
+    if (!Number.isFinite(stored) || stored <= 0) {
+      stored = Math.round(cell.getBoundingClientRect().width || 120);
+    }
+
+    // Persist normalized width for consistency between renders
+    localStorage.setItem(`runsheetpro-column-width-${index}`, String(stored));
+
+    // Apply to all cells in this column (header + data rows)
+    const allCells = table.querySelectorAll(`.table-row .table-cell:nth-child(${index + 1})`);
+    allCells.forEach((c) => {
+      c.style.width = `${stored}px`;
+      c.style.minWidth = `${stored}px`;
+      c.style.maxWidth = `${stored}px`;
+    });
+
+    totalWidth += stored;
   });
-  
+
   // Set the table width to exactly match total column widths
   table.style.width = `${totalWidth}px`;
   table.style.minWidth = `${totalWidth}px`;
   table.style.maxWidth = `${totalWidth}px`;
-  
+
   // Update all rows to match exact width
   const rows = table.querySelectorAll('.table-row');
-  rows.forEach(row => {
+  rows.forEach((row) => {
     row.style.width = `${totalWidth}px`;
     row.style.minWidth = `${totalWidth}px`;
     row.style.maxWidth = `${totalWidth}px`;
   });
-  
-  console.log('🔧 RunsheetPro Extension: Updated table width to', totalWidth, 'px');
+
+  // Force a repaint to avoid any sub-pixel misalignment in sticky header
+  requestAnimationFrame(() => {
+    headerCells.forEach((cell) => {
+      cell.style.transform = 'translateZ(0)';
+    });
+  });
+
+  console.log('🔧 RunsheetPro Extension: Normalized column widths; table width =', totalWidth, 'px');
 }
 
 // Create full runsheet view (shows all data)
