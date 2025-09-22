@@ -11,7 +11,7 @@ interface AnalysisJob {
   currentData: Record<string, string>[];
   skipRowsWithData: boolean;
   currentIndex: number;
-  status: 'running' | 'paused' | 'completed' | 'error';
+  status: 'running' | 'paused' | 'completed' | 'error' | 'cancelled';
   results: AnalysisResult[];
   documentCache: Map<string, string>; // Cache for downloaded document blobs
   lastSaveIndex: number; // Track when we last saved to batch saves
@@ -366,10 +366,11 @@ export class BackgroundAnalyzer {
 
   cancelAnalysis() {
     if (this.currentJob) {
-      this.currentJob.status = 'error';
-      this.saveJobToStorage(this.currentJob);
-      this.clearJobFromStorage();
+      this.currentJob.status = 'cancelled';
+      this.isRunning = false;
+      this.clearJobFromStorage();  // Clear storage first
       this.currentJob = null;
+      this.notifyCallbacks();      // Notify components immediately
     }
   }
 
@@ -407,7 +408,7 @@ export interface AnalysisProgress {
   jobId: string;
   total: number;
   completed: number;
-  status: 'running' | 'paused' | 'completed' | 'error';
+  status: 'running' | 'paused' | 'completed' | 'error' | 'cancelled';
   results: AnalysisResult[];
   currentData: Record<string, string>[];
 }

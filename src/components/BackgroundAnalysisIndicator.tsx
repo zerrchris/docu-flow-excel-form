@@ -48,13 +48,18 @@ export const BackgroundAnalysisIndicator: React.FC<BackgroundAnalysisIndicatorPr
         // Get job details for runsheet name
         const job = backgroundAnalyzer.getJobStatus();
         setJobStatus(`Analyzing ${job?.runsheetName || 'documents'}`);
-      } else if (progress.status === 'completed' || progress.status === 'error') {
+      } else if (progress.status === 'completed' || progress.status === 'error' || progress.status === 'cancelled') {
         setIsVisible(false);
         setCurrentJobId(null);
         if (progress.status === 'completed') {
           toast({
             title: "Background analysis completed",
             description: "Document analysis finished successfully.",
+          });
+        } else if (progress.status === 'cancelled') {
+          toast({
+            title: "Background analysis cancelled",
+            description: "Document analysis has been cancelled.",
           });
         }
       }
