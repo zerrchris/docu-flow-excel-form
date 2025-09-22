@@ -57,8 +57,12 @@
             console.log(LOG_PREFIX, 'ensureContentScript response:', response);
             
             // Wait a bit longer to ensure content script is fully initialized
-            setTimeout(() => {
-              console.log(LOG_PREFIX, 'triggering runsheet UI');
+            const attemptUITrigger = (attempt = 1) => {
+              console.log(LOG_PREFIX, `triggering runsheet UI (attempt ${attempt})`);
+              
+              // Check if content script has loaded
+              const contentLoaded = document.querySelector('#runsheetpro-content-loaded');
+              console.log(LOG_PREFIX, 'content loaded marker found:', !!contentLoaded);
               
               // Dispatch a custom event to trigger runsheet UI
               window.dispatchEvent(new CustomEvent('runsheetpro-open'));
@@ -69,8 +73,16 @@
                 window.openRunsheetUI();
               } else {
                 console.log(LOG_PREFIX, 'global openRunsheetUI function not found');
+                
+                // If content script isn't loaded yet and we haven't tried too many times, retry
+                if (!contentLoaded && attempt < 3) {
+                  setTimeout(() => attemptUITrigger(attempt + 1), 500);
+                  return;
+                }
               }
-            }, 200);
+            };
+            
+            setTimeout(() => attemptUITrigger(), 200);
             
             // Notify background
             chrome.runtime.sendMessage({ action: 'openRunsheet' });

@@ -24,10 +24,19 @@ window.onerror = function(message, source, lineno, colno, error) {
 console.log('🔧 RUNSHEETPRO EXTENSION LOADED 🔧');
 
 // Add a marker to indicate content script has loaded
-const contentLoadedMarker = document.createElement('div');
-contentLoadedMarker.id = 'runsheetpro-content-loaded';
-contentLoadedMarker.style.display = 'none';
-document.head.appendChild(contentLoadedMarker);
+try {
+  const contentLoadedMarker = document.createElement('div');
+  contentLoadedMarker.id = 'runsheetpro-content-loaded';
+  contentLoadedMarker.style.display = 'none';
+  if (document.head) {
+    document.head.appendChild(contentLoadedMarker);
+  } else if (document.documentElement) {
+    document.documentElement.appendChild(contentLoadedMarker);
+  }
+  console.log('🔧 RUNSHEETPRO EXTENSION: Content loaded marker added');
+} catch (e) {
+  console.error('🔧 RUNSHEETPRO EXTENSION: Failed to add content loaded marker', e);
+}
 
 // Load enhanced snip workflow
 const enhancedSnipScript = document.createElement('script');
@@ -3432,17 +3441,6 @@ async function init() {
       showSignInPopup();
     }
   };
-
-  // Expose global function for bootstrap fallback
-  window.openRunsheetUI = async () => {
-    console.log('🔧 RunsheetPro Extension: Global function called from bootstrap');
-    const isAuthenticated = await checkAuth();
-    if (isAuthenticated) {
-      showRunsheetSelector();
-    } else {
-      showSignInPopup();
-    }
-  };
   
   console.log('🔧 RunsheetPro Extension: Initialized successfully');
 }
@@ -4904,12 +4902,23 @@ try {
   
   // Use initializeExtensionWithStateRestore instead of init for proper persistence
   const initializeExtension = () => {
-    console.log('🔧 RunsheetPro Extension: Initializing with state restoration');
-    if (typeof initializeExtensionWithStateRestore !== 'undefined') {
-      initializeExtensionWithStateRestore();
-    } else {
-      // Fallback to regular init if persistent state not available
-      init();
+    try {
+      console.log('🔧 RunsheetPro Extension: Initializing with state restoration');
+      if (typeof initializeExtensionWithStateRestore !== 'undefined') {
+        initializeExtensionWithStateRestore();
+      } else {
+        // Fallback to regular init if persistent state not available
+        console.log('🔧 RunsheetPro Extension: Using fallback init');
+        init();
+      }
+    } catch (e) {
+      console.error('🔧 RunsheetPro Extension: Initialization failed', e);
+      // Force basic init as final fallback
+      try {
+        init();
+      } catch (initError) {
+        console.error('🔧 RunsheetPro Extension: Basic init also failed', initError);
+      }
     }
   };
   
