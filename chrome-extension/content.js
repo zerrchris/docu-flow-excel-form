@@ -23,6 +23,12 @@ window.onerror = function(message, source, lineno, colno, error) {
 // IMMEDIATE TEST - This should appear in console if script loads
 console.log('🔧 RUNSHEETPRO EXTENSION LOADED 🔧');
 
+// Add a marker to indicate content script has loaded
+const contentLoadedMarker = document.createElement('div');
+contentLoadedMarker.id = 'runsheetpro-content-loaded';
+contentLoadedMarker.style.display = 'none';
+document.head.appendChild(contentLoadedMarker);
+
 // Load enhanced snip workflow
 const enhancedSnipScript = document.createElement('script');
 enhancedSnipScript.src = chrome.runtime.getURL('enhanced-snip-workflow.js');
@@ -3400,13 +3406,32 @@ async function init() {
   // Setup global event listeners for bootstrap communication
   window.addEventListener('runsheetpro-open', async () => {
     console.log('🔧 RunsheetPro Extension: Custom event received from bootstrap');
+    console.log('🔧 RunsheetPro Extension: Current auth status check starting...');
     const isAuthenticated = await checkAuth();
+    console.log('🔧 RunsheetPro Extension: Auth status result:', isAuthenticated);
     if (isAuthenticated) {
+      console.log('🔧 RunsheetPro Extension: Showing runsheet selector');
       showRunsheetSelector();
     } else {
+      console.log('🔧 RunsheetPro Extension: Showing sign-in popup');
       showSignInPopup();
     }
   });
+
+  // Setup global function for bootstrap to call directly
+  window.openRunsheetUI = async () => {
+    console.log('🔧 RunsheetPro Extension: Global openRunsheetUI function called');
+    console.log('🔧 RunsheetPro Extension: Current auth status check starting...');
+    const isAuthenticated = await checkAuth();
+    console.log('🔧 RunsheetPro Extension: Auth status result:', isAuthenticated);
+    if (isAuthenticated) {
+      console.log('🔧 RunsheetPro Extension: Showing runsheet selector');
+      showRunsheetSelector();
+    } else {
+      console.log('🔧 RunsheetPro Extension: Showing sign-in popup');
+      showSignInPopup();
+    }
+  };
 
   // Expose global function for bootstrap fallback
   window.openRunsheetUI = async () => {

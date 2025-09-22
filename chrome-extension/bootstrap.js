@@ -47,6 +47,11 @@
           console.log(LOG_PREFIX, 'button clicked');
           
           try { 
+            // Check if content script has loaded
+            console.log(LOG_PREFIX, 'checking if content script loaded...');
+            const contentScriptLoaded = document.querySelector('#runsheetpro-content-loaded') !== null;
+            console.log(LOG_PREFIX, 'content script loaded check:', contentScriptLoaded);
+            
             // First ensure content script is loaded
             const response = await chrome.runtime.sendMessage({ action: 'ensureContentScript' });
             console.log(LOG_PREFIX, 'ensureContentScript response:', response);
