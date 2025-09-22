@@ -1901,21 +1901,37 @@ function createSingleEntryView(content) {
       // Handle keyboard navigation like EditableSpreadsheet
       textarea.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.altKey && !e.shiftKey) {
-          // Enter moves to next cell or add button if last field
+          // Enter moves to next row in same column
           e.preventDefault();
           const currentIndex = Array.from(dataRow.children).indexOf(cell);
-          if (currentIndex < dataRow.children.length - 1) {
-            // Move to next cell
-            const nextCell = dataRow.children[currentIndex + 1];
-            const nextTextarea = nextCell.querySelector('textarea');
-            const nextInput = nextCell.querySelector('input');
-            if (nextTextarea) {
-              nextTextarea.focus();
-            } else if (nextInput) {
-              // If it's the Document File Name cell, focus the Add Row button
-              const addButton = nextCell.querySelector('.add-row-btn');
-              if (addButton) addButton.focus();
-            }
+          
+          // First try to add a new row if we're on the last row
+          if (currentRowIndex >= (activeRunsheet.data ? activeRunsheet.data.length - 1 : 0)) {
+            // Add new row and move to it
+            addRowToSheet();
+            // Wait for new row to be created, then focus same column
+            setTimeout(() => {
+              if (currentViewMode === 'single') {
+                const newRowTextarea = dataRow.children[currentIndex]?.querySelector('textarea');
+                if (newRowTextarea) {
+                  newRowTextarea.focus();
+                }
+              }
+            }, 100);
+          } else {
+            // Move to next existing row
+            currentRowIndex++;
+            refreshCurrentView();
+            // Focus same column in new row
+            setTimeout(() => {
+              if (currentViewMode === 'single') {
+                const sameColTextarea = dataRow.children[currentIndex]?.querySelector('textarea');
+                if (sameColTextarea) {
+                  sameColTextarea.focus();
+                }
+              }
+            }, 50);
+          }
           }
         } else if (e.key === 'Enter' && e.altKey) {
           // Alt+Enter creates line break - allow default behavior and resize
