@@ -152,9 +152,6 @@ serve(async (req) => {
       }
     }
     */
-      extractedData = await extractWithVision(fileUrl, openAIApiKey, columnInstructions, globalInstructions)
-      method = 'vision'
-    }
 
     // Validate and enhance results
     const validatedData = await validateAndEnhance(extractedData, openAIApiKey)
