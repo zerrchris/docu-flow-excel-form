@@ -56,13 +56,55 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.action === 'ensureContentScript') {
-    // Avoid reinjecting scripts; content scripts are declared in the manifest
-    try {
-      sendResponse({ success: true, skipped: true });
-    } catch (e) {
-      console.warn('ensureContentScript error:', e);
-      sendResponse({ success: false, error: e.message });
-    }
+    // Verify content script marker and inject if missing
+    (async () => {
+      try {
+        const tabId = sender.tab?.id;
+        if (!tabId) {
+          sendResponse({ success: false, error: 'No tabId available' });
+          return;
+        }
+
+        // Check if content script marker exists in the page DOM (main world)
+        const [checkResult] = await chrome.scripting.executeScript({
+          target: { tabId },
+          world: 'MAIN',
+          func: () => Boolean(document.getElementById('runsheetpro-content-loaded')),
+        });
+        const alreadyLoaded = Boolean(checkResult?.result);
+        if (alreadyLoaded) {
+          sendResponse({ success: true, alreadyLoaded: true, skipped: true });
+          return;
+        }
+
+        // Inject our scripts in correct order
+        await chrome.scripting.executeScript({
+          target: { tabId },
+          files: ['persistent-state.js'],
+        });
+        await chrome.scripting.executeScript({
+          target: { tabId },
+          files: ['error-handler.js'],
+        });
+        await chrome.scripting.executeScript({
+          target: { tabId },
+          files: ['content.js'],
+        });
+
+        // Re-check for marker
+        const [postInjectCheck] = await chrome.scripting.executeScript({
+          target: { tabId },
+          world: 'MAIN',
+          func: () => Boolean(document.getElementById('runsheetpro-content-loaded')),
+        });
+
+        sendResponse({ success: true, injected: true, markerFound: Boolean(postInjectCheck?.result) });
+      } catch (e) {
+        console.warn('ensureContentScript error:', e);
+        sendResponse({ success: false, error: e?.message || String(e) });
+      }
+    })();
+    return true; // Keep message channel open for async response
   }
 });
 
