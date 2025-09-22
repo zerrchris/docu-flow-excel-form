@@ -366,11 +366,25 @@ export class BackgroundAnalyzer {
 
   cancelAnalysis() {
     if (this.currentJob) {
-      this.currentJob.status = 'cancelled';
+      // Capture job before clearing
+      const job = this.currentJob;
+      job.status = 'cancelled';
       this.isRunning = false;
-      this.clearJobFromStorage();  // Clear storage first
+
+      // Broadcast a final cancellation update so UI can hide immediately
+      const progress: AnalysisProgress = {
+        jobId: job.id,
+        total: job.documentMap.length,
+        completed: job.currentIndex,
+        status: 'cancelled',
+        results: job.results,
+        currentData: job.currentData,
+      };
+      this.callbacks.forEach((cb) => cb(progress));
+
+      // Clear state/storage
+      this.clearJobFromStorage();
       this.currentJob = null;
-      this.notifyCallbacks();      // Notify components immediately
     }
   }
 
