@@ -7004,7 +7004,7 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
                   {columns.map((column) => (
                     <th 
                         key={column}
-                        className={`font-bold text-center border-r border-b border-border relative p-0 last:border-r-0 cursor-move transition-all duration-200 h-12 px-4 text-left align-middle font-medium text-muted-foreground
+                        className={`font-bold text-center border-r border-b border-border relative last:border-r-0 cursor-move transition-all duration-200 h-12 font-medium text-muted-foreground
                            ${draggedColumn === column ? 'opacity-50 transform scale-95' : ''}
                            ${dragOverColumn === column ? 'bg-primary/20 shadow-lg' : 'bg-background/95'}
                            ${localMissingColumns.includes(column) ? 'bg-yellow-100 border-2 border-yellow-400 dark:bg-yellow-900/20 dark:border-yellow-500 animate-pulse shadow-yellow-200 dark:shadow-yellow-900' : 'hover:bg-muted/30'}
@@ -7048,7 +7048,7 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
                                   openColumnDialog(column);
                                 }}
                               >
-                                <div className="flex flex-col items-center pr-6"> {/* Add right padding to make room for resize handle */}
+                                <div className="flex flex-col items-center justify-center h-full px-4 pr-6"> {/* Center content vertically and horizontally */}
                                   <span 
                                     className="font-bold truncate max-w-full" 
                                     title={column}
