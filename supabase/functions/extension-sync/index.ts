@@ -72,18 +72,42 @@ Deno.serve(async (req) => {
           updatedData.push(emptyRow)
         }
       } else {
-        // Find the first empty row or add a new one
+        // Find the first empty row or add a new one by checking actual documents
         targetRowIndex = 0;
         
-        // Look for first row that has all empty values
+        // Get all existing documents for this runsheet to know which rows have documents
+        const { data: existingDocs } = await supabase
+          .from('documents')
+          .select('row_index')
+          .eq('runsheet_id', runsheet_id)
+          .eq('user_id', user.id)
+        
+        const documentRowIndexes = new Set(existingDocs?.map(doc => doc.row_index) || [])
+        
+        // Look for first row that has no text data AND no linked documents
         for (let i = 0; i < updatedData.length; i++) {
           const row = updatedData[i];
-          const hasData = Object.values(row).some(value => value && value.toString().trim() !== '');
-          if (!hasData) {
+          
+          // Check if row has any meaningful text data
+          const hasTextData = runsheet.columns.some((column: string) => {
+            if (column === 'Document File Name' || column.toLowerCase().includes('document')) {
+              return false; // Skip document columns for text data check
+            }
+            const value = row[column]
+            return value && value.toString().trim() !== '' && value !== 'N/A'
+          })
+          
+          // Check if this row has any actual linked documents
+          const hasLinkedDocuments = documentRowIndexes.has(i)
+          
+          if (!hasTextData && !hasLinkedDocuments) {
             targetRowIndex = i;
+            console.log(`Found available row at index ${i} (no text data, no linked docs)`)
             break;
+          } else {
+            console.log(`Row ${i} has data (textData: ${hasTextData}, linkedDocs: ${hasLinkedDocuments}), skipping`)
+            targetRowIndex = i + 1; // Next row after this one
           }
-          targetRowIndex = i + 1; // Next row after this one
         }
         
         // If we need to add a new row

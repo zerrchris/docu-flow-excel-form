@@ -1437,13 +1437,14 @@ function findNextAvailableRow(runsheetData) {
   if (!runsheetData || !runsheetData.data || runsheetData.data.length === 0) {
     return 0; // First row
   }
-  
+
   // Look for first completely empty row (no data AND no linked documents)
   for (let i = 0; i < runsheetData.data.length; i++) {
     const row = runsheetData.data[i];
     
     // Check if row exists and has any data
     if (!row || Object.keys(row).length === 0) {
+      console.log(`🔧 RunsheetPro Extension: Found completely empty row at index ${i}`);
       return i; // Completely empty row
     }
     
@@ -1456,7 +1457,7 @@ function findNextAvailableRow(runsheetData) {
       return value !== null && value !== undefined && value !== '' && value !== 'N/A';
     });
     
-    // Check if row has any linked documents
+    // Check if row has any linked documents by checking the documents table
     const hasLinkedDocuments = Object.entries(row).some(([key, value]) => {
       if (key === 'Document File Name' || key === 'screenshot_url' || key.toLowerCase().includes('document')) {
         return value !== null && value !== undefined && value !== '';
@@ -6514,6 +6515,8 @@ function enableExtensionInteractions() {
 
 // Update cleanup function to disable smart scroll
 function cleanupSnipMode() {
+  console.log('🔧 RunsheetPro Extension: Cleaning up snip mode completely');
+  
   isSnipMode = false;
   snipMode = 'single';
   capturedSnips = [];
@@ -6543,11 +6546,90 @@ function cleanupSnipMode() {
     snipSelection = null;
   }
   
+  // Remove navigation controls
+  const navPanel = document.getElementById('runsheetpro-nav-controls');
+  if (navPanel) {
+    navPanel.remove();
+  }
+  
+  // Remove any selection rectangles
+  const selectionRect = document.getElementById('runsheetpro-selection-rect');
+  if (selectionRect) {
+    selectionRect.remove();
+  }
+  
+  // Remove grid overlay
+  const gridOverlay = document.getElementById('runsheetpro-grid-overlay');
+  if (gridOverlay) {
+    gridOverlay.remove();
+  }
+  
+  // Clear snip session
+  snipSession = {
+    active: false,
+    captures: [],
+    timestamp: null
+  };
+  
+  // Remove all mouse event listeners
+  document.removeEventListener('mousedown', handleMouseDown);
+  document.removeEventListener('mousemove', handleMouseMove);
+  document.removeEventListener('mouseup', handleMouseUp);
+  document.removeEventListener('keydown', handleKeyDown);
+  
+  // Remove scroll event listeners
+  document.removeEventListener('wheel', handleScrollPassthrough);
+  document.removeEventListener('keydown', handleKeyScrollPassthrough);
+  
   // Clean up scroll overlay modifications
   cleanupScrollOverlay();
   
   console.log('🔧 RunsheetPro Extension: Snip mode cleaned up with smart scroll disabled');
 }
+
+// Enhanced navigation detection and cleanup
+let currentUrl = window.location.href;
+let navigationCleanupTimeout;
+
+// Clean up on page navigation/unload
+window.addEventListener('beforeunload', () => {
+  console.log('🔧 RunsheetPro Extension: Page unloading, cleaning up snip mode');
+  if (isSnipMode) cleanupSnipMode();
+});
+
+window.addEventListener('pagehide', () => {
+  console.log('🔧 RunsheetPro Extension: Page hiding, cleaning up snip mode');
+  if (isSnipMode) cleanupSnipMode();
+});
+
+// Watch for URL changes (SPA navigation)
+const urlObserver = new MutationObserver(() => {
+  if (window.location.href !== currentUrl) {
+    const oldUrl = currentUrl;
+    currentUrl = window.location.href;
+    console.log('🔧 RunsheetPro Extension: URL change detected:', oldUrl, '->', currentUrl);
+    
+    // Debounce cleanup to avoid excessive calls
+    clearTimeout(navigationCleanupTimeout);
+    navigationCleanupTimeout = setTimeout(() => {
+      if (isSnipMode) {
+        console.log('🔧 RunsheetPro Extension: Cleaning up snip mode due to navigation');
+        cleanupSnipMode();
+      }
+    }, 100);
+  }
+});
+
+// Start observing for navigation changes
+urlObserver.observe(document, { subtree: true, childList: true });
+
+// Also listen for popstate events (browser back/forward)
+window.addEventListener('popstate', () => {
+  console.log('🔧 RunsheetPro Extension: Popstate detected, cleaning up snip mode');
+  if (isSnipMode) {
+    cleanupSnipMode();
+  }
+});
 
 // Make the overlay allow scrolling through to underlying elements
 function makeOverlayScrollable() {
