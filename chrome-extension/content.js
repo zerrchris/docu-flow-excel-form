@@ -63,6 +63,7 @@ let snipOverlay = null;
 let snipSelection = null;
 let capturedSnips = [];
 let snipControlPanel = null;
+let contextMenu = null;
 
 // Check authentication status
 async function checkAuth() {
@@ -6114,6 +6115,9 @@ function cleanupSnipMode() {
   // Clean up scroll overlay modifications
   cleanupScrollOverlay();
   
+  // Clean up context menu
+  cleanupContextMenu();
+  
   console.log('🔧 RunsheetPro Extension: Snip mode cleaned up with smart scroll disabled');
 }
 
@@ -6566,4 +6570,163 @@ function cleanupScrollOverlay() {
   // Remove event listeners
   document.removeEventListener('wheel', handleScrollPassthrough);
   document.removeEventListener('keydown', handleKeyScrollPassthrough, true);
+}
+
+// ============= RIGHT-CLICK CONTEXT MENU =============
+
+// Create and show context menu
+function createContextMenu(x, y) {
+  // Remove existing context menu
+  removeContextMenu();
+  
+  // Only show if we're in snip mode with multiple snips capability
+  if (!isSnipMode || snipMode === 'single') return;
+  
+  contextMenu = document.createElement('div');
+  contextMenu.id = 'runsheetpro-context-menu';
+  contextMenu.style.cssText = `
+    position: fixed !important;
+    top: ${y}px !important;
+    left: ${x}px !important;
+    background: hsl(var(--background, 0 0% 100%)) !important;
+    border: 1px solid hsl(var(--border, 214 32% 91%)) !important;
+    border-radius: 8px !important;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15) !important;
+    z-index: 2147483647 !important;
+    min-width: 180px !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    overflow: hidden !important;
+    animation: contextMenuFadeIn 0.15s ease-out !important;
+  `;
+  
+  const menuItems = [
+    {
+      icon: '📷',
+      text: 'Next Snip',
+      action: () => {
+        removeContextMenu();
+        handleNextSnip();
+      },
+      disabled: false
+    },
+    {
+      icon: '✅',
+      text: 'Finish Snipping',
+      action: () => {
+        removeContextMenu();
+        finishSnipping();
+      },
+      disabled: capturedSnips.length === 0
+    },
+    {
+      icon: '❌',
+      text: 'Cancel Snipping',
+      action: () => {
+        removeContextMenu();
+        cancelSnipping();
+      },
+      disabled: false
+    }
+  ];
+  
+  menuItems.forEach((item, index) => {
+    const menuItem = document.createElement('div');
+    menuItem.style.cssText = `
+      padding: 12px 16px !important;
+      cursor: ${item.disabled ? 'not-allowed' : 'pointer'} !important;
+      display: flex !important;
+      align-items: center !important;
+      gap: 12px !important;
+      font-size: 14px !important;
+      color: ${item.disabled ? 'hsl(var(--muted-foreground, 215 16% 47%))' : 'hsl(var(--foreground, 222 47% 11%))'} !important;
+      opacity: ${item.disabled ? '0.5' : '1'} !important;
+      transition: background-color 0.15s ease !important;
+      border-bottom: ${index < menuItems.length - 1 ? '1px solid hsl(var(--border, 214 32% 91%))' : 'none'} !important;
+    `;
+    
+    if (!item.disabled) {
+      menuItem.addEventListener('mouseenter', () => {
+        menuItem.style.backgroundColor = 'hsl(var(--accent, 210 40% 96%))';
+      });
+      
+      menuItem.addEventListener('mouseleave', () => {
+        menuItem.style.backgroundColor = 'transparent';
+      });
+      
+      menuItem.addEventListener('click', item.action);
+    }
+    
+    menuItem.innerHTML = `
+      <span style="font-size: 16px;">${item.icon}</span>
+      <span>${item.text}</span>
+    `;
+    
+    contextMenu.appendChild(menuItem);
+  });
+  
+  // Add animation keyframes
+  if (!document.getElementById('runsheetpro-context-menu-styles')) {
+    const style = document.createElement('style');
+    style.id = 'runsheetpro-context-menu-styles';
+    style.textContent = `
+      @keyframes contextMenuFadeIn {
+        from {
+          opacity: 0;
+          transform: scale(0.95);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+  
+  document.body.appendChild(contextMenu);
+  
+  // Adjust position if menu goes off screen
+  const rect = contextMenu.getBoundingClientRect();
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  
+  if (rect.right > viewportWidth) {
+    contextMenu.style.left = `${x - rect.width}px`;
+  }
+  
+  if (rect.bottom > viewportHeight) {
+    contextMenu.style.top = `${y - rect.height}px`;
+  }
+  
+  // Close menu when clicking outside
+  setTimeout(() => {
+    document.addEventListener('click', removeContextMenu, { once: true });
+    document.addEventListener('contextmenu', removeContextMenu, { once: true });
+  }, 100);
+}
+
+// Remove context menu
+function removeContextMenu() {
+  if (contextMenu) {
+    try {
+      document.body.removeChild(contextMenu);
+    } catch (e) {
+      // Menu might already be removed
+    }
+    contextMenu = null;
+  }
+}
+
+// Add right-click event listener to document
+document.addEventListener('contextmenu', (e) => {
+  // Only show context menu in snip mode
+  if (isSnipMode && snipMode !== 'single') {
+    e.preventDefault();
+    createContextMenu(e.clientX, e.clientY);
+  }
+});
+
+// Close context menu when snip mode ends
+function cleanupContextMenu() {
+  removeContextMenu();
 }
