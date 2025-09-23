@@ -1367,6 +1367,16 @@ function createRunsheetFrame() {
     </div>
   `;
   
+  // Reset any transient screenshot state on fresh frame render
+  try {
+    window.currentCapturedSnip = null;
+    window.currentSnipFilename = null;
+    screenshotAddedToSheet = false;
+    setTimeout(() => {
+      try { updateScreenshotIndicator(false); } catch {}
+    }, 0);
+  } catch {}
+  
   // Create content area
   const content = document.createElement('div');
   content.className = 'frame-content';
@@ -5419,8 +5429,12 @@ try {
 function updateScreenshotIndicator(hasScreenshot) {
   // Check for current captured snip first, then check stored screenshot
   const hasCapturedSnip = !!window.currentCapturedSnip;
-  const hasStoredScreenshot = activeRunsheet && activeRunsheet.data && activeRunsheet.data[currentRowIndex] && 
-    (activeRunsheet.data[currentRowIndex]['Document File Name'] || activeRunsheet.data[currentRowIndex]['screenshot_url']);
+  const row = activeRunsheet && activeRunsheet.data && activeRunsheet.data[currentRowIndex];
+  const rawUrl = row && row['screenshot_url'];
+  // Only treat as stored screenshot if it looks like a valid Supabase storage URL
+  const hasStoredScreenshot = typeof rawUrl === 'string'
+    && /^https?:\/\//.test(rawUrl)
+    && rawUrl.includes('/storage/v1/object/public/documents/');
   
   // Only show screenshot-related buttons if we actually have a screenshot
   const actuallyHasScreenshot = hasCapturedSnip || hasStoredScreenshot;
