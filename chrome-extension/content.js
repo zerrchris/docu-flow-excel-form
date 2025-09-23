@@ -384,8 +384,7 @@ function handleFullscreenChange() {
     // Exiting fullscreen - remove snip button
     removeFullscreenSnipButton();
   }
-}
-}
+  }
 
 // Show sign-in popup
 function showSignInPopup() {
