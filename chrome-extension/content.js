@@ -4721,14 +4721,16 @@ function createNavigationControlPanel() {
   const snipAgainButton = document.createElement('button');
   snipAgainButton.textContent = 'Next Snip';
   snipAgainButton.style.cssText = `
-    background: #3b82f6 !important;
-    color: white !important;
-    border: none !important;
+    background: hsl(var(--primary, 215 80% 40%)) !important;
+    color: hsl(var(--primary-foreground, 210 40% 98%)) !important;
+    border: 1px solid hsl(var(--primary, 215 80% 40%)) !important;
     padding: 8px 16px !important;
     border-radius: 6px !important;
     cursor: pointer !important;
     font-size: 14px !important;
-    font-weight: 500 !important;
+    font-weight: 600 !important;
+    transition: var(--transition-smooth) !important;
+    box-shadow: 0 2px 4px hsl(var(--primary, 215 80% 40%) / 0.2) !important;
   `;
   
   snipAgainButton.addEventListener('click', () => {
@@ -4740,14 +4742,16 @@ function createNavigationControlPanel() {
   const doneButton = document.createElement('button');
   doneButton.textContent = 'Finished Snipping';
   doneButton.style.cssText = `
-    background: #10b981 !important;
-    color: white !important;
-    border: none !important;
+    background: hsl(var(--success, 145 70% 40%)) !important;
+    color: hsl(var(--success-foreground, 145 80% 98%)) !important;
+    border: 1px solid hsl(var(--success, 145 70% 40%)) !important;
     padding: 8px 16px !important;
     border-radius: 6px !important;
     cursor: pointer !important;
     font-size: 14px !important;
-    font-weight: 500 !important;
+    font-weight: 600 !important;
+    transition: var(--transition-smooth) !important;
+    box-shadow: 0 2px 4px hsl(var(--success, 145 70% 40%) / 0.2) !important;
   `;
   
   doneButton.addEventListener('click', () => {
@@ -4759,14 +4763,16 @@ function createNavigationControlPanel() {
   const cancelButton = document.createElement('button');
   cancelButton.textContent = 'Cancel';
   cancelButton.style.cssText = `
-    background: #ef4444 !important;
-    color: white !important;
-    border: none !important;
+    background: hsl(var(--destructive, 0 84% 60%)) !important;
+    color: hsl(var(--destructive-foreground, 210 40% 98%)) !important;
+    border: 1px solid hsl(var(--destructive, 0 84% 60%)) !important;
     padding: 8px 16px !important;
     border-radius: 6px !important;
     cursor: pointer !important;
     font-size: 14px !important;
-    font-weight: 500 !important;
+    font-weight: 600 !important;
+    transition: var(--transition-smooth) !important;
+    box-shadow: 0 2px 4px hsl(var(--destructive, 0 84% 60%) / 0.2) !important;
   `;
   
   cancelButton.addEventListener('click', () => {
