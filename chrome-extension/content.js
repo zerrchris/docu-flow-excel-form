@@ -4609,9 +4609,10 @@ async function finishSnipping() {
     window.currentCapturedSnip = finalBlob;
     window.currentSnipFilename = `snip_session_${Date.now()}.png`;
     
-    // If we're in quickview mode, immediately link to the selected row
-    if (currentViewMode === 'full' && currentRowIndex !== undefined) {
+    // Automatically link to the current row (matches legacy navigate workflow)
+    if (activeRunsheet && currentRowIndex !== undefined) {
       await linkScreenshotToSpecificRow(currentRowIndex, finalBlob, window.currentSnipFilename);
+      showNotification(`Screenshot${snipsToProcess.length > 1 ? 's' : ''} added to row successfully!`, 'success');
       cleanupSnipMode();
       return;
     }
@@ -4908,8 +4909,6 @@ async function processSnipForRow(snipData) {
   } catch (error) {
     console.error('Error processing snip for row:', error);
     showNotification('Failed to process screenshot: ' + error.message, 'error');
-  }
-}
   }
 }
 
