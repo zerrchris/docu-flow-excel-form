@@ -3615,6 +3615,9 @@ function initializeExtension() {
     // Always create the runsheet button first
     createRunsheetButton();
     console.log('🔧 RunsheetPro Extension: Button creation attempted');
+
+    // Also create a persistent top-right Snip button (works even without true fullscreen)
+    try { createFullscreenSnipButton(); } catch (e) { console.warn('Snip button create failed', e); }
     
     // Add fullscreen event listeners
     document.addEventListener('fullscreenchange', handleFullscreenChange);
@@ -3665,6 +3668,9 @@ async function init() {
     // Always create the runsheet button first
     createRunsheetButton();
     console.log('🔧 RunsheetPro Extension: Button creation attempted');
+
+    // Also create a persistent top-right Snip button (works even without true fullscreen)
+    try { createFullscreenSnipButton(); } catch (e) { console.warn('Snip button create failed', e); }
     
     // Add fullscreen event listeners
     document.addEventListener('fullscreenchange', handleFullscreenChange);
