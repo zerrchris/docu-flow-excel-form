@@ -6229,23 +6229,38 @@ async function linkScreenshotToSpecificRow(rowIndex, blob, filename) {
       throw new Error('Failed to sync screenshot with backend');
     }
     
-    // Clear the captured snip since it's now saved
-    window.currentCapturedSnip = null;
-    window.currentSnipFilename = null;
+    // Refresh the UI to reflect the new document
+    const frameContent = document.querySelector('#runsheetpro-runsheet-frame .frame-content');
+    if (frameContent) {
+      frameContent.innerHTML = '';
+      if (currentViewMode === 'full') {
+        createFullRunsheetView(frameContent);
+      } else {
+        createSingleEntryView(frameContent);
+      }
+      // Update any dependent UI (navigation, counters)
+      setTimeout(() => {
+        try { updateRowNavigationUI && updateRowNavigationUI(); } catch {}
+      }, 0);
+    }
     
-    // Refresh the quickview display to show the new document
-    if (currentViewMode === 'full') {
-      const content = document.querySelector('#runsheetpro-runsheet-frame .frame-content');
-      if (content) {
-        // Clear and rebuild to ensure buttons reflect the new state
-        content.innerHTML = '';
-        createFullRunsheetView(content);
-        // Update any dependent UI
-        setTimeout(() => {
-          try { updateRowNavigationUI && updateRowNavigationUI(); } catch {}
-        }, 0);
+    // Also toggle the header container (single entry header) if present
+    const headerContainer = document.querySelector('.document-header-container');
+    if (headerContainer) {
+      const uploadInterface = headerContainer.querySelector('.upload-interface');
+      const documentInterface = headerContainer.querySelector('.document-interface');
+      const filenameText = headerContainer.querySelector('.filename-text');
+      if (uploadInterface && documentInterface && filenameText) {
+        uploadInterface.style.display = 'none';
+        documentInterface.style.display = 'flex';
+        filenameText.textContent = filename;
       }
     }
+    
+    // Fire a custom event so any listeners can refresh their document map
+    try {
+      window.dispatchEvent(new CustomEvent('documentRecordCreated', { detail: { runsheetId: activeRunsheet.id, rowIndex } }));
+    } catch {}
     
     showNotification('✅ Screenshot linked to row successfully!', 'success');
     
