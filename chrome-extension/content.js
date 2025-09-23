@@ -3465,11 +3465,36 @@ async function captureSelectedArea(left, top, width, height) {
         // Get the cropped image data
         const croppedDataUrl = canvas.toDataURL('image/png');
         
-        // Add to captures and process
-        captures.push(croppedDataUrl);
-        showNotification('Area captured successfully!', 'success');
-        
-        console.log('🔧 RunsheetPro Extension: Snipped area captured');
+        // Convert to blob and add to captured snips with proper structure
+        canvas.toBlob((blob) => {
+          const snipData = {
+            blob: blob,
+            dataUrl: croppedDataUrl,
+            timestamp: Date.now(),
+            coordinates: { left, top, width, height }
+          };
+          
+          // Add to the correct captures array based on snip mode
+          if (snipMode === 'navigate' || snipMode === 'scroll') {
+            capturedSnips.push(snipData);
+            console.log('🔧 Added snip to capturedSnips, total:', capturedSnips.length);
+            
+            // Also add to session captures for persistence
+            if (snipSession && snipSession.active) {
+              snipSession.captures.push(snipData);
+            }
+          } else {
+            // For single mode, also add to capturedSnips
+            capturedSnips.push(snipData);
+            console.log('🔧 Added single snip to capturedSnips');
+          }
+          
+          // Also add to legacy captures array for compatibility
+          captures.push(croppedDataUrl);
+          
+          showNotification('Area captured successfully!', 'success');
+          console.log('🔧 RunsheetPro Extension: Snipped area captured and processed');
+        }, 'image/png');
       };
       img.src = dataUrl;
     }
@@ -4236,6 +4261,19 @@ async function startDocumentSnippingMode() {
     return;
   }
   
+  // Check if we're already in snip mode
+  if (isSnipMode) {
+    console.log('🔧 Already in snip mode, adding another snip to session');
+    // If already snipping, just show the crosshairs again and let user add another snip
+    if (snipOverlay) {
+      snipOverlay.style.display = 'block';
+    } else {
+      createSnipOverlay();
+    }
+    showNotification('Select another area to add to this snip session', 'info');
+    return;
+  }
+  
   // Start snip mode with crosshairs in navigate mode for multi-page support
   startSnipModeWithMode('navigate', true);
   showNotification('✂️ Snip Mode Active! Drag to select area → Right-click "RunsheetPro: Snip Document" for more pages → Press ESC when done', 'info');
@@ -4802,18 +4840,34 @@ function completeSnipSession() {
 // Process a single snip and add it to the current row
 async function processSnipForRow(snipData) {
   try {
+    console.log('🔧 ProcessSnipForRow called with:', snipData);
+    
     if (!activeRunsheet || currentRowIndex === undefined) {
       showNotification('No active runsheet or row selected', 'error');
+      console.error('🔧 ProcessSnipForRow: Missing runsheet or row index');
       return;
     }
 
+    // Handle different snipData formats - could be {blob} or just the blob
+    const blob = snipData?.blob || snipData;
+    if (!blob) {
+      showNotification('No screenshot data found', 'error');
+      console.error('🔧 ProcessSnipForRow: No blob data found');
+      return;
+    }
+    
+    console.log('🔧 ProcessSnipForRow: Found blob, size:', blob.size);
+
     // Store the snip locally for "Add to Row" functionality
-    window.currentCapturedSnip = snipData.blob;
+    window.currentCapturedSnip = blob;
     window.currentSnipFilename = `snip_${Date.now()}.png`;
+    
+    console.log('🔧 ProcessSnipForRow: Stored snip locally, currentViewMode:', currentViewMode);
     
     // If we're in full view mode, immediately link to the selected row
     if (currentViewMode === 'full' && currentRowIndex !== undefined) {
-      await linkScreenshotToSpecificRow(currentRowIndex, snipData.blob, window.currentSnipFilename);
+      console.log('🔧 ProcessSnipForRow: In full view mode, linking directly');
+      await linkScreenshotToSpecificRow(currentRowIndex, blob, window.currentSnipFilename);
       showNotification('Screenshot added to row successfully!', 'success');
       return;
     }
@@ -4843,11 +4897,19 @@ async function processSnipForRow(snipData) {
     updateScreenshotIndicator(true);
     screenshotAddedToSheet = false; // New screenshot hasn't been added yet
     
+    // Make sure the runsheet frame is visible if we're not in full view mode
+    if (currentViewMode !== 'full' && runsheetFrame) {
+      runsheetFrame.style.display = 'block';
+      console.log('🔧 Made runsheet frame visible for snip');
+    }
+    
     showNotification('Screenshot captured and ready! Fill in data and click "Add to Row" to save.', 'success');
     
   } catch (error) {
     console.error('Error processing snip for row:', error);
     showNotification('Failed to process screenshot: ' + error.message, 'error');
+  }
+}
   }
 }
 
