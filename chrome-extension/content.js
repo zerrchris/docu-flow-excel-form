@@ -4115,6 +4115,21 @@ function loadSelectedRunsheet(runsheetData) {
   showNotification(`Loaded runsheet: ${runsheetData.name}`, 'success');
 }
 
+// Start document snipping mode (for toolbar button)
+function startDocumentSnippingMode() {
+  console.log('🔧 RunsheetPro Extension: Starting document snipping mode from toolbar');
+  
+  // Check if we have an active runsheet and authentication
+  if (!activeRunsheet) {
+    showNotification('No active runsheet. Please select a runsheet first.', 'warning');
+    return;
+  }
+  
+  // Start single snip mode directly without overwrite check (user initiated)
+  startSnipModeWithMode('single', true);
+  showNotification('Click and drag to select the document area to capture', 'info');
+}
+
 // Start snip mode with specific mode
 function startSnipModeWithMode(mode = 'single', skipOverwriteCheck = false) {
   if (isSnipMode) return;
@@ -4979,6 +4994,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   } else if (request.action === 'showSnipModeSelector') {
     // Show snip mode selection modal
     showSnipModeSelector();
+  } else if (request.action === 'startDocumentSnip') {
+    // Start document snipping directly (for toolbar button use)
+    startDocumentSnippingMode();
   } else if (request.action === 'openRunsheet') {
     // Open the runsheet UI: if frame exists, toggle; else show selector/sign-in
     (async () => {
