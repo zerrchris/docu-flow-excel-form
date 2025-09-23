@@ -8,6 +8,7 @@ interface ExtensionData {
   runsheet_id: string
   row_data: Record<string, any>
   screenshot_url?: string
+  target_row_index?: number
 }
 
 Deno.serve(async (req) => {
@@ -21,7 +22,7 @@ Deno.serve(async (req) => {
 
     if (req.method === 'POST') {
       // Sync data from extension to runsheet
-      const { runsheet_id, row_data, screenshot_url }: ExtensionData = await req.json()
+      const { runsheet_id, row_data, screenshot_url, target_row_index }: ExtensionData = await req.json()
 
       // Get the authorization header
       const authHeader = req.headers.get('Authorization')
@@ -59,25 +60,38 @@ Deno.serve(async (req) => {
       const currentData = runsheet.data as any[]
       const updatedData = [...currentData]
       
-      // Find the first empty row or add a new one
-      let targetRowIndex = 0;
+      // Determine target row index: prefer explicit target, else find first empty row
+      let targetRowIndex: number;
       
-      // Look for first row that has all empty values
-      for (let i = 0; i < updatedData.length; i++) {
-        const row = updatedData[i];
-        const hasData = Object.values(row).some(value => value && value.toString().trim() !== '');
-        if (!hasData) {
-          targetRowIndex = i;
-          break;
+      if (typeof target_row_index === 'number' && Number.isInteger(target_row_index) && target_row_index >= 0) {
+        targetRowIndex = target_row_index;
+        // Ensure rows exist up to the target index
+        while (targetRowIndex >= updatedData.length) {
+          const emptyRow: Record<string, string> = {}
+          runsheet.columns.forEach((col: string) => emptyRow[col] = '')
+          updatedData.push(emptyRow)
         }
-        targetRowIndex = i + 1; // Next row after this one
-      }
-      
-      // If we need to add a new row
-      if (targetRowIndex >= updatedData.length) {
-        const emptyRow: Record<string, string> = {}
-        runsheet.columns.forEach((col: string) => emptyRow[col] = '')
-        updatedData.push(emptyRow)
+      } else {
+        // Find the first empty row or add a new one
+        targetRowIndex = 0;
+        
+        // Look for first row that has all empty values
+        for (let i = 0; i < updatedData.length; i++) {
+          const row = updatedData[i];
+          const hasData = Object.values(row).some(value => value && value.toString().trim() !== '');
+          if (!hasData) {
+            targetRowIndex = i;
+            break;
+          }
+          targetRowIndex = i + 1; // Next row after this one
+        }
+        
+        // If we need to add a new row
+        if (targetRowIndex >= updatedData.length) {
+          const emptyRow: Record<string, string> = {}
+          runsheet.columns.forEach((col: string) => emptyRow[col] = '')
+          updatedData.push(emptyRow)
+        }
       }
 
       // Update the target row with the provided data
