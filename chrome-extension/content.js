@@ -3303,22 +3303,69 @@ async function captureSelectedArea(left, top, width, height) {
   console.log('🔧 RunsheetPro Extension: Capturing area:', { left, top, width, height });
   
   try {
-    // Request screenshot from background script
-    const response = await chrome.runtime.sendMessage({ action: 'captureTab' });
+    let dataUrl;
     
-    if (response && response.dataUrl) {
-      // Create canvas to crop the image
+    // Check if we're in fullscreen mode
+    if (isInFullscreen()) {
+      console.log('🔧 Fullscreen detected, attempting desktop capture');
+      
+      try {
+        // Try desktop capture first for fullscreen content
+        dataUrl = await captureFullscreenContent();
+        showNotification('📸 Captured fullscreen content using desktop capture', 'info');
+      } catch (desktopError) {
+        console.warn('🔧 Desktop capture failed, trying to exit fullscreen:', desktopError);
+        
+        // If desktop capture fails, try exiting fullscreen and using regular capture
+        const exitedFullscreen = await exitFullscreenIfNeeded();
+        if (exitedFullscreen) {
+          showNotification('📸 Exited fullscreen mode to enable extension capture', 'info');
+          const response = await chrome.runtime.sendMessage({ action: 'captureTab' });
+          if (response.error) {
+            throw new Error(response.error);
+          }
+          dataUrl = response.dataUrl;
+        } else {
+          throw new Error('Cannot capture in fullscreen mode and failed to exit fullscreen');
+        }
+      }
+    } else {
+      // Normal tab capture for non-fullscreen content
+      const response = await chrome.runtime.sendMessage({ action: 'captureTab' });
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      dataUrl = response.dataUrl;
+    }
+    
+    // For fullscreen captures without specific coordinates, start area selection
+    if (!left && !top && !width && !height && isInFullscreen()) {
+      // Store the captured image and start area selection UI
+      window.fullscreenCapturedImage = dataUrl;
+      startSnipMode();
+      return;
+    }
+    
+    if (dataUrl) {
+      // Create canvas to crop the image if coordinates provided
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       const img = new Image();
       
       img.onload = () => {
-        // Set canvas size to selection
-        canvas.width = width;
-        canvas.height = height;
-        
-        // Draw the cropped portion
-        ctx.drawImage(img, left, top, width, height, 0, 0, width, height);
+        if (left !== undefined && top !== undefined && width > 0 && height > 0) {
+          // Set canvas size to selection
+          canvas.width = width;
+          canvas.height = height;
+          
+          // Draw the cropped portion
+          ctx.drawImage(img, left, top, width, height, 0, 0, width, height);
+        } else {
+          // Use full image if no crop coordinates
+          canvas.width = img.width;
+          canvas.height = img.height;
+          ctx.drawImage(img, 0, 0);
+        }
         
         // Get the cropped image data
         const croppedDataUrl = canvas.toDataURL('image/png');
@@ -3329,11 +3376,11 @@ async function captureSelectedArea(left, top, width, height) {
         
         console.log('🔧 RunsheetPro Extension: Snipped area captured');
       };
-      img.src = response.dataUrl;
+      img.src = dataUrl;
     }
   } catch (error) {
     console.error('Snip capture error:', error);
-    showNotification('Failed to capture area', 'error');
+    showNotification('Failed to capture area: ' + error.message, 'error');
   }
 }
 
@@ -4348,196 +4395,6 @@ function createSnipControlPanel() {
   createSnipPreviewPanel();
 }
 
-// Capture selected area
-async function captureSelectedArea(left, top, width, height) {
-  try {
-    let dataUrl;
-    
-    // Check if we're in fullscreen mode
-    if (isInFullscreen()) {
-      console.log('🔧 Fullscreen detected, attempting desktop capture');
-      
-      try {
-        // Try desktop capture first for fullscreen content
-        dataUrl = await captureFullscreenContent();
-        showNotification('📸 Captured fullscreen content using desktop capture', 'info');
-      } catch (desktopError) {
-        console.warn('🔧 Desktop capture failed, trying to exit fullscreen:', desktopError);
-        
-        // If desktop capture fails, try exiting fullscreen and using regular capture
-        const exitedFullscreen = await exitFullscreenIfNeeded();
-        if (exitedFullscreen) {
-          showNotification('📸 Exited fullscreen mode to enable extension capture', 'info');
-          const response = await chrome.runtime.sendMessage({ action: 'captureTab' });
-          if (response.error) {
-            throw new Error(response.error);
-          }
-          dataUrl = response.dataUrl;
-        } else {
-          throw new Error('Cannot capture in fullscreen mode and failed to exit fullscreen');
-        }
-      }
-    } else {
-      // Normal tab capture for non-fullscreen content
-      const response = await chrome.runtime.sendMessage({ action: 'captureTab' });
-      if (response.error) {
-        throw new Error(response.error);
-      }
-      dataUrl = response.dataUrl;
-    }
-    
-    const img = new Image();
-    img.onload = () => {
-      // Create canvas for cropping
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      
-      // Account for device pixel ratio
-      const ratio = window.devicePixelRatio || 1;
-      
-      // For fullscreen desktop captures, we might not need to crop since the whole screen was captured
-      // But we'll still crop to the selected area if coordinates were provided
-      if (left !== undefined && top !== undefined && width > 0 && height > 0) {
-        canvas.width = width * ratio;
-        canvas.height = height * ratio;
-        canvas.style.width = width + 'px';
-        canvas.style.height = height + 'px';
-        
-        // Draw cropped portion
-        ctx.drawImage(
-          img,
-          left * ratio, top * ratio, width * ratio, height * ratio,
-          0, 0, width * ratio, height * ratio
-        );
-      } else {
-        // Use full captured image if no cropping coordinates provided
-        canvas.width = img.width;
-        canvas.height = img.height;
-        ctx.drawImage(img, 0, 0);
-      }
-      
-      // Convert to blob
-      canvas.toBlob(async (blob) => {
-        if (blob) {
-          capturedSnips.push({
-            blob: blob,
-            timestamp: Date.now(),
-            width: width,
-            height: height
-          });
-          
-          // Also add to persistent session for navigation/scroll modes
-          if (snipMode === 'navigate' || snipMode === 'scroll') {
-            snipSession.captures.push({
-              blob: blob,
-              timestamp: Date.now(),
-              width: width,
-              height: height
-            });
-            // Save session to storage
-            saveExtensionState();
-          }
-          
-          // Update counter for all modes
-          updateSnipCounter();
-          
-          showNotification(`Snip ${capturedSnips.length} captured!`, 'success');
-          
-          // For navigate mode, hide crosshairs after capture but keep session active
-          if (snipMode === 'navigate') {
-            console.log('🔧 RunsheetPro Extension: Navigate mode - hiding crosshairs and showing nav panel');
-            hideSnipModeForNavigation();
-          }
-          
-          // Handle single mode - process with AI analysis if available
-          if (snipMode === 'single') {
-            try {
-              // Validate captured content format first
-              const validation = await validateCaptureFormat(blob);
-              
-              if (!validation.isValid) {
-                showNotification(validation.error, 'error');
-                cleanupSnipMode();
-                return;
-              }
-              
-              // Store the snip locally for later use
-              window.currentCapturedSnip = blob;
-              window.currentSnipFilename = `captured_snip_${Date.now()}.png`;
-              
-              // If we're in quickview mode, immediately link to the selected row
-              if (currentViewMode === 'full' && currentRowIndex !== undefined) {
-                await linkScreenshotToSpecificRow(currentRowIndex, blob, window.currentSnipFilename);
-                cleanupSnipMode();
-                return;
-              }
-              
-              // For single entry mode, continue with standard flow
-              // Try enhanced AI processing first
-              const aiResult = await processSnipWithAI(blob, {
-                filename: window.currentSnipFilename,
-                row_index: currentRowIndex
-              });
-              
-              if (aiResult.success) {
-                // AI processing succeeded - don't cleanup yet, wait for user decision
-                console.log('Enhanced AI analysis completed successfully');
-                return;
-              } else {
-                // AI processing failed - continue with standard flow
-                console.log('AI processing failed, continuing with standard flow');
-              }
-              
-              // Standard processing flow
-              // Update the Document File Name field in the UI
-              const input = document.querySelector(`input[data-column="Document File Name"]`);
-              if (input) {
-                input.value = window.currentSnipFilename;
-              }
-              
-              // Update the Document File Name column header to show the document interface
-              const headerContainer = document.querySelector('.document-header-container');
-              if (headerContainer) {
-                const uploadInterface = headerContainer.querySelector('.upload-interface');
-                const documentInterface = headerContainer.querySelector('.document-interface');
-                const filenameText = headerContainer.querySelector('.filename-text');
-                
-                if (uploadInterface && documentInterface && filenameText) {
-                  uploadInterface.style.display = 'none';
-                  documentInterface.style.display = 'flex';
-                  filenameText.textContent = window.currentSnipFilename;
-                  headerContainer.style.border = '1px solid hsl(var(--border, 214 32% 91%))';
-                }
-              }
-              
-              // Update screenshot indicator and reset added status
-              updateScreenshotIndicator(true);
-              screenshotAddedToSheet = false; // New screenshot hasn't been added yet
-              
-              cleanupSnipMode();
-              showNotification('✅ Screenshot captured successfully! Fill in any additional data and click "Add Row" to save.', 'success');
-            } catch (error) {
-              console.error('Error capturing snip:', error);
-              showNotification(`Failed to capture screenshot: ${error.message}`, 'error');
-              cleanupSnipMode();
-            }
-          }
-        } else {
-          showNotification('Failed to capture snip', 'error');
-          if (snipMode === 'single') {
-            cleanupSnipMode();
-          }
-        }
-      }, 'image/png');
-    };
-    
-    img.src = response.dataUrl;
-    
-  } catch (error) {
-    console.error('Error capturing snip:', error);
-    showNotification('Failed to capture snip: ' + error.message, 'error');
-  }
-}
 
 // Update snip counter
 function updateSnipCounter() {
