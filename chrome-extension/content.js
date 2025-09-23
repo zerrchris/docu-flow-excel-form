@@ -64,6 +64,9 @@ let snipSelection = null;
 let capturedSnips = [];
 let snipControlPanel = null;
 
+// Fullscreen snip button
+let fullscreenSnipButton = null;
+
 // Check if page is in fullscreen mode
 function isInFullscreen() {
   return !!(document.fullscreenElement || document.webkitFullscreenElement || 
@@ -286,6 +289,102 @@ function createRunsheetButton() {
     showSignInPopup();
   });
   document.body.appendChild(debugButton);
+}
+
+// Create fullscreen snip button
+function createFullscreenSnipButton() {
+  if (fullscreenSnipButton) return fullscreenSnipButton;
+  
+  const button = document.createElement('button');
+  button.id = 'runsheetpro-fullscreen-snip';
+  button.innerHTML = '📄 Snip';
+  button.style.cssText = `
+    position: fixed !important;
+    top: 10px !important;
+    right: 10px !important;
+    z-index: 999999 !important;
+    background: #2563eb !important;
+    color: white !important;
+    border: none !important;
+    padding: 8px 16px !important;
+    border-radius: 6px !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    cursor: pointer !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  `;
+  
+  button.addEventListener('click', async () => {
+    try {
+      if (activeRunsheet) {
+        await captureSelectedArea();
+      } else {
+        showNotification('Please select a runsheet first', 'error');
+      }
+    } catch (error) {
+      console.error('Fullscreen snip error:', error);
+      showNotification('Snip failed: ' + error.message, 'error');
+    }
+  });
+  
+  // Try to inject into menu bar first, fallback to fixed position
+  const menuSelectors = [
+    'nav', 'header', '.menu', '.toolbar', '.navigation', 
+    '.header', '.top-bar', '.nav-bar', '[role="navigation"]',
+    '.menubar', '#menu', '#navigation', '#header',
+    '.navbar', '.site-header', '.main-nav'
+  ];
+  
+  let injected = false;
+  for (const selector of menuSelectors) {
+    const menuElement = document.querySelector(selector);
+    if (menuElement && menuElement.offsetParent !== null) {
+      // Found a visible menu element
+      const wrapper = document.createElement('div');
+      wrapper.style.cssText = 'display: inline-block; margin-left: 10px;';
+      wrapper.appendChild(button);
+      menuElement.appendChild(wrapper);
+      injected = true;
+      console.log('🔧 Injected snip button into menu:', selector);
+      break;
+    }
+  }
+  
+  if (!injected) {
+    // Fallback to body with fixed positioning
+    document.body.appendChild(button);
+    console.log('🔧 Injected snip button as fixed position');
+  }
+  
+  fullscreenSnipButton = button;
+  return button;
+}
+
+// Remove fullscreen snip button
+function removeFullscreenSnipButton() {
+  if (fullscreenSnipButton) {
+    fullscreenSnipButton.remove();
+    fullscreenSnipButton = null;
+  }
+}
+
+// Monitor fullscreen changes
+function handleFullscreenChange() {
+  const isFullscreen = document.fullscreenElement !== null || 
+                      document.webkitFullscreenElement !== null ||
+                      document.mozFullScreenElement !== null ||
+                      document.msFullscreenElement !== null;
+  
+  if (isFullscreen && activeRunsheet) {
+    // Entering fullscreen with active runsheet - add snip button
+    createFullscreenSnipButton();
+    console.log('🔧 Fullscreen detected - added snip button');
+  } else {
+    // Exiting fullscreen - remove snip button
+    removeFullscreenSnipButton();
+  }
+}
 }
 
 // Show sign-in popup
@@ -3470,6 +3569,13 @@ function initializeExtension() {
     // Always create the runsheet button first
     createRunsheetButton();
     console.log('🔧 RunsheetPro Extension: Button creation attempted');
+    
+    // Add fullscreen event listeners
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+    console.log('🔧 Fullscreen event listeners added');
   }).catch((err) => {
     console.warn('🔧 RunsheetPro Extension: Could not read storage, defaulting to enabled:', err);
     createRunsheetButton();
@@ -3513,6 +3619,13 @@ async function init() {
     // Always create the runsheet button first
     createRunsheetButton();
     console.log('🔧 RunsheetPro Extension: Button creation attempted');
+    
+    // Add fullscreen event listeners
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+    console.log('🔧 Fullscreen event listeners added');
     
     // Check authentication after button is created
     const isAuthenticated = await checkAuth();
