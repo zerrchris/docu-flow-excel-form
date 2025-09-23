@@ -64,6 +64,100 @@ let snipSelection = null;
 let capturedSnips = [];
 let snipControlPanel = null;
 
+// Check if page is in fullscreen mode
+function isInFullscreen() {
+  return !!(document.fullscreenElement || document.webkitFullscreenElement || 
+           document.mozFullScreenElement || document.msFullscreenElement);
+}
+
+// Exit fullscreen mode if active
+async function exitFullscreenIfNeeded() {
+  if (isInFullscreen()) {
+    try {
+      if (document.exitFullscreen) {
+        await document.exitFullscreen();
+      } else if (document.webkitExitFullscreen) {
+        await document.webkitExitFullscreen();
+      } else if (document.mozCancelFullScreen) {
+        await document.mozCancelFullScreen();
+      } else if (document.msExitFullscreen) {
+        await document.msExitFullscreen();
+      }
+      
+      // Wait a moment for fullscreen to exit
+      await new Promise(resolve => setTimeout(resolve, 300));
+      console.log('🔧 Exited fullscreen mode for extension access');
+      return true;
+    } catch (error) {
+      console.warn('🔧 Could not exit fullscreen:', error);
+      return false;
+    }
+  }
+  return false;
+}
+
+// Use desktop capture for fullscreen scenarios
+async function captureFullscreenContent() {
+  try {
+    console.log('🔧 Starting desktop capture for fullscreen content');
+    
+    // Request desktop capture from background script
+    const response = await chrome.runtime.sendMessage({ action: 'startScreenCapture' });
+    
+    if (response.error) {
+      throw new Error(response.error);
+    }
+    
+    if (!response.streamId) {
+      throw new Error('No stream ID received from desktop capture');
+    }
+    
+    // Use the stream ID to capture desktop
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: {
+        mandatory: {
+          chromeMediaSource: 'desktop',
+          chromeMediaSourceId: response.streamId,
+          maxWidth: 1920,
+          maxHeight: 1080
+        }
+      }
+    });
+    
+    // Create video element to capture frame
+    const video = document.createElement('video');
+    video.srcObject = stream;
+    await video.play();
+    
+    // Wait for video to load
+    await new Promise((resolve) => {
+      video.onloadedmetadata = resolve;
+    });
+    
+    // Create canvas and capture frame
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0);
+    
+    // Stop stream
+    stream.getTracks().forEach(track => track.stop());
+    
+    // Convert to data URL
+    const dataUrl = canvas.toDataURL('image/png');
+    console.log('🔧 Desktop capture successful');
+    
+    return dataUrl;
+    
+  } catch (error) {
+    console.error('🔧 Desktop capture failed:', error);
+    throw error;
+  }
+}
+
 // Check authentication status
 async function checkAuth() {
   try {
@@ -4144,11 +4238,39 @@ function createSnipControlPanel() {
 // Capture selected area
 async function captureSelectedArea(left, top, width, height) {
   try {
-    // Get tab capture
-    const response = await chrome.runtime.sendMessage({ action: 'captureTab' });
+    let dataUrl;
     
-    if (response.error) {
-      throw new Error(response.error);
+    // Check if we're in fullscreen mode
+    if (isInFullscreen()) {
+      console.log('🔧 Fullscreen detected, attempting desktop capture');
+      
+      try {
+        // Try desktop capture first for fullscreen content
+        dataUrl = await captureFullscreenContent();
+        showNotification('📸 Captured fullscreen content using desktop capture', 'info');
+      } catch (desktopError) {
+        console.warn('🔧 Desktop capture failed, trying to exit fullscreen:', desktopError);
+        
+        // If desktop capture fails, try exiting fullscreen and using regular capture
+        const exitedFullscreen = await exitFullscreenIfNeeded();
+        if (exitedFullscreen) {
+          showNotification('📸 Exited fullscreen mode to enable extension capture', 'info');
+          const response = await chrome.runtime.sendMessage({ action: 'captureTab' });
+          if (response.error) {
+            throw new Error(response.error);
+          }
+          dataUrl = response.dataUrl;
+        } else {
+          throw new Error('Cannot capture in fullscreen mode and failed to exit fullscreen');
+        }
+      }
+    } else {
+      // Normal tab capture for non-fullscreen content
+      const response = await chrome.runtime.sendMessage({ action: 'captureTab' });
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      dataUrl = response.dataUrl;
     }
     
     const img = new Image();
@@ -4160,17 +4282,26 @@ async function captureSelectedArea(left, top, width, height) {
       // Account for device pixel ratio
       const ratio = window.devicePixelRatio || 1;
       
-      canvas.width = width * ratio;
-      canvas.height = height * ratio;
-      canvas.style.width = width + 'px';
-      canvas.style.height = height + 'px';
-      
-      // Draw cropped portion
-      ctx.drawImage(
-        img,
-        left * ratio, top * ratio, width * ratio, height * ratio,
-        0, 0, width * ratio, height * ratio
-      );
+      // For fullscreen desktop captures, we might not need to crop since the whole screen was captured
+      // But we'll still crop to the selected area if coordinates were provided
+      if (left !== undefined && top !== undefined && width > 0 && height > 0) {
+        canvas.width = width * ratio;
+        canvas.height = height * ratio;
+        canvas.style.width = width + 'px';
+        canvas.style.height = height + 'px';
+        
+        // Draw cropped portion
+        ctx.drawImage(
+          img,
+          left * ratio, top * ratio, width * ratio, height * ratio,
+          0, 0, width * ratio, height * ratio
+        );
+      } else {
+        // Use full captured image if no cropping coordinates provided
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+      }
       
       // Convert to blob
       canvas.toBlob(async (blob) => {
