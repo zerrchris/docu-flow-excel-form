@@ -383,8 +383,104 @@ function handleFullscreenChange() {
   } else {
     // Exiting fullscreen - remove snip button
     removeFullscreenSnipButton();
+    console.log('🔧 Exited fullscreen - removed snip button');
+    
+    // Check if there's an active snip session with captures
+    if (isSnipMode && capturedSnips && capturedSnips.length > 0) {
+      // Show finish snipping dialog
+      showFinishSnippingDialog();
+    }
   }
-  }
+}
+
+// Show finish snipping dialog when exiting fullscreen with active snips
+function showFinishSnippingDialog() {
+  // Remove any existing dialog
+  const existing = document.getElementById('finish-snipping-dialog');
+  if (existing) existing.remove();
+  
+  const dialog = document.createElement('div');
+  dialog.id = 'finish-snipping-dialog';
+  dialog.style.cssText = `
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    background: white !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 12px !important;
+    padding: 24px !important;
+    z-index: 2147483647 !important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15) !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    max-width: 400px !important;
+    width: 90vw !important;
+  `;
+  
+  dialog.innerHTML = `
+    <div style="text-align: center; margin-bottom: 20px;">
+      <h3 style="margin: 0 0 8px 0; font-size: 18px; color: #1f2937;">📸 Snip Session Active</h3>
+      <p style="margin: 0; color: #6b7280; font-size: 14px;">You have ${capturedSnips.length} captured snip(s)</p>
+    </div>
+    <div style="display: flex; gap: 12px; justify-content: center;">
+      <button id="finish-snipping-btn" style="
+        background: #3b82f6 !important;
+        color: white !important;
+        border: none !important;
+        padding: 10px 20px !important;
+        border-radius: 8px !important;
+        cursor: pointer !important;
+        font-size: 14px !important;
+        font-weight: 500 !important;
+      ">✅ Finish & Add to Row</button>
+      <button id="continue-snipping-btn" style="
+        background: #6b7280 !important;
+        color: white !important;
+        border: none !important;
+        padding: 10px 20px !important;
+        border-radius: 8px !important;
+        cursor: pointer !important;
+        font-size: 14px !important;
+        font-weight: 500 !important;
+      ">📄 Continue Snipping</button>
+      <button id="cancel-snipping-btn" style="
+        background: #ef4444 !important;
+        color: white !important;
+        border: none !important;
+        padding: 10px 20px !important;
+        border-radius: 8px !important;
+        cursor: pointer !important;
+        font-size: 14px !important;
+        font-weight: 500 !important;
+      ">❌ Cancel</button>
+    </div>
+  `;
+  
+  // Add event listeners
+  dialog.querySelector('#finish-snipping-btn').addEventListener('click', () => {
+    dialog.remove();
+    completeSnipSession();
+  });
+  
+  dialog.querySelector('#continue-snipping-btn').addEventListener('click', () => {
+    dialog.remove();
+    // Resume snip mode for more captures
+    if (snipOverlay) {
+      snipOverlay.style.display = 'block';
+    }
+    if (snipControlPanel) {
+      snipControlPanel.style.display = 'flex';
+    }
+    showNotification('Continue snipping! Drag to select more areas, then press ESC when done.', 'info');
+  });
+  
+  dialog.querySelector('#cancel-snipping-btn').addEventListener('click', () => {
+    dialog.remove();
+    cancelSnipSession();
+  });
+  
+  document.body.appendChild(dialog);
+}
 
 // Show sign-in popup
 function showSignInPopup() {
@@ -4140,8 +4236,8 @@ async function startDocumentSnippingMode() {
     return;
   }
   
-  // Start snip mode with crosshairs
-  startSnipModeWithMode('single', true);
+  // Start snip mode with crosshairs in navigate mode for multi-page support
+  startSnipModeWithMode('navigate', true);
   showNotification('✂️ Snip Mode Active! Drag to select area → Right-click "RunsheetPro: Snip Document" for more pages → Press ESC when done', 'info');
 }
 
@@ -4310,9 +4406,11 @@ function createSnipOverlay() {
       
       // Handle different modes after capture  
       if (snipMode === 'single') {
-        // Single mode: automatically store and cleanup
+        // Single mode: process the last captured snip and cleanup
+        if (capturedSnips.length > 0) {
+          await processSnipForRow(capturedSnips[capturedSnips.length - 1]);
+        }
         cleanupSnipMode();
-        showNotification('Screenshot captured and saved!', 'success');
       } else if (snipMode === 'scroll') {
         // Scroll mode: keep crosshairs active for continuous snipping
         snipOverlay.style.display = 'block';
@@ -4692,13 +4790,80 @@ function completeSnipSession() {
     // Process the captured snips
     if (capturedSnips.length === 1) {
       // Single snip - process directly
-      processSnip(capturedSnips[0]);
+      processSnipForRow(capturedSnips[0]);
     } else {
       // Multiple snips - combine them
       combineAndProcessSnips(capturedSnips);
     }
   }
   cleanupSnipMode();
+}
+
+// Process a single snip and add it to the current row
+async function processSnipForRow(snipData) {
+  try {
+    if (!activeRunsheet || currentRowIndex === undefined) {
+      showNotification('No active runsheet or row selected', 'error');
+      return;
+    }
+
+    // Store the snip locally for "Add to Row" functionality
+    window.currentCapturedSnip = snipData.blob;
+    window.currentSnipFilename = `snip_${Date.now()}.png`;
+    
+    // If we're in full view mode, immediately link to the selected row
+    if (currentViewMode === 'full' && currentRowIndex !== undefined) {
+      await linkScreenshotToSpecificRow(currentRowIndex, snipData.blob, window.currentSnipFilename);
+      showNotification('Screenshot added to row successfully!', 'success');
+      return;
+    }
+    
+    // Update the Document File Name field in the UI
+    const input = document.querySelector(`input[data-column="Document File Name"]`);
+    if (input) {
+      input.value = window.currentSnipFilename;
+    }
+    
+    // Show file indication in the document header
+    const headerContainer = document.querySelector('.document-header-container');
+    if (headerContainer) {
+      const uploadInterface = headerContainer.querySelector('.upload-interface');
+      const documentInterface = headerContainer.querySelector('.document-interface');
+      const filenameText = headerContainer.querySelector('.filename-text');
+      
+      if (uploadInterface && documentInterface && filenameText) {
+        uploadInterface.style.display = 'none';
+        documentInterface.style.display = 'flex';
+        filenameText.textContent = window.currentSnipFilename;
+        headerContainer.style.border = '1px solid hsl(var(--border, 214 32% 91%))';
+      }
+    }
+    
+    // Update screenshot indicator and reset added status
+    updateScreenshotIndicator(true);
+    screenshotAddedToSheet = false; // New screenshot hasn't been added yet
+    
+    showNotification('Screenshot captured and ready! Fill in data and click "Add to Row" to save.', 'success');
+    
+  } catch (error) {
+    console.error('Error processing snip for row:', error);
+    showNotification('Failed to process screenshot: ' + error.message, 'error');
+  }
+}
+
+// Combine multiple snips and process them
+async function combineAndProcessSnips(snips) {
+  try {
+    // Combine snips vertically
+    const finalBlob = await combineSnipsVertically(snips);
+    
+    // Process the combined snip
+    await processSnipForRow({ blob: finalBlob });
+    
+  } catch (error) {
+    console.error('Error combining snips:', error);
+    showNotification('Failed to combine screenshots: ' + error.message, 'error');
+  }
 }
 
 // Cancel snip session
