@@ -4121,19 +4121,28 @@ function loadSelectedRunsheet(runsheetData) {
   showNotification(`Loaded runsheet: ${runsheetData.name}`, 'success');
 }
 
-// Start document snipping mode (for toolbar button)
-function startDocumentSnippingMode() {
-  console.log('🔧 RunsheetPro Extension: Starting document snipping mode from toolbar');
+// Start document snipping mode (for right-click context menu or keyboard shortcut)
+async function startDocumentSnippingMode() {
+  console.log('🔧 RunsheetPro Extension: Starting document snipping mode from right-click/shortcut');
   
-  // Check if we have an active runsheet and authentication
-  if (!activeRunsheet) {
-    showNotification('No active runsheet. Please select a runsheet first.', 'warning');
+  // Check authentication first
+  const isAuthenticated = await checkAuth();
+  if (!isAuthenticated) {
+    showNotification('Please sign in to RunsheetPro first', 'warning');
+    showSignInPopup();
     return;
   }
   
-  // Start single snip mode directly without overwrite check (user initiated)
+  // If no active runsheet, show selector first
+  if (!activeRunsheet) {
+    showNotification('Select a runsheet to snip documents to', 'info');
+    showRunsheetSelector();
+    return;
+  }
+  
+  // Start snip mode with crosshairs
   startSnipModeWithMode('single', true);
-  showNotification('Click and drag to select the document area to capture', 'info');
+  showNotification('✂️ Snip Mode Active! Drag to select area → Right-click "RunsheetPro: Snip Document" for more pages → Press ESC when done', 'info');
 }
 
 // Start snip mode with specific mode
@@ -4179,6 +4188,9 @@ function startSnipModeWithMode(mode = 'single', skipOverwriteCheck = false) {
   }
   
   createSnipOverlay();
+  
+  // Add escape key handler for snip mode
+  document.addEventListener('keydown', handleSnipModeEscape, true);
   
   // Disable other extension interactions during snip mode
   disableExtensionInteractions();
@@ -4652,10 +4664,56 @@ function resumeSnipMode() {
   showNotification('Ready for next snip! Drag to select area.', 'info');
 }
 
+// Handle escape key during snip mode
+function handleSnipModeEscape(e) {
+  if (e.key === 'Escape' && isSnipMode) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // If we have captured snips, offer to complete or cancel
+    if (capturedSnips && capturedSnips.length > 0) {
+      const shouldComplete = confirm(`You have ${capturedSnips.length} captured snip(s). Complete and save to runsheet? (Cancel to discard)`);
+      if (shouldComplete) {
+        completeSnipSession();
+      } else {
+        cancelSnipSession();
+      }
+    } else {
+      // No snips captured, just exit
+      cancelSnipSession();
+    }
+  }
+}
+
+// Complete snip session with captured snips
+function completeSnipSession() {
+  if (capturedSnips && capturedSnips.length > 0) {
+    showNotification(`Completing snip session with ${capturedSnips.length} capture(s)...`, 'info');
+    // Process the captured snips
+    if (capturedSnips.length === 1) {
+      // Single snip - process directly
+      processSnip(capturedSnips[0]);
+    } else {
+      // Multiple snips - combine them
+      combineAndProcessSnips(capturedSnips);
+    }
+  }
+  cleanupSnipMode();
+}
+
+// Cancel snip session
+function cancelSnipSession() {
+  showNotification('Snip session cancelled', 'info');
+  cleanupSnipMode();
+}
+
 // Cleanup snip mode
 function cleanupSnipMode() {
   isSnipMode = false;
   capturedSnips = [];
+  
+  // Remove escape key handler
+  document.removeEventListener('keydown', handleSnipModeEscape, true);
   
   if (snipOverlay) {
     snipOverlay.remove();
@@ -6212,6 +6270,9 @@ function cleanupSnipMode() {
   isSnipMode = false;
   snipMode = 'single';
   capturedSnips = [];
+  
+  // Remove escape key handler
+  document.removeEventListener('keydown', handleSnipModeEscape, true);
   
   // Disable smart scrolling
   disableSmartScrollDetection();
