@@ -6756,7 +6756,6 @@ function updateMassCapturePanel() {
   if (rowSpan) rowSpan.textContent = currentRowIndex + 1;
   if (countSpan) countSpan.textContent = massCaptureCount;
 }
-}
 
 // End mass capture mode
 function endMassCaptureMode() {
