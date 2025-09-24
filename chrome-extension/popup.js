@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const toggleBtn = document.getElementById('toggleBtn');
   const viewModeBtn = document.getElementById('viewModeBtn');
   const screenshotBtn = document.getElementById('screenshotBtn');
+  const massCaptureBtn = document.getElementById('massCaptureBtn');
   const openAppBtn = document.getElementById('openApp');
 
   // Check current extension status
@@ -23,9 +24,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         viewModeBtn.style.display = 'block';
         viewModeBtn.textContent = viewMode === 'single' ? 'Switch to Full View' : 'Switch to Single Entry';
         screenshotBtn.style.display = 'block';
+        massCaptureBtn.style.display = 'block';
       } else {
         viewModeBtn.style.display = 'none';
         screenshotBtn.style.display = 'none';
+        massCaptureBtn.style.display = 'none';
       }
       
       return isEnabled;
@@ -102,6 +105,23 @@ document.addEventListener('DOMContentLoaded', async () => {
       window.close(); // Close popup after starting snip mode
     } catch (error) {
       console.error('Error showing snip mode selector:', error);
+    }
+  });
+
+  // Mass capture button
+  massCaptureBtn.addEventListener('click', async () => {
+    try {
+      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tabs[0]) {
+        chrome.tabs.sendMessage(tabs[0].id, { 
+          action: 'startMassCapture'
+        }).catch(() => {
+          console.error('Could not start mass capture mode');
+        });
+      }
+      window.close(); // Close popup after starting mass capture mode
+    } catch (error) {
+      console.error('Error starting mass capture mode:', error);
     }
   });
 
