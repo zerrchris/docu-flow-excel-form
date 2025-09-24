@@ -65,6 +65,10 @@ let snipSelection = null;
 let capturedSnips = [];
 let snipControlPanel = null;
 
+// Multi-step snip session variables
+let isSnipSession = false;
+let snipSessionData = [];
+
 // Mass capture mode variables
 let isMassCaptureMode = false;
 let massCapturePanel = null;
@@ -5004,7 +5008,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   } else if (request.action === 'nextSnip') {
     // Handle next snip from context menu
     console.log('🔧 RunsheetPro Extension: Next snip triggered from context menu');
-    if (isMassCaptureMode) {
+    if (isSnipSession) {
+      // If we're in a snip session, capture next snip
+      captureSnipInSession();
+    } else if (isMassCaptureMode) {
       // If we're in mass capture mode and already in an active snip session, resume snip mode
       // Otherwise start a new document session
       if (isSnipMode) {
@@ -5015,6 +5022,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     } else {
       resumeSnipMode();
     }
+  } else if (request.action === 'beginSnipSession') {
+    // Start a new multi-step snip session
+    console.log('🔧 RunsheetPro Extension: Begin snip session triggered');
+    beginSnipSession();
+  } else if (request.action === 'finishSnipSession') {
+    // Finish the multi-step snip session
+    console.log('🔧 RunsheetPro Extension: Finish snip session triggered');
+    finishSnipSession();
   } else if (request.action === 'openRunsheet') {
     // Open the runsheet UI: if frame exists, toggle; else show selector/sign-in
     (async () => {
@@ -7154,3 +7169,209 @@ async function refreshRunsheetDataFromDatabase() {
     console.error('🔄 RunsheetPro Extension: Failed to refresh runsheet data:', error);
   }
 }
+
+// Multi-step snip session functions
+function beginSnipSession() {
+  console.log('🔧 RunsheetPro Extension: Beginning snip session');
+  
+  // Initialize snip session
+  isSnipSession = true;
+  snipSessionData = [];
+  
+  // Update context menu to show "Next Snip"
+  chrome.runtime.sendMessage({ 
+    action: 'updateSnipContextMenu', 
+    enabled: true, 
+    state: 'next' 
+  });
+  
+  showNotification('Snip session started! Navigate and right-click to capture snips.', 'success');
+}
+
+function captureSnipInSession() {
+  console.log('🔧 RunsheetPro Extension: Capturing snip in session');
+  
+  // Start screen capture for this snip
+  startSnipMode('single');
+  
+  // Override the completion handler to add to session data
+  const originalCompleteHandler = window.completeSnipSession;
+  window.completeSnipSession = function(snipData) {
+    // Add the snip data to session
+    snipSessionData.push(snipData);
+    
+    // Update context menu to show "Finish Snipping" after first capture
+    chrome.runtime.sendMessage({ 
+      action: 'updateSnipContextMenu', 
+      enabled: true, 
+      state: 'finish' 
+    });
+    
+    showNotification(`Snip ${snipSessionData.length} captured! Navigate and right-click for next snip or to finish.`, 'success');
+    
+    // Reset snip mode but keep session active
+    isSnipMode = false;
+    if (snipOverlay) { snipOverlay.remove(); snipOverlay = null; }
+    if (snipControlPanel) { snipControlPanel.remove(); snipControlPanel = null; }
+    
+    // Restore original handler
+    if (originalCompleteHandler) {
+      window.completeSnipSession = originalCompleteHandler;
+    }
+  };
+}
+
+function finishSnipSession() {
+  console.log('🔧 RunsheetPro Extension: Finishing snip session');
+  
+  if (snipSessionData.length === 0) {
+    showNotification('No snips captured in this session.', 'warning');
+    endSnipSession();
+    return;
+  }
+  
+  // Process all captured snips and add to next blank row
+  processSnipSessionData();
+  
+  // End the session
+  endSnipSession();
+}
+
+function endSnipSession() {
+  // Clean up session state
+  isSnipSession = false;
+  snipSessionData = [];
+  
+  // Remove context menu
+  chrome.runtime.sendMessage({ 
+    action: 'updateSnipContextMenu', 
+    enabled: false 
+  });
+  
+  // Show context menu for beginning new session
+  chrome.runtime.sendMessage({ 
+    action: 'updateSnipContextMenu', 
+    enabled: true, 
+    state: 'begin' 
+  });
+  
+  showNotification('Snip session ended.', 'info');
+}
+
+async function processSnipSessionData() {
+  if (!activeRunsheet || !userSession) {
+    showNotification('No active runsheet. Please select a runsheet first.', 'error');
+    return;
+  }
+  
+  try {
+    console.log('🔧 RunsheetPro Extension: Processing snip session data');
+    
+    // Find the next blank row
+    const nextBlankRowIndex = findNextBlankRow();
+    
+    // Combine all snip data into a single entry
+    const combinedData = {};
+    
+    // Process each snip and extract data
+    for (let i = 0; i < snipSessionData.length; i++) {
+      const snipData = snipSessionData[i];
+      
+      // Use enhanced document analysis for each snip
+      const analysisResult = await analyzeSnipWithAI(snipData);
+      
+      if (analysisResult && analysisResult.extractedData) {
+        // Merge extracted data
+        Object.assign(combinedData, analysisResult.extractedData);
+      }
+    }
+    
+    // Add the combined data to the next blank row
+    await addDataToRunsheet(combinedData, nextBlankRowIndex);
+    
+    showNotification(`Snip session data added to row ${nextBlankRowIndex + 1}!`, 'success');
+    
+  } catch (error) {
+    console.error('🔧 RunsheetPro Extension: Error processing snip session:', error);
+    showNotification('Error processing snip session data.', 'error');
+  }
+}
+
+function findNextBlankRow() {
+  if (!activeRunsheet || !activeRunsheet.data) return 0;
+  
+  // Find first completely blank row
+  for (let i = 0; i < activeRunsheet.data.length; i++) {
+    const row = activeRunsheet.data[i];
+    const isBlank = !row || Object.values(row).every(value => !value || value.trim() === '');
+    if (isBlank) {
+      return i;
+    }
+  }
+  
+  // If no blank row found, return next index
+  return activeRunsheet.data.length;
+}
+
+async function analyzeSnipWithAI(snipData) {
+  try {
+    // Convert snip to base64
+    const base64Data = await blobToBase64(snipData.blob);
+    
+    // Use enhanced document analysis
+    const response = await fetch('https://xnpmrafjjqsissbtempj.supabase.co/functions/v1/enhanced-document-analysis', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${userSession.access_token}`,
+        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhucG1yYWZqanFzaXNzYnRlbXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4NzMyNjcsImV4cCI6MjA2ODQ0OTI2N30.aQG15Ed8IOLJfM5p7XF_kEM5FUz8zJug1pxAi9rTTsg',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        image_base64: base64Data,
+        runsheet_id: activeRunsheet.id,
+        extraction_preferences: activeRunsheet.columnInstructions || {}
+      })
+    });
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error analyzing snip with AI:', error);
+    return null;
+  }
+}
+
+async function addDataToRunsheet(data, rowIndex) {
+  if (!activeRunsheet || !activeRunsheet.data) return;
+  
+  // Ensure the data array has enough rows
+  while (activeRunsheet.data.length <= rowIndex) {
+    activeRunsheet.data.push({});
+  }
+  
+  // Add the data to the specified row
+  activeRunsheet.data[rowIndex] = { ...activeRunsheet.data[rowIndex], ...data };
+  
+  // Update the runsheet display if visible
+  if (runsheetFrame) {
+    updateRunsheetDisplay();
+  }
+  
+  // Save to database
+  await saveRunsheetToDatabase();
+}
+
+async function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+// Initialize context menu for beginning snip sessions
+chrome.runtime.sendMessage({ 
+  action: 'updateSnipContextMenu', 
+  enabled: true, 
+  state: 'begin' 
+});
