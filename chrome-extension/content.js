@@ -4661,10 +4661,28 @@ async function combineSnipsVertically(snips) {
       };
       
       img.onerror = () => {
-        reject(new Error('Failed to load snip image'));
+        console.error('🔧 RunsheetPro Extension: Failed to load snip image at index', index, snip);
+        reject(new Error(`Failed to load snip image at index ${index}`));
       };
       
-      img.src = URL.createObjectURL(snip.blob);
+      // Validate and handle different snip data formats
+      try {
+        if (snip && snip.blob && snip.blob instanceof Blob) {
+          img.src = URL.createObjectURL(snip.blob);
+        } else if (snip && snip.dataUrl && typeof snip.dataUrl === 'string') {
+          img.src = snip.dataUrl;
+        } else if (snip && typeof snip === 'string') {
+          // Handle case where snip is just a data URL string
+          img.src = snip;
+        } else {
+          console.error('🔧 RunsheetPro Extension: Invalid snip data format:', snip);
+          reject(new Error(`Invalid snip data format at index ${index}`));
+          return;
+        }
+      } catch (error) {
+        console.error('🔧 RunsheetPro Extension: Error creating object URL for snip:', error, snip);
+        reject(new Error(`Error processing snip at index ${index}: ${error.message}`));
+      }
     });
   });
 }
