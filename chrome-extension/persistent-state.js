@@ -306,7 +306,7 @@ async function initializeExtensionWithStateRestore() {
     
     // If we have an active runsheet, show the frame
     if (activeRunsheet && userSession) {
-      createRunsheetFrame();
+      await createRunsheetFrame();
       if (runsheetFrame) {
         runsheetFrame.style.display = 'block';
         document.body.appendChild(runsheetFrame);

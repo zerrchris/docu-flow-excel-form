@@ -477,7 +477,7 @@ function showQuickCreateDialog() {
         
         // Load the new runsheet immediately - no delay needed
         if (data.runsheet) {
-          loadRunsheet(data.runsheet);
+          await loadRunsheet(data.runsheet);
         } else {
           console.error('🔧 RunsheetPro Extension: No runsheet data in response');
         }
@@ -626,8 +626,8 @@ async function showRunsheetSelector() {
           runsheetItem.style.background = 'hsl(var(--card, 0 0% 100%))';
         });
         
-        runsheetItem.addEventListener('click', () => {
-          loadRunsheet(runsheet);
+        runsheetItem.addEventListener('click', async () => {
+          await loadRunsheet(runsheet);
           closeSelector();
         });
         
@@ -935,7 +935,7 @@ async function analyzeDocument(file, filename) {
 }
 
 // Load a specific runsheet
-function loadRunsheet(runsheet) {
+async function loadRunsheet(runsheet) {
   console.log('🔧 RunsheetPro Extension: Loading runsheet:', runsheet.name);
   
   activeRunsheet = runsheet;
@@ -972,7 +972,7 @@ function loadRunsheet(runsheet) {
   }
   
   // Create the frame with the loaded runsheet
-  createRunsheetFrame();
+  await createRunsheetFrame();
   
   // Show the frame
   if (runsheetFrame) {
@@ -1000,7 +1000,7 @@ function toggleRunsheetFrame() {
 }
 
 // Create the fixed bottom frame
-function createRunsheetFrame() {
+async function createRunsheetFrame() {
   if (runsheetFrame) return; // Already exists
   
   console.log('🔧 RunsheetPro Extension: Creating runsheet frame');
@@ -1097,11 +1097,10 @@ function createRunsheetFrame() {
     flex: 1 !important;
   `;
   
-  // Load current view mode from storage
-  chrome.storage.local.get(['viewMode']).then(result => {
-    currentViewMode = result.viewMode || 'single';
-    updateViewModeButton();
-  });
+  // Load current view mode from storage first, then create content
+  const storageResult = await chrome.storage.local.get(['viewMode']);
+  currentViewMode = storageResult.viewMode || 'single';
+  updateViewModeButton();
   
   // Create content based on view mode
   if (currentViewMode === 'full') {
@@ -3445,7 +3444,7 @@ async function init() {
         console.log('🔧 RunsheetPro Extension: Set currentRowIndex to next available row:', currentRowIndex);
         
         // Create and show the frame with the restored runsheet
-        createRunsheetFrame();
+        await createRunsheetFrame();
         if (runsheetFrame) {
           runsheetFrame.style.display = 'block';
           document.body.appendChild(runsheetFrame);
@@ -3838,9 +3837,9 @@ async function showRunsheetSelectorAlt() {
           item.style.borderColor = '#e5e7eb';
         });
         
-        item.addEventListener('click', () => {
+        item.addEventListener('click', async () => {
           const runsheetData = JSON.parse(decodeURIComponent(item.dataset.runsheet));
-          loadSelectedRunsheet(runsheetData);
+          await loadSelectedRunsheet(runsheetData);
           overlay.remove();
         });
       });
@@ -3858,7 +3857,7 @@ async function showRunsheetSelectorAlt() {
 }
 
 // Load selected runsheet
-function loadSelectedRunsheet(runsheetData) {
+async function loadSelectedRunsheet(runsheetData) {
   // Convert database format to extension format
   activeRunsheet = {
     id: runsheetData.id,
@@ -3879,7 +3878,7 @@ function loadSelectedRunsheet(runsheetData) {
   }
 
   // Refresh the frame
-  createRunsheetFrame();
+  await createRunsheetFrame();
   if (runsheetFrame) {
     runsheetFrame.style.display = 'block';
     document.body.appendChild(runsheetFrame);
