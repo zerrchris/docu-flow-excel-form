@@ -781,9 +781,13 @@ async function addRowToSheet() {
     if (result.success) {
       showNotification(`Row ${result.row_index + 1} added successfully!`, 'success');
       
-      // Mark screenshot as added to sheet if one was included
+      // Mark screenshot as added to sheet and clear current snip if one was included
       if (screenshotUrl) {
         screenshotAddedToSheet = true;
+        // Clear the current snip since it's now saved to the runsheet
+        window.currentCapturedSnip = null;
+        window.currentSnipFilename = null;
+        updateScreenshotIndicator(false);
       }
       
       // If a document was created, fire an event for the main app to refresh its document map
