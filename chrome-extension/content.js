@@ -4905,7 +4905,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log('🔧 RunsheetPro Extension: Received message:', request);
   
   if (request.action === 'toggle') {
-    if (runsheetButton) {
+    if (runsheetButton && !isMassCaptureMode) {
       runsheetButton.style.display = runsheetButton.style.display === 'none' ? 'block' : 'none';
     }
   } else if (request.action === 'toggleExtension') {
@@ -4914,7 +4914,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       if (!runsheetButton) {
         createRunsheetButton();
       } else {
-        runsheetButton.style.display = 'block';
+        if (!isMassCaptureMode) runsheetButton.style.display = 'block';
       }
     } else {
       if (runsheetButton) runsheetButton.style.display = 'none';
@@ -4985,7 +4985,7 @@ try {
       const enabled = (changes.extensionEnabled ? changes.extensionEnabled.newValue !== false : true)
         && (changes.extension_enabled ? changes.extension_enabled.newValue !== false : true)
         && !(changes.extension_disabled ? changes.extension_disabled.newValue === true : false);
-      if (enabled) {
+      if (enabled && !isMassCaptureMode) {
         if (!runsheetButton) createRunsheetButton();
         else runsheetButton.style.display = 'block';
       } else {
@@ -6650,6 +6650,9 @@ function startMassCaptureMode() {
   }
   if (runsheetButton) {
     runsheetButton.style.display = 'none';
+    console.log('🔧 RunsheetPro Extension: Hidden runsheet button for mass capture mode');
+  } else {
+    console.log('🔧 RunsheetPro Extension: No runsheet button found to hide');
   }
   
   // Create the minimal floating control panel
@@ -6796,6 +6799,7 @@ function endMassCaptureMode() {
   }
   if (runsheetButton) {
     runsheetButton.style.display = 'block';
+    console.log('🔧 RunsheetPro Extension: Restored runsheet button after mass capture mode');
   }
   
   // Navigate to next available blank row (like when extension first opens)
