@@ -4424,7 +4424,8 @@ async function finishSnipping() {
     showNotification('Failed to process snips: ' + error.message, 'error');
   } finally {
     if (!isMassCaptureMode) {
-      cleanupSnipMode();
+      // Use the preserve data cleanup to keep snip available for viewing
+      cleanupSnipModePreserveData();
     }
   }
 }
@@ -6207,6 +6208,54 @@ function cleanupSnipMode() {
   cleanupScrollOverlay();
   
   console.log('🔧 RunsheetPro Extension: Snip mode cleaned up with smart scroll disabled');
+}
+
+// Cleanup snip mode UI but preserve captured snip data for viewing
+function cleanupSnipModePreserveData() {
+  isSnipMode = false;
+  snipMode = 'single';
+  capturedSnips = [];
+  
+  // Disable context menu for next snip
+  chrome.runtime.sendMessage({ action: 'updateSnipContextMenu', enabled: false });
+  
+  // Disable smart scrolling
+  disableSmartScrollDetection();
+  
+  // Re-enable extension interactions
+  enableExtensionInteractions();
+  
+  // Remove overlays and UI
+  if (snipOverlay) {
+    snipOverlay.remove();
+    snipOverlay = null;
+  }
+  
+  if (snipControlPanel) {
+    snipControlPanel.remove();
+    snipControlPanel = null;
+  }
+  
+  if (snipSelection) {
+    snipSelection.remove();
+    snipSelection = null;
+  }
+  
+  // Remove navigation panel if it exists
+  const navPanel = document.getElementById('runsheetpro-nav-controls');
+  if (navPanel) {
+    navPanel.remove();
+  }
+  
+  // Clear snip session but keep window.currentCapturedSnip for viewing
+  if (typeof cleanupSnipSession === 'function') {
+    cleanupSnipSession();
+  }
+  
+  // Clean up scroll overlay modifications
+  cleanupScrollOverlay();
+  
+  console.log('🔧 RunsheetPro Extension: Snip mode UI cleaned up but snip data preserved for viewing');
 }
 
 // Make the overlay allow scrolling through to underlying elements
