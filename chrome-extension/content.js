@@ -4065,9 +4065,8 @@ function createSnipOverlay() {
       
       // Handle different modes after capture  
       if (snipMode === 'single') {
-        // Single mode: automatically store and cleanup
-        cleanupSnipMode();
-        showNotification('Screenshot captured and saved!', 'success');
+        // Single mode is handled within captureSelectedArea's toBlob flow (validation, storage, UI)
+        // Do not cleanup here to preserve window.currentCapturedSnip for preview
       } else if (snipMode === 'scroll') {
         // Scroll mode: keep crosshairs active for continuous snipping
         snipOverlay.style.display = 'block';
@@ -5549,13 +5548,15 @@ function updateTableWidth() {
 function showSnipPreview() {
   console.log('🔧 showSnipPreview called, currentRowIndex:', currentRowIndex);
   
-  if (!activeRunsheet || !activeRunsheet.data || currentRowIndex >= activeRunsheet.data.length) {
-    showNotification('No snip data available', 'error');
-    return;
+  // If row index is beyond current data, don't exit; we may still have a transient snip to show
+  let currentRow = null;
+  const hasRow = activeRunsheet && activeRunsheet.data && currentRowIndex < activeRunsheet.data.length;
+  if (hasRow) {
+    currentRow = activeRunsheet.data[currentRowIndex];
+    console.log('🔧 Current row data:', currentRow);
+  } else {
+    console.log('🔧 No row data at this index; attempting to preview transient/session snip');
   }
-
-  const currentRow = activeRunsheet.data[currentRowIndex];
-  console.log('🔧 Current row data:', currentRow);
   
   let snipUrl = null;
 
