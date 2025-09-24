@@ -7370,8 +7370,35 @@ async function blobToBase64(blob) {
 }
 
 // Initialize context menu for beginning snip sessions
-chrome.runtime.sendMessage({ 
-  action: 'updateSnipContextMenu', 
-  enabled: true, 
-  state: 'begin' 
+document.addEventListener('DOMContentLoaded', () => {
+  // Delay initialization to ensure background script is ready
+  setTimeout(() => {
+    chrome.runtime.sendMessage({ 
+      action: 'updateSnipContextMenu', 
+      enabled: true, 
+      state: 'begin' 
+    });
+  }, 1000);
 });
+
+// Also initialize immediately for already loaded pages
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+      chrome.runtime.sendMessage({ 
+        action: 'updateSnipContextMenu', 
+        enabled: true, 
+        state: 'begin' 
+      });
+    }, 1000);
+  });
+} else {
+  // Document already loaded
+  setTimeout(() => {
+    chrome.runtime.sendMessage({ 
+      action: 'updateSnipContextMenu', 
+      enabled: true, 
+      state: 'begin' 
+    });
+  }, 1000);
+}
