@@ -14,27 +14,6 @@ self.addEventListener('unhandledrejection', (event) => {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log('Background received message:', message);
   
-  if (message.action === 'initializeContextMenu') {
-    createContextMenu();
-    sendResponse({ success: true });
-    return;
-  }
-  
-if (message.action === 'updateContextMenu') {
-    const updateProps = {};
-    if (typeof message.visible === 'boolean') updateProps.visible = message.visible;
-    if (typeof message.enabled === 'boolean') updateProps.enabled = message.enabled;
-    chrome.contextMenus.update("runsheetpro-next-snip", updateProps, () => {
-      if (chrome.runtime.lastError) {
-        console.error('Context menu update error:', chrome.runtime.lastError);
-      } else {
-        console.log('Context menu update:', updateProps);
-      }
-    });
-    sendResponse({ success: true });
-    return;
-  }
-  
   if (message.action === 'captureTab') {
     // Capture visible tab for screenshot functionality
     chrome.tabs.captureVisibleTab(null, { format: 'png' }, (dataUrl) => {
@@ -121,25 +100,9 @@ if (message.action === 'updateContextMenu') {
   }
 });
 
-// Handle context menu clicks
-chrome.contextMenus.onClicked.addListener((info, tab) => {
-  console.log('Context menu clicked:', info.menuItemId);
-  if (info.menuItemId === "runsheetpro-next-snip") {
-    // Send message to content script to trigger next snip
-    chrome.tabs.sendMessage(tab.id, { action: 'contextMenuNextSnip' }, (response) => {
-      if (chrome.runtime.lastError) {
-        console.error('Error sending context menu message:', chrome.runtime.lastError);
-      } else {
-        console.log('Context menu next snip triggered');
-      }
-    });
-  }
-});
-
-// Handle extension installation and startup
+// Handle extension installation
 chrome.runtime.onInstalled.addListener((details) => {
   console.log('RunsheetPro extension installed:', details.reason);
-  createContextMenu();
   
   if (details.reason === 'install') {
     // Set default settings on first install - ensure extension is enabled by default
@@ -151,44 +114,6 @@ chrome.runtime.onInstalled.addListener((details) => {
       syncInterval: 5000
     });
     console.log('RunsheetPro extension: Default settings applied - extension enabled');
-  }
-});
-
-// Also create context menu on startup
-chrome.runtime.onStartup.addListener(() => {
-  console.log('RunsheetPro extension startup');
-  createContextMenu();
-});
-
-// Create context menu function
-function createContextMenu() {
-  // Remove existing menu first to avoid duplicates
-  chrome.contextMenus.removeAll(() => {
-    // Create context menu item
-    chrome.contextMenus.create({
-      id: "runsheetpro-next-snip",
-      title: "RunsheetPro: Next Snip",
-      contexts: ["page", "selection", "image", "link"],
-      documentUrlPatterns: ["<all_urls>"]
-    }, () => {
-      if (chrome.runtime.lastError) {
-        console.error('Context menu creation error:', chrome.runtime.lastError);
-      } else {
-        console.log('RunsheetPro context menu created successfully');
-      }
-    });
-  });
-}
-
-// Ensure menu visibility reflects current state when the menu opens
-chrome.contextMenus.onShown.addListener(async (info, tab) => {
-  try {
-    // Always ensure the item is visible and enabled; content script will decide behavior
-    chrome.contextMenus.update('runsheetpro-next-snip', { visible: true, enabled: true }, () => {
-      if (chrome.contextMenus.refresh) chrome.contextMenus.refresh();
-    });
-  } catch (e) {
-    console.warn('onShown update failed:', e);
   }
 });
 

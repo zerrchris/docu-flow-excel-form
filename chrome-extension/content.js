@@ -63,22 +63,6 @@ let snipOverlay = null;
 let snipSelection = null;
 let capturedSnips = [];
 let snipControlPanel = null;
-let snipContextMenu = null;
-
-// Listen for context menu messages from background script
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === 'contextMenuNextSnip') {
-    if (snipMode === 'navigate') {
-      resumeSnipMode();
-    }
-    sendResponse({ success: true });
-  }
-});
-
-// Initialize context menu on content script load
-chrome.runtime.sendMessage({ action: 'initializeContextMenu' }, (response) => {
-  console.log('🔧 Context menu initialization requested');
-});
 
 // Check authentication status
 async function checkAuth() {
@@ -3901,15 +3885,6 @@ function startSnipModeWithMode(mode = 'single', skipOverwriteCheck = false) {
   snipMode = mode;
   capturedSnips = [];
   
-  // Toggle native context menu item visibility based on mode
-  try {
-    const isNavigate = mode === 'navigate';
-    chrome.storage.local.set({ runsheetpro_navigate_snip: isNavigate });
-    chrome.runtime.sendMessage({ action: 'updateContextMenu', visible: true, enabled: isNavigate });
-  } catch (e) {
-    console.warn('Context menu visibility toggle failed:', e);
-  }
-  
   // For scroll and navigate modes, initialize persistent session
   if (mode === 'scroll' || mode === 'navigate') {
     snipSession = {
@@ -3934,14 +3909,8 @@ function startSnipModeWithMode(mode = 'single', skipOverwriteCheck = false) {
   // Disable other extension interactions during snip mode
   disableExtensionInteractions();
   
-  if (mode === 'scroll') {
+  if (mode !== 'single') {
     createSnipControlPanel();
-  } else if (mode === 'navigate') {
-    createNavigationControlPanel();
-    if (snipControlPanel) { try { snipControlPanel.remove(); } catch (_) {}
-      snipControlPanel = null;
-    }
-    updateSnipCounter();
   }
   
   const messages = {
@@ -4455,7 +4424,7 @@ function createNavigationControlPanel() {
     border: 1px solid #e5e7eb !important;
     border-radius: 8px !important;
     padding: 12px 16px !important;
-    z-index: 2147483648 !important;
+    z-index: 2147483647 !important;
     display: flex !important;
     gap: 12px !important;
     align-items: center !important;
@@ -4562,118 +4531,10 @@ function resumeSnipMode() {
   showNotification('Ready for next snip! Drag to select area.', 'info');
 }
 
-// Show snip context menu
-function showSnipContextMenu(x, y) {
-  // Remove existing menu if any
-  if (snipContextMenu) {
-    snipContextMenu.remove();
-    snipContextMenu = null;
-  }
-
-  snipContextMenu = document.createElement('div');
-  snipContextMenu.id = 'runsheetpro-snip-context-menu';
-  snipContextMenu.style.cssText = `
-    position: fixed !important;
-    left: ${x}px !important;
-    top: ${y}px !important;
-    background: white !important;
-    border: 1px solid #e5e7eb !important;
-    border-radius: 8px !important;
-    padding: 8px 0 !important;
-    z-index: 2147483648 !important;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-    min-width: 180px !important;
-  `;
-
-  const menuItems = [
-    {
-      text: '📸 RunsheetPro: Next Snip',
-      action: () => {
-        hideSnipContextMenu();
-        resumeSnipMode();
-      }
-    },
-    {
-      text: '✅ Finish Snipping',
-      action: () => {
-        hideSnipContextMenu();
-        finishSnipping();
-      }
-    },
-    {
-      text: '❌ Cancel Snipping',
-      action: () => {
-        hideSnipContextMenu();
-        cancelSnipping();
-      }
-    }
-  ];
-
-  menuItems.forEach(item => {
-    const menuItem = document.createElement('div');
-    menuItem.textContent = item.text;
-    menuItem.style.cssText = `
-      padding: 12px 16px !important;
-      cursor: pointer !important;
-      font-size: 14px !important;
-      color: #374151 !important;
-      border-bottom: 1px solid #f3f4f6 !important;
-      transition: background-color 0.15s ease !important;
-    `;
-
-    // Remove border from last item
-    if (item === menuItems[menuItems.length - 1]) {
-      menuItem.style.borderBottom = 'none !important';
-    }
-
-    menuItem.addEventListener('mouseenter', () => {
-      menuItem.style.backgroundColor = '#f9fafb !important';
-    });
-
-    menuItem.addEventListener('mouseleave', () => {
-      menuItem.style.backgroundColor = 'transparent !important';
-    });
-
-    menuItem.addEventListener('click', item.action);
-    snipContextMenu.appendChild(menuItem);
-  });
-
-  document.body.appendChild(snipContextMenu);
-
-  // Hide menu when clicking elsewhere
-  const hideOnClick = (e) => {
-    if (!snipContextMenu.contains(e.target)) {
-      hideSnipContextMenu();
-      document.removeEventListener('click', hideOnClick);
-    }
-  };
-  
-  setTimeout(() => {
-    document.addEventListener('click', hideOnClick);
-  }, 100);
-}
-
-// Hide snip context menu
-function hideSnipContextMenu() {
-  if (snipContextMenu) {
-    snipContextMenu.remove();
-    snipContextMenu = null;
-  }
-}
-
 // Cleanup snip mode
 function cleanupSnipMode() {
   isSnipMode = false;
   capturedSnips = [];
-  
-  // Hide context menu
-  chrome.runtime.sendMessage({ 
-    action: 'updateContextMenu', 
-    visible: false,
-    enabled: false
-  });
-  try { chrome.storage.local.set({ runsheetpro_navigate_snip: false }); } catch (_) {}
   
   if (snipOverlay) {
     snipOverlay.remove();
@@ -4684,9 +4545,6 @@ function cleanupSnipMode() {
     snipControlPanel.remove();
     snipControlPanel = null;
   }
-  
-  // Remove context menu if it exists
-  hideSnipContextMenu();
   
   // Also remove navigation panel if it exists
   const navPanel = document.getElementById('runsheetpro-nav-controls');
@@ -6231,20 +6089,11 @@ function cleanupSnipMode() {
   snipMode = 'single';
   capturedSnips = [];
   
-  // Hide native context menu item
-  try {
-    chrome.storage.local.set({ runsheetpro_navigate_snip: false });
-    chrome.runtime.sendMessage({ action: 'updateContextMenu', visible: true, enabled: false });
-  } catch (_) {}
-  
   // Disable smart scrolling
   disableSmartScrollDetection();
   
   // Re-enable extension interactions
   enableExtensionInteractions();
-  
-  // Remove context menu if it exists
-  hideSnipContextMenu();
   
   // Remove overlays and UI
   if (snipOverlay) {
