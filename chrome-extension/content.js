@@ -6773,7 +6773,9 @@ function createMassCapturePanel() {
   
   // Add event listeners
   nextBtn.addEventListener('click', startNextMassDocument);
-  doneBtn.addEventListener('click', endMassCaptureMode);
+  doneBtn.addEventListener('click', async () => {
+    await endMassCaptureMode();
+  });
   
   document.body.appendChild(massCapturePanel);
 }
@@ -6807,7 +6809,7 @@ function updateMassCapturePanel() {
 }
 
 // End mass capture mode
-function endMassCaptureMode() {
+async function endMassCaptureMode() {
   if (!isMassCaptureMode) return;
   
   console.log('🔧 RunsheetPro Extension: Ending mass capture mode');
@@ -6834,8 +6836,12 @@ function endMassCaptureMode() {
     console.log('🔧 RunsheetPro Extension: Restored runsheet button after mass capture mode');
   }
   
+  
   // Navigate to next available blank row (like when extension first opens)
   if (activeRunsheet) {
+    // First refresh the runsheet data from database to get all the captured documents
+    await refreshRunsheetDataFromDatabase();
+    
     currentRowIndex = findNextAvailableRow(activeRunsheet);
     console.log(`🔧 RunsheetPro Extension: Mass capture ended, moved to next available row: ${currentRowIndex}`);
     
