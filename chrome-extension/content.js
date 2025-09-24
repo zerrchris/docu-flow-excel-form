@@ -65,6 +65,14 @@ let snipSelection = null;
 let capturedSnips = [];
 let snipControlPanel = null;
 
+// Multi-step snipping session variables
+let snipSession = {
+  active: false,
+  mode: 'navigate', // 'navigate' for multi-step workflow
+  captures: [],
+  startedAt: null
+};
+
 // Mass capture mode variables
 let isMassCaptureMode = false;
 let massCapturePanel = null;
@@ -5001,10 +5009,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   } else if (request.action === 'showSnipModeSelector') {
     // Show snip mode selection modal
     showSnipModeSelector();
+  } else if (request.action === 'beginSnipSession') {
+    // Handle begin snip session from context menu
+    console.log('🔧 RunsheetPro Extension: Begin snip session triggered');
+    beginSnipSession();
   } else if (request.action === 'nextSnip') {
     // Handle next snip from context menu
     console.log('🔧 RunsheetPro Extension: Next snip triggered from context menu');
-    if (isMassCaptureMode) {
+    if (snipSession.active) {
+      performNextSnip();
+    } else if (isMassCaptureMode) {
       // If we're in mass capture mode and already in an active snip session, resume snip mode
       // Otherwise start a new document session
       if (isSnipMode) {
@@ -5015,6 +5029,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     } else {
       resumeSnipMode();
     }
+  } else if (request.action === 'finishSnipping') {
+    // Handle finish snipping from context menu
+    console.log('🔧 RunsheetPro Extension: Finish snipping triggered');
+    finishSnipSession();
   } else if (request.action === 'openRunsheet') {
     // Open the runsheet UI: if frame exists, toggle; else show selector/sign-in
     (async () => {
@@ -5088,11 +5106,21 @@ try {
         console.log('🔧 RunsheetPro Extension: Using fallback init');
         init();
       }
+      
+      // Always restore snip session after initialization
+      setTimeout(() => {
+        restoreSnipSessionFromStorage();
+      }, 500);
+      
     } catch (e) {
       console.error('🔧 RunsheetPro Extension: Initialization failed', e);
       // Force basic init as final fallback
       try {
         init();
+        // Still try to restore snip session
+        setTimeout(() => {
+          restoreSnipSessionFromStorage();
+        }, 500);
       } catch (initError) {
         console.error('🔧 RunsheetPro Extension: Basic init also failed', initError);
       }
@@ -7154,3 +7182,202 @@ async function refreshRunsheetDataFromDatabase() {
     console.error('🔄 RunsheetPro Extension: Failed to refresh runsheet data:', error);
   }
 }
+
+// ============= MULTI-STEP SNIPPING SESSION FUNCTIONS =============
+
+// Begin a new snipping session
+async function beginSnipSession() {
+  console.log('🔧 RunsheetPro Extension: Beginning snip session');
+  
+  // Check if we have an active runsheet and user is authenticated
+  if (!activeRunsheet || !userSession) {
+    showNotification('Please select a runsheet first', 'error');
+    return;
+  }
+  
+  // Initialize the snipping session
+  snipSession = {
+    active: true,
+    mode: 'navigate',
+    captures: [],
+    startedAt: Date.now()
+  };
+  
+  // Update context menu to show "Next Snip" and "Finish Snipping"
+  updateSnipContextMenu(true, 'active');
+  
+  // Save session state to storage for persistence across navigations
+  await chrome.storage.local.set({ snipSession });
+  
+  showNotification('Snip session started! Right-click and select "Next Snip" to capture.', 'success');
+}
+
+// Perform the next snip in the session
+async function performNextSnip() {
+  console.log('🔧 RunsheetPro Extension: Performing next snip');
+  
+  if (!snipSession.active) {
+    showNotification('No active snip session. Start one first.', 'error');
+    return;
+  }
+  
+  try {
+    // Enter snip mode
+    await enterSnipMode('single');
+    
+  } catch (error) {
+    console.error('🔧 RunsheetPro Extension: Error performing next snip:', error);
+    showNotification('Failed to start snip capture', 'error');
+  }
+}
+
+// Finish the snipping session and process all captures
+async function finishSnipSession() {
+  console.log('🔧 RunsheetPro Extension: Finishing snip session');
+  
+  if (!snipSession.active) {
+    showNotification('No active snip session', 'error');
+    return;
+  }
+  
+  if (snipSession.captures.length === 0) {
+    showNotification('No captures found in session', 'error');
+    resetSnipSession();
+    return;
+  }
+  
+  try {
+    // Process all captured snips and add to next available row
+    const combinedBlob = await combineSnipCaptures(snipSession.captures);
+    
+    // Use enhanced snip workflow to process the combined document
+    if (typeof window.EnhancedSnipWorkflow !== 'undefined') {
+      await window.EnhancedSnipWorkflow.processEnhancedSnip(combinedBlob, {
+        filename: `multi-snip-${Date.now()}.png`,
+        rowIndex: currentRowIndex,
+        isMultiSnip: true
+      });
+    } else {
+      console.error('EnhancedSnipWorkflow not available');
+      showNotification('Failed to process snip session', 'error');
+    }
+    
+    // Reset the session
+    resetSnipSession();
+    showNotification('Snip session completed and added to runsheet!', 'success');
+    
+  } catch (error) {
+    console.error('🔧 RunsheetPro Extension: Error finishing snip session:', error);
+    showNotification('Failed to process snip session', 'error');
+  }
+}
+
+// Reset the snipping session
+async function resetSnipSession() {
+  console.log('🔧 RunsheetPro Extension: Resetting snip session');
+  
+  snipSession = {
+    active: false,
+    mode: 'navigate',
+    captures: [],
+    startedAt: null
+  };
+  
+  // Update context menu to show only "Begin Snip Session"
+  updateSnipContextMenu(true, 'inactive');
+  
+  // Clear session from storage
+  await chrome.storage.local.remove(['snipSession']);
+}
+
+// Combine multiple snip captures into a single blob
+async function combineSnipCaptures(captures) {
+  if (captures.length === 1) {
+    return captures[0];
+  }
+  
+  // Create a canvas to combine all captures vertically
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  
+  const images = await Promise.all(
+    captures.map(capture => {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.src = URL.createObjectURL(capture);
+      });
+    })
+  );
+  
+  // Calculate total height and max width
+  let totalHeight = 0;
+  let maxWidth = 0;
+  
+  images.forEach(img => {
+    totalHeight += img.height;
+    maxWidth = Math.max(maxWidth, img.width);
+  });
+  
+  // Set canvas size
+  canvas.width = maxWidth;
+  canvas.height = totalHeight;
+  
+  // Draw all images vertically
+  let currentY = 0;
+  images.forEach(img => {
+    ctx.drawImage(img, 0, currentY);
+    currentY += img.height;
+  });
+  
+  // Convert to blob
+  return new Promise((resolve) => {
+    canvas.toBlob(resolve, 'image/png');
+  });
+}
+
+// Update the context menu based on snipping state
+function updateSnipContextMenu(enabled, state = 'inactive') {
+  chrome.runtime.sendMessage({
+    action: 'updateSnipContextMenu',
+    enabled: enabled,
+    state: state
+  });
+}
+
+// Restore snip session from storage (called on page load)
+async function restoreSnipSessionFromStorage() {
+  try {
+    const result = await chrome.storage.local.get(['snipSession']);
+    if (result.snipSession && result.snipSession.active) {
+      snipSession = result.snipSession;
+      
+      // Update context menu to show active state
+      updateSnipContextMenu(true, 'active');
+      
+      showNotification('Continued snip session from previous page. Right-click for "Next Snip".', 'info');
+    } else {
+      // Ensure context menu shows inactive state
+      updateSnipContextMenu(true, 'inactive');
+    }
+  } catch (error) {
+    console.error('🔧 RunsheetPro Extension: Error restoring snip session:', error);
+    updateSnipContextMenu(true, 'inactive');
+  }
+}
+
+// Override the existing snip capture function to add to session
+const originalCaptureSnip = window.captureSnip;
+window.captureSnip = function(blob) {
+  // If we're in an active snip session, add to captures
+  if (snipSession.active) {
+    snipSession.captures.push(blob);
+    chrome.storage.local.set({ snipSession });
+    showNotification(`Capture ${snipSession.captures.length} added to session`, 'success');
+  }
+  
+  // Call original function if it exists
+  if (originalCaptureSnip) {
+    originalCaptureSnip(blob);
+  }
+};
