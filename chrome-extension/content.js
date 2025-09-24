@@ -5571,6 +5571,18 @@ function showSnipPreview() {
     snipUrl = URL.createObjectURL(window.currentCapturedSnip);
     console.log('🔧 Created object URL:', snipUrl);
   }
+  // Finally, fall back to last snip session capture (if any)
+  else if (typeof snipSession !== 'undefined' && snipSession.captures && snipSession.captures.length > 0) {
+    const last = snipSession.captures[snipSession.captures.length - 1];
+    console.log('🔧 Falling back to last session capture for preview');
+    if (last && last.blob instanceof Blob) {
+      snipUrl = URL.createObjectURL(last.blob);
+    } else if (last && typeof last.dataUrl === 'string') {
+      snipUrl = last.dataUrl;
+    } else if (typeof last === 'string') {
+      snipUrl = last;
+    }
+  }
 
   if (!snipUrl) {
     console.log('🔧 No snip URL found');
