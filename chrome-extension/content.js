@@ -3885,6 +3885,9 @@ function startSnipModeWithMode(mode = 'single', skipOverwriteCheck = false) {
   snipMode = mode;
   capturedSnips = [];
   
+  // Enable context menu for next snip
+  chrome.runtime.sendMessage({ action: 'updateSnipContextMenu', enabled: true });
+  
   // For scroll and navigate modes, initialize persistent session
   if (mode === 'scroll' || mode === 'navigate') {
     snipSession = {
@@ -6092,6 +6095,9 @@ function cleanupSnipMode() {
   isSnipMode = false;
   snipMode = 'single';
   capturedSnips = [];
+  
+  // Disable context menu for next snip
+  chrome.runtime.sendMessage({ action: 'updateSnipContextMenu', enabled: false });
   
   // Disable smart scrolling
   disableSmartScrollDetection();
