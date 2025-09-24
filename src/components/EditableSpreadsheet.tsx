@@ -1713,9 +1713,25 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     const handlePostMessage = (event: MessageEvent) => {
       console.log('🔧 EditableSpreadsheet: Received postMessage:', event.data);
       // Only process messages from our extension
-      if (event.data && event.data.source === 'runsheet-extension' && event.data.type === 'EXTENSION_DOCUMENT_CREATED') {
-        console.log('🚨 EditableSpreadsheet: PostMessage received from extension:', event.data.detail);
-        handleDocumentRecordCreated(new CustomEvent('documentRecordCreated', { detail: event.data.detail }));
+      if (event.data && event.data.source === 'runsheet-extension') {
+        if (event.data.type === 'EXTENSION_DOCUMENT_CREATED') {
+          console.log('🚨 EditableSpreadsheet: PostMessage received from extension:', event.data.detail);
+          handleDocumentRecordCreated(new CustomEvent('documentRecordCreated', { detail: event.data.detail }));
+        } else if (event.data.type === 'EXTENSION_RUNSHEET_REFRESH_NEEDED') {
+          console.log('🚨 EditableSpreadsheet: Refresh requested by extension:', event.data.reason);
+          // Force refresh the runsheet data by setting a refresh flag
+          if (currentRunsheetId && event.data.runsheetId === currentRunsheetId) {
+            console.log('🔄 Triggering runsheet data refresh for mass capture mode');
+            // Use a small delay to ensure the database changes have propagated
+            setTimeout(() => {
+              // Force a re-render by triggering window resize event
+              window.dispatchEvent(new Event('resize'));
+              // Also try to refresh the documents if available
+              const documentRefreshEvent = new CustomEvent('refreshDocuments');
+              window.dispatchEvent(documentRefreshEvent);
+            }, 500);
+          }
+        }
       }
     };
     window.addEventListener('message', handlePostMessage);

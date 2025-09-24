@@ -6806,6 +6806,16 @@ function endMassCaptureMode() {
   if (activeRunsheet) {
     currentRowIndex = findNextAvailableRow(activeRunsheet);
     console.log(`🔧 RunsheetPro Extension: Mass capture ended, moved to next available row: ${currentRowIndex}`);
+    
+    // Notify main app to refresh and show the correct row
+    window.postMessage({
+      type: 'EXTENSION_RUNSHEET_REFRESH_NEEDED',
+      runsheetId: activeRunsheet.id,
+      source: 'runsheet-extension',
+      reason: 'mass_capture_ended',
+      targetRow: currentRowIndex
+    }, '*');
+    console.log('🚨 Extension: Requested runsheet refresh after mass capture ended');
   }
   
   const finalMessage = massCaptureCount > 0 
@@ -6831,6 +6841,18 @@ function handleMassCaptureCompletion() {
   // Update the panel display
   updateMassCapturePanel();
   
+  // Refresh the local runsheet data from the database
+  await refreshRunsheetDataFromDatabase();
+  
+  // Notify main app to refresh runsheet data to show the new document
+  window.postMessage({
+    type: 'EXTENSION_RUNSHEET_REFRESH_NEEDED',
+    runsheetId: activeRunsheet?.id,
+    source: 'runsheet-extension',
+    reason: 'mass_capture_document_added'
+  }, '*');
+  console.log('🚨 Extension: Requested runsheet refresh after mass capture document');
+  
   // Show the mass capture panel again after snip session
   if (massCapturePanel) {
     massCapturePanel.style.display = 'block';
@@ -6853,5 +6875,46 @@ function handleMassCaptureCompletion() {
   // Re-enable extension interactions
   enableExtensionInteractions();
   
-  showNotification(`Document captured for row ${currentRowIndex}! Ready for next capture.`, 'success');
+  showNotification(`Document added to row ${currentRowIndex}! Ready for next document.`, 'success');
+}
+
+// Refresh runsheet data from the database
+async function refreshRunsheetDataFromDatabase() {
+  if (!activeRunsheet || !userSession) return;
+  
+  try {
+    console.log('🔄 RunsheetPro Extension: Refreshing runsheet data from database');
+    
+    const response = await fetch(`https://xnpmrafjjqsissbtempj.supabase.co/functions/v1/extension-sync?runsheet_id=${activeRunsheet.id}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${userSession.access_token}`,
+        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhucG1yYWZqanFzaXNzYnRlbXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4NzMyNjcsImV4cCI6MjA2ODQ0OTI2N30.aQG15Ed8IOLJfM5p7XF_kEM5FUz8zJug1pxAi9rTTsg',
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch current runsheet data');
+    }
+    
+    const { runsheet } = await response.json();
+    
+    // Update the local activeRunsheet data
+    if (runsheet) {
+      activeRunsheet.data = runsheet.data || [];
+      activeRunsheet.columns = runsheet.columns || [];
+      activeRunsheet.columnInstructions = runsheet.column_instructions || {};
+      
+      console.log('🔄 RunsheetPro Extension: Updated local runsheet data with fresh data from database');
+      
+      // Save updated data to storage
+      chrome.storage.local.set({ 
+        'active_runsheet': activeRunsheet,
+        'activeRunsheet': activeRunsheet
+      });
+    }
+  } catch (error) {
+    console.error('🔄 RunsheetPro Extension: Failed to refresh runsheet data:', error);
+  }
 }
