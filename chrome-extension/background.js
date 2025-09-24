@@ -56,43 +56,28 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.action === 'updateSnipContextMenu') {
-    // Handle different snip workflow states
-    chrome.contextMenus.removeAll(() => {
-      if (message.enabled && message.state) {
-        let menuTitle = '';
-        let menuId = '';
-        
-        switch (message.state) {
-          case 'begin':
-            menuTitle = 'Begin Snip Session';
-            menuId = 'runsheetpro-begin-snip';
-            break;
-          case 'next':
-            menuTitle = 'Next Snip';
-            menuId = 'runsheetpro-next-snip';
-            break;
-          case 'finish':
-            menuTitle = 'Finish Snipping';
-            menuId = 'runsheetpro-finish-snip';
-            break;
-          default:
-            menuTitle = 'next snip';
-            menuId = 'runsheetpro-next-snip';
+    // Show or hide the context menu based on snipping state
+    if (message.enabled) {
+      chrome.contextMenus.create({
+        id: 'runsheetpro-next-snip',
+        title: 'next snip',
+        contexts: ['all']
+      }, () => {
+        if (chrome.runtime.lastError) {
+          console.log('Context menu already exists or error:', chrome.runtime.lastError);
+        } else {
+          console.log('RunsheetPro extension: Context menu item created');
         }
-        
-        chrome.contextMenus.create({
-          id: menuId,
-          title: menuTitle,
-          contexts: ['all']
-        }, () => {
-          if (chrome.runtime.lastError) {
-            console.log('Context menu creation error:', chrome.runtime.lastError);
-          } else {
-            console.log(`Context menu "${menuTitle}" created`);
-          }
-        });
-      }
-    });
+      });
+    } else {
+      chrome.contextMenus.remove('runsheetpro-next-snip', () => {
+        if (chrome.runtime.lastError) {
+          console.log('Context menu removal error:', chrome.runtime.lastError);
+        } else {
+          console.log('RunsheetPro extension: Context menu item removed');
+        }
+      });
+    }
     sendResponse({ success: true });
   }
 
@@ -162,28 +147,14 @@ chrome.runtime.onInstalled.addListener((details) => {
 
 // Handle context menu clicks
 chrome.contextMenus.onClicked.addListener((info, tab) => {
-  console.log('RunsheetPro extension: Context menu clicked:', info.menuItemId);
-  
-  let action = '';
-  switch (info.menuItemId) {
-    case 'runsheetpro-begin-snip':
-      action = 'beginSnipSession';
-      break;
-    case 'runsheetpro-next-snip':
-      action = 'nextSnip';
-      break;
-    case 'runsheetpro-finish-snip':
-      action = 'finishSnipSession';
-      break;
-    default:
-      action = 'nextSnip'; // fallback for old menu items
-  }
-  
-  if (action) {
+  if (info.menuItemId === 'runsheetpro-next-snip') {
+    console.log('RunsheetPro extension: Next snip context menu clicked');
+    
+    // Send message to content script to trigger next snip functionality
     chrome.tabs.sendMessage(tab.id, {
-      action: action
+      action: 'nextSnip'
     }).catch((error) => {
-      console.error(`RunsheetPro extension: Error sending ${action} message:`, error);
+      console.error('RunsheetPro extension: Error sending next snip message:', error);
     });
   }
 });
