@@ -6784,6 +6784,17 @@ function createMassCapturePanel() {
 function startNextMassDocument() {
   if (!isMassCaptureMode || !activeRunsheet) return;
   
+  // Always target the next available blank row before starting a new capture
+  try {
+    const nextIdx = findNextAvailableRow(activeRunsheet);
+    if (typeof nextIdx === 'number' && nextIdx >= 0) {
+      currentRowIndex = nextIdx;
+      updateMassCapturePanel();
+    }
+  } catch (e) {
+    console.warn('🔧 RunsheetPro Extension: Could not compute next available row before mass capture start', e);
+  }
+  
   console.log('🔧 RunsheetPro Extension: Starting next document session for row', currentRowIndex + 1);
   
   // Hide the mass capture panel during snipping for maximum screen area
@@ -6794,7 +6805,7 @@ function startNextMassDocument() {
   // Start navigate snip mode for this document session
   startSnipModeWithMode('navigate', true); // Skip overwrite check since we're in mass mode
   
-  showNotification(`Starting document capture session for row ${currentRowIndex + 1}`, 'info');
+  showNotification(`Starting document capture session for row ${currentRowIndex + 1}` , 'info');
 }
 
 // Update mass capture panel display
@@ -6841,10 +6852,11 @@ async function endMassCaptureMode() {
   if (activeRunsheet) {
     // First refresh the runsheet data from database to get all the captured documents
     await refreshRunsheetDataFromDatabase();
-    
+
+    // After refresh, compute next available row from the newest data
     currentRowIndex = findNextAvailableRow(activeRunsheet);
     console.log(`🔧 RunsheetPro Extension: Mass capture ended, moved to next available row: ${currentRowIndex}`);
-    
+
     // Notify main app to refresh and show the correct row
     window.postMessage({
       type: 'EXTENSION_RUNSHEET_REFRESH_NEEDED',
@@ -6875,55 +6887,116 @@ async function endMassCaptureMode() {
 // Handle completion of a single capture in mass mode
 async function handleMassCaptureCompletion() {
   if (!isMassCaptureMode) return;
-  
-  massCaptureCount++;
-  
-  // Move to next row
-  currentRowIndex++;
-  
-  // Update the panel display
-  updateMassCapturePanel();
-  
-  // Refresh the local runsheet data from the database
-  await refreshRunsheetDataFromDatabase();
-  
-  // Notify main app to refresh runsheet data to show the new document
-  window.postMessage({
-    type: 'EXTENSION_RUNSHEET_REFRESH_NEEDED',
-    runsheetId: activeRunsheet?.id,
-    source: 'runsheet-extension',
-    reason: 'mass_capture_document_added'
-  }, '*');
-  console.log('🚨 Extension: Requested runsheet refresh after mass capture document');
-  
-  // Show the mass capture panel again after snip session
-  if (massCapturePanel) {
-    massCapturePanel.style.display = 'block';
+
+  try {
+    // Ensure we have a captured snip from the just-finished session
+    const blob = window.currentCapturedSnip;
+    const filename = window.currentSnipFilename || `snip_${Date.now()}.png`;
+
+    if (!blob) {
+      console.warn('🔧 RunsheetPro Extension: No captured snip found at mass completion – treating as already saved (quickview path)');
+      // Quickview path: row already saved via linkScreenshotToSpecificRow
+      massCaptureCount++;
+      await refreshRunsheetDataFromDatabase();
+      currentRowIndex = findNextAvailableRow(activeRunsheet);
+      updateMassCapturePanel();
+      window.postMessage({
+        type: 'EXTENSION_RUNSHEET_REFRESH_NEEDED',
+        runsheetId: activeRunsheet?.id,
+        source: 'runsheet-extension',
+        reason: 'mass_capture_document_added'
+      }, '*');
+    } else {
+      // 1) Upload snip to storage
+      let uploaded;
+      try {
+        uploaded = await uploadSnipToStorage(blob);
+      } catch (e) {
+        console.error('🔧 RunsheetPro Extension: Upload failed during mass capture completion', e);
+        showNotification('Failed to upload screenshot. Try capturing this doc again.', 'error');
+        // Show panel again and exit early without advancing the row
+        if (massCapturePanel) massCapturePanel.style.display = 'block';
+        return;
+      }
+
+      // 2) Create a row with minimal data (Document File Name) and screenshot_url
+      try {
+        const syncResponse = await fetch('https://xnpmrafjjqsissbtempj.supabase.co/functions/v1/extension-sync', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${userSession.access_token}`,
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhucG1yYWZqanFzaXNzYnRlbXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4NzMyNjcsImV4cCI6MjA2ODQ0OTI2N30.aQG15Ed8IOLJfM5p7XF_kEM5FUz8zJug1pxAi9rTTsg',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            runsheet_id: activeRunsheet.id,
+            row_data: { 'Document File Name': filename },
+            screenshot_url: uploaded.url
+          })
+        });
+        if (!syncResponse.ok) {
+          const text = await syncResponse.text();
+          throw new Error(`HTTP ${syncResponse.status}: ${text}`);
+        }
+        const result = await syncResponse.json();
+
+        // Bump count on confirmed success
+        massCaptureCount++;
+
+        // Update local state from server to avoid stale data
+        await refreshRunsheetDataFromDatabase();
+
+        // Set currentRowIndex to the next available row after the one we just filled
+        if (typeof result.row_index === 'number') {
+          currentRowIndex = result.row_index + 1;
+        } else {
+          currentRowIndex = findNextAvailableRow(activeRunsheet);
+        }
+        updateMassCapturePanel();
+
+        // Notify main app to refresh runsheet UI
+        window.postMessage({
+          type: 'EXTENSION_RUNSHEET_REFRESH_NEEDED',
+          runsheetId: activeRunsheet?.id,
+          source: 'runsheet-extension',
+          reason: 'mass_capture_document_added'
+        }, '*');
+        console.log('🚨 Extension: Requested runsheet refresh after mass capture document');
+
+        // Clear the staged snip
+        window.currentCapturedSnip = null;
+        window.currentSnipFilename = null;
+        try { updateScreenshotIndicator(false); } catch {}
+
+        showNotification(`Document added to row ${result.row_index + 1}. Ready for next.`, 'success');
+      } catch (e) {
+        console.error('🔧 RunsheetPro Extension: Failed to save mass-captured document to runsheet', e);
+        showNotification('Failed to save document to runsheet. Please try again.', 'error');
+        // Show panel again and do not advance row
+        if (massCapturePanel) massCapturePanel.style.display = 'block';
+        return;
+      }
+    }
+  } finally {
+    // Show the mass capture panel again after snip session
+    if (massCapturePanel) {
+      massCapturePanel.style.display = 'block';
+    }
+
+    // Clean up current snip mode but stay in mass capture mode
+    isSnipMode = false;
+    capturedSnips = [];
+    if (snipOverlay) { snipOverlay.remove(); snipOverlay = null; }
+    if (snipControlPanel) { snipControlPanel.remove(); snipControlPanel = null; }
+
+    // Re-enable extension interactions
+    enableExtensionInteractions();
+
+    // Persist state
+    if (typeof saveExtensionState === 'function') {
+      saveExtensionState();
+    }
   }
-  
-  // Clean up current snip mode but stay in mass capture mode
-  isSnipMode = false;
-  capturedSnips = [];
-  
-  if (snipOverlay) {
-    snipOverlay.remove();
-    snipOverlay = null;
-  }
-  
-  if (snipControlPanel) {
-    snipControlPanel.remove();
-    snipControlPanel = null;
-  }
-  
-  // Re-enable extension interactions
-  enableExtensionInteractions();
-  
-  // Save the updated state with new document count and row
-  if (typeof saveExtensionState === 'function') {
-    saveExtensionState();
-  }
-  
-  showNotification(`Document added to row ${currentRowIndex}! Ready for next document.`, 'success');
 }
 
 // Refresh runsheet data from the database
