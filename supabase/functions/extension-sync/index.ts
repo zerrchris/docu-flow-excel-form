@@ -8,6 +8,7 @@ interface ExtensionData {
   runsheet_id: string
   row_data: Record<string, any>
   screenshot_url?: string
+  target_row_index?: number
 }
 
 Deno.serve(async (req) => {
@@ -21,7 +22,7 @@ Deno.serve(async (req) => {
 
     if (req.method === 'POST') {
       // Sync data from extension to runsheet
-      const { runsheet_id, row_data, screenshot_url }: ExtensionData = await req.json()
+      const { runsheet_id, row_data, screenshot_url, target_row_index }: ExtensionData = await req.json()
 
       // Get the authorization header
       const authHeader = req.headers.get('Authorization')
@@ -59,25 +60,62 @@ Deno.serve(async (req) => {
       const currentData = runsheet.data as any[]
       const updatedData = [...currentData]
       
-      // Find the first empty row or add a new one
-      let targetRowIndex = 0;
+      // Determine target row index: prefer explicit target, else find first empty row
+      let targetRowIndex: number;
       
-      // Look for first row that has all empty values
-      for (let i = 0; i < updatedData.length; i++) {
-        const row = updatedData[i];
-        const hasData = Object.values(row).some(value => value && value.toString().trim() !== '');
-        if (!hasData) {
-          targetRowIndex = i;
-          break;
+      if (typeof target_row_index === 'number' && Number.isInteger(target_row_index) && target_row_index >= 0) {
+        targetRowIndex = target_row_index;
+        // Ensure rows exist up to the target index
+        while (targetRowIndex >= updatedData.length) {
+          const emptyRow: Record<string, string> = {}
+          runsheet.columns.forEach((col: string) => emptyRow[col] = '')
+          updatedData.push(emptyRow)
         }
-        targetRowIndex = i + 1; // Next row after this one
-      }
-      
-      // If we need to add a new row
-      if (targetRowIndex >= updatedData.length) {
-        const emptyRow: Record<string, string> = {}
-        runsheet.columns.forEach((col: string) => emptyRow[col] = '')
-        updatedData.push(emptyRow)
+      } else {
+        // Find the first empty row or add a new one by checking actual documents
+        targetRowIndex = 0;
+        
+        // Get all existing documents for this runsheet to know which rows have documents
+        const { data: existingDocs } = await supabase
+          .from('documents')
+          .select('row_index')
+          .eq('runsheet_id', runsheet_id)
+          .eq('user_id', user.id)
+        
+        const documentRowIndexes = new Set(existingDocs?.map(doc => doc.row_index) || [])
+        
+        // Look for first row that has no text data AND no linked documents
+        for (let i = 0; i < updatedData.length; i++) {
+          const row = updatedData[i];
+          
+          // Check if row has any meaningful text data
+          const hasTextData = runsheet.columns.some((column: string) => {
+            if (column === 'Document File Name' || column.toLowerCase().includes('document')) {
+              return false; // Skip document columns for text data check
+            }
+            const value = row[column]
+            return value && value.toString().trim() !== '' && value !== 'N/A'
+          })
+          
+          // Check if this row has any actual linked documents
+          const hasLinkedDocuments = documentRowIndexes.has(i)
+          
+          if (!hasTextData && !hasLinkedDocuments) {
+            targetRowIndex = i;
+            console.log(`Found available row at index ${i} (no text data, no linked docs)`)
+            break;
+          } else {
+            console.log(`Row ${i} has data (textData: ${hasTextData}, linkedDocs: ${hasLinkedDocuments}), skipping`)
+            targetRowIndex = i + 1; // Next row after this one
+          }
+        }
+        
+        // If we need to add a new row
+        if (targetRowIndex >= updatedData.length) {
+          const emptyRow: Record<string, string> = {}
+          runsheet.columns.forEach((col: string) => emptyRow[col] = '')
+          updatedData.push(emptyRow)
+        }
       }
 
       // Update the target row with the provided data

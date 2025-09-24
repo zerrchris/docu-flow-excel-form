@@ -63,7 +63,103 @@ let snipOverlay = null;
 let snipSelection = null;
 let capturedSnips = [];
 let snipControlPanel = null;
-let contextMenu = null;
+
+// Fullscreen snip button
+let fullscreenSnipButton = null;
+
+// Check if page is in fullscreen mode
+function isInFullscreen() {
+  return !!(document.fullscreenElement || document.webkitFullscreenElement || 
+           document.mozFullScreenElement || document.msFullscreenElement);
+}
+
+// Exit fullscreen mode if active
+async function exitFullscreenIfNeeded() {
+  if (isInFullscreen()) {
+    try {
+      if (document.exitFullscreen) {
+        await document.exitFullscreen();
+      } else if (document.webkitExitFullscreen) {
+        await document.webkitExitFullscreen();
+      } else if (document.mozCancelFullScreen) {
+        await document.mozCancelFullScreen();
+      } else if (document.msExitFullscreen) {
+        await document.msExitFullscreen();
+      }
+      
+      // Wait a moment for fullscreen to exit
+      await new Promise(resolve => setTimeout(resolve, 300));
+      console.log('🔧 Exited fullscreen mode for extension access');
+      return true;
+    } catch (error) {
+      console.warn('🔧 Could not exit fullscreen:', error);
+      return false;
+    }
+  }
+  return false;
+}
+
+// Use desktop capture for fullscreen scenarios
+async function captureFullscreenContent() {
+  try {
+    console.log('🔧 Starting desktop capture for fullscreen content');
+    
+    // Request desktop capture from background script
+    const response = await chrome.runtime.sendMessage({ action: 'startScreenCapture' });
+    
+    if (response.error) {
+      throw new Error(response.error);
+    }
+    
+    if (!response.streamId) {
+      throw new Error('No stream ID received from desktop capture');
+    }
+    
+    // Use the stream ID to capture desktop
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: {
+        mandatory: {
+          chromeMediaSource: 'desktop',
+          chromeMediaSourceId: response.streamId,
+          maxWidth: 1920,
+          maxHeight: 1080
+        }
+      }
+    });
+    
+    // Create video element to capture frame
+    const video = document.createElement('video');
+    video.srcObject = stream;
+    await video.play();
+    
+    // Wait for video to load
+    await new Promise((resolve) => {
+      video.onloadedmetadata = resolve;
+    });
+    
+    // Create canvas and capture frame
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0);
+    
+    // Stop stream
+    stream.getTracks().forEach(track => track.stop());
+    
+    // Convert to data URL
+    const dataUrl = canvas.toDataURL('image/png');
+    console.log('🔧 Desktop capture successful');
+    
+    return dataUrl;
+    
+  } catch (error) {
+    console.error('🔧 Desktop capture failed:', error);
+    throw error;
+  }
+}
 
 // Check authentication status
 async function checkAuth() {
@@ -193,6 +289,197 @@ function createRunsheetButton() {
     showSignInPopup();
   });
   document.body.appendChild(debugButton);
+}
+
+// Create fullscreen snip button
+function createFullscreenSnipButton() {
+  if (fullscreenSnipButton) return fullscreenSnipButton;
+  
+  const button = document.createElement('button');
+  button.id = 'runsheetpro-fullscreen-snip';
+  button.innerHTML = '📄 Snip';
+  button.style.cssText = `
+    position: fixed !important;
+    top: 10px !important;
+    right: 10px !important;
+    z-index: 999999 !important;
+    background: #2563eb !important;
+    color: white !important;
+    border: none !important;
+    padding: 8px 16px !important;
+    border-radius: 6px !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    cursor: pointer !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  `;
+  
+  button.addEventListener('click', async () => {
+    try {
+      if (activeRunsheet) {
+        await captureSelectedArea();
+      } else {
+        showNotification('Please select a runsheet first', 'error');
+      }
+    } catch (error) {
+      console.error('Fullscreen snip error:', error);
+      showNotification('Snip failed: ' + error.message, 'error');
+    }
+  });
+  
+  // Try to inject into menu bar first, fallback to fixed position
+  const menuSelectors = [
+    'nav', 'header', '.menu', '.toolbar', '.navigation', 
+    '.header', '.top-bar', '.nav-bar', '[role="navigation"]',
+    '.menubar', '#menu', '#navigation', '#header',
+    '.navbar', '.site-header', '.main-nav'
+  ];
+  
+  let injected = false;
+  for (const selector of menuSelectors) {
+    const menuElement = document.querySelector(selector);
+    if (menuElement && menuElement.offsetParent !== null) {
+      // Found a visible menu element
+      const wrapper = document.createElement('div');
+      wrapper.style.cssText = 'display: inline-block; margin-left: 10px;';
+      wrapper.appendChild(button);
+      menuElement.appendChild(wrapper);
+      injected = true;
+      console.log('🔧 Injected snip button into menu:', selector);
+      break;
+    }
+  }
+  
+  if (!injected) {
+    // Fallback to body with fixed positioning
+    document.body.appendChild(button);
+    console.log('🔧 Injected snip button as fixed position');
+  }
+  
+  fullscreenSnipButton = button;
+  return button;
+}
+
+// Remove fullscreen snip button
+function removeFullscreenSnipButton() {
+  if (fullscreenSnipButton) {
+    fullscreenSnipButton.remove();
+    fullscreenSnipButton = null;
+  }
+}
+
+// Monitor fullscreen changes
+function handleFullscreenChange() {
+  const isFullscreen = document.fullscreenElement !== null || 
+                      document.webkitFullscreenElement !== null ||
+                      document.mozFullScreenElement !== null ||
+                      document.msFullscreenElement !== null;
+  
+  if (isFullscreen && activeRunsheet) {
+    // Entering fullscreen with active runsheet - add snip button
+    createFullscreenSnipButton();
+    console.log('🔧 Fullscreen detected - added snip button');
+  } else {
+    // Exiting fullscreen - remove snip button
+    removeFullscreenSnipButton();
+    console.log('🔧 Exited fullscreen - removed snip button');
+    
+    // Check if there's an active snip session with captures
+    if (isSnipMode && capturedSnips && capturedSnips.length > 0) {
+      // Show finish snipping dialog
+      showFinishSnippingDialog();
+    }
+  }
+}
+
+// Show finish snipping dialog when exiting fullscreen with active snips
+function showFinishSnippingDialog() {
+  // Remove any existing dialog
+  const existing = document.getElementById('finish-snipping-dialog');
+  if (existing) existing.remove();
+  
+  const dialog = document.createElement('div');
+  dialog.id = 'finish-snipping-dialog';
+  dialog.style.cssText = `
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    background: white !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 12px !important;
+    padding: 24px !important;
+    z-index: 2147483647 !important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15) !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    max-width: 400px !important;
+    width: 90vw !important;
+  `;
+  
+  dialog.innerHTML = `
+    <div style="text-align: center; margin-bottom: 20px;">
+      <h3 style="margin: 0 0 8px 0; font-size: 18px; color: #1f2937;">📸 Snip Session Active</h3>
+      <p style="margin: 0; color: #6b7280; font-size: 14px;">You have ${capturedSnips.length} captured snip(s)</p>
+    </div>
+    <div style="display: flex; gap: 12px; justify-content: center;">
+      <button id="finish-snipping-btn" style="
+        background: #3b82f6 !important;
+        color: white !important;
+        border: none !important;
+        padding: 10px 20px !important;
+        border-radius: 8px !important;
+        cursor: pointer !important;
+        font-size: 14px !important;
+        font-weight: 500 !important;
+      ">✅ Finish & Add to Row</button>
+      <button id="continue-snipping-btn" style="
+        background: #6b7280 !important;
+        color: white !important;
+        border: none !important;
+        padding: 10px 20px !important;
+        border-radius: 8px !important;
+        cursor: pointer !important;
+        font-size: 14px !important;
+        font-weight: 500 !important;
+      ">📄 Continue Snipping</button>
+      <button id="cancel-snipping-btn" style="
+        background: #ef4444 !important;
+        color: white !important;
+        border: none !important;
+        padding: 10px 20px !important;
+        border-radius: 8px !important;
+        cursor: pointer !important;
+        font-size: 14px !important;
+        font-weight: 500 !important;
+      ">❌ Cancel</button>
+    </div>
+  `;
+  
+  // Add event listeners
+  dialog.querySelector('#finish-snipping-btn').addEventListener('click', () => {
+    dialog.remove();
+    completeSnipSession();
+  });
+  
+  dialog.querySelector('#continue-snipping-btn').addEventListener('click', () => {
+    dialog.remove();
+    // Resume snip mode for more captures
+    if (snipOverlay) {
+      snipOverlay.style.display = 'block';
+    }
+    if (snipControlPanel) {
+      snipControlPanel.style.display = 'flex';
+    }
+    showNotification('Continue snipping! Drag to select more areas, then press ESC when done.', 'info');
+  });
+  
+  dialog.querySelector('#cancel-snipping-btn').addEventListener('click', () => {
+    dialog.remove();
+    cancelSnipSession();
+  });
+  
+  document.body.appendChild(dialog);
 }
 
 // Show sign-in popup
@@ -1080,6 +1367,16 @@ function createRunsheetFrame() {
     </div>
   `;
   
+  // Reset any transient screenshot state on fresh frame render
+  try {
+    window.currentCapturedSnip = null;
+    window.currentSnipFilename = null;
+    screenshotAddedToSheet = false;
+    setTimeout(() => {
+      try { updateScreenshotIndicator(false); } catch {}
+    }, 0);
+  } catch {}
+  
   // Create content area
   const content = document.createElement('div');
   content.className = 'frame-content';
@@ -1150,13 +1447,14 @@ function findNextAvailableRow(runsheetData) {
   if (!runsheetData || !runsheetData.data || runsheetData.data.length === 0) {
     return 0; // First row
   }
-  
+
   // Look for first completely empty row (no data AND no linked documents)
   for (let i = 0; i < runsheetData.data.length; i++) {
     const row = runsheetData.data[i];
     
     // Check if row exists and has any data
     if (!row || Object.keys(row).length === 0) {
+      console.log(`🔧 RunsheetPro Extension: Found completely empty row at index ${i}`);
       return i; // Completely empty row
     }
     
@@ -1169,7 +1467,7 @@ function findNextAvailableRow(runsheetData) {
       return value !== null && value !== undefined && value !== '' && value !== 'N/A';
     });
     
-    // Check if row has any linked documents
+    // Check if row has any linked documents by checking the documents table
     const hasLinkedDocuments = Object.entries(row).some(([key, value]) => {
       if (key === 'Document File Name' || key === 'screenshot_url' || key.toLowerCase().includes('document')) {
         return value !== null && value !== undefined && value !== '';
@@ -3111,37 +3409,109 @@ async function captureSelectedArea(left, top, width, height) {
   console.log('🔧 RunsheetPro Extension: Capturing area:', { left, top, width, height });
   
   try {
-    // Request screenshot from background script
-    const response = await chrome.runtime.sendMessage({ action: 'captureTab' });
+    let dataUrl;
     
-    if (response && response.dataUrl) {
-      // Create canvas to crop the image
+    // Check if we're in fullscreen mode
+    if (isInFullscreen()) {
+      console.log('🔧 Fullscreen detected, attempting desktop capture');
+      
+      try {
+        // Try desktop capture first for fullscreen content
+        dataUrl = await captureFullscreenContent();
+        showNotification('📸 Captured fullscreen content using desktop capture', 'info');
+      } catch (desktopError) {
+        console.warn('🔧 Desktop capture failed, trying to exit fullscreen:', desktopError);
+        
+        // If desktop capture fails, try exiting fullscreen and using regular capture
+        const exitedFullscreen = await exitFullscreenIfNeeded();
+        if (exitedFullscreen) {
+          showNotification('📸 Exited fullscreen mode to enable extension capture', 'info');
+          const response = await chrome.runtime.sendMessage({ action: 'captureTab' });
+          if (response.error) {
+            throw new Error(response.error);
+          }
+          dataUrl = response.dataUrl;
+        } else {
+          throw new Error('Cannot capture in fullscreen mode and failed to exit fullscreen');
+        }
+      }
+    } else {
+      // Normal tab capture for non-fullscreen content
+      const response = await chrome.runtime.sendMessage({ action: 'captureTab' });
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      dataUrl = response.dataUrl;
+    }
+    
+    // For fullscreen captures without specific coordinates, start area selection
+    if (!left && !top && !width && !height && isInFullscreen()) {
+      // Store the captured image and start area selection UI
+      window.fullscreenCapturedImage = dataUrl;
+      startSnipMode();
+      return;
+    }
+    
+    if (dataUrl) {
+      // Create canvas to crop the image if coordinates provided
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       const img = new Image();
       
       img.onload = () => {
-        // Set canvas size to selection
-        canvas.width = width;
-        canvas.height = height;
-        
-        // Draw the cropped portion
-        ctx.drawImage(img, left, top, width, height, 0, 0, width, height);
+        if (left !== undefined && top !== undefined && width > 0 && height > 0) {
+          // Set canvas size to selection
+          canvas.width = width;
+          canvas.height = height;
+          
+          // Draw the cropped portion
+          ctx.drawImage(img, left, top, width, height, 0, 0, width, height);
+        } else {
+          // Use full image if no crop coordinates
+          canvas.width = img.width;
+          canvas.height = img.height;
+          ctx.drawImage(img, 0, 0);
+        }
         
         // Get the cropped image data
         const croppedDataUrl = canvas.toDataURL('image/png');
         
-        // Add to captures and process
-        captures.push(croppedDataUrl);
-        showNotification('Area captured successfully!', 'success');
-        
-        console.log('🔧 RunsheetPro Extension: Snipped area captured');
+        // Convert to blob and add to captured snips with proper structure
+        canvas.toBlob((blob) => {
+          const snipData = {
+            blob: blob,
+            dataUrl: croppedDataUrl,
+            timestamp: Date.now(),
+            coordinates: { left, top, width, height }
+          };
+          
+          // Add to the correct captures array based on snip mode
+          if (snipMode === 'navigate' || snipMode === 'scroll') {
+            capturedSnips.push(snipData);
+            console.log('🔧 Added snip to capturedSnips, total:', capturedSnips.length);
+            
+            // Also add to session captures for persistence
+            if (snipSession && snipSession.active) {
+              snipSession.captures.push(snipData);
+            }
+          } else {
+            // For single mode, also add to capturedSnips
+            capturedSnips.push(snipData);
+            console.log('🔧 Added single snip to capturedSnips');
+          }
+          
+          // Also add to legacy captures array for compatibility
+          captures.push(croppedDataUrl);
+          
+          showNotification('Area captured successfully!', 'success');
+          console.log('🔧 RunsheetPro Extension: Snipped area captured and processed');
+        }, 'image/png');
       };
-      img.src = response.dataUrl;
+      img.src = dataUrl;
     }
   } catch (error) {
     console.error('Snip capture error:', error);
-    showNotification('Failed to capture area', 'error');
+    showNotification('Failed to capture area: ' + error.message, 'error');
   }
 }
 
@@ -3377,6 +3747,16 @@ function initializeExtension() {
     // Always create the runsheet button first
     createRunsheetButton();
     console.log('🔧 RunsheetPro Extension: Button creation attempted');
+
+    // Also create a persistent top-right Snip button (works even without true fullscreen)
+    try { createFullscreenSnipButton(); } catch (e) { console.warn('Snip button create failed', e); }
+    
+    // Add fullscreen event listeners
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+    console.log('🔧 Fullscreen event listeners added');
   }).catch((err) => {
     console.warn('🔧 RunsheetPro Extension: Could not read storage, defaulting to enabled:', err);
     createRunsheetButton();
@@ -3420,6 +3800,16 @@ async function init() {
     // Always create the runsheet button first
     createRunsheetButton();
     console.log('🔧 RunsheetPro Extension: Button creation attempted');
+
+    // Also create a persistent top-right Snip button (works even without true fullscreen)
+    try { createFullscreenSnipButton(); } catch (e) { console.warn('Snip button create failed', e); }
+    
+    // Add fullscreen event listeners
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+    console.log('🔧 Fullscreen event listeners added');
     
     // Check authentication after button is created
     const isAuthenticated = await checkAuth();
@@ -3863,6 +4253,43 @@ function loadSelectedRunsheet(runsheetData) {
   showNotification(`Loaded runsheet: ${runsheetData.name}`, 'success');
 }
 
+// Start document snipping mode (for right-click context menu or keyboard shortcut)
+async function startDocumentSnippingMode() {
+  console.log('🔧 RunsheetPro Extension: Starting document snipping mode from right-click/shortcut');
+  
+  // Check authentication first
+  const isAuthenticated = await checkAuth();
+  if (!isAuthenticated) {
+    showNotification('Please sign in to RunsheetPro first', 'warning');
+    showSignInPopup();
+    return;
+  }
+  
+  // If no active runsheet, show selector first
+  if (!activeRunsheet) {
+    showNotification('Select a runsheet to snip documents to', 'info');
+    showRunsheetSelector();
+    return;
+  }
+  
+  // Check if we're already in snip mode
+  if (isSnipMode) {
+    console.log('🔧 Already in snip mode, adding another snip to session');
+    // If already snipping, just show the crosshairs again and let user add another snip
+    if (snipOverlay) {
+      snipOverlay.style.display = 'block';
+    } else {
+      createSnipOverlay();
+    }
+    showNotification('Select another area to add to this snip session', 'info');
+    return;
+  }
+  
+  // Start snip mode with crosshairs in navigate mode for multi-page support
+  startSnipModeWithMode('navigate', true);
+  showNotification('✂️ Snip Mode Active! Drag to select area → Right-click "RunsheetPro: Snip Document" for more pages → Press ESC when done', 'info');
+}
+
 // Start snip mode with specific mode
 function startSnipModeWithMode(mode = 'single', skipOverwriteCheck = false) {
   if (isSnipMode) return;
@@ -3906,6 +4333,9 @@ function startSnipModeWithMode(mode = 'single', skipOverwriteCheck = false) {
   }
   
   createSnipOverlay();
+  
+  // Add escape key handler for snip mode
+  document.addEventListener('keydown', handleSnipModeEscape, true);
   
   // Disable other extension interactions during snip mode
   disableExtensionInteractions();
@@ -4025,9 +4455,11 @@ function createSnipOverlay() {
       
       // Handle different modes after capture  
       if (snipMode === 'single') {
-        // Single mode: automatically store and cleanup
+        // Single mode: process the last captured snip and cleanup
+        if (capturedSnips.length > 0) {
+          await processSnipForRow(capturedSnips[capturedSnips.length - 1]);
+        }
         cleanupSnipMode();
-        showNotification('Screenshot captured and saved!', 'success');
       } else if (snipMode === 'scroll') {
         // Scroll mode: keep crosshairs active for continuous snipping
         snipOverlay.style.display = 'block';
@@ -4142,159 +4574,6 @@ function createSnipControlPanel() {
   createSnipPreviewPanel();
 }
 
-// Capture selected area
-async function captureSelectedArea(left, top, width, height) {
-  try {
-    // Get tab capture
-    const response = await chrome.runtime.sendMessage({ action: 'captureTab' });
-    
-    if (response.error) {
-      throw new Error(response.error);
-    }
-    
-    const img = new Image();
-    img.onload = () => {
-      // Create canvas for cropping
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      
-      // Account for device pixel ratio
-      const ratio = window.devicePixelRatio || 1;
-      
-      canvas.width = width * ratio;
-      canvas.height = height * ratio;
-      canvas.style.width = width + 'px';
-      canvas.style.height = height + 'px';
-      
-      // Draw cropped portion
-      ctx.drawImage(
-        img,
-        left * ratio, top * ratio, width * ratio, height * ratio,
-        0, 0, width * ratio, height * ratio
-      );
-      
-      // Convert to blob
-      canvas.toBlob(async (blob) => {
-        if (blob) {
-          capturedSnips.push({
-            blob: blob,
-            timestamp: Date.now(),
-            width: width,
-            height: height
-          });
-          
-          // Also add to persistent session for navigation/scroll modes
-          if (snipMode === 'navigate' || snipMode === 'scroll') {
-            snipSession.captures.push({
-              blob: blob,
-              timestamp: Date.now(),
-              width: width,
-              height: height
-            });
-            // Save session to storage
-            saveExtensionState();
-          }
-          
-          // Update counter for all modes
-          updateSnipCounter();
-          
-          showNotification(`Snip ${capturedSnips.length} captured!`, 'success');
-          
-          // For navigate mode, hide crosshairs after capture but keep session active
-          if (snipMode === 'navigate') {
-            console.log('🔧 RunsheetPro Extension: Navigate mode - hiding crosshairs and showing nav panel');
-            hideSnipModeForNavigation();
-          }
-          
-          // Handle single mode - process with AI analysis if available
-          if (snipMode === 'single') {
-            try {
-              // Validate captured content format first
-              const validation = await validateCaptureFormat(blob);
-              
-              if (!validation.isValid) {
-                showNotification(validation.error, 'error');
-                cleanupSnipMode();
-                return;
-              }
-              
-              // Store the snip locally for later use
-              window.currentCapturedSnip = blob;
-              window.currentSnipFilename = `captured_snip_${Date.now()}.png`;
-              
-              // If we're in quickview mode, immediately link to the selected row
-              if (currentViewMode === 'full' && currentRowIndex !== undefined) {
-                await linkScreenshotToSpecificRow(currentRowIndex, blob, window.currentSnipFilename);
-                cleanupSnipMode();
-                return;
-              }
-              
-              // For single entry mode, continue with standard flow
-              // Try enhanced AI processing first
-              const aiResult = await processSnipWithAI(blob, {
-                filename: window.currentSnipFilename,
-                row_index: currentRowIndex
-              });
-              
-              if (aiResult.success) {
-                // AI processing succeeded - don't cleanup yet, wait for user decision
-                console.log('Enhanced AI analysis completed successfully');
-                return;
-              } else {
-                // AI processing failed - continue with standard flow
-                console.log('AI processing failed, continuing with standard flow');
-              }
-              
-              // Standard processing flow
-              // Update the Document File Name field in the UI
-              const input = document.querySelector(`input[data-column="Document File Name"]`);
-              if (input) {
-                input.value = window.currentSnipFilename;
-              }
-              
-              // Update the Document File Name column header to show the document interface
-              const headerContainer = document.querySelector('.document-header-container');
-              if (headerContainer) {
-                const uploadInterface = headerContainer.querySelector('.upload-interface');
-                const documentInterface = headerContainer.querySelector('.document-interface');
-                const filenameText = headerContainer.querySelector('.filename-text');
-                
-                if (uploadInterface && documentInterface && filenameText) {
-                  uploadInterface.style.display = 'none';
-                  documentInterface.style.display = 'flex';
-                  filenameText.textContent = window.currentSnipFilename;
-                  headerContainer.style.border = '1px solid hsl(var(--border, 214 32% 91%))';
-                }
-              }
-              
-              // Update screenshot indicator and reset added status
-              updateScreenshotIndicator(true);
-              screenshotAddedToSheet = false; // New screenshot hasn't been added yet
-              
-              cleanupSnipMode();
-              showNotification('✅ Screenshot captured successfully! Fill in any additional data and click "Add Row" to save.', 'success');
-            } catch (error) {
-              console.error('Error capturing snip:', error);
-              showNotification(`Failed to capture screenshot: ${error.message}`, 'error');
-              cleanupSnipMode();
-            }
-          }
-        } else {
-          showNotification('Failed to capture snip', 'error');
-          if (snipMode === 'single') {
-            cleanupSnipMode();
-          }
-        }
-      }, 'image/png');
-    };
-    
-    img.src = response.dataUrl;
-    
-  } catch (error) {
-    console.error('Error capturing snip:', error);
-    showNotification('Failed to capture snip: ' + error.message, 'error');
-  }
-}
 
 // Update snip counter
 function updateSnipCounter() {
@@ -4341,9 +4620,10 @@ async function finishSnipping() {
     window.currentCapturedSnip = finalBlob;
     window.currentSnipFilename = `snip_session_${Date.now()}.png`;
     
-    // If we're in quickview mode, immediately link to the selected row
-    if (currentViewMode === 'full' && currentRowIndex !== undefined) {
+    // Automatically link to the current row (matches legacy navigate workflow)
+    if (activeRunsheet && currentRowIndex !== undefined) {
       await linkScreenshotToSpecificRow(currentRowIndex, finalBlob, window.currentSnipFilename);
+      showNotification(`Screenshot${snipsToProcess.length > 1 ? 's' : ''} added to row successfully!`, 'success');
       cleanupSnipMode();
       return;
     }
@@ -4452,14 +4732,16 @@ function createNavigationControlPanel() {
   const snipAgainButton = document.createElement('button');
   snipAgainButton.textContent = 'Next Snip';
   snipAgainButton.style.cssText = `
-    background: #3b82f6 !important;
-    color: white !important;
-    border: none !important;
+    background: hsl(var(--primary, 215 80% 40%)) !important;
+    color: hsl(var(--primary-foreground, 210 40% 98%)) !important;
+    border: 1px solid hsl(var(--primary, 215 80% 40%)) !important;
     padding: 8px 16px !important;
     border-radius: 6px !important;
     cursor: pointer !important;
     font-size: 14px !important;
-    font-weight: 500 !important;
+    font-weight: 600 !important;
+    transition: var(--transition-smooth) !important;
+    box-shadow: 0 2px 4px hsl(var(--primary, 215 80% 40%) / 0.2) !important;
   `;
   
   snipAgainButton.addEventListener('click', () => {
@@ -4471,14 +4753,16 @@ function createNavigationControlPanel() {
   const doneButton = document.createElement('button');
   doneButton.textContent = 'Finished Snipping';
   doneButton.style.cssText = `
-    background: #10b981 !important;
-    color: white !important;
-    border: none !important;
+    background: hsl(var(--success, 145 70% 40%)) !important;
+    color: hsl(var(--success-foreground, 145 80% 98%)) !important;
+    border: 1px solid hsl(var(--success, 145 70% 40%)) !important;
     padding: 8px 16px !important;
     border-radius: 6px !important;
     cursor: pointer !important;
     font-size: 14px !important;
-    font-weight: 500 !important;
+    font-weight: 600 !important;
+    transition: var(--transition-smooth) !important;
+    box-shadow: 0 2px 4px hsl(var(--success, 145 70% 40%) / 0.2) !important;
   `;
   
   doneButton.addEventListener('click', () => {
@@ -4490,14 +4774,16 @@ function createNavigationControlPanel() {
   const cancelButton = document.createElement('button');
   cancelButton.textContent = 'Cancel';
   cancelButton.style.cssText = `
-    background: #ef4444 !important;
-    color: white !important;
-    border: none !important;
+    background: hsl(var(--destructive, 0 84% 60%)) !important;
+    color: hsl(var(--destructive-foreground, 210 40% 98%)) !important;
+    border: 1px solid hsl(var(--destructive, 0 84% 60%)) !important;
     padding: 8px 16px !important;
     border-radius: 6px !important;
     cursor: pointer !important;
     font-size: 14px !important;
-    font-weight: 500 !important;
+    font-weight: 600 !important;
+    transition: var(--transition-smooth) !important;
+    box-shadow: 0 2px 4px hsl(var(--destructive, 0 84% 60%) / 0.2) !important;
   `;
   
   cancelButton.addEventListener('click', () => {
@@ -4532,10 +4818,145 @@ function resumeSnipMode() {
   showNotification('Ready for next snip! Drag to select area.', 'info');
 }
 
+// Handle escape key during snip mode
+function handleSnipModeEscape(e) {
+  if (e.key === 'Escape' && isSnipMode) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // If we have captured snips, offer to complete or cancel
+    if (capturedSnips && capturedSnips.length > 0) {
+      const shouldComplete = confirm(`You have ${capturedSnips.length} captured snip(s). Complete and save to runsheet? (Cancel to discard)`);
+      if (shouldComplete) {
+        completeSnipSession();
+      } else {
+        cancelSnipSession();
+      }
+    } else {
+      // No snips captured, just exit
+      cancelSnipSession();
+    }
+  }
+}
+
+// Complete snip session with captured snips
+function completeSnipSession() {
+  if (capturedSnips && capturedSnips.length > 0) {
+    showNotification(`Completing snip session with ${capturedSnips.length} capture(s)...`, 'info');
+    // Process the captured snips
+    if (capturedSnips.length === 1) {
+      // Single snip - process directly
+      processSnipForRow(capturedSnips[0]);
+    } else {
+      // Multiple snips - combine them
+      combineAndProcessSnips(capturedSnips);
+    }
+  }
+  cleanupSnipMode();
+}
+
+// Process a single snip and add it to the current row
+async function processSnipForRow(snipData) {
+  try {
+    console.log('🔧 ProcessSnipForRow called with:', snipData);
+    
+    if (!activeRunsheet || currentRowIndex === undefined) {
+      showNotification('No active runsheet or row selected', 'error');
+      console.error('🔧 ProcessSnipForRow: Missing runsheet or row index');
+      return;
+    }
+
+    // Handle different snipData formats - could be {blob} or just the blob
+    const blob = snipData?.blob || snipData;
+    if (!blob) {
+      showNotification('No screenshot data found', 'error');
+      console.error('🔧 ProcessSnipForRow: No blob data found');
+      return;
+    }
+    
+    console.log('🔧 ProcessSnipForRow: Found blob, size:', blob.size);
+
+    // Store the snip locally for "Add to Row" functionality
+    window.currentCapturedSnip = blob;
+    window.currentSnipFilename = `snip_${Date.now()}.png`;
+    
+    console.log('🔧 ProcessSnipForRow: Stored snip locally, currentViewMode:', currentViewMode);
+    
+    // If we're in full view mode, immediately link to the selected row
+    if (currentViewMode === 'full' && currentRowIndex !== undefined) {
+      console.log('🔧 ProcessSnipForRow: In full view mode, linking directly');
+      await linkScreenshotToSpecificRow(currentRowIndex, blob, window.currentSnipFilename);
+      showNotification('Screenshot added to row successfully!', 'success');
+      return;
+    }
+    
+    // Update the Document File Name field in the UI
+    const input = document.querySelector(`input[data-column="Document File Name"]`);
+    if (input) {
+      input.value = window.currentSnipFilename;
+    }
+    
+    // Show file indication in the document header
+    const headerContainer = document.querySelector('.document-header-container');
+    if (headerContainer) {
+      const uploadInterface = headerContainer.querySelector('.upload-interface');
+      const documentInterface = headerContainer.querySelector('.document-interface');
+      const filenameText = headerContainer.querySelector('.filename-text');
+      
+      if (uploadInterface && documentInterface && filenameText) {
+        uploadInterface.style.display = 'none';
+        documentInterface.style.display = 'flex';
+        filenameText.textContent = window.currentSnipFilename;
+        headerContainer.style.border = '1px solid hsl(var(--border, 214 32% 91%))';
+      }
+    }
+    
+    // Update screenshot indicator and reset added status
+    updateScreenshotIndicator(true);
+    screenshotAddedToSheet = false; // New screenshot hasn't been added yet
+    
+    // Make sure the runsheet frame is visible if we're not in full view mode
+    if (currentViewMode !== 'full' && runsheetFrame) {
+      runsheetFrame.style.display = 'block';
+      console.log('🔧 Made runsheet frame visible for snip');
+    }
+    
+    showNotification('Screenshot captured and ready! Fill in data and click "Add to Row" to save.', 'success');
+    
+  } catch (error) {
+    console.error('Error processing snip for row:', error);
+    showNotification('Failed to process screenshot: ' + error.message, 'error');
+  }
+}
+
+// Combine multiple snips and process them
+async function combineAndProcessSnips(snips) {
+  try {
+    // Combine snips vertically
+    const finalBlob = await combineSnipsVertically(snips);
+    
+    // Process the combined snip
+    await processSnipForRow({ blob: finalBlob });
+    
+  } catch (error) {
+    console.error('Error combining snips:', error);
+    showNotification('Failed to combine screenshots: ' + error.message, 'error');
+  }
+}
+
+// Cancel snip session
+function cancelSnipSession() {
+  showNotification('Snip session cancelled', 'info');
+  cleanupSnipMode();
+}
+
 // Cleanup snip mode
 function cleanupSnipMode() {
   isSnipMode = false;
   capturedSnips = [];
+  
+  // Remove escape key handler
+  document.removeEventListener('keydown', handleSnipModeEscape, true);
   
   if (snipOverlay) {
     snipOverlay.remove();
@@ -4880,6 +5301,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   } else if (request.action === 'showSnipModeSelector') {
     // Show snip mode selection modal
     showSnipModeSelector();
+  } else if (request.action === 'startDocumentSnip') {
+    // Start document snipping directly (for toolbar button use)
+    startDocumentSnippingMode();
   } else if (request.action === 'openRunsheet') {
     // Open the runsheet UI: if frame exists, toggle; else show selector/sign-in
     (async () => {
@@ -5005,8 +5429,12 @@ try {
 function updateScreenshotIndicator(hasScreenshot) {
   // Check for current captured snip first, then check stored screenshot
   const hasCapturedSnip = !!window.currentCapturedSnip;
-  const hasStoredScreenshot = activeRunsheet && activeRunsheet.data && activeRunsheet.data[currentRowIndex] && 
-    (activeRunsheet.data[currentRowIndex]['Document File Name'] || activeRunsheet.data[currentRowIndex]['screenshot_url']);
+  const row = activeRunsheet && activeRunsheet.data && activeRunsheet.data[currentRowIndex];
+  const rawUrl = row && row['screenshot_url'];
+  // Only treat as stored screenshot if it looks like a valid Supabase storage URL
+  const hasStoredScreenshot = typeof rawUrl === 'string'
+    && /^https?:\/\//.test(rawUrl)
+    && rawUrl.includes('/storage/v1/object/public/documents/');
   
   // Only show screenshot-related buttons if we actually have a screenshot
   const actuallyHasScreenshot = hasCapturedSnip || hasStoredScreenshot;
@@ -5822,23 +6250,38 @@ async function linkScreenshotToSpecificRow(rowIndex, blob, filename) {
       throw new Error('Failed to sync screenshot with backend');
     }
     
-    // Clear the captured snip since it's now saved
-    window.currentCapturedSnip = null;
-    window.currentSnipFilename = null;
+    // Refresh the UI to reflect the new document
+    const frameContent = document.querySelector('#runsheetpro-runsheet-frame .frame-content');
+    if (frameContent) {
+      frameContent.innerHTML = '';
+      if (currentViewMode === 'full') {
+        createFullRunsheetView(frameContent);
+      } else {
+        createSingleEntryView(frameContent);
+      }
+      // Update any dependent UI (navigation, counters)
+      setTimeout(() => {
+        try { updateRowNavigationUI && updateRowNavigationUI(); } catch {}
+      }, 0);
+    }
     
-    // Refresh the quickview display to show the new document
-    if (currentViewMode === 'full') {
-      const content = document.querySelector('#runsheetpro-runsheet-frame .frame-content');
-      if (content) {
-        // Clear and rebuild to ensure buttons reflect the new state
-        content.innerHTML = '';
-        createFullRunsheetView(content);
-        // Update any dependent UI
-        setTimeout(() => {
-          try { updateRowNavigationUI && updateRowNavigationUI(); } catch {}
-        }, 0);
+    // Also toggle the header container (single entry header) if present
+    const headerContainer = document.querySelector('.document-header-container');
+    if (headerContainer) {
+      const uploadInterface = headerContainer.querySelector('.upload-interface');
+      const documentInterface = headerContainer.querySelector('.document-interface');
+      const filenameText = headerContainer.querySelector('.filename-text');
+      if (uploadInterface && documentInterface && filenameText) {
+        uploadInterface.style.display = 'none';
+        documentInterface.style.display = 'flex';
+        filenameText.textContent = filename;
       }
     }
+    
+    // Fire a custom event so any listeners can refresh their document map
+    try {
+      window.dispatchEvent(new CustomEvent('documentRecordCreated', { detail: { runsheetId: activeRunsheet.id, rowIndex } }));
+    } catch {}
     
     showNotification('✅ Screenshot linked to row successfully!', 'success');
     
@@ -6086,9 +6529,14 @@ function enableExtensionInteractions() {
 
 // Update cleanup function to disable smart scroll
 function cleanupSnipMode() {
+  console.log('🔧 RunsheetPro Extension: Cleaning up snip mode completely');
+  
   isSnipMode = false;
   snipMode = 'single';
   capturedSnips = [];
+  
+  // Remove escape key handler
+  document.removeEventListener('keydown', handleSnipModeEscape, true);
   
   // Disable smart scrolling
   disableSmartScrollDetection();
@@ -6112,14 +6560,90 @@ function cleanupSnipMode() {
     snipSelection = null;
   }
   
+  // Remove navigation controls
+  const navPanel = document.getElementById('runsheetpro-nav-controls');
+  if (navPanel) {
+    navPanel.remove();
+  }
+  
+  // Remove any selection rectangles
+  const selectionRect = document.getElementById('runsheetpro-selection-rect');
+  if (selectionRect) {
+    selectionRect.remove();
+  }
+  
+  // Remove grid overlay
+  const gridOverlay = document.getElementById('runsheetpro-grid-overlay');
+  if (gridOverlay) {
+    gridOverlay.remove();
+  }
+  
+  // Clear snip session
+  snipSession = {
+    active: false,
+    captures: [],
+    timestamp: null
+  };
+  
+  // Remove all mouse event listeners
+  document.removeEventListener('mousedown', handleMouseDown);
+  document.removeEventListener('mousemove', handleMouseMove);
+  document.removeEventListener('mouseup', handleMouseUp);
+  document.removeEventListener('keydown', handleKeyDown);
+  
+  // Remove scroll event listeners
+  document.removeEventListener('wheel', handleScrollPassthrough);
+  document.removeEventListener('keydown', handleKeyScrollPassthrough);
+  
   // Clean up scroll overlay modifications
   cleanupScrollOverlay();
   
-  // Clean up context menu
-  cleanupContextMenu();
-  
   console.log('🔧 RunsheetPro Extension: Snip mode cleaned up with smart scroll disabled');
 }
+
+// Enhanced navigation detection and cleanup
+let currentUrl = window.location.href;
+let navigationCleanupTimeout;
+
+// Clean up on page navigation/unload
+window.addEventListener('beforeunload', () => {
+  console.log('🔧 RunsheetPro Extension: Page unloading, cleaning up snip mode');
+  if (isSnipMode) cleanupSnipMode();
+});
+
+window.addEventListener('pagehide', () => {
+  console.log('🔧 RunsheetPro Extension: Page hiding, cleaning up snip mode');
+  if (isSnipMode) cleanupSnipMode();
+});
+
+// Watch for URL changes (SPA navigation)
+const urlObserver = new MutationObserver(() => {
+  if (window.location.href !== currentUrl) {
+    const oldUrl = currentUrl;
+    currentUrl = window.location.href;
+    console.log('🔧 RunsheetPro Extension: URL change detected:', oldUrl, '->', currentUrl);
+    
+    // Debounce cleanup to avoid excessive calls
+    clearTimeout(navigationCleanupTimeout);
+    navigationCleanupTimeout = setTimeout(() => {
+      if (isSnipMode) {
+        console.log('🔧 RunsheetPro Extension: Cleaning up snip mode due to navigation');
+        cleanupSnipMode();
+      }
+    }, 100);
+  }
+});
+
+// Start observing for navigation changes
+urlObserver.observe(document, { subtree: true, childList: true });
+
+// Also listen for popstate events (browser back/forward)
+window.addEventListener('popstate', () => {
+  console.log('🔧 RunsheetPro Extension: Popstate detected, cleaning up snip mode');
+  if (isSnipMode) {
+    cleanupSnipMode();
+  }
+});
 
 // Make the overlay allow scrolling through to underlying elements
 function makeOverlayScrollable() {
@@ -6570,163 +7094,4 @@ function cleanupScrollOverlay() {
   // Remove event listeners
   document.removeEventListener('wheel', handleScrollPassthrough);
   document.removeEventListener('keydown', handleKeyScrollPassthrough, true);
-}
-
-// ============= RIGHT-CLICK CONTEXT MENU =============
-
-// Create and show context menu
-function createContextMenu(x, y) {
-  // Remove existing context menu
-  removeContextMenu();
-  
-  // Only show if we're in snip mode with multiple snips capability
-  if (!isSnipMode || snipMode === 'single') return;
-  
-  contextMenu = document.createElement('div');
-  contextMenu.id = 'runsheetpro-context-menu';
-  contextMenu.style.cssText = `
-    position: fixed !important;
-    top: ${y}px !important;
-    left: ${x}px !important;
-    background: hsl(var(--background, 0 0% 100%)) !important;
-    border: 1px solid hsl(var(--border, 214 32% 91%)) !important;
-    border-radius: 8px !important;
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15) !important;
-    z-index: 2147483647 !important;
-    min-width: 180px !important;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-    overflow: hidden !important;
-    animation: contextMenuFadeIn 0.15s ease-out !important;
-  `;
-  
-  const menuItems = [
-    {
-      icon: '📷',
-      text: 'Next Snip',
-      action: () => {
-        removeContextMenu();
-        handleNextSnip();
-      },
-      disabled: false
-    },
-    {
-      icon: '✅',
-      text: 'Finish Snipping',
-      action: () => {
-        removeContextMenu();
-        finishSnipping();
-      },
-      disabled: capturedSnips.length === 0
-    },
-    {
-      icon: '❌',
-      text: 'Cancel Snipping',
-      action: () => {
-        removeContextMenu();
-        cancelSnipping();
-      },
-      disabled: false
-    }
-  ];
-  
-  menuItems.forEach((item, index) => {
-    const menuItem = document.createElement('div');
-    menuItem.style.cssText = `
-      padding: 12px 16px !important;
-      cursor: ${item.disabled ? 'not-allowed' : 'pointer'} !important;
-      display: flex !important;
-      align-items: center !important;
-      gap: 12px !important;
-      font-size: 14px !important;
-      color: ${item.disabled ? 'hsl(var(--muted-foreground, 215 16% 47%))' : 'hsl(var(--foreground, 222 47% 11%))'} !important;
-      opacity: ${item.disabled ? '0.5' : '1'} !important;
-      transition: background-color 0.15s ease !important;
-      border-bottom: ${index < menuItems.length - 1 ? '1px solid hsl(var(--border, 214 32% 91%))' : 'none'} !important;
-    `;
-    
-    if (!item.disabled) {
-      menuItem.addEventListener('mouseenter', () => {
-        menuItem.style.backgroundColor = 'hsl(var(--accent, 210 40% 96%))';
-      });
-      
-      menuItem.addEventListener('mouseleave', () => {
-        menuItem.style.backgroundColor = 'transparent';
-      });
-      
-      menuItem.addEventListener('click', item.action);
-    }
-    
-    menuItem.innerHTML = `
-      <span style="font-size: 16px;">${item.icon}</span>
-      <span>${item.text}</span>
-    `;
-    
-    contextMenu.appendChild(menuItem);
-  });
-  
-  // Add animation keyframes
-  if (!document.getElementById('runsheetpro-context-menu-styles')) {
-    const style = document.createElement('style');
-    style.id = 'runsheetpro-context-menu-styles';
-    style.textContent = `
-      @keyframes contextMenuFadeIn {
-        from {
-          opacity: 0;
-          transform: scale(0.95);
-        }
-        to {
-          opacity: 1;
-          transform: scale(1);
-        }
-      }
-    `;
-    document.head.appendChild(style);
-  }
-  
-  document.body.appendChild(contextMenu);
-  
-  // Adjust position if menu goes off screen
-  const rect = contextMenu.getBoundingClientRect();
-  const viewportWidth = window.innerWidth;
-  const viewportHeight = window.innerHeight;
-  
-  if (rect.right > viewportWidth) {
-    contextMenu.style.left = `${x - rect.width}px`;
-  }
-  
-  if (rect.bottom > viewportHeight) {
-    contextMenu.style.top = `${y - rect.height}px`;
-  }
-  
-  // Close menu when clicking outside
-  setTimeout(() => {
-    document.addEventListener('click', removeContextMenu, { once: true });
-    document.addEventListener('contextmenu', removeContextMenu, { once: true });
-  }, 100);
-}
-
-// Remove context menu
-function removeContextMenu() {
-  if (contextMenu) {
-    try {
-      document.body.removeChild(contextMenu);
-    } catch (e) {
-      // Menu might already be removed
-    }
-    contextMenu = null;
-  }
-}
-
-// Add right-click event listener to document
-document.addEventListener('contextmenu', (e) => {
-  // Only show context menu in snip mode
-  if (isSnipMode && snipMode !== 'single') {
-    e.preventDefault();
-    createContextMenu(e.clientX, e.clientY);
-  }
-});
-
-// Close context menu when snip mode ends
-function cleanupContextMenu() {
-  removeContextMenu();
 }

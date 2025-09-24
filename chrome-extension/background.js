@@ -104,6 +104,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 chrome.runtime.onInstalled.addListener((details) => {
   console.log('RunsheetPro extension installed:', details.reason);
   
+  // (Re)create context menu for snipping on install/update
+  try {
+    chrome.contextMenus.removeAll(() => {
+      chrome.contextMenus.create({
+        id: 'runsheetpro-snip',
+        title: 'RunsheetPro: Snip Document',
+        contexts: ['all']
+      });
+    });
+  } catch (e) {
+    console.warn('Context menu setup error:', e);
+  }
+  
   if (details.reason === 'install') {
     // Set default settings on first install - ensure extension is enabled by default
     chrome.storage.local.set({
@@ -120,4 +133,26 @@ chrome.runtime.onInstalled.addListener((details) => {
 // Handle tab updates: no-op (manifest handles injection to avoid duplicates)
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   // Intentionally left blank
+});
+
+// Keyboard shortcuts (works even when toolbar is hidden)
+chrome.commands.onCommand.addListener(async (command) => {
+  console.log('Command received:', command);
+  if (command === 'start-document-snip') {
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tab && tab.id) {
+        chrome.tabs.sendMessage(tab.id, { action: 'startDocumentSnip' });
+      }
+    } catch (e) {
+      console.error('start-document-snip error:', e);
+    }
+  }
+});
+
+// Context menu support for snipping
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (info.menuItemId === 'runsheetpro-snip' && tab && tab.id) {
+    chrome.tabs.sendMessage(tab.id, { action: 'startDocumentSnip' });
+  }
 });
