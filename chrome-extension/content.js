@@ -63,6 +63,7 @@ let snipOverlay = null;
 let snipSelection = null;
 let capturedSnips = [];
 let snipControlPanel = null;
+let snipContextMenu = null;
 
 // Check authentication status
 async function checkAuth() {
@@ -4531,6 +4532,106 @@ function resumeSnipMode() {
   showNotification('Ready for next snip! Drag to select area.', 'info');
 }
 
+// Show snip context menu
+function showSnipContextMenu(x, y) {
+  // Remove existing menu if any
+  if (snipContextMenu) {
+    snipContextMenu.remove();
+    snipContextMenu = null;
+  }
+
+  snipContextMenu = document.createElement('div');
+  snipContextMenu.id = 'runsheetpro-snip-context-menu';
+  snipContextMenu.style.cssText = `
+    position: fixed !important;
+    left: ${x}px !important;
+    top: ${y}px !important;
+    background: white !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 8px !important;
+    padding: 8px 0 !important;
+    z-index: 2147483648 !important;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    min-width: 180px !important;
+  `;
+
+  const menuItems = [
+    {
+      text: '📸 RunsheetPro: Next Snip',
+      action: () => {
+        hideSnipContextMenu();
+        resumeSnipMode();
+      }
+    },
+    {
+      text: '✅ Finish Snipping',
+      action: () => {
+        hideSnipContextMenu();
+        finishSnipping();
+      }
+    },
+    {
+      text: '❌ Cancel Snipping',
+      action: () => {
+        hideSnipContextMenu();
+        cancelSnipping();
+      }
+    }
+  ];
+
+  menuItems.forEach(item => {
+    const menuItem = document.createElement('div');
+    menuItem.textContent = item.text;
+    menuItem.style.cssText = `
+      padding: 12px 16px !important;
+      cursor: pointer !important;
+      font-size: 14px !important;
+      color: #374151 !important;
+      border-bottom: 1px solid #f3f4f6 !important;
+      transition: background-color 0.15s ease !important;
+    `;
+
+    // Remove border from last item
+    if (item === menuItems[menuItems.length - 1]) {
+      menuItem.style.borderBottom = 'none !important';
+    }
+
+    menuItem.addEventListener('mouseenter', () => {
+      menuItem.style.backgroundColor = '#f9fafb !important';
+    });
+
+    menuItem.addEventListener('mouseleave', () => {
+      menuItem.style.backgroundColor = 'transparent !important';
+    });
+
+    menuItem.addEventListener('click', item.action);
+    snipContextMenu.appendChild(menuItem);
+  });
+
+  document.body.appendChild(snipContextMenu);
+
+  // Hide menu when clicking elsewhere
+  const hideOnClick = (e) => {
+    if (!snipContextMenu.contains(e.target)) {
+      hideSnipContextMenu();
+      document.removeEventListener('click', hideOnClick);
+    }
+  };
+  
+  setTimeout(() => {
+    document.addEventListener('click', hideOnClick);
+  }, 100);
+}
+
+// Hide snip context menu
+function hideSnipContextMenu() {
+  if (snipContextMenu) {
+    snipContextMenu.remove();
+    snipContextMenu = null;
+  }
+}
+
 // Cleanup snip mode
 function cleanupSnipMode() {
   isSnipMode = false;
@@ -4545,6 +4646,9 @@ function cleanupSnipMode() {
     snipControlPanel.remove();
     snipControlPanel = null;
   }
+  
+  // Remove context menu if it exists
+  hideSnipContextMenu();
   
   // Also remove navigation panel if it exists
   const navPanel = document.getElementById('runsheetpro-nav-controls');
@@ -6095,6 +6199,9 @@ function cleanupSnipMode() {
   // Re-enable extension interactions
   enableExtensionInteractions();
   
+  // Remove context menu if it exists
+  hideSnipContextMenu();
+  
   // Remove overlays and UI
   if (snipOverlay) {
     snipOverlay.remove();
@@ -6567,3 +6674,12 @@ function cleanupScrollOverlay() {
   document.removeEventListener('wheel', handleScrollPassthrough);
   document.removeEventListener('keydown', handleKeyScrollPassthrough, true);
 }
+
+// Add right-click context menu support for multi-snip sessions
+document.addEventListener('contextmenu', (e) => {
+  // Only show context menu during navigate mode when not actively selecting
+  if (snipMode === 'navigate' && (!snipOverlay || snipOverlay.style.display === 'none')) {
+    e.preventDefault();
+    showSnipContextMenu(e.clientX, e.clientY);
+  }
+});
