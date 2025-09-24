@@ -4392,13 +4392,20 @@ async function finishSnipping() {
     updateScreenshotIndicator(true);
     screenshotAddedToSheet = false; // New screenshot hasn't been added yet
     
-    showNotification(`✅ ${snipsToProcess.length} snips combined and ready! Fill in data and click "Add to Row" to save everything.`, 'success');
+    // Handle mass capture mode completion
+    if (isMassCaptureMode) {
+      handleMassCaptureCompletion();
+    } else {
+      showNotification(`✅ ${snipsToProcess.length} snips combined and ready! Fill in data and click "Add to Row" to save everything.`, 'success');
+    }
     
   } catch (error) {
     console.error('Error finishing snipping:', error);
     showNotification('Failed to process snips: ' + error.message, 'error');
   } finally {
-    cleanupSnipMode();
+    if (!isMassCaptureMode) {
+      cleanupSnipMode();
+    }
   }
 }
 
@@ -6618,10 +6625,10 @@ function startMassCaptureMode() {
   // Create the minimal floating control panel
   createMassCapturePanel();
   
-  // Enable context menu for next snip
-  chrome.runtime.sendMessage({ action: 'updateSnipContextMenu', enabled: true });
+  // Disable context menu for next snip (will be enabled when user starts a document session)
+  chrome.runtime.sendMessage({ action: 'updateSnipContextMenu', enabled: false });
   
-  showNotification('Mass capture mode started! Use "Next Snip" to capture documents continuously.', 'success');
+  showNotification('Mass capture mode started! Click "Next Document" to begin capturing.', 'success');
 }
 
 // Create the floating mass capture control panel
@@ -6654,7 +6661,7 @@ function createMassCapturePanel() {
     </div>
     <div style="margin-bottom: 12px; font-size: 13px; opacity: 0.9;">
       Row: <span id="mass-capture-row">${currentRowIndex + 1}</span> | 
-      Captured: <span id="mass-capture-count">0</span>
+      Docs: <span id="mass-capture-count">0</span>
     </div>
     <div style="display: flex; gap: 8px;">
       <button id="mass-capture-next" style="
@@ -6667,7 +6674,7 @@ function createMassCapturePanel() {
         cursor: pointer !important;
         transition: all 0.2s ease !important;
         flex: 1 !important;
-      ">Next Snip</button>
+      ">Next Document</button>
       <button id="mass-capture-done" style="
         background: rgba(220, 38, 38, 0.8) !important;
         color: white !important;
@@ -6677,7 +6684,7 @@ function createMassCapturePanel() {
         font-size: 13px !important;
         cursor: pointer !important;
         transition: all 0.2s ease !important;
-      ">Done</button>
+      ">Exit Mode</button>
     </div>
   `;
   
@@ -6700,22 +6707,22 @@ function createMassCapturePanel() {
   });
   
   // Add event listeners
-  nextBtn.addEventListener('click', startNextMassCapture);
+  nextBtn.addEventListener('click', startNextMassDocument);
   doneBtn.addEventListener('click', endMassCaptureMode);
   
   document.body.appendChild(massCapturePanel);
 }
 
-// Start next capture in mass mode
-function startNextMassCapture() {
+// Start next document capture session in mass mode
+function startNextMassDocument() {
   if (!isMassCaptureMode || !activeRunsheet) return;
   
-  console.log('🔧 RunsheetPro Extension: Starting next mass capture for row', currentRowIndex + 1);
+  console.log('🔧 RunsheetPro Extension: Starting next document session for row', currentRowIndex + 1);
   
-  // Start navigate snip mode for this capture
+  // Start navigate snip mode for this document session
   startSnipModeWithMode('navigate', true); // Skip overwrite check since we're in mass mode
   
-  showNotification(`Capturing for row ${currentRowIndex + 1}`, 'info');
+  showNotification(`Starting document capture session for row ${currentRowIndex + 1}`, 'info');
 }
 
 // Update mass capture panel display
@@ -6727,6 +6734,7 @@ function updateMassCapturePanel() {
   
   if (rowSpan) rowSpan.textContent = currentRowIndex + 1;
   if (countSpan) countSpan.textContent = massCaptureCount;
+}
 }
 
 // End mass capture mode
