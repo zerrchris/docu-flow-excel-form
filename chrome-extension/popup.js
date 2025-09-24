@@ -3,7 +3,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const statusDiv = document.getElementById('status');
   const toggleBtn = document.getElementById('toggleBtn');
   const viewModeBtn = document.getElementById('viewModeBtn');
-  const snipBtn = document.getElementById('snipBtn');
   const screenshotBtn = document.getElementById('screenshotBtn');
   const openAppBtn = document.getElementById('openApp');
 
@@ -19,15 +18,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       statusDiv.className = `status ${isEnabled ? 'active' : 'inactive'}`;
       toggleBtn.textContent = isEnabled ? 'Deactivate Extension' : 'Activate Extension';
       
-      // Show buttons only if extension is active and has an active runsheet
+      // Show view mode button only if extension is active and has an active runsheet
       if (isEnabled && hasActiveRunsheet) {
         viewModeBtn.style.display = 'block';
         viewModeBtn.textContent = viewMode === 'single' ? 'Switch to Full View' : 'Switch to Single Entry';
-        snipBtn.style.display = 'block';
         screenshotBtn.style.display = 'block';
       } else {
         viewModeBtn.style.display = 'none';
-        snipBtn.style.display = 'none';
         screenshotBtn.style.display = 'none';
       }
       
@@ -88,23 +85,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       await checkStatus();
     } catch (error) {
       console.error('Error toggling view mode:', error);
-    }
-  });
-
-  // Snip document button - specific for document snipping
-  snipBtn.addEventListener('click', async () => {
-    try {
-      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (tabs[0]) {
-        chrome.tabs.sendMessage(tabs[0].id, { 
-          action: 'startDocumentSnip'
-        }).catch(() => {
-          console.error('Could not start document snip');
-        });
-      }
-      window.close(); // Close popup after starting snip mode
-    } catch (error) {
-      console.error('Error starting document snip:', error);
     }
   });
 

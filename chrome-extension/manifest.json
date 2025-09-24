@@ -53,14 +53,5 @@
 
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"
-  },
-  "commands": {
-    "start-document-snip": {
-      "suggested_key": {
-        "default": "Alt+S",
-        "mac": "Command+Shift+S"
-      },
-      "description": "Start RunsheetPro document snip"
-    }
   }
 }
