@@ -2819,6 +2819,12 @@ async function switchViewMode(newMode) {
       }
     });
     
+    // Ensure the main runsheet button is visible when switching back to single entry mode
+    if (currentViewMode === 'single' && runsheetButton && !isMassCaptureMode) {
+      runsheetButton.style.display = 'flex';
+      console.log('🔧 RunsheetPro Extension: Restored runsheet button visibility when switching to single view');
+    }
+    
     // Save state when switching view modes
     if (typeof saveExtensionState === 'function') {
       saveExtensionState();

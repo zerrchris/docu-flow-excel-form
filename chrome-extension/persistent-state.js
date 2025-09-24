@@ -361,9 +361,15 @@ async function initializeExtensionWithStateRestore() {
     if (snipSession.active) {
       console.log('🔧 RunsheetPro Extension: Found active snip session', snipSession);
       
-      // Don't restore snip sessions if we're in mass capture mode
+      // Don't restore snip sessions if we're in mass capture mode or quick view mode
       if (isMassCaptureMode) {
         console.log('🔧 RunsheetPro Extension: Skipping snip session restoration - mass capture mode is active');
+        return;
+      }
+      
+      // Don't restore snip sessions if we're in quick view mode
+      if (currentViewMode === 'full') {
+        console.log('🔧 RunsheetPro Extension: Skipping snip session restoration - quick view mode is active');
         return;
       }
       
