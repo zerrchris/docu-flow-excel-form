@@ -55,6 +55,7 @@ let userSession = null;
 let currentViewMode = 'single'; // 'single' or 'full'
 let currentRowIndex = 0; // Track current row being edited
 let screenshotAddedToSheet = false; // Track if current screenshot has been added to sheet
+let lastSuccessfulAddTs = 0; // Timestamp of last successful add-to-sheet (prevents false unsaved warnings)
 
 // Snip mode variables
 let isSnipMode = false;
@@ -780,6 +781,7 @@ async function addRowToSheet() {
     
     if (result.success) {
       showNotification(`Row ${result.row_index + 1} added successfully!`, 'success');
+      lastSuccessfulAddTs = Date.now();
       
       // Mark screenshot as added to sheet and clear current snip if one was included
       if (screenshotUrl) {
@@ -2965,6 +2967,8 @@ function setupFrameEventListeners() {
 // Check if there's unsaved data in single entry mode
 function hasUnsavedData() {
   if (currentViewMode !== 'single') return false;
+  // Grace period after a save to avoid false positives when UI is refreshing
+  if (Date.now() - lastSuccessfulAddTs < 3000) return false;
 
   // Look for the editable single-entry row
   const editableRow = document.querySelector('#runsheetpro-runsheet-frame .editable-row');
