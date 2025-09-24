@@ -169,9 +169,7 @@ function createContextMenu() {
       id: "runsheetpro-next-snip",
       title: "RunsheetPro: Next Snip",
       contexts: ["page", "selection", "image", "link"],
-      documentUrlPatterns: ["<all_urls>"],
-      visible: true,
-      enabled: false
+      documentUrlPatterns: ["<all_urls>"]
     }, () => {
       if (chrome.runtime.lastError) {
         console.error('Context menu creation error:', chrome.runtime.lastError);
