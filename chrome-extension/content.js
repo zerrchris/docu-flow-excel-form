@@ -75,6 +75,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
+// Initialize context menu on content script load
+chrome.runtime.sendMessage({ action: 'initializeContextMenu' }, (response) => {
+  console.log('🔧 Context menu initialization requested');
+});
+
 // Check authentication status
 async function checkAuth() {
   try {
