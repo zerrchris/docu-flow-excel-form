@@ -6830,7 +6830,7 @@ function endMassCaptureMode() {
 }
 
 // Handle completion of a single capture in mass mode
-function handleMassCaptureCompletion() {
+async function handleMassCaptureCompletion() {
   if (!isMassCaptureMode) return;
   
   massCaptureCount++;
