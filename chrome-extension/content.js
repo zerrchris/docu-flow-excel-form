@@ -97,6 +97,12 @@ function createRunsheetButton() {
   console.log('🔧 RunsheetPro Extension: createRunsheetButton() called');
   console.log('🔧 RunsheetPro Extension: Current button element:', runsheetButton);
   
+  // Don't create/show button if we're in mass capture mode
+  if (isMassCaptureMode) {
+    console.log('🔧 RunsheetPro Extension: Skipping button creation - mass capture mode is active');
+    return;
+  }
+  
   if (runsheetButton) {
     console.log('🔧 RunsheetPro Extension: Button already exists, checking if attached to DOM');
     if (document.body && document.body.contains(runsheetButton)) {
@@ -6753,7 +6759,7 @@ function createMassCapturePanel() {
   massCapturePanel.id = 'runsheetpro-mass-capture-panel';
   massCapturePanel.style.cssText = `
     position: fixed !important;
-    top: 20px !important;
+    bottom: 20px !important;
     right: 20px !important;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
     color: white !important;

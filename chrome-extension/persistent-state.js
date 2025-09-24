@@ -361,6 +361,12 @@ async function initializeExtensionWithStateRestore() {
     if (snipSession.active) {
       console.log('🔧 RunsheetPro Extension: Found active snip session', snipSession);
       
+      // Don't restore snip sessions if we're in mass capture mode
+      if (isMassCaptureMode) {
+        console.log('🔧 RunsheetPro Extension: Skipping snip session restoration - mass capture mode is active');
+        return;
+      }
+      
       // Only auto-restore on the same domain or for navigate/scroll modes that persist across domains
       const currentDomain = window.location.hostname;
       const sessionDomain = snipSession.domain || '';
