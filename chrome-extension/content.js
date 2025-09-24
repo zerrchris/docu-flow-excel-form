@@ -65,6 +65,16 @@ let capturedSnips = [];
 let snipControlPanel = null;
 let snipContextMenu = null;
 
+// Listen for context menu messages from background script
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === 'contextMenuNextSnip') {
+    if (snipMode === 'navigate') {
+      resumeSnipMode();
+    }
+    sendResponse({ success: true });
+  }
+});
+
 // Check authentication status
 async function checkAuth() {
   try {
@@ -4637,6 +4647,12 @@ function cleanupSnipMode() {
   isSnipMode = false;
   capturedSnips = [];
   
+  // Hide context menu
+  chrome.runtime.sendMessage({ 
+    action: 'updateContextMenu', 
+    visible: false 
+  });
+  
   if (snipOverlay) {
     snipOverlay.remove();
     snipOverlay = null;
@@ -6674,12 +6690,3 @@ function cleanupScrollOverlay() {
   document.removeEventListener('wheel', handleScrollPassthrough);
   document.removeEventListener('keydown', handleKeyScrollPassthrough, true);
 }
-
-// Add right-click context menu support for multi-snip sessions
-document.addEventListener('contextmenu', (e) => {
-  // Only show context menu during navigate mode when not actively selecting
-  if (snipMode === 'navigate' && (!snipOverlay || snipOverlay.style.display === 'none')) {
-    e.preventDefault();
-    showSnipContextMenu(e.clientX, e.clientY);
-  }
-});
