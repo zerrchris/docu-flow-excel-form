@@ -115,6 +115,28 @@ chrome.runtime.onInstalled.addListener((details) => {
     });
     console.log('RunsheetPro extension: Default settings applied - extension enabled');
   }
+
+  // Create context menu item for "next snip"
+  chrome.contextMenus.create({
+    id: 'runsheetpro-next-snip',
+    title: 'next snip',
+    contexts: ['all']
+  });
+  console.log('RunsheetPro extension: Context menu item created');
+});
+
+// Handle context menu clicks
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (info.menuItemId === 'runsheetpro-next-snip') {
+    console.log('RunsheetPro extension: Next snip context menu clicked');
+    
+    // Send message to content script to trigger next snip functionality
+    chrome.tabs.sendMessage(tab.id, {
+      action: 'nextSnip'
+    }).catch((error) => {
+      console.error('RunsheetPro extension: Error sending next snip message:', error);
+    });
+  }
 });
 
 // Handle tab updates: no-op (manifest handles injection to avoid duplicates)

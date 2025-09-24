@@ -4879,6 +4879,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   } else if (request.action === 'showSnipModeSelector') {
     // Show snip mode selection modal
     showSnipModeSelector();
+  } else if (request.action === 'nextSnip') {
+    // Handle next snip from context menu
+    console.log('🔧 RunsheetPro Extension: Next snip triggered from context menu');
+    resumeSnipMode();
   } else if (request.action === 'openRunsheet') {
     // Open the runsheet UI: if frame exists, toggle; else show selector/sign-in
     (async () => {
