@@ -4213,24 +4213,30 @@ async function captureSelectedArea(left, top, width, height) {
         0, 0, width * ratio, height * ratio
       );
       
-      // Convert to blob
+      // Convert to blob and store serializable data for session restore
       canvas.toBlob(async (blob) => {
         if (blob) {
+          // Keep Blob in-memory for immediate use
           capturedSnips.push({
-            blob: blob,
+            blob,
             timestamp: Date.now(),
-            width: width,
-            height: height
+            width,
+            height
           });
           
-          // Also add to persistent session for navigation/scroll modes
+          // For navigate/scroll modes, persist a data URL (not Blob) to storage
           if (snipMode === 'navigate' || snipMode === 'scroll') {
-            snipSession.captures.push({
-              blob: blob,
-              timestamp: Date.now(),
-              width: width,
-              height: height
-            });
+            try {
+              const sessionDataUrl = canvas.toDataURL('image/png');
+              snipSession.captures.push({
+                dataUrl: sessionDataUrl,
+                timestamp: Date.now(),
+                width,
+                height
+              });
+            } catch (e) {
+              console.warn('🔧 RunsheetPro Extension: Failed to generate dataUrl for session capture', e);
+            }
             // Save session to storage
             saveExtensionState();
           }
@@ -4376,7 +4382,18 @@ async function finishSnipping() {
     // Store the combined snip locally for the current row
     let finalBlob;
     if (snipsToProcess.length === 1) {
-      finalBlob = snipsToProcess[0].blob;
+      const first = snipsToProcess[0];
+      if (first && first.blob instanceof Blob) {
+        finalBlob = first.blob;
+      } else if (first && typeof first.dataUrl === 'string') {
+        const res = await fetch(first.dataUrl);
+        finalBlob = await res.blob();
+      } else if (typeof first === 'string') {
+        const res = await fetch(first);
+        finalBlob = await res.blob();
+      } else {
+        throw new Error('Invalid snip data for single capture');
+      }
     } else {
       // Combine snips vertically
       finalBlob = await combineSnipsVertically(snipsToProcess);
