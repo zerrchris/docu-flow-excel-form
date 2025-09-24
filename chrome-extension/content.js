@@ -3588,6 +3588,22 @@ function showSnipModeSelector(skipOverwriteCheck = true) {
         <div style="font-weight: 600; margin-bottom: 4px;">🔗 Snip & Navigate</div>
         <div style="opacity: 0.9; font-size: 13px;">Capture areas across multiple pages by clicking links or navigating</div>
       </button>
+      
+      <button id="mass-capture-option" style="
+        background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        padding: 16px;
+        text-align: left;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 14px;
+        box-shadow: 0 2px 8px rgba(139, 92, 246, 0.2);
+      ">
+        <div style="font-weight: 600; margin-bottom: 4px;">📸 Mass Capture Mode</div>
+        <div style="opacity: 0.9; font-size: 13px;">Continuous session for capturing multiple documents to multiple rows</div>
+      </button>
     </div>
     
     <div style="text-align: center; margin-top: 20px;">
@@ -3620,6 +3636,11 @@ function showSnipModeSelector(skipOverwriteCheck = true) {
   document.getElementById('navigate-snip-option').addEventListener('click', () => {
     overlay.remove();
     startSnipModeWithMode('navigate', skipOverwriteCheck);
+  });
+
+  document.getElementById('mass-capture-option').addEventListener('click', () => {
+    overlay.remove();
+    startMassCaptureMode();
   });
 
   document.getElementById('cancel-snip-selector').addEventListener('click', () => {
