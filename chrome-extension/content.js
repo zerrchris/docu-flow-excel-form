@@ -6792,8 +6792,14 @@ function endMassCaptureMode() {
     runsheetButton.style.display = 'block';
   }
   
+  // Navigate to next available blank row (like when extension first opens)
+  if (activeRunsheet) {
+    currentRowIndex = findNextAvailableRow(activeRunsheet);
+    console.log(`🔧 RunsheetPro Extension: Mass capture ended, moved to next available row: ${currentRowIndex}`);
+  }
+  
   const finalMessage = massCaptureCount > 0 
-    ? `Mass capture completed! Captured ${massCaptureCount} documents.`
+    ? `Mass capture completed! Captured ${massCaptureCount} documents. Ready for next entry.`
     : 'Mass capture mode ended.';
     
   showNotification(finalMessage, 'success');
