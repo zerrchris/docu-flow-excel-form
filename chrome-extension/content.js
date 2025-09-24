@@ -6946,6 +6946,12 @@ async function endMassCaptureMode() {
   
   // Disable context menu
   chrome.runtime.sendMessage({ action: 'updateSnipContextMenu', enabled: false });
+
+  // Clear any staged snip data and prevent false unsaved warnings on return
+  window.currentCapturedSnip = null;
+  window.currentSnipFilename = null;
+  screenshotAddedToSheet = false;
+  lastSuccessfulAddTs = Date.now();
   
   // Show the main runsheet frame and button again
   if (runsheetFrame) {
