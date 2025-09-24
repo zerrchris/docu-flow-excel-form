@@ -488,14 +488,29 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
         // Update the row data with extracted information
         const updatedData = { ...localRowData };
         
+        console.log('🔍 FullScreen Analysis - Raw extracted data:', extractedData);
+        console.log('🔍 FullScreen Analysis - Available editable fields:', editableFields);
+        console.log('🔍 FullScreen Analysis - Current localRowData:', localRowData);
+        
         // Parse and populate the extracted data
         Object.entries(extractedData).forEach(([field, value]) => {
+          console.log(`🔍 FullScreen Analysis - Processing field "${field}" with value:`, value, 'Type:', typeof value);
+          console.log(`🔍 FullScreen Analysis - Field "${field}" is in editableFields:`, editableFields.includes(field));
+          
           if (editableFields.includes(field) && value && typeof value === 'string') {
             updatedData[field] = value;
+            console.log(`✅ FullScreen Analysis - Updated field "${field}" with value:`, value);
+          } else {
+            console.log(`❌ FullScreen Analysis - Skipped field "${field}" - reason: not in editableFields(${editableFields.includes(field)}) or invalid value(${!!value && typeof value === 'string'})`);
           }
         });
         
+        console.log('🔍 FullScreen Analysis - Final updatedData:', updatedData);
+        
+        console.log('🔍 FullScreen Analysis - Setting localRowData to:', updatedData);
         setLocalRowData(updatedData);
+        
+        console.log('🔍 FullScreen Analysis - Calling onUpdateRow with rowIndex:', rowIndex, 'and data:', updatedData);
         onUpdateRow(rowIndex, updatedData);
         
         // Force immediate save to prevent data loss
