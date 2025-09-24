@@ -6658,6 +6658,11 @@ function startMassCaptureMode() {
   // Create the minimal floating control panel
   createMassCapturePanel();
   
+  // Save the mass capture state for persistence
+  if (typeof saveExtensionState === 'function') {
+    saveExtensionState();
+  }
+  
   // Disable context menu for next snip (will be enabled when user starts a document session)
   chrome.runtime.sendMessage({ action: 'updateSnipContextMenu', enabled: false });
   
@@ -6827,6 +6832,11 @@ function endMassCaptureMode() {
   // Reset counters
   massCaptureCount = 0;
   massCaptureStartRow = 0;
+  
+  // Save the updated state
+  if (typeof saveExtensionState === 'function') {
+    saveExtensionState();
+  }
 }
 
 // Handle completion of a single capture in mass mode
@@ -6874,6 +6884,11 @@ async function handleMassCaptureCompletion() {
   
   // Re-enable extension interactions
   enableExtensionInteractions();
+  
+  // Save the updated state with new document count and row
+  if (typeof saveExtensionState === 'function') {
+    saveExtensionState();
+  }
   
   showNotification(`Document added to row ${currentRowIndex}! Ready for next document.`, 'success');
 }

@@ -10,7 +10,8 @@ if (!STATE_KEYS) {
     CURRENT_ROW_INDEX: 'extension_current_row_index',
     SNIP_SESSION: 'extension_snip_session',
     FORM_DATA: 'extension_form_data',
-    VIEW_MODE: 'extension_view_mode'
+    VIEW_MODE: 'extension_view_mode',
+    MASS_CAPTURE_MODE: 'extension_mass_capture_mode'
   };
   if (typeof window !== 'undefined') window.STATE_KEYS = STATE_KEYS;
 }
@@ -34,6 +35,7 @@ async function restoreExtensionState() {
       STATE_KEYS.SNIP_SESSION,
       STATE_KEYS.FORM_DATA,
       STATE_KEYS.VIEW_MODE,
+      STATE_KEYS.MASS_CAPTURE_MODE,
       // Legacy/fallback keys
       'activeRunsheet',
       'active_runsheet',
@@ -78,6 +80,19 @@ async function restoreExtensionState() {
         console.log('🔧 RunsheetPro Extension: Restored view mode:', currentViewMode);
       }
       
+      // Restore mass capture mode state
+      if (result[STATE_KEYS.MASS_CAPTURE_MODE]) {
+        const massCaptureState = result[STATE_KEYS.MASS_CAPTURE_MODE];
+        isMassCaptureMode = massCaptureState.active || false;
+        massCaptureCount = massCaptureState.count || 0;
+        massCaptureStartRow = massCaptureState.startRow || 0;
+        console.log('🔧 RunsheetPro Extension: Restored mass capture mode:', {
+          active: isMassCaptureMode,
+          count: massCaptureCount,
+          startRow: massCaptureStartRow
+        });
+      }
+      
       resolve();
     });
   });
@@ -97,6 +112,11 @@ function saveExtensionState() {
     [STATE_KEYS.CURRENT_ROW_INDEX]: currentRowIndex,
     [STATE_KEYS.SNIP_SESSION]: snipSession,
     [STATE_KEYS.VIEW_MODE]: currentViewMode,
+    [STATE_KEYS.MASS_CAPTURE_MODE]: {
+      active: isMassCaptureMode,
+      count: massCaptureCount,
+      startRow: massCaptureStartRow
+    },
     // Mirror to legacy keys for compatibility
     activeRunsheet: activeRunsheet,
     active_runsheet: activeRunsheet,
@@ -297,6 +317,22 @@ async function initializeExtensionWithStateRestore() {
           restoreFormData();
         }, 100);
       }
+    }
+    
+    // Restore mass capture mode if it was active
+    if (isMassCaptureMode && activeRunsheet) {
+      console.log('🔧 RunsheetPro Extension: Restoring mass capture mode');
+      // Hide the button and frame since we're in mass capture mode
+      if (runsheetButton) {
+        runsheetButton.style.display = 'none';
+      }
+      if (runsheetFrame) {
+        runsheetFrame.style.display = 'none';
+      }
+      // Recreate the mass capture panel
+      createMassCapturePanel();
+      // Disable context menu initially (will be enabled when user starts a document session)
+      chrome.runtime.sendMessage({ action: 'updateSnipContextMenu', enabled: false });
     }
     
     // Check if we should restore snip session based on context
