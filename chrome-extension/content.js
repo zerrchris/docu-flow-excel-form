@@ -3901,6 +3901,15 @@ function startSnipModeWithMode(mode = 'single', skipOverwriteCheck = false) {
   snipMode = mode;
   capturedSnips = [];
   
+  // Toggle native context menu item visibility based on mode
+  try {
+    const isNavigate = mode === 'navigate';
+    chrome.storage.local.set({ runsheetpro_navigate_snip: isNavigate });
+    chrome.runtime.sendMessage({ action: 'updateContextMenu', visible: true, enabled: isNavigate });
+  } catch (e) {
+    console.warn('Context menu visibility toggle failed:', e);
+  }
+  
   // For scroll and navigate modes, initialize persistent session
   if (mode === 'scroll' || mode === 'navigate') {
     snipSession = {
@@ -4655,8 +4664,10 @@ function cleanupSnipMode() {
   // Hide context menu
   chrome.runtime.sendMessage({ 
     action: 'updateContextMenu', 
-    visible: false 
+    visible: false,
+    enabled: false
   });
+  try { chrome.storage.local.set({ runsheetpro_navigate_snip: false }); } catch (_) {}
   
   if (snipOverlay) {
     snipOverlay.remove();
@@ -6213,6 +6224,12 @@ function cleanupSnipMode() {
   isSnipMode = false;
   snipMode = 'single';
   capturedSnips = [];
+  
+  // Hide native context menu item
+  try {
+    chrome.storage.local.set({ runsheetpro_navigate_snip: false });
+    chrome.runtime.sendMessage({ action: 'updateContextMenu', visible: true, enabled: false });
+  } catch (_) {}
   
   // Disable smart scrolling
   disableSmartScrollDetection();

@@ -20,14 +20,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return;
   }
   
-  if (message.action === 'updateContextMenu') {
-    chrome.contextMenus.update("runsheetpro-next-snip", {
-      visible: message.visible
-    }, () => {
+if (message.action === 'updateContextMenu') {
+    const updateProps = {};
+    if (typeof message.visible === 'boolean') updateProps.visible = message.visible;
+    if (typeof message.enabled === 'boolean') updateProps.enabled = message.enabled;
+    chrome.contextMenus.update("runsheetpro-next-snip", updateProps, () => {
       if (chrome.runtime.lastError) {
         console.error('Context menu update error:', chrome.runtime.lastError);
       } else {
-        console.log('Context menu visibility updated:', message.visible);
+        console.log('Context menu update:', updateProps);
       }
     });
     sendResponse({ success: true });
@@ -168,7 +169,9 @@ function createContextMenu() {
       id: "runsheetpro-next-snip",
       title: "RunsheetPro: Next Snip",
       contexts: ["page", "selection", "image", "link"],
-      visible: false // Initially hidden, will be shown during navigate mode
+      documentUrlPatterns: ["<all_urls>"],
+      visible: true,
+      enabled: false
     }, () => {
       if (chrome.runtime.lastError) {
         console.error('Context menu creation error:', chrome.runtime.lastError);
@@ -178,6 +181,18 @@ function createContextMenu() {
     });
   });
 }
+
+// Ensure menu visibility reflects current state when the menu opens
+chrome.contextMenus.onShown.addListener(async (info, tab) => {
+  try {
+    // Always ensure the item is visible and enabled; content script will decide behavior
+    chrome.contextMenus.update('runsheetpro-next-snip', { visible: true, enabled: true }, () => {
+      if (chrome.contextMenus.refresh) chrome.contextMenus.refresh();
+    });
+  } catch (e) {
+    console.warn('onShown update failed:', e);
+  }
+});
 
 // Handle tab updates: no-op (manifest handles injection to avoid duplicates)
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
