@@ -4317,13 +4317,13 @@ async function captureSelectedArea(left, top, width, height) {
               updateScreenshotIndicator(true);
               screenshotAddedToSheet = false; // New screenshot hasn't been added yet
               
-              // Handle mass capture mode completion
-              if (isMassCaptureMode) {
-                handleMassCaptureCompletion();
-              } else {
-                cleanupSnipMode();
-                showNotification('✅ Screenshot captured successfully! Fill in any additional data and click "Add Row" to save.', 'success');
-              }
+               // Handle mass capture mode completion
+               if (isMassCaptureMode) {
+                 handleMassCaptureCompletion();
+               } else {
+                 cleanupSnipModePreserveData();
+                 showNotification('✅ Screenshot captured successfully! Fill in any additional data and click "Add Row" to save.', 'success');
+               }
             } catch (error) {
               console.error('Error capturing snip:', error);
               showNotification(`Failed to capture screenshot: ${error.message}`, 'error');
