@@ -217,6 +217,28 @@ function cleanupSnipSession() {
   chrome.storage.local.remove([STATE_KEYS.FORM_DATA]);
 }
 
+// Clean up snip session but preserve captured snip data for viewing
+function cleanupSnipSessionPreserveData() {
+  console.log('🔧 RunsheetPro Extension: Cleaning up snip session but preserving captured snip data');
+  
+  // Reset session but preserve any processed snip data
+  snipSession = {
+    active: false,
+    mode: null,
+    captures: [],
+    currentFormData: {},
+    startTime: null
+  };
+  
+  // Save cleared state
+  saveExtensionState();
+  
+  // Clear form data backup
+  chrome.storage.local.remove([STATE_KEYS.FORM_DATA]);
+  
+  // Note: window.currentCapturedSnip and window.currentSnipFilename are preserved
+}
+
 // Restore snip session after page navigation
 function restoreSnipSession(retryCount = 0) {
   if (!snipSession.active) {

@@ -859,8 +859,8 @@ async function addRowToSheet() {
       refreshCurrentView();
       
       // End any persistent snip session to prevent it from restoring on navigation
-      if (typeof snipSession !== 'undefined' && snipSession.active && typeof cleanupSnipSession === 'function') {
-        cleanupSnipSession();
+      if (typeof snipSession !== 'undefined' && snipSession.active && typeof cleanupSnipSessionPreserveData === 'function') {
+        cleanupSnipSessionPreserveData();
       }
       // Also remove navigation controls if present
       const navPanel = document.getElementById('runsheetpro-nav-controls');
@@ -4768,9 +4768,9 @@ async function processSnipWithAI(blob, metadata = {}) {
 
         window.EnhancedSnipWorkflow.showEnhancedPreview(result);
         
-        // Clean up snip session after successful processing
-        if (typeof cleanupSnipSession === 'function') {
-          cleanupSnipSession();
+        // Clean up snip session after successful processing but preserve data for viewing
+        if (typeof cleanupSnipSessionPreserveData === 'function') {
+          cleanupSnipSessionPreserveData();
         }
         
         return result;
@@ -6248,8 +6248,8 @@ function cleanupSnipModePreserveData() {
   }
   
   // Clear snip session but keep window.currentCapturedSnip for viewing
-  if (typeof cleanupSnipSession === 'function') {
-    cleanupSnipSession();
+  if (typeof cleanupSnipSessionPreserveData === 'function') {
+    cleanupSnipSessionPreserveData();
   }
   
   // Clean up scroll overlay modifications
