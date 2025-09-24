@@ -3934,8 +3934,14 @@ function startSnipModeWithMode(mode = 'single', skipOverwriteCheck = false) {
   // Disable other extension interactions during snip mode
   disableExtensionInteractions();
   
-  if (mode !== 'single') {
+  if (mode === 'scroll') {
     createSnipControlPanel();
+  } else if (mode === 'navigate') {
+    createNavigationControlPanel();
+    if (snipControlPanel) { try { snipControlPanel.remove(); } catch (_) {}
+      snipControlPanel = null;
+    }
+    updateSnipCounter();
   }
   
   const messages = {
@@ -4449,7 +4455,7 @@ function createNavigationControlPanel() {
     border: 1px solid #e5e7eb !important;
     border-radius: 8px !important;
     padding: 12px 16px !important;
-    z-index: 2147483647 !important;
+    z-index: 2147483648 !important;
     display: flex !important;
     gap: 12px !important;
     align-items: center !important;
