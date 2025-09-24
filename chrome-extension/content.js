@@ -65,13 +65,7 @@ let snipSelection = null;
 let capturedSnips = [];
 let snipControlPanel = null;
 
-// Multi-step snipping session variables
-let snipSession = {
-  active: false,
-  mode: 'navigate', // 'navigate' for multi-step workflow
-  captures: [],
-  startedAt: null
-};
+// Multi-step snipping session variables (using global from persistent-state.js)
 
 // Mass capture mode variables
 let isMassCaptureMode = false;
@@ -7200,7 +7194,8 @@ async function beginSnipSession() {
     active: true,
     mode: 'navigate',
     captures: [],
-    startedAt: Date.now()
+    currentFormData: {},
+    startTime: Date.now()
   };
   
   // Update context menu to show "Next Snip" and "Finish Snipping"
@@ -7278,9 +7273,10 @@ async function resetSnipSession() {
   
   snipSession = {
     active: false,
-    mode: 'navigate',
+    mode: null,
     captures: [],
-    startedAt: null
+    currentFormData: {},
+    startTime: null
   };
   
   // Update context menu to show only "Begin Snip Session"
