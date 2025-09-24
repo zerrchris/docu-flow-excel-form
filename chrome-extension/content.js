@@ -4667,8 +4667,18 @@ async function combineSnipsVertically(snips) {
       
       // Validate and handle different snip data formats
       try {
-        if (snip && snip.blob && snip.blob instanceof Blob) {
-          img.src = URL.createObjectURL(snip.blob);
+        if (snip && snip.blob) {
+          // Try to create object URL from blob, fallback to dataUrl if it fails
+          try {
+            img.src = URL.createObjectURL(snip.blob);
+          } catch (blobError) {
+            console.warn('🔧 RunsheetPro Extension: Blob invalid, trying dataUrl fallback:', blobError);
+            if (snip.dataUrl) {
+              img.src = snip.dataUrl;
+            } else {
+              throw new Error('No valid data URL fallback available');
+            }
+          }
         } else if (snip && snip.dataUrl && typeof snip.dataUrl === 'string') {
           img.src = snip.dataUrl;
         } else if (snip && typeof snip === 'string') {
