@@ -511,6 +511,13 @@ function showQuickCreateDialog() {
 async function showRunsheetSelector() {
   console.log('🔧 RunsheetPro Extension: Showing runsheet selector');
   
+  // Remove any existing selector to prevent duplicates
+  const existingSelector = document.getElementById('runsheetpro-runsheet-selector');
+  if (existingSelector) {
+    console.log('🔧 RunsheetPro Extension: Removing existing selector to prevent duplicate');
+    existingSelector.remove();
+  }
+  
   // Create dialog
   const dialog = document.createElement('div');
   dialog.id = 'runsheetpro-runsheet-selector';
@@ -3681,9 +3688,12 @@ function showSnipModeSelector(skipOverwriteCheck = true) {
 
 // Show runsheet selector modal (alternate implementation)
 async function showRunsheetSelectorAlt() {
-  // Remove any existing selector
+  console.log('🔧 RunsheetPro Extension: Showing alternate runsheet selector');
+  
+  // Remove any existing selector to prevent duplicates
   const existingSelector = document.getElementById('runsheetpro-runsheet-selector');
   if (existingSelector) {
+    console.log('🔧 RunsheetPro Extension: Removing existing selector to prevent duplicate');
     existingSelector.remove();
   }
 
