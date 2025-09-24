@@ -4931,7 +4931,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     // Handle next snip from context menu
     console.log('🔧 RunsheetPro Extension: Next snip triggered from context menu');
     if (isMassCaptureMode) {
-      startNextMassCapture();
+      startNextMassDocument();
     } else {
       resumeSnipMode();
     }
