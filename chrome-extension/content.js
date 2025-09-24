@@ -6638,9 +6638,12 @@ function startMassCaptureMode() {
   massCaptureStartRow = currentRowIndex;
   massCaptureCount = 0;
   
-  // Hide the main runsheet frame
+  // Hide the main runsheet frame and button
   if (runsheetFrame) {
     runsheetFrame.style.display = 'none';
+  }
+  if (runsheetButton) {
+    runsheetButton.style.display = 'none';
   }
   
   // Create the minimal floating control panel
@@ -6740,6 +6743,11 @@ function startNextMassDocument() {
   
   console.log('🔧 RunsheetPro Extension: Starting next document session for row', currentRowIndex + 1);
   
+  // Hide the mass capture panel during snipping for maximum screen area
+  if (massCapturePanel) {
+    massCapturePanel.style.display = 'none';
+  }
+  
   // Start navigate snip mode for this document session
   startSnipModeWithMode('navigate', true); // Skip overwrite check since we're in mass mode
   
@@ -6776,9 +6784,12 @@ function endMassCaptureMode() {
   // Disable context menu
   chrome.runtime.sendMessage({ action: 'updateSnipContextMenu', enabled: false });
   
-  // Show the main runsheet frame again
+  // Show the main runsheet frame and button again
   if (runsheetFrame) {
     runsheetFrame.style.display = 'block';
+  }
+  if (runsheetButton) {
+    runsheetButton.style.display = 'block';
   }
   
   const finalMessage = massCaptureCount > 0 
@@ -6803,6 +6814,11 @@ function handleMassCaptureCompletion() {
   
   // Update the panel display
   updateMassCapturePanel();
+  
+  // Show the mass capture panel again after snip session
+  if (massCapturePanel) {
+    massCapturePanel.style.display = 'block';
+  }
   
   // Clean up current snip mode but stay in mass capture mode
   isSnipMode = false;
