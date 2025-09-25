@@ -16,8 +16,8 @@ if (!STATE_KEYS) {
   if (typeof window !== 'undefined') window.STATE_KEYS = STATE_KEYS;
 }
 
-// Snipping session state
-let snipSession = {
+// Snipping session state - make it globally accessible
+window.snipSession = window.snipSession || {
   active: false,
   mode: null,
   captures: [],
@@ -71,8 +71,8 @@ async function restoreExtensionState() {
       }
       
       if (result[STATE_KEYS.SNIP_SESSION]) {
-        snipSession = result[STATE_KEYS.SNIP_SESSION];
-        console.log('🔧 RunsheetPro Extension: Restored snip session:', snipSession);
+        window.snipSession = result[STATE_KEYS.SNIP_SESSION];
+        console.log('🔧 RunsheetPro Extension: Restored snip session:', window.snipSession);
       }
       
       if (result[STATE_KEYS.VIEW_MODE]) {
@@ -101,16 +101,16 @@ async function restoreExtensionState() {
 // Save extension state to storage
 function saveExtensionState() {
   // Add domain tracking to snip session
-  if (snipSession.active) {
-    snipSession.domain = window.location.hostname;
-    snipSession.timestamp = Date.now();
+  if (window.snipSession.active) {
+    window.snipSession.domain = window.location.hostname;
+    window.snipSession.timestamp = Date.now();
   }
   
   const stateToSave = {
     [STATE_KEYS.ACTIVE_RUNSHEET]: activeRunsheet,
     [STATE_KEYS.USER_SESSION]: userSession,
     [STATE_KEYS.CURRENT_ROW_INDEX]: currentRowIndex,
-    [STATE_KEYS.SNIP_SESSION]: snipSession,
+    [STATE_KEYS.SNIP_SESSION]: window.snipSession,
     [STATE_KEYS.VIEW_MODE]: currentViewMode,
     [STATE_KEYS.MASS_CAPTURE_MODE]: {
       active: isMassCaptureMode,
@@ -173,28 +173,28 @@ function restoreFormData() {
 
 // Process all captures from snip session
 async function processSnipSessionCaptures() {
-  if (snipSession.captures.length === 0) return;
+  if (window.snipSession.captures.length === 0) return;
   
-  console.log(`🔧 RunsheetPro Extension: Processing ${snipSession.captures.length} session captures`);
+  console.log(`🔧 RunsheetPro Extension: Processing ${window.snipSession.captures.length} session captures`);
   
-  if (snipSession.captures.length === 1) {
+  if (window.snipSession.captures.length === 1) {
     // Single capture - use directly
-    window.currentCapturedSnip = snipSession.captures[0];
+    window.currentCapturedSnip = window.snipSession.captures[0];
   } else {
     // Multiple captures - combine them
     try {
-      const combinedImage = await combineImages(snipSession.captures);
+      const combinedImage = await combineImages(window.snipSession.captures);
       window.currentCapturedSnip = combinedImage;
     } catch (error) {
       console.error('Error combining session captures:', error);
       // Fall back to last capture
-      window.currentCapturedSnip = snipSession.captures[snipSession.captures.length - 1];
+      window.currentCapturedSnip = window.snipSession.captures[window.snipSession.captures.length - 1];
     }
   }
   
   // Update UI
   updateScreenshotIndicator(true);
-  showNotification(`${snipSession.captures.length} captures processed and ready for data entry!`, 'success');
+  showNotification(`${window.snipSession.captures.length} captures processed and ready for data entry!`, 'success');
 }
 
 // Clean up snip session
@@ -272,15 +272,15 @@ function restoreSnipSession(retryCount = 0) {
       updateSnipCounter();
       
       // No preview needed - session continues until finished
-      console.log('🔧 RunsheetPro Extension: Snip session restored with', snipSession.captures.length, 'captures');
+      console.log('🔧 RunsheetPro Extension: Snip session restored with', window.snipSession.captures.length, 'captures');
       
-      showNotification(`Snip session restored! ${snipSession.captures.length} captures so far. Continue snipping or finish when done.`, 'info');
+      showNotification(`Snip session restored! ${window.snipSession.captures.length} captures so far. Continue snipping or finish when done.`, 'info');
       console.log('🔧 RunsheetPro Extension: Navigate mode restoration complete');
       
-    } else if (snipSession.mode === 'scroll') {
+    } else if (window.snipSession.mode === 'scroll') {
       // Restore captured snips to the current session
-      if (snipSession.captures && snipSession.captures.length > 0) {
-        capturedSnips = [...snipSession.captures];
+      if (window.snipSession.captures && window.snipSession.captures.length > 0) {
+        capturedSnips = [...window.snipSession.captures];
         console.log('🔧 RunsheetPro Extension: Restored', capturedSnips.length, 'captured snips');
       }
       
@@ -288,9 +288,9 @@ function restoreSnipSession(retryCount = 0) {
       updateSnipCounter();
       
       // No preview needed - session continues until finished
-      console.log('🔧 RunsheetPro Extension: Scroll snip session restored with', snipSession.captures.length, 'captures');
+      console.log('🔧 RunsheetPro Extension: Scroll snip session restored with', window.snipSession.captures.length, 'captures');
       
-      showNotification(`Scroll snip session restored! ${snipSession.captures.length} captures so far.`, 'info');
+      showNotification(`Scroll snip session restored! ${window.snipSession.captures.length} captures so far.`, 'info');
       console.log('🔧 RunsheetPro Extension: Scroll mode restoration complete');
     }
   } catch (error) {
@@ -358,8 +358,8 @@ async function initializeExtensionWithStateRestore() {
     }
     
     // Check if we should restore snip session based on context
-    if (snipSession.active) {
-      console.log('🔧 RunsheetPro Extension: Found active snip session', snipSession);
+    if (window.snipSession.active) {
+      console.log('🔧 RunsheetPro Extension: Found active snip session', window.snipSession);
       console.log('🔧 RunsheetPro Extension: Current context - isMassCaptureMode:', isMassCaptureMode, 'currentViewMode:', currentViewMode);
       
       // Don't restore snip sessions if we're in mass capture mode
@@ -382,12 +382,12 @@ async function initializeExtensionWithStateRestore() {
       
       // Only auto-restore on the same domain or for navigate/scroll modes that persist across domains
       const currentDomain = window.location.hostname;
-      const sessionDomain = snipSession.domain || '';
+      const sessionDomain = window.snipSession.domain || '';
       const sameOrigin = currentDomain === sessionDomain;
       
       // Auto-restore for navigate/scroll modes or same domain
-      if ((snipSession.mode === 'navigate' || snipSession.mode === 'scroll') || sameOrigin) {
-        console.log('🔧 RunsheetPro Extension: Auto-restoring snip session (mode:', snipSession.mode, ', same domain:', sameOrigin, ')');
+      if ((window.snipSession.mode === 'navigate' || window.snipSession.mode === 'scroll') || sameOrigin) {
+        console.log('🔧 RunsheetPro Extension: Auto-restoring snip session (mode:', window.snipSession.mode, ', same domain:', sameOrigin, ')');
         setTimeout(() => {
           restoreSnipSession();
         }, 1000);
