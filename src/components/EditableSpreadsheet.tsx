@@ -7471,28 +7471,28 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
                       >
                            <div className="bg-background border border-border rounded-md p-2 h-full min-h-[60px] flex gap-2 overflow-visible">
                              {/* Row Actions (Move buttons only) */}
-                              <div className="flex gap-1 items-start flex-col justify-center min-w-[30px]">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => moveRowUp(rowIndex)}
-                                    disabled={rowIndex === 0}
-                                    className="h-6 w-6 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/20 flex-shrink-0"
-                                    title="Move row up"
-                                  >
-                                    <ArrowUp className="h-3 w-3" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => moveRowDown(rowIndex)}
-                                    disabled={rowIndex >= data.length - 1}
-                                    className="h-6 w-6 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/20 flex-shrink-0"
-                                    title="Move row down"
-                                  >
-                                    <ArrowDown className="h-3 w-3" />
-                                  </Button>
-                              </div>
+                               <div className="flex flex-col items-center justify-center gap-0.5 min-w-[32px] bg-muted/30 rounded-md p-1 border border-border/40">
+                                   <Button
+                                     variant="ghost"
+                                     size="sm"
+                                     onClick={() => moveRowUp(rowIndex)}
+                                     disabled={rowIndex === 0}
+                                     className="h-5 w-5 p-0 hover:bg-primary/10 hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed rounded-sm transition-all"
+                                     title="Move row up"
+                                   >
+                                     <ArrowUp className="h-3 w-3" />
+                                   </Button>
+                                   <Button
+                                     variant="ghost"
+                                     size="sm"
+                                     onClick={() => moveRowDown(rowIndex)}
+                                     disabled={rowIndex >= data.length - 1}
+                                     className="h-5 w-5 p-0 hover:bg-primary/10 hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed rounded-sm transition-all"
+                                     title="Move row down"
+                                   >
+                                     <ArrowDown className="h-3 w-3" />
+                                   </Button>
+                               </div>
                            
                             {/* Document Section */}
                             <div className="flex-1 h-full flex flex-col">
