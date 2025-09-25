@@ -7910,7 +7910,10 @@ window.captureSnip = function(blob) {
   if (originalCaptureSnip) {
     originalCaptureSnip(blob);
   }
-;
+};
+
+// Variables for snip control panel
+let snipControlPanel = null;
 
 // Create minimal snip control panel
 function createSnipControlPanel() {
