@@ -4371,11 +4371,13 @@ function createSnipOverlay() {
           runsheetFrame.style.setProperty('visibility', 'hidden', 'important');
         }
         updateSnipCounter();
+        updateSnipControlPanel();
         showNotification(`Snip ${capturedSnips.length} captured! Continue scrolling and snipping or click "Snipping Complete"`, 'success');
       } else if (snipMode === 'navigate') {
         // Navigate mode: hide crosshairs, show navigation controls with "Next Snip"
         hideSnipModeForNavigation();
         updateSnipCounter();
+        updateSnipControlPanel();
         showNotification(`Snip ${capturedSnips.length} captured! Navigate to next area and click "Next Snip"`, 'success');
       }
     }, 100);
@@ -4542,6 +4544,7 @@ async function captureSelectedArea(left, top, width, height) {
           
           // Update counter for all modes
           updateSnipCounter();
+          updateSnipControlPanel(); // Also update the session control panel
           
           showNotification(`Snip ${capturedSnips.length} captured!`, 'success');
           
