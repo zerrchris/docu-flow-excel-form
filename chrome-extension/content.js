@@ -4006,8 +4006,8 @@ function createSnipOverlay() {
   
   // Hide the extension frame during crosshairs mode so it doesn't obstruct snipping
   if (runsheetFrame) {
-    runsheetFrame.style.display = 'none !important';
-    runsheetFrame.style.visibility = 'hidden !important';
+    runsheetFrame.style.setProperty('display', 'none', 'important');
+    runsheetFrame.style.setProperty('visibility', 'hidden', 'important');
   }
   
   snipOverlay = document.createElement('div');
@@ -4101,8 +4101,8 @@ function createSnipOverlay() {
     setTimeout(async () => {
       // Keep extension frame hidden during capture
       if (runsheetFrame) {
-        runsheetFrame.style.display = 'none !important';
-        runsheetFrame.style.visibility = 'hidden !important';
+        runsheetFrame.style.setProperty('display', 'none', 'important');
+        runsheetFrame.style.setProperty('visibility', 'hidden', 'important');
       }
       
       await captureSelectedArea(left, top, width, height);
@@ -4119,8 +4119,8 @@ function createSnipOverlay() {
         }
         // Hide extension frame again for next snip
         if (runsheetFrame) {
-          runsheetFrame.style.display = 'none !important';
-          runsheetFrame.style.visibility = 'hidden !important';
+          runsheetFrame.style.setProperty('display', 'none', 'important');
+          runsheetFrame.style.setProperty('visibility', 'hidden', 'important');
         }
         updateSnipCounter();
         showNotification(`Snip ${capturedSnips.length} captured! Continue scrolling and snipping or click "Snipping Complete"`, 'success');
@@ -4390,8 +4390,8 @@ async function captureSelectedArea(left, top, width, height) {
                
                // Restore extension UI after processing
                if (runsheetFrame) {
-                 runsheetFrame.style.display = 'block !important';
-                 runsheetFrame.style.visibility = 'visible !important';
+                 runsheetFrame.style.setProperty('display', 'block', 'important');
+                 runsheetFrame.style.setProperty('visibility', 'visible', 'important');
                }
                
                 // Handle mass capture mode completion
@@ -4552,8 +4552,8 @@ function hideSnipModeForNavigation() {
   
   // Restore extension frame when crosshairs are hidden
   if (runsheetFrame) {
-    runsheetFrame.style.display = 'block !important';
-    runsheetFrame.style.visibility = 'visible !important';
+    runsheetFrame.style.setProperty('display', 'block', 'important');
+    runsheetFrame.style.setProperty('visibility', 'visible', 'important');
   }
   
   // Don't remove the control panel - keep it for session persistence
@@ -4686,8 +4686,8 @@ function resumeSnipMode() {
     snipOverlay.style.display = 'block';
     // Hide extension frame when crosshairs are active
     if (runsheetFrame) {
-      runsheetFrame.style.display = 'none !important';
-      runsheetFrame.style.visibility = 'hidden !important';
+      runsheetFrame.style.setProperty('display', 'none', 'important');
+      runsheetFrame.style.setProperty('visibility', 'hidden', 'important');
     }
   } else {
     createSnipOverlay();
@@ -4720,8 +4720,8 @@ function cleanupSnipMode() {
   
   // Restore extension frame when snip mode ends
   if (runsheetFrame) {
-    runsheetFrame.style.display = 'block !important';
-    runsheetFrame.style.visibility = 'visible !important';
+    runsheetFrame.style.setProperty('display', 'block', 'important');
+    runsheetFrame.style.setProperty('visibility', 'visible', 'important');
   }
   
   // Clear snip session and save state
@@ -6251,29 +6251,34 @@ function disableMouseWheelScrollDetection() {
 function disableExtensionInteractions() {
   // Disable runsheet button
   if (runsheetButton) {
-    runsheetButton.style.pointerEvents = 'none';
-    runsheetButton.style.opacity = '0.5';
+    runsheetButton.style.setProperty('display', 'none', 'important');
+    runsheetButton.style.setProperty('visibility', 'hidden', 'important');
   }
   
-  // Disable runsheet frame interactions
-  if (runsheetFrame && runsheetFrame.style.display !== 'none') {
-    runsheetFrame.style.pointerEvents = 'none';
-    runsheetFrame.style.opacity = '0.7';
+  // Disable runsheet frame interactions (hide completely)
+  if (runsheetFrame) {
+    runsheetFrame.style.setProperty('display', 'none', 'important');
+    runsheetFrame.style.setProperty('visibility', 'hidden', 'important');
   }
 }
 
 // Re-enable extension interactions after snip mode
 function enableExtensionInteractions() {
-  // Re-enable runsheet button
+  // Re-enable runsheet button (unless mass capture mode)
   if (runsheetButton) {
-    runsheetButton.style.pointerEvents = 'auto';
-    runsheetButton.style.opacity = '1';
+    if (isMassCaptureMode) {
+      runsheetButton.style.setProperty('display', 'none', 'important');
+      runsheetButton.style.setProperty('visibility', 'hidden', 'important');
+    } else {
+      runsheetButton.style.setProperty('display', 'flex', 'important');
+      runsheetButton.style.setProperty('visibility', 'visible', 'important');
+    }
   }
   
   // Re-enable runsheet frame interactions
   if (runsheetFrame) {
-    runsheetFrame.style.pointerEvents = 'auto';
-    runsheetFrame.style.opacity = '1';
+    runsheetFrame.style.setProperty('display', 'block', 'important');
+    runsheetFrame.style.setProperty('visibility', 'visible', 'important');
   }
 }
 
@@ -6313,8 +6318,8 @@ function cleanupSnipMode() {
   
   // Restore extension frame when snip mode ends
   if (runsheetFrame) {
-    runsheetFrame.style.display = 'block !important';
-    runsheetFrame.style.visibility = 'visible !important';
+    runsheetFrame.style.setProperty('display', 'block', 'important');
+    runsheetFrame.style.setProperty('visibility', 'visible', 'important');
   }
   
   console.log('🔧 RunsheetPro Extension: Snip mode cleaned up with smart scroll disabled');
@@ -6367,8 +6372,8 @@ function cleanupSnipModePreserveData() {
   
   // Restore extension frame when snip mode ends
   if (runsheetFrame) {
-    runsheetFrame.style.display = 'block !important';
-    runsheetFrame.style.visibility = 'visible !important';
+    runsheetFrame.style.setProperty('display', 'block', 'important');
+    runsheetFrame.style.setProperty('visibility', 'visible', 'important');
   }
   
   console.log('🔧 RunsheetPro Extension: Snip mode UI cleaned up but snip data preserved for viewing');
