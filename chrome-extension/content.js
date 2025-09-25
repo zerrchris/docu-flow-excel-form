@@ -3031,6 +3031,8 @@ async function switchViewMode(newMode) {
     window.currentSnipFilename = null;
     screenshotAddedToSheet = false;
     snipStagedAt = 0;
+    // Set timestamp to prevent false unsaved data warnings immediately after save & close
+    lastSuccessfulAddTs = Date.now();
   }
   
   // Recreate the frame content
@@ -3171,8 +3173,11 @@ function setupFrameEventListeners() {
     viewModeBtn.addEventListener('click', () => {
       const newMode = currentViewMode === 'single' ? 'full' : 'single';
       
+      // Only show warning when switching FROM single entry mode (where unsaved data can exist)
+      // Never show when switching FROM Quick View (full mode) - that's a save operation
       if (currentViewMode === 'single' && hasUnsavedData()) {
-        showUnsavedDataWarning('switching to Quick View', () => {
+        const actionText = newMode === 'full' ? 'switching to Quick View' : 'switching to Single Entry';
+        showUnsavedDataWarning(actionText, () => {
           switchViewMode(newMode);
         });
       } else {
