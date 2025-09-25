@@ -60,7 +60,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const menuItems = [
       { id: 'runsheetpro-begin-snip', title: 'Begin Snip Session' },
       { id: 'runsheetpro-next-snip', title: 'Next Snip' },
-      { id: 'runsheetpro-finish-snip', title: 'Finish Snipping' }
+      { id: 'runsheetpro-finish-snip', title: 'Finish Snipping' },
+      { id: 'runsheetpro-fullscreen-help', title: 'Fullscreen Snipping Help' }
     ];
 
     // Remove all existing menu items first
@@ -76,21 +77,39 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         // Only show "Begin Snip Session"
         chrome.contextMenus.create({
           id: 'runsheetpro-begin-snip',
-          title: 'Begin Snip Session',
+          title: message.fullscreenMode ? '📸 Begin Snip Session (Fullscreen)' : 'Begin Snip Session',
           contexts: ['all']
         });
+        
+        // Add help option in fullscreen mode
+        if (message.fullscreenMode) {
+          chrome.contextMenus.create({
+            id: 'runsheetpro-fullscreen-help',
+            title: '❓ Keyboard Shortcuts',
+            contexts: ['all']
+          });
+        }
       } else if (message.state === 'active') {
         // Show "Next Snip" and "Finish Snipping"
         chrome.contextMenus.create({
           id: 'runsheetpro-next-snip',
-          title: 'Next Snip',
+          title: message.fullscreenMode ? '📸 Next Snip (Ctrl+Shift+S)' : 'Next Snip',
           contexts: ['all']
         });
         chrome.contextMenus.create({
           id: 'runsheetpro-finish-snip',
-          title: 'Finish Snipping',
+          title: message.fullscreenMode ? '✅ Finish Snipping (Ctrl+Shift+F)' : 'Finish Snipping',
           contexts: ['all']
         });
+        
+        // Add help option in fullscreen mode
+        if (message.fullscreenMode) {
+          chrome.contextMenus.create({
+            id: 'runsheetpro-fullscreen-help',
+            title: '❓ Keyboard Shortcuts',
+            contexts: ['all']
+          });
+        }
       }
     }
     sendResponse({ success: true });
@@ -170,6 +189,8 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     chrome.tabs.sendMessage(tab.id, { action: 'nextSnip' });
   } else if (info.menuItemId === 'runsheetpro-finish-snip') {
     chrome.tabs.sendMessage(tab.id, { action: 'finishSnipping' });
+  } else if (info.menuItemId === 'runsheetpro-fullscreen-help') {
+    chrome.tabs.sendMessage(tab.id, { action: 'showFullscreenHelp' });
   }
 });
 

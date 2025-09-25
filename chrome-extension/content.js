@@ -23,6 +23,22 @@ window.onerror = function(message, source, lineno, colno, error) {
 // IMMEDIATE TEST - This should appear in console if script loads
 console.log('🔧 RUNSHEETPRO EXTENSION LOADED 🔧');
 
+// Initialize global snip session tracking
+let currentSnipSession = {
+  isActive: false,
+  captures: [],
+  mode: null
+};
+
+// Initialize window.snipSession for backward compatibility
+window.snipSession = {
+  active: false,
+  mode: null,
+  captures: [],
+  currentFormData: {},
+  startTime: null
+};
+
 // Add a marker to indicate content script has loaded
 try {
   const contentLoadedMarker = document.createElement('div');
@@ -48,6 +64,209 @@ enhancedSnipScript.onerror = () => {
   console.warn('🔧 Enhanced Snip Workflow script failed to load');
 };
 document.head.appendChild(enhancedSnipScript);
+
+// Fullscreen detection and management
+let isInFullscreen = false;
+let fullscreenMode = false;
+
+// Detect fullscreen changes
+function handleFullscreenChange() {
+  const wasInFullscreen = isInFullscreen;
+  isInFullscreen = !!(document.fullscreenElement || 
+                     document.webkitFullscreenElement || 
+                     document.mozFullScreenElement ||
+                     document.msFullscreenElement);
+  
+  if (isInFullscreen !== wasInFullscreen) {
+    console.log('🔧 Fullscreen state changed:', isInFullscreen ? 'entered' : 'exited');
+    fullscreenMode = isInFullscreen;
+    
+    // Update context menu for fullscreen mode
+    updateContextMenuForFullscreen();
+    
+    // Show notification about fullscreen snipping capabilities
+    if (isInFullscreen && currentSnipSession.isActive) {
+      showFullscreenNotification();
+    }
+  }
+}
+
+// Add fullscreen event listeners
+document.addEventListener('fullscreenchange', handleFullscreenChange);
+document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+// Update context menu for fullscreen mode
+function updateContextMenuForFullscreen() {
+  if (!currentSnipSession.isActive) return;
+  
+  const state = currentSnipSession.isActive ? 'active' : 'inactive';
+  chrome.runtime.sendMessage({
+    action: 'updateSnipContextMenu',
+    enabled: true,
+    state: state,
+    fullscreenMode: fullscreenMode
+  });
+}
+
+// Show fullscreen notification
+function showFullscreenNotification() {
+  const notification = document.createElement('div');
+  notification.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 12px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    z-index: 999999;
+    max-width: 300px;
+    line-height: 1.4;
+  `;
+  notification.textContent = 'Right-click anywhere to access snipping options in fullscreen mode. Ctrl+Shift+S to snip, Ctrl+Shift+F to finish.';
+  
+  document.body.appendChild(notification);
+  
+  // Remove notification after 4 seconds
+  setTimeout(() => {
+    if (notification.parentNode) {
+      notification.parentNode.removeChild(notification);
+    }
+  }, 4000);
+}
+
+// Keyboard shortcuts for fullscreen mode
+function handleKeyboardShortcuts(e) {
+  // Only handle shortcuts when in fullscreen or when extension UI might not be visible
+  if (!fullscreenMode && !currentSnipSession.isActive) return;
+  
+  // Ctrl+Shift+S: Start/Next snip
+  if (e.ctrlKey && e.shiftKey && e.code === 'KeyS') {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!currentSnipSession.isActive) {
+      handleBeginSnipSession();
+    } else {
+      handleNextSnip();
+    }
+    return;
+  }
+  
+  // Ctrl+Shift+F: Finish snipping session
+  if (e.ctrlKey && e.shiftKey && e.code === 'KeyF') {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (currentSnipSession.isActive) {
+      handleFinishSnipping();
+    }
+    return;
+  }
+  
+  // Escape: Cancel current snip operation
+  if (e.code === 'Escape' && currentSnipSession.isActive) {
+    e.preventDefault();
+    e.stopPropagation();
+    handleFinishSnipping();
+    return;
+  }
+}
+
+// Add keyboard event listener
+document.addEventListener('keydown', handleKeyboardShortcuts, true);
+
+// Show fullscreen help dialog
+function showFullscreenHelpDialog() {
+  const helpDialog = document.createElement('div');
+  helpDialog.style.cssText = `
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 24px;
+    border-radius: 12px;
+    font-size: 16px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    z-index: 999999;
+    max-width: 500px;
+    line-height: 1.6;
+    text-align: center;
+    border: 2px solid #4CAF50;
+  `;
+  
+  helpDialog.innerHTML = `
+    <h3 style="margin: 0 0 16px 0; color: #4CAF50;">📸 Fullscreen Snipping Guide</h3>
+    <div style="text-align: left; margin-bottom: 20px;">
+      <p><strong>Keyboard Shortcuts:</strong></p>
+      <ul style="margin: 8px 0; padding-left: 20px;">
+        <li><kbd style="background: #333; padding: 2px 6px; border-radius: 3px;">Ctrl + Shift + S</kbd> - Start/Next Snip</li>
+        <li><kbd style="background: #333; padding: 2px 6px; border-radius: 3px;">Ctrl + Shift + F</kbd> - Finish Session</li>
+        <li><kbd style="background: #333; padding: 2px 6px; border-radius: 3px;">Esc</kbd> - Cancel Snipping</li>
+      </ul>
+      <p><strong>Right-click anywhere</strong> to access the snipping menu</p>
+    </div>
+    <button id="fullscreen-help-close" style="
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+    ">Got it!</button>
+  `;
+  
+  document.body.appendChild(helpDialog);
+  
+  // Close button functionality
+  document.getElementById('fullscreen-help-close').onclick = () => {
+    if (helpDialog.parentNode) {
+      helpDialog.parentNode.removeChild(helpDialog);
+    }
+  };
+  
+  // Auto-close after 10 seconds
+  setTimeout(() => {
+    if (helpDialog.parentNode) {
+      helpDialog.parentNode.removeChild(helpDialog);
+    }
+  }, 10000);
+}
+
+// Handle snip session functions with proper error handling
+function handleBeginSnipSession() {
+  try {
+    beginSnipSession();
+  } catch (error) {
+    console.error('Error beginning snip session:', error);
+    showNotification('Failed to start snip session', 'error');
+  }
+}
+
+function handleNextSnip() {
+  try {
+    performNextSnip();
+  } catch (error) {
+    console.error('Error performing next snip:', error);
+    showNotification('Failed to capture snip', 'error');
+  }
+}
+
+function handleFinishSnipping() {
+  try {
+    finishSnipSession();
+  } catch (error) {
+    console.error('Error finishing snip session:', error);
+    showNotification('Failed to finish snip session', 'error');
+  }
+}
 console.log('🔧 RunsheetPro Extension: Content script loading started');
 console.log('🔧 RunsheetPro Extension: Document ready state:', document.readyState);
 
@@ -5048,6 +5267,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     // Handle finish snipping from context menu
     console.log('🔧 RunsheetPro Extension: Finish snipping triggered');
     finishSnipSession();
+  } else if (request.action === 'showFullscreenHelp') {
+    // Show fullscreen help notification
+    showFullscreenHelpDialog();
   } else if (request.action === 'openRunsheet') {
     // Open the runsheet UI: if frame exists, toggle; else show selector/sign-in
     (async () => {
@@ -7239,6 +7461,13 @@ async function beginSnipSession() {
     startTime: Date.now()
   };
   
+  // Sync with currentSnipSession
+  currentSnipSession = {
+    isActive: true,
+    captures: [],
+    mode: 'navigate'
+  };
+  
   // Update context menu to show "Next Snip" and "Finish Snipping"
   updateSnipContextMenu(true, 'active');
   
@@ -7258,8 +7487,8 @@ async function performNextSnip() {
   }
   
   try {
-    // Enter snip mode
-    await enterSnipMode('single');
+    // Enter snip mode using existing function
+    startSnipModeWithMode('single', true);
     
   } catch (error) {
     console.error('🔧 RunsheetPro Extension: Error performing next snip:', error);
@@ -7318,6 +7547,13 @@ async function resetSnipSession() {
     captures: [],
     currentFormData: {},
     startTime: null
+  };
+  
+  // Sync with currentSnipSession
+  currentSnipSession = {
+    isActive: false,
+    captures: [],
+    mode: null
   };
   
   // Update context menu to show only "Begin Snip Session"
@@ -7388,6 +7624,13 @@ async function restoreSnipSessionFromStorage() {
     const result = await chrome.storage.local.get(['snipSession']);
     if (result.snipSession && result.snipSession.active) {
       window.snipSession = result.snipSession;
+      
+      // Sync with currentSnipSession
+      currentSnipSession = {
+        isActive: result.snipSession.active,
+        captures: result.snipSession.captures || [],
+        mode: result.snipSession.mode
+      };
       
       // Update context menu to show active state
       updateSnipContextMenu(true, 'active');
