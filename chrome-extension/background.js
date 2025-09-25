@@ -64,55 +64,66 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       { id: 'runsheetpro-fullscreen-help', title: 'Fullscreen Snipping Help' }
     ];
 
-    // Remove all existing menu items first
-    menuItems.forEach(item => {
-      chrome.contextMenus.remove(item.id, () => {
-        // Ignore errors for non-existent items
-      });
-    });
-
-    if (message.enabled) {
-      // Add menu items based on current state
-      if (message.state === 'inactive') {
-        // Only show "Begin Snip Session"
-        chrome.contextMenus.create({
-          id: 'runsheetpro-begin-snip',
-          title: message.fullscreenMode ? '📸 Begin Snip Session (Fullscreen)' : 'Begin Snip Session',
-          contexts: ['all']
+    // Remove all existing menu items first (with promise handling for better reliability)
+    const removePromises = menuItems.map(item => 
+      new Promise(resolve => {
+        chrome.contextMenus.remove(item.id, () => {
+          // Ignore errors for non-existent items
+          resolve();
         });
-        
-        // Add help option in fullscreen mode
-        if (message.fullscreenMode) {
+      })
+    );
+    
+    Promise.all(removePromises).then(() => {
+      if (message.enabled) {
+        // Add menu items based on current state
+        if (message.state === 'inactive') {
+          // Only show "Begin Snip Session"
           chrome.contextMenus.create({
-            id: 'runsheetpro-fullscreen-help',
-            title: '❓ Keyboard Shortcuts',
-            contexts: ['all']
+            id: 'runsheetpro-begin-snip',
+            title: message.fullscreenMode ? '📸 Begin Snip Session (Fullscreen)' : '📸 Begin Snip Session',
+            contexts: ['all'],
+            documentUrlPatterns: ['<all_urls>']
           });
-        }
-      } else if (message.state === 'active') {
-        // Show "Next Snip" and "Finish Snipping"
-        chrome.contextMenus.create({
-          id: 'runsheetpro-next-snip',
-          title: message.fullscreenMode ? '📸 Next Snip (Ctrl+Shift+S)' : 'Next Snip',
-          contexts: ['all']
-        });
-        chrome.contextMenus.create({
-          id: 'runsheetpro-finish-snip',
-          title: message.fullscreenMode ? '✅ Finish Snipping (Ctrl+Shift+F)' : 'Finish Snipping',
-          contexts: ['all']
-        });
-        
-        // Add help option in fullscreen mode
-        if (message.fullscreenMode) {
+          
+          // Add help option in fullscreen mode
+          if (message.fullscreenMode) {
+            chrome.contextMenus.create({
+              id: 'runsheetpro-fullscreen-help',
+              title: '❓ Keyboard Shortcuts',
+              contexts: ['all'],
+              documentUrlPatterns: ['<all_urls>']
+            });
+          }
+        } else if (message.state === 'active') {
+          // Show "Next Snip" and "Finish Snipping" - make them prominent
           chrome.contextMenus.create({
-            id: 'runsheetpro-fullscreen-help',
-            title: '❓ Keyboard Shortcuts',
-            contexts: ['all']
+            id: 'runsheetpro-next-snip',
+            title: message.fullscreenMode ? '🎯 Next Snip (Ctrl+Shift+S)' : '🎯 Next Snip',
+            contexts: ['all'],
+            documentUrlPatterns: ['<all_urls>']
           });
+          chrome.contextMenus.create({
+            id: 'runsheetpro-finish-snip',
+            title: message.fullscreenMode ? '✅ Finish Snipping (Ctrl+Shift+F)' : '✅ Finish Snipping',
+            contexts: ['all'],
+            documentUrlPatterns: ['<all_urls>']
+          });
+          
+          // Add help option in fullscreen mode
+          if (message.fullscreenMode) {
+            chrome.contextMenus.create({
+              id: 'runsheetpro-fullscreen-help',
+              title: '❓ Keyboard Shortcuts',
+              contexts: ['all'],
+              documentUrlPatterns: ['<all_urls>']
+            });
+          }
         }
       }
-    }
-    sendResponse({ success: true });
+      sendResponse({ success: true });
+    });
+    return true; // Keep channel open for async response
   }
 
   if (message.action === 'ensureContentScript') {

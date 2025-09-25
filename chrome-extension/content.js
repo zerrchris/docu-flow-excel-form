@@ -7480,6 +7480,14 @@ async function beginSnipSession() {
   // Update context menu to show "Next Snip" and "Finish Snipping"
   updateSnipContextMenu(true, 'active');
   
+  // Also ensure fullscreen context is applied
+  chrome.runtime.sendMessage({
+    action: 'updateSnipContextMenu',
+    enabled: true,
+    state: 'active',
+    fullscreenMode: fullscreenMode
+  });
+  
   // Save session state to storage for persistence across navigations
   await chrome.storage.local.set({ snipSession: window.snipSession });
   
