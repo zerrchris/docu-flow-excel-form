@@ -4925,6 +4925,116 @@ function resumeSnipMode() {
   showNotification('Ready for next snip! Drag to select area.', 'info');
 }
 
+// ============= Quick right-click menu overlay during snip sessions =============
+let snipQuickMenu = null;
+let snipContextHandlerAttached = false;
+
+function attachSnipContextMenuHandler() {
+  if (snipContextHandlerAttached) return;
+  document.addEventListener('contextmenu', onSnipContextMenu, true);
+  snipContextHandlerAttached = true;
+}
+
+function detachSnipContextMenuHandler() {
+  if (!snipContextHandlerAttached) return;
+  document.removeEventListener('contextmenu', onSnipContextMenu, true);
+  snipContextHandlerAttached = false;
+  removeSnipQuickMenu();
+}
+
+function onSnipContextMenu(e) {
+  // Only override right-click while an extension snip session is active (or mass capture)
+  if (!(currentSnipSession && currentSnipSession.isActive) && !isMassCaptureMode) return;
+  e.preventDefault();
+  e.stopPropagation();
+  showSnipQuickMenu(e.clientX, e.clientY);
+}
+
+function showSnipQuickMenu(x, y) {
+  removeSnipQuickMenu();
+  const menu = document.createElement('div');
+  menu.id = 'runsheetpro-snip-quick-menu';
+  menu.style.cssText = `
+    position: fixed !important;
+    z-index: 2147483647 !important;
+    top: ${y + 4}px !important;
+    left: ${x + 4}px !important;
+    background: rgba(17, 24, 39, 0.98) !important; /* gray-900 */
+    color: white !important;
+    border: 1px solid rgba(255,255,255,0.12) !important;
+    border-radius: 8px !important;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35) !important;
+    overflow: hidden !important;
+    min-width: 220px !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  `;
+  menu.innerHTML = `
+    <button id="snip-quick-next" style="all: unset; display: block; width: 100%; padding: 10px 14px; cursor: pointer; font-size: 14px;">🎯 Next Snip</button>
+    <div style="height:1px;background:rgba(255,255,255,0.1);"></div>
+    <button id="snip-quick-finish" style="all: unset; display: block; width: 100%; padding: 10px 14px; cursor: pointer; font-size: 14px;">✅ Finish Snipping</button>
+  `;
+  document.body.appendChild(menu);
+  snipQuickMenu = menu;
+
+  const nextBtn = menu.querySelector('#snip-quick-next');
+  const finishBtn = menu.querySelector('#snip-quick-finish');
+  nextBtn.addEventListener('click', () => {
+    removeSnipQuickMenu();
+    try {
+      if (window.snipSession && window.snipSession.active) {
+        resumeSnipMode();
+      } else if (isMassCaptureMode) {
+        if (isSnipMode) {
+          resumeSnipMode();
+        } else {
+          startNextMassDocument();
+        }
+      } else {
+        resumeSnipMode();
+      }
+    } catch (err) {
+      console.error('Next Snip error:', err);
+      showNotification('Failed to start next snip', 'error');
+    }
+  });
+  finishBtn.addEventListener('click', () => {
+    removeSnipQuickMenu();
+    try {
+      finishSnipSession();
+    } catch (err) {
+      console.error('Finish Snip error:', err);
+      showNotification('Failed to finish snip session', 'error');
+    }
+  });
+
+  // auto-hide on outside click or ESC
+  setTimeout(() => {
+    const hide = (ev) => {
+      if (!menu.contains(ev.target)) {
+        removeSnipQuickMenu();
+        document.removeEventListener('mousedown', hide, true);
+        document.removeEventListener('keydown', onKey, true);
+      }
+    };
+    const onKey = (ev) => {
+      if (ev.key === 'Escape') {
+        removeSnipQuickMenu();
+        document.removeEventListener('mousedown', hide, true);
+        document.removeEventListener('keydown', onKey, true);
+      }
+    };
+    document.addEventListener('mousedown', hide, true);
+    document.addEventListener('keydown', onKey, true);
+  }, 0);
+}
+
+function removeSnipQuickMenu() {
+  if (snipQuickMenu) {
+    snipQuickMenu.remove();
+    snipQuickMenu = null;
+  }
+}
+
 // Cleanup snip mode
 function cleanupSnipMode() {
   isSnipMode = false;
@@ -7491,6 +7601,9 @@ async function beginSnipSession() {
   // Save session state to storage for persistence across navigations
   await chrome.storage.local.set({ snipSession: window.snipSession });
   
+  // Ensure our quick right-click menu is available anywhere on the page
+  attachSnipContextMenuHandler();
+  
   // Immediately start snip mode with crosshairs instead of just notifying
   try {
     startSnipModeWithMode('single', true);
@@ -7511,9 +7624,8 @@ async function performNextSnip() {
   }
   
   try {
-    // Enter snip mode using existing function
-    startSnipModeWithMode('single', true);
-    
+    // In navigate sessions, simply resume crosshairs instead of re-initializing
+    resumeSnipMode();
   } catch (error) {
     console.error('🔧 RunsheetPro Extension: Error performing next snip:', error);
     showNotification('Failed to start snip capture', 'error');
@@ -7582,6 +7694,9 @@ async function resetSnipSession() {
   
   // Update context menu to show only "Begin Snip Session"
   updateSnipContextMenu(true, 'inactive');
+  
+  // Detach quick right-click handler
+  detachSnipContextMenuHandler();
   
   // Clear session from storage
   await chrome.storage.local.remove(['snipSession']);
@@ -7658,6 +7773,8 @@ async function restoreSnipSessionFromStorage() {
       
       // Update context menu to show active state
       updateSnipContextMenu(true, 'active');
+      // Ensure our quick right-click handler is active
+      attachSnipContextMenuHandler();
       
       showNotification('Continued snip session from previous page. Right-click for "Next Snip".', 'info');
     } else {
