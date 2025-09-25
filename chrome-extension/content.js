@@ -7587,6 +7587,14 @@ async function beginSnipSession() {
     mode: 'navigate'
   };
   
+  // Hide the RunsheetPro UI frame during snip session to keep it out of the way
+  if (runsheetFrame) {
+    runsheetFrame.style.display = 'none';
+  }
+  if (runsheetButton) {
+    runsheetButton.style.display = 'none';
+  }
+  
   // Update context menu to show "Next Snip" and "Finish Snipping"
   updateSnipContextMenu(true, 'active');
   
@@ -7691,6 +7699,14 @@ async function resetSnipSession() {
     captures: [],
     mode: null
   };
+  
+  // Show the RunsheetPro UI frame again after snip session is complete
+  if (runsheetFrame) {
+    runsheetFrame.style.display = 'block';
+  }
+  if (runsheetButton) {
+    runsheetButton.style.display = 'block';
+  }
   
   // Update context menu to show only "Begin Snip Session"
   updateSnipContextMenu(true, 'inactive');
