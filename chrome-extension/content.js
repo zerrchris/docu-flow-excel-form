@@ -4000,7 +4000,9 @@ function createSnipOverlay() {
   
   // Hide the extension button during crosshairs mode so it doesn't obstruct snipping
   if (runsheetButton) {
-    runsheetButton.style.display = 'none';
+    runsheetButton.style.display = 'none !important';
+    runsheetButton.style.visibility = 'hidden !important';
+    runsheetButton.style.opacity = '0 !important';
   }
   
   snipOverlay = document.createElement('div');
@@ -4092,9 +4094,11 @@ function createSnipOverlay() {
     
     // Wait a bit for UI to hide
     setTimeout(async () => {
-      // Restore extension button temporarily for capture (to avoid it being visible)
+      // Keep extension button hidden during capture
       if (runsheetButton) {
-        runsheetButton.style.display = 'flex';
+        runsheetButton.style.display = 'none !important';
+        runsheetButton.style.visibility = 'hidden !important';
+        runsheetButton.style.opacity = '0 !important';
       }
       
       await captureSelectedArea(left, top, width, height);
@@ -4111,7 +4115,9 @@ function createSnipOverlay() {
         }
         // Hide extension button again for next snip
         if (runsheetButton) {
-          runsheetButton.style.display = 'none';
+          runsheetButton.style.display = 'none !important';
+          runsheetButton.style.visibility = 'hidden !important';
+          runsheetButton.style.opacity = '0 !important';
         }
         updateSnipCounter();
         showNotification(`Snip ${capturedSnips.length} captured! Continue scrolling and snipping or click "Snipping Complete"`, 'success');
@@ -4515,7 +4521,9 @@ function hideSnipModeForNavigation() {
   
   // Restore extension button when crosshairs are hidden
   if (runsheetButton) {
-    runsheetButton.style.display = 'flex';
+    runsheetButton.style.display = 'flex !important';
+    runsheetButton.style.visibility = 'visible !important';
+    runsheetButton.style.opacity = '1 !important';
   }
   
   // Don't remove the control panel - keep it for session persistence
@@ -4648,7 +4656,9 @@ function resumeSnipMode() {
     snipOverlay.style.display = 'block';
     // Hide extension button when crosshairs are active
     if (runsheetButton) {
-      runsheetButton.style.display = 'none';
+      runsheetButton.style.display = 'none !important';
+      runsheetButton.style.visibility = 'hidden !important';
+      runsheetButton.style.opacity = '0 !important';
     }
   } else {
     createSnipOverlay();
@@ -4681,7 +4691,9 @@ function cleanupSnipMode() {
   
   // Restore extension button when snip mode ends
   if (runsheetButton) {
-    runsheetButton.style.display = 'flex';
+    runsheetButton.style.display = 'flex !important';
+    runsheetButton.style.visibility = 'visible !important';
+    runsheetButton.style.opacity = '1 !important';
   }
   
   // Clear snip session and save state
@@ -6328,7 +6340,9 @@ function cleanupSnipMode() {
   
   // Restore extension button when snip mode ends
   if (runsheetButton) {
-    runsheetButton.style.display = 'flex';
+    runsheetButton.style.display = 'flex !important';
+    runsheetButton.style.visibility = 'visible !important';
+    runsheetButton.style.opacity = '1 !important';
   }
   
   console.log('🔧 RunsheetPro Extension: Snip mode cleaned up with smart scroll disabled');
@@ -6381,7 +6395,9 @@ function cleanupSnipModePreserveData() {
   
   // Restore extension button when snip mode ends
   if (runsheetButton) {
-    runsheetButton.style.display = 'flex';
+    runsheetButton.style.display = 'flex !important';
+    runsheetButton.style.visibility = 'visible !important';
+    runsheetButton.style.opacity = '1 !important';
   }
   
   console.log('🔧 RunsheetPro Extension: Snip mode UI cleaned up but snip data preserved for viewing');
