@@ -7912,9 +7912,7 @@ window.captureSnip = function(blob) {
   }
 };
 
-// Variables for snip control panel
-let snipControlPanel = null;
-
+// Reuse global snipControlPanel declared near top of file
 // Create minimal snip control panel
 function createSnipControlPanel() {
   if (snipControlPanel) return;
