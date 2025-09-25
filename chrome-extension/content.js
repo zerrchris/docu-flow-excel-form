@@ -7810,8 +7810,15 @@ async function resetSnipSessionForMassCapture() {
 
 // Combine multiple snip captures into a single blob
 async function combineSnipCaptures(captures) {
-  if (captures.length === 1) {
-    return captures[0];
+  // Filter out any invalid captures
+  const validCaptures = captures.filter(capture => capture instanceof Blob);
+  
+  if (validCaptures.length === 0) {
+    throw new Error('No valid blob captures found');
+  }
+  
+  if (validCaptures.length === 1) {
+    return validCaptures[0];
   }
   
   // Create a canvas to combine all captures vertically
@@ -7819,10 +7826,11 @@ async function combineSnipCaptures(captures) {
   const ctx = canvas.getContext('2d');
   
   const images = await Promise.all(
-    captures.map(capture => {
-      return new Promise((resolve) => {
+    validCaptures.map(capture => {
+      return new Promise((resolve, reject) => {
         const img = new Image();
         img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error('Failed to load image'));
         img.src = URL.createObjectURL(capture);
       });
     })
