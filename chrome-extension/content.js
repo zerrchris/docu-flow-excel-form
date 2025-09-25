@@ -4335,6 +4335,12 @@ async function captureSelectedArea(left, top, width, height) {
               }
               
               // Standard processing flow
+              // First hide the extension UI during processing
+              if (runsheetFrame) {
+                runsheetFrame.style.display = 'none !important';
+                runsheetFrame.style.visibility = 'hidden !important';
+              }
+              
               // Update the Document File Name field in the UI
               const input = document.querySelector(`input[data-column="Document File Name"]`);
               if (input) {
@@ -4356,11 +4362,17 @@ async function captureSelectedArea(left, top, width, height) {
                 }
               }
               
-              // Update screenshot indicator and reset added status
-              updateScreenshotIndicator(true);
-              screenshotAddedToSheet = false; // New screenshot hasn't been added yet
-              
-               // Handle mass capture mode completion
+               // Update screenshot indicator and reset added status
+               updateScreenshotIndicator(true);
+               screenshotAddedToSheet = false; // New screenshot hasn't been added yet
+               
+               // Restore extension UI after processing
+               if (runsheetFrame) {
+                 runsheetFrame.style.display = 'block !important';
+                 runsheetFrame.style.visibility = 'visible !important';
+               }
+               
+                // Handle mass capture mode completion
                if (isMassCaptureMode) {
                  handleMassCaptureCompletion();
                } else {
