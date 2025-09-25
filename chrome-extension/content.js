@@ -4957,7 +4957,11 @@ function detachSnipContextMenuHandler() {
 
 function onSnipContextMenu(e) {
   // Only override right-click while an extension snip session is active (or mass capture)
-  if (!(currentSnipSession && currentSnipSession.isActive) && !isMassCaptureMode) return;
+  const hasActiveSnipSession = (window.snipSession && window.snipSession.active) || 
+                                (currentSnipSession && currentSnipSession.isActive);
+  
+  if (!hasActiveSnipSession && !isMassCaptureMode) return;
+  
   e.preventDefault();
   e.stopPropagation();
   showSnipQuickMenu(e.clientX, e.clientY);
