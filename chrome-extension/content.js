@@ -7479,7 +7479,14 @@ async function beginSnipSession() {
   // Save session state to storage for persistence across navigations
   await chrome.storage.local.set({ snipSession: window.snipSession });
   
-  showNotification('Snip session started! Right-click and select "Next Snip" to capture.', 'success');
+  // Immediately start snip mode with crosshairs instead of just notifying
+  try {
+    startSnipModeWithMode('single', true);
+    showNotification('Snip session started! Drag to select area.', 'success');
+  } catch (error) {
+    console.error('🔧 RunsheetPro Extension: Error starting snip mode:', error);
+    showNotification('Failed to start snip capture', 'error');
+  }
 }
 
 // Perform the next snip in the session
