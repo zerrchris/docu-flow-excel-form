@@ -374,9 +374,13 @@ async function initializeExtensionWithStateRestore() {
         return;
       }
       
-      // Additional check: if runsheet frame is visible, we're likely in quick view
-      if (runsheetFrame && runsheetFrame.style.display !== 'none') {
-        console.log('🔧 RunsheetPro Extension: Skipping snip session restoration - runsheet frame is visible (likely quick view)');
+      // For navigate/scroll modes, always restore regardless of frame visibility
+      // since these modes are designed to persist across navigation
+      const isNavigateOrScrollMode = (window.snipSession.mode === 'navigate' || window.snipSession.mode === 'scroll');
+      
+      // Additional check: if runsheet frame is visible and NOT in navigate/scroll mode, we're likely in quick view
+      if (runsheetFrame && runsheetFrame.style.display !== 'none' && !isNavigateOrScrollMode) {
+        console.log('🔧 RunsheetPro Extension: Skipping snip session restoration - runsheet frame is visible (likely quick view) and not in navigate/scroll mode');
         return;
       }
       
