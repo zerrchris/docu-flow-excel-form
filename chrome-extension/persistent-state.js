@@ -374,6 +374,17 @@ async function initializeExtensionWithStateRestore() {
         return;
       }
       
+      // Additional safeguard: If there's no active snip context menu visible, don't auto-restore
+      const hasActiveSnipUI = document.querySelector('.snip-context-menu') || 
+                              document.querySelector('.snip-overlay') ||
+                              document.querySelector('.crosshair-cursor');
+      
+      if (!hasActiveSnipUI) {
+        console.log('🔧 RunsheetPro Extension: No active snip UI detected - clearing stale session');
+        clearSnipSession();
+        return;
+      }
+      
       // For navigate/scroll modes, always restore regardless of frame visibility
       // since these modes are designed to persist across navigation
       const isNavigateOrScrollMode = (window.snipSession.mode === 'navigate' || window.snipSession.mode === 'scroll');
@@ -389,12 +400,15 @@ async function initializeExtensionWithStateRestore() {
       const sessionDomain = window.snipSession.domain || '';
       const sameOrigin = currentDomain === sessionDomain;
       
-      // Auto-restore for navigate/scroll modes or same domain
-      if ((window.snipSession.mode === 'navigate' || window.snipSession.mode === 'scroll') || sameOrigin) {
+      // Auto-restore for navigate/scroll modes or same domain, but only if UI context supports it
+      if (((window.snipSession.mode === 'navigate' || window.snipSession.mode === 'scroll') || sameOrigin) && hasActiveSnipUI) {
         console.log('🔧 RunsheetPro Extension: Auto-restoring snip session (mode:', window.snipSession.mode, ', same domain:', sameOrigin, ')');
         setTimeout(() => {
           restoreSnipSession();
         }, 1000);
+      } else if (!hasActiveSnipUI) {
+        console.log('🔧 RunsheetPro Extension: Clearing stale snip session - no active UI context');
+        clearSnipSession();
       } else {
         // Different domain - ask user if they want to continue the session, but only if no quickview is already shown
         console.log('🔧 RunsheetPro Extension: Different domain detected, checking if quickview is active');
