@@ -38,9 +38,15 @@ try {
   console.error('🔧 RUNSHEETPRO EXTENSION: Failed to add content loaded marker', e);
 }
 
-// Load enhanced snip workflow
+// Load enhanced snip workflow and wait for it to be ready
 const enhancedSnipScript = document.createElement('script');
 enhancedSnipScript.src = chrome.runtime.getURL('enhanced-snip-workflow.js');
+enhancedSnipScript.onload = () => {
+  console.log('🔧 Enhanced Snip Workflow script loaded successfully');
+};
+enhancedSnipScript.onerror = () => {
+  console.warn('🔧 Enhanced Snip Workflow script failed to load');
+};
 document.head.appendChild(enhancedSnipScript);
 console.log('🔧 RunsheetPro Extension: Content script loading started');
 console.log('🔧 RunsheetPro Extension: Document ready state:', document.readyState);
@@ -4318,28 +4324,44 @@ async function captureSelectedArea(left, top, width, height) {
                 return;
               }
               
-              // For single entry mode, continue with standard flow
-              // Try enhanced AI processing first
-              const aiResult = await processSnipWithAI(blob, {
-                filename: window.currentSnipFilename,
-                row_index: currentRowIndex
+              // Unified processing - check for enhanced workflow with timeout
+              let enhancedProcessingComplete = false;
+              
+              // Try enhanced processing with timeout
+              const enhancedPromise = new Promise(async (resolve) => {
+                if (window.EnhancedSnipWorkflow) {
+                  try {
+                    const result = await window.EnhancedSnipWorkflow.processEnhancedSnip(blob, {
+                      filename: window.currentSnipFilename,
+                      row_index: currentRowIndex
+                    });
+                    if (result.success) {
+                      enhancedProcessingComplete = true;
+                      resolve(true);
+                      return;
+                    }
+                  } catch (error) {
+                    console.log('Enhanced processing failed:', error);
+                  }
+                }
+                resolve(false);
               });
               
-              if (aiResult.success) {
-                // AI processing succeeded - don't cleanup yet, wait for user decision
-                console.log('Enhanced AI analysis completed successfully');
+              // Timeout for enhanced processing
+              const timeoutPromise = new Promise(resolve => {
+                setTimeout(() => resolve(false), 2000); // 2 second timeout
+              });
+              
+              const enhancedResult = await Promise.race([enhancedPromise, timeoutPromise]);
+              
+              if (enhancedResult && enhancedProcessingComplete) {
+                // Enhanced processing succeeded - UI will be handled by enhanced workflow
+                console.log('Enhanced processing completed successfully');
                 return;
-              } else {
-                // AI processing failed - continue with standard flow
-                console.log('AI processing failed, continuing with standard flow');
               }
               
-              // Standard processing flow
-              // First hide the extension UI during processing
-              if (runsheetFrame) {
-                runsheetFrame.style.display = 'none !important';
-                runsheetFrame.style.visibility = 'hidden !important';
-              }
+              // Fall back to standard processing
+              console.log('Using standard processing flow');
               
               // Update the Document File Name field in the UI
               const input = document.querySelector(`input[data-column="Document File Name"]`);
@@ -4833,61 +4855,6 @@ function validateCaptureFormat(blob) {
     
     reader.readAsDataURL(blob);
   });
-}
-
-// Enhanced processSnipWithAI function with better validation
-async function processSnipWithAI(blob, metadata = {}) {
-  try {
-    if (!window.EnhancedSnipWorkflow) {
-      console.warn('Enhanced Snip Workflow not available, falling back to standard processing');
-      return { success: false, error: 'Enhanced workflow not available' };
-    }
-
-    const processingIndicator = window.EnhancedSnipWorkflow.showProcessingIndicator();
-
-    try {
-      const result = await window.EnhancedSnipWorkflow.processEnhancedSnip(blob, metadata);
-      
-      window.EnhancedSnipWorkflow.hideProcessingIndicator();
-      
-      if (result.success && result.analysis) {
-        // Show analysis preview with option to accept or edit
-        window.onAnalysisAccepted = (analysisResult) => {
-          // Fill form with extracted data
-          if (analysisResult.analysis?.extracted_data) {
-            fillFormWithExtractedData(analysisResult.analysis.extracted_data);
-          }
-          showNotification('AI analysis applied! Review and click "Add Row" to save.', 'success');
-        };
-
-        window.onAnalysisEdit = (analysisResult) => {
-          // Fill form with extracted data for editing
-          if (analysisResult.analysis?.extracted_data) {
-            fillFormWithExtractedData(analysisResult.analysis.extracted_data);
-          }
-          showNotification('Analysis data loaded for editing. Make changes and click "Add Row" to save.', 'info');
-        };
-
-        window.EnhancedSnipWorkflow.showEnhancedPreview(result);
-        
-        // Clean up snip session after successful processing but preserve data for viewing
-        if (typeof cleanupSnipSessionPreserveData === 'function') {
-          cleanupSnipSessionPreserveData();
-        }
-        
-        return result;
-      } else {
-        throw new Error(result.error || 'Analysis failed');
-      }
-    } catch (error) {
-      window.EnhancedSnipWorkflow.hideProcessingIndicator();
-      throw error;
-    }
-  } catch (error) {
-    console.error('Enhanced snip processing error:', error);
-    showNotification(`AI analysis failed: ${error.message}. Using standard snip processing.`, 'warning');
-    return { success: false, error: error.message };
-  }
 }
 
 // Upload snip to Supabase storage
