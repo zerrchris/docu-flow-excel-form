@@ -7326,10 +7326,10 @@ function startNextMassDocument() {
     massCapturePanel.style.display = 'none';
   }
   
-  // Start navigate snip mode for this document session
-  startSnipModeWithMode('navigate', true); // Skip overwrite check since we're in mass mode
+  // Start a snip and navigate session for this document
+  beginSnipSession();
   
-  showNotification(`Starting document capture session for row ${currentRowIndex + 1}` , 'info');
+  showNotification(`Starting document capture session for row ${currentRowIndex + 1}`, 'info');
 }
 
 // Update mass capture panel display
@@ -7379,22 +7379,28 @@ async function endMassCaptureMode() {
   }
   
   
-  // Navigate to next available blank row (like when extension first opens)
+  // Reset to the beginning: find the very first empty row (like fresh start)
   if (activeRunsheet) {
     // First refresh the runsheet data from database to get all the captured documents
     await refreshRunsheetDataFromDatabase();
 
-    // After refresh, compute next available row from the newest data
-    currentRowIndex = findNextAvailableRow(activeRunsheet);
-    console.log(`🔧 RunsheetPro Extension: Mass capture ended, moved to next available row: ${currentRowIndex}`);
+    // Reset to row 0 and find the first truly empty row from the beginning
+    currentRowIndex = 0;
+    const firstEmptyRow = findFirstEmptyRow(activeRunsheet);
+    if (typeof firstEmptyRow === 'number' && firstEmptyRow >= 0) {
+      currentRowIndex = firstEmptyRow;
+    }
+    
+    console.log(`🔧 RunsheetPro Extension: Mass capture ended, reset to first empty row: ${currentRowIndex}`);
 
-    // Notify main app to refresh and show the correct row
+    // Notify main app to refresh and show single entry mode at the first empty row
     window.postMessage({
       type: 'EXTENSION_RUNSHEET_REFRESH_NEEDED',
       runsheetId: activeRunsheet.id,
       source: 'runsheet-extension',
       reason: 'mass_capture_ended',
-      targetRow: currentRowIndex
+      targetRow: currentRowIndex,
+      resetToSingleEntry: true
     }, '*');
     console.log('🚨 Extension: Requested runsheet refresh after mass capture ended');
   }
@@ -7600,13 +7606,16 @@ async function beginSnipSession() {
     mode: 'navigate'
   };
   
-  // Hide the RunsheetPro UI frame during snip session to keep it out of the way
+  // Hide ALL UI during snip session - only show minimal control panel
   if (runsheetFrame) {
     runsheetFrame.style.display = 'none';
   }
   if (runsheetButton) {
     runsheetButton.style.display = 'none';
   }
+  
+  // Create minimal snip control panel
+  createSnipControlPanel();
   
   // Update context menu to show "Next Snip" and "Finish Snipping"
   updateSnipContextMenu(true, 'active');
@@ -7669,7 +7678,7 @@ async function finishSnipSession() {
   }
   
   try {
-    // Process all captured snips and add to next available row
+    // Process all captured snips and add to current row
     const combinedBlob = await combineSnipCaptures(window.snipSession.captures);
     
     // Use enhanced snip workflow to process the combined document
@@ -7682,11 +7691,40 @@ async function finishSnipSession() {
     } else {
       console.error('EnhancedSnipWorkflow not available');
       showNotification('Failed to process snip session', 'error');
+      return;
     }
     
-    // Reset the session
-    resetSnipSession();
-    showNotification('Snip session completed and added to runsheet!', 'success');
+    // Check if we're in mass capture mode
+    if (isMassCaptureMode) {
+      // In mass capture mode, continue to next document
+      massCaptureCount++;
+      updateMassCapturePanel();
+      
+      // Move to next available row
+      try {
+        const nextIdx = findNextAvailableRow(activeRunsheet);
+        if (typeof nextIdx === 'number' && nextIdx >= 0) {
+          currentRowIndex = nextIdx;
+          updateMassCapturePanel();
+        }
+      } catch (e) {
+        console.warn('🔧 RunsheetPro Extension: Could not find next row', e);
+      }
+      
+      // Reset the snip session but stay in mass capture mode
+      resetSnipSessionForMassCapture();
+      
+      // Show the mass capture panel again
+      if (massCapturePanel) {
+        massCapturePanel.style.display = 'block';
+      }
+      
+      showNotification(`Document ${massCaptureCount} added to row ${currentRowIndex}! Ready for next document.`, 'success');
+    } else {
+      // Normal snip session - reset completely and return to regular view
+      resetSnipSession();
+      showNotification('Snip session completed and added to runsheet!', 'success');
+    }
     
   } catch (error) {
     console.error('🔧 RunsheetPro Extension: Error finishing snip session:', error);
@@ -7713,6 +7751,9 @@ async function resetSnipSession() {
     mode: null
   };
   
+  // Remove snip control panel
+  removeSnipControlPanel();
+  
   // Show the RunsheetPro UI frame again after snip session is complete
   if (runsheetFrame) {
     runsheetFrame.style.display = 'block';
@@ -7722,6 +7763,38 @@ async function resetSnipSession() {
   }
   
   // Update context menu to show only "Begin Snip Session"
+  updateSnipContextMenu(true, 'inactive');
+  
+  // Detach quick right-click handler
+  detachSnipContextMenuHandler();
+  
+  // Clear session from storage
+  await chrome.storage.local.remove(['snipSession']);
+}
+
+// Reset snip session but keep mass capture mode active
+async function resetSnipSessionForMassCapture() {
+  console.log('🔧 RunsheetPro Extension: Resetting snip session for mass capture');
+  
+  window.snipSession = {
+    active: false,
+    mode: null,
+    captures: [],
+    currentFormData: {},
+    startTime: null
+  };
+  
+  // Sync with currentSnipSession
+  currentSnipSession = {
+    isActive: false,
+    captures: [],
+    mode: null
+  };
+  
+  // Remove snip control panel
+  removeSnipControlPanel();
+  
+  // Update context menu to show only "Begin Snip Session" 
   updateSnipContextMenu(true, 'inactive');
   
   // Detach quick right-click handler
@@ -7824,6 +7897,9 @@ window.captureSnip = function(blob) {
     window.snipSession.captures.push(blob);
     chrome.storage.local.set({ snipSession: window.snipSession });
     showNotification(`Capture ${window.snipSession.captures.length} added to session`, 'success');
+    
+    // Update the snip control panel to show new count
+    updateSnipControlPanel();
   }
   
   // Call original function if it exists
@@ -7831,3 +7907,110 @@ window.captureSnip = function(blob) {
     originalCaptureSnip(blob);
   }
 };
+
+// Variables for snip control panel
+let snipControlPanel = null;
+
+// Create minimal snip control panel
+function createSnipControlPanel() {
+  if (snipControlPanel) return;
+  
+  snipControlPanel = document.createElement('div');
+  snipControlPanel.id = 'runsheetpro-snip-control-panel';
+  snipControlPanel.style.cssText = `
+    position: fixed !important;
+    bottom: 20px !important;
+    right: 20px !important;
+    background: rgba(0, 0, 0, 0.8) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 8px !important;
+    padding: 12px !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    font-size: 13px !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3) !important;
+    z-index: 2147483647 !important;
+    user-select: none !important;
+    backdrop-filter: blur(10px) !important;
+  `;
+  
+  const captureCount = window.snipSession?.captures?.length || 0;
+  
+  snipControlPanel.innerHTML = `
+    <div style="margin-bottom: 8px; font-weight: 600; text-align: center;">
+      Snip Session (${captureCount} captured)
+    </div>
+    <div style="display: flex; gap: 6px;">
+      <button id="snip-control-cancel" style="
+        background: rgba(220, 38, 38, 0.8) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 4px !important;
+        padding: 6px 10px !important;
+        font-size: 12px !important;
+        cursor: pointer !important;
+        transition: all 0.2s ease !important;
+      ">Cancel</button>
+      <button id="snip-control-next" style="
+        background: rgba(59, 130, 246, 0.8) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 4px !important;
+        padding: 6px 10px !important;
+        font-size: 12px !important;
+        cursor: pointer !important;
+        transition: all 0.2s ease !important;
+        flex: 1 !important;
+      ">Next</button>
+      <button id="snip-control-finish" style="
+        background: rgba(34, 197, 94, 0.8) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 4px !important;
+        padding: 6px 10px !important;
+        font-size: 12px !important;
+        cursor: pointer !important;
+        transition: all 0.2s ease !important;
+      ">Finish</button>
+    </div>
+  `;
+  
+  // Add event listeners
+  const cancelBtn = snipControlPanel.querySelector('#snip-control-cancel');
+  const nextBtn = snipControlPanel.querySelector('#snip-control-next');
+  const finishBtn = snipControlPanel.querySelector('#snip-control-finish');
+  
+  cancelBtn.addEventListener('click', () => {
+    resetSnipSession();
+    showNotification('Snip session cancelled', 'info');
+  });
+  
+  nextBtn.addEventListener('click', () => {
+    resumeSnipMode();
+  });
+  
+  finishBtn.addEventListener('click', () => {
+    finishSnipSession();
+  });
+  
+  document.body.appendChild(snipControlPanel);
+}
+
+// Remove snip control panel
+function removeSnipControlPanel() {
+  if (snipControlPanel) {
+    snipControlPanel.remove();
+    snipControlPanel = null;
+  }
+}
+
+// Update snip control panel capture count
+function updateSnipControlPanel() {
+  if (!snipControlPanel) return;
+  
+  const captureCount = window.snipSession?.captures?.length || 0;
+  const titleDiv = snipControlPanel.querySelector('div');
+  if (titleDiv) {
+    titleDiv.textContent = `Snip Session (${captureCount} captured)`;
+  }
+}
