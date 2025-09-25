@@ -5024,7 +5024,7 @@ function showSnipQuickMenu(x, y) {
   finishBtn.addEventListener('click', () => {
     removeSnipQuickMenu();
     try {
-      finishSnipSession();
+      finishSnipping();
     } catch (err) {
       console.error('Finish Snip error:', err);
       showNotification('Failed to finish snip session', 'error');
@@ -7647,7 +7647,7 @@ async function beginSnipSession() {
   
   // Immediately start snip mode with crosshairs instead of just notifying
   try {
-    startSnipModeWithMode('single', true);
+    startSnipModeWithMode('navigate', true);
     showNotification('Snip session started! Drag to select area.', 'success');
   } catch (error) {
     console.error('🔧 RunsheetPro Extension: Error starting snip mode:', error);
