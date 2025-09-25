@@ -56,6 +56,7 @@ let currentViewMode = 'single'; // 'single' or 'full'
 let currentRowIndex = 0; // Track current row being edited
 let screenshotAddedToSheet = false; // Track if current screenshot has been added to sheet
 let lastSuccessfulAddTs = 0; // Timestamp of last successful add-to-sheet (prevents false unsaved warnings)
+let snipStagedAt = 0; // Timestamp when a staged screenshot was captured
 
 // Snip mode variables
 let isSnipMode = false;
@@ -717,6 +718,7 @@ async function addRowToSheet() {
       
       // Clear screenshot indicator
       updateScreenshotIndicator(false);
+      snipStagedAt = 0;
     } catch (error) {
       console.error('Error uploading captured snip:', error);
       showNotification('Failed to upload captured snip, but continuing with other data...', 'warning');
@@ -793,6 +795,7 @@ async function addRowToSheet() {
         window.currentCapturedSnip = null;
         window.currentSnipFilename = null;
         updateScreenshotIndicator(false);
+        snipStagedAt = 0;
       }
       
       // If a document was created, fire an event for the main app to refresh its document map
@@ -2802,6 +2805,7 @@ async function switchViewMode(newMode) {
     window.currentCapturedSnip = null;
     window.currentSnipFilename = null;
     screenshotAddedToSheet = false;
+    snipStagedAt = 0;
   }
   
   // Recreate the frame content
@@ -3000,13 +3004,14 @@ function hasUnsavedData() {
     }
   }
 
-  // If we have a captured screenshot that's not yet processed, that counts as unsaved
-  if (window.currentCapturedSnip && !screenshotAddedToSheet) {
-    return true;
-  }
+  // Consider a staged screenshot only if it's fresh and real
+  const hasRecentStagedScreenshot = (window.currentCapturedSnip instanceof Blob)
+    && window.currentCapturedSnip.size > 0
+    && !screenshotAddedToSheet
+    && (!snipStagedAt || (Date.now() - snipStagedAt < 180000)); // 3 min freshness
 
-  // Only warn if there's actual user-entered data (not just auto-generated content)
-  return hasUserData;
+  // Warn only when there is actual user-entered data OR a recent staged screenshot
+  return hasUserData || hasRecentStagedScreenshot;
 }
 
 // Show warning dialog for unsaved data
@@ -4286,6 +4291,7 @@ async function captureSelectedArea(left, top, width, height) {
               
               // Store the snip locally for later use
               window.currentCapturedSnip = blob;
+              snipStagedAt = Date.now();
               window.currentSnipFilename = `captured_snip_${Date.now()}.png`;
               
               // If we're in quickview mode, immediately link to the selected row
@@ -4421,6 +4427,7 @@ async function finishSnipping() {
     
     // Store locally for "Add to Row" functionality
     window.currentCapturedSnip = finalBlob;
+    snipStagedAt = Date.now();
     window.currentSnipFilename = `snip_session_${Date.now()}.png`;
     
     // If we're in quickview mode, immediately link to the selected row
@@ -5394,6 +5401,7 @@ function retakeScreenshot() {
   // Update button visibility and reset added status
   updateScreenshotIndicator(false);
   screenshotAddedToSheet = false; // Reset since screenshot is cleared
+  snipStagedAt = 0;
   
   // Start new screenshot process
   startSnipMode();
@@ -6975,6 +6983,7 @@ async function endMassCaptureMode() {
   window.currentSnipFilename = null;
   screenshotAddedToSheet = false;
   lastSuccessfulAddTs = Date.now();
+  snipStagedAt = 0;
   
   // Show the main runsheet frame and button again
   if (runsheetFrame) {
@@ -7105,6 +7114,7 @@ async function handleMassCaptureCompletion() {
         window.currentCapturedSnip = null;
         window.currentSnipFilename = null;
         try { updateScreenshotIndicator(false); } catch {}
+        snipStagedAt = 0;
 
         showNotification(`Document added to row ${result.row_index + 1}. Ready for next.`, 'success');
       } catch (e) {
