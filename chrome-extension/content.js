@@ -7647,7 +7647,7 @@ async function beginSnipSession() {
   
   // Immediately start snip mode with crosshairs instead of just notifying
   try {
-    startSnipModeWithMode('navigate', true);
+    startSnipModeWithMode('single', true);
     showNotification('Snip session started! Drag to select area.', 'success');
   } catch (error) {
     console.error('🔧 RunsheetPro Extension: Error starting snip mode:', error);
