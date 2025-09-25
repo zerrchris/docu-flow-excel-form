@@ -3900,27 +3900,32 @@ function showSnipModeSelector(skipOverwriteCheck = true) {
   document.body.appendChild(overlay);
 
   // Add event listeners
-  document.getElementById('single-snip-option').addEventListener('click', () => {
+  document.getElementById('single-snip-option').addEventListener('click', (e) => {
+    e.stopPropagation();
     overlay.remove();
     startSnipModeWithMode('single', skipOverwriteCheck);
   });
 
-  document.getElementById('scroll-snip-option').addEventListener('click', () => {
+  document.getElementById('scroll-snip-option').addEventListener('click', (e) => {
+    e.stopPropagation();
     overlay.remove();
     startSnipModeWithMode('scroll', skipOverwriteCheck);
   });
 
-  document.getElementById('navigate-snip-option').addEventListener('click', () => {
+  document.getElementById('navigate-snip-option').addEventListener('click', (e) => {
+    e.stopPropagation();
     overlay.remove();
     startSnipModeWithMode('navigate', skipOverwriteCheck);
   });
 
-  document.getElementById('mass-capture-option').addEventListener('click', () => {
+  document.getElementById('mass-capture-option').addEventListener('click', (e) => {
+    e.stopPropagation();
     overlay.remove();
     startMassCaptureMode();
   });
 
-  document.getElementById('cancel-snip-selector').addEventListener('click', () => {
+  document.getElementById('cancel-snip-selector').addEventListener('click', (e) => {
+    e.stopPropagation();
     overlay.remove();
   });
 
