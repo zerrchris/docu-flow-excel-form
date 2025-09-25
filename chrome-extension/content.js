@@ -4179,8 +4179,12 @@ function startSnipModeWithMode(mode = 'single', skipOverwriteCheck = false) {
   snipMode = mode;
   capturedSnips = [];
   
-  // Enable context menu for next snip
-  chrome.runtime.sendMessage({ action: 'updateSnipContextMenu', enabled: true });
+  // Enable context menu for active snip session
+  updateSnipContextMenu(true, 'active');
+  // Ensure fullscreen-specific labels are applied
+  if (typeof updateContextMenuForFullscreen === 'function') {
+    updateContextMenuForFullscreen();
+  }
   
   // For scroll and navigate modes, initialize persistent session
   if (mode === 'scroll' || mode === 'navigate') {
