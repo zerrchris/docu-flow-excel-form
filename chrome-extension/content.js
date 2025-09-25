@@ -4526,15 +4526,18 @@ async function captureSelectedArea(left, top, width, height) {
               const sessionDataUrl = canvas.toDataURL('image/png');
               window.snipSession.captures.push({
                 dataUrl: sessionDataUrl,
+                blob: blob, // Keep blob for immediate processing
                 timestamp: Date.now(),
                 width,
                 height
               });
+              // Save session to storage
+              if (typeof saveExtensionState === 'function') {
+                saveExtensionState();
+              }
             } catch (e) {
               console.warn('🔧 RunsheetPro Extension: Failed to generate dataUrl for session capture', e);
             }
-            // Save session to storage
-            saveExtensionState();
           }
           
           // Update counter for all modes
@@ -8007,7 +8010,7 @@ function createSnipControlPanel() {
   });
   
   finishBtn.addEventListener('click', () => {
-    finishSnipSession();
+    finishSnipping();
   });
   
   document.body.appendChild(snipControlPanel);
@@ -8025,7 +8028,11 @@ function removeSnipControlPanel() {
 function updateSnipControlPanel() {
   if (!snipControlPanel) return;
   
-  const captureCount = window.snipSession?.captures?.length || 0;
+  // Use the appropriate capture count based on mode
+  const captureCount = (snipMode === 'navigate' || snipMode === 'scroll') ? 
+    (window.snipSession?.captures?.length || 0) : 
+    (capturedSnips?.length || 0);
+  
   const titleDiv = snipControlPanel.querySelector('div');
   if (titleDiv) {
     titleDiv.textContent = `Snip Session (${captureCount} captured)`;
