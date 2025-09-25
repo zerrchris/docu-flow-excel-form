@@ -5409,7 +5409,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   } else if (request.action === 'finishSnipping') {
     // Handle finish snipping from context menu
     console.log('🔧 RunsheetPro Extension: Finish snipping triggered');
-    finishSnipSession();
+    finishSnipping();
   } else if (request.action === 'showFullscreenHelp') {
     // Show fullscreen help notification
     showFullscreenHelpDialog();
