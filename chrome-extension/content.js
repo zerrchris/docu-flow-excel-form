@@ -3170,12 +3170,25 @@ function setupFrameEventListeners() {
   // View mode button
   const viewModeBtn = document.getElementById('view-mode-btn');
   if (viewModeBtn) {
-    viewModeBtn.addEventListener('click', () => {
-      const newMode = currentViewMode === 'single' ? 'full' : 'single';
-      
+    viewModeBtn.addEventListener('click', async () => {
+      // Determine effective mode robustly (storage, then UI label, then in-memory)
+      let effectiveMode = currentViewMode;
+      try {
+        const { viewMode: storedViewMode } = await chrome.storage.local.get(['viewMode']);
+        if (storedViewMode) effectiveMode = storedViewMode;
+      } catch (e) {
+        // ignore
+      }
+      // Fallback to button label if storage is stale
+      const label = (viewModeBtn.textContent || '').toLowerCase();
+      if (label.includes('save & close')) effectiveMode = 'full';
+      else if (label.includes('quick view')) effectiveMode = 'single';
+
+      const newMode = effectiveMode === 'single' ? 'full' : 'single';
+
       // Only show warning when switching FROM single entry mode (where unsaved data can exist)
       // Never show when switching FROM Quick View (full mode) - that's a save operation
-      if (currentViewMode === 'single' && hasUnsavedData()) {
+      if (effectiveMode === 'single' && hasUnsavedData()) {
         const actionText = newMode === 'full' ? 'switching to Quick View' : 'switching to Single Entry';
         showUnsavedDataWarning(actionText, () => {
           switchViewMode(newMode);
