@@ -504,7 +504,7 @@ function showSignInPopup() {
       <div id="signin-error" style="display: none; color: hsl(var(--destructive, 0 84% 60%)); font-size: 12px; text-align: center;"></div>
     </form>
     <div style="text-align: center; margin-top: 16px; font-size: 12px; color: hsl(var(--muted-foreground, 215 16% 47%));">
-      Don't have an account? <a href="#" id="open-main-app" style="color: hsl(var(--primary, 215 80% 40%)); text-decoration: none;">Open main app to sign up</a>
+      Don't have an account? <a href="javascript:void(0)" id="open-main-app" style="color: hsl(var(--primary, 215 80% 40%)); text-decoration: none;">Open main app to sign up</a>
     </div>
   `;
 
@@ -522,6 +522,7 @@ function showSignInPopup() {
   
   document.getElementById('open-main-app').addEventListener('click', (e) => {
     e.preventDefault();
+    e.stopPropagation();
     window.open(window.location.origin, '_blank');
     closeSignIn();
   });
@@ -653,7 +654,7 @@ function showQuickCreateDialog() {
       <div id="create-error" style="display: none; color: hsl(var(--destructive, 0 84% 60%)); font-size: 12px; text-align: center;"></div>
     </form>
     <div style="text-align: center; margin-top: 16px; font-size: 12px; color: hsl(var(--muted-foreground, 215 16% 47%));">
-      Need custom setup? <a href="#" id="open-main-app-create" style="color: hsl(var(--primary, 215 80% 40%)); text-decoration: none;">Open main app</a>
+      Need custom setup? <a href="javascript:void(0)" id="open-main-app-create" style="color: hsl(var(--primary, 215 80% 40%)); text-decoration: none;">Open main app</a>
     </div>
   `;
 
@@ -671,6 +672,7 @@ function showQuickCreateDialog() {
   
   document.getElementById('open-main-app-create').addEventListener('click', (e) => {
     e.preventDefault();
+    e.stopPropagation();
     window.open(window.location.origin, '_blank');
     closeQuickCreate();
   });
