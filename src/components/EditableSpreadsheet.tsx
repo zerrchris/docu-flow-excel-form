@@ -7018,9 +7018,9 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
                   </th>
                   
                   {columns.map((column) => (
-                    <th 
+                   <th 
                         key={column}
-                        className={`font-bold text-center border-r border-b border-border relative last:border-r-0 cursor-move transition-all duration-200 h-12 font-medium text-muted-foreground
+                        className={`font-bold text-center border-r border-b border-border relative cursor-move transition-all duration-200 h-12 font-medium text-muted-foreground
                            ${draggedColumn === column ? 'opacity-50 transform scale-95' : ''}
                            ${dragOverColumn === column ? 'bg-primary/20 shadow-lg' : 'bg-background/95'}
                            ${localMissingColumns.includes(column) ? 'bg-yellow-100 border-2 border-yellow-400 dark:bg-yellow-900/20 dark:border-yellow-500 animate-pulse shadow-yellow-200 dark:shadow-yellow-900' : 'hover:bg-muted/30'}
@@ -7124,17 +7124,17 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
                  
                    {/* Document File Name column header removed - using DocumentLinker instead */}
                   
-                   {/* Actions column header - not draggable */}
-                       <th
-                        className="font-bold text-center border-b border-border relative p-0 bg-background sticky top-0"
-                       style={{ 
-                         width: "480px", 
-                         minWidth: "480px",
-                         backgroundColor: 'hsl(var(--background))',
-                         position: 'sticky',
-                         top: '0px',
-                         zIndex: 999
-                       }}
+                    {/* Actions column header - not draggable */}
+                        <th
+                         className="font-bold text-center border-b border-border relative p-0 bg-background sticky top-0"
+                        style={{ 
+                          width: "480px", 
+                          minWidth: "480px",
+                          backgroundColor: 'hsl(var(--background))',
+                          position: 'sticky',
+                          top: '0px',
+                          zIndex: 999
+                        }}
                      >
                        <div className="w-full h-full px-4 py-2 flex gap-2">
                            {/* File Name Management Dropdown */}
@@ -7340,12 +7340,12 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
                         columnIndex <= Math.max(copiedRange.start.columnIndex, copiedRange.end.columnIndex);
                       
                       return (
-                           <td
-                            key={`${rowIndex}-${column}`}
-                             className={`border-r border-b border-border last:border-r-0 relative cursor-text transition-all duration-200 group-hover:bg-muted/20
-                               ${isEditing ? 'p-0 z-20' : 'p-0'}
-                               ${cellValidationErrors[`${rowIndex}-${column}`] ? 'border-2 border-red-400 bg-red-50 dark:bg-red-900/20' : ''}
-                             `}
+                            <td
+                             key={`${rowIndex}-${column}`}
+                              className={`border-r border-b border-border relative cursor-text transition-all duration-200 group-hover:bg-muted/20
+                                ${isEditing ? 'p-0 z-20' : 'p-0'}
+                                ${cellValidationErrors[`${rowIndex}-${column}`] ? 'border-2 border-red-400 bg-red-50 dark:bg-red-900/20' : ''}
+                              `}
                              style={{ 
                                width: `${getColumnWidth(column)}px`, 
                                minWidth: `${getColumnWidth(column)}px`,
@@ -7458,41 +7458,41 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
                     
                       {/* Document File Name column removed - use DocumentLinker for file naming */}
                     
-                         {/* Actions column - Document management */}
-                       <td 
-                         className="p-0 overflow-hidden"
-                         style={{ 
-                           width: "480px", 
-                           minWidth: "480px",
-                           maxWidth: "480px",
-                           height: `${getRowHeight(rowIndex)}px`,
-                           minHeight: `${getRowHeight(rowIndex)}px`
-                         }}
-                     >
-                          <div className="bg-background border border-border rounded-md p-2 h-full min-h-[60px] flex gap-2 overflow-visible">
-                            {/* Row Actions (Move buttons only) */}
-                             <div className="flex gap-1 items-center min-w-[50px]">
-                                 <Button
-                                   variant="ghost"
-                                   size="sm"
-                                   onClick={() => moveRowUp(rowIndex)}
-                                   disabled={rowIndex === 0}
-                                   className="h-6 w-6 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/20 flex-shrink-0"
-                                   title="Move row up"
-                                 >
-                                   <ArrowUp className="h-3 w-3" />
-                                 </Button>
-                                 <Button
-                                   variant="ghost"
-                                   size="sm"
-                                   onClick={() => moveRowDown(rowIndex)}
-                                   disabled={rowIndex >= data.length - 1}
-                                   className="h-6 w-6 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/20 flex-shrink-0"
-                                   title="Move row down"
-                                 >
-                                   <ArrowDown className="h-3 w-3" />
-                                 </Button>
-                             </div>
+                          {/* Actions column - Document management */}
+                        <td 
+                          className="p-0 overflow-hidden border-b border-border"
+                          style={{ 
+                            width: "480px", 
+                            minWidth: "480px",
+                            maxWidth: "480px",
+                            height: `${getRowHeight(rowIndex)}px`,
+                            minHeight: `${getRowHeight(rowIndex)}px`
+                          }}
+                      >
+                           <div className="bg-background border border-border rounded-md p-2 h-full min-h-[60px] flex gap-2 overflow-visible">
+                             {/* Row Actions (Move buttons only) */}
+                              <div className="flex gap-1 items-start flex-col justify-center min-w-[30px]">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => moveRowUp(rowIndex)}
+                                    disabled={rowIndex === 0}
+                                    className="h-6 w-6 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/20 flex-shrink-0"
+                                    title="Move row up"
+                                  >
+                                    <ArrowUp className="h-3 w-3" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => moveRowDown(rowIndex)}
+                                    disabled={rowIndex >= data.length - 1}
+                                    className="h-6 w-6 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/20 flex-shrink-0"
+                                    title="Move row down"
+                                  >
+                                    <ArrowDown className="h-3 w-3" />
+                                  </Button>
+                              </div>
                            
                             {/* Document Section */}
                             <div className="flex-1 h-full flex flex-col">
