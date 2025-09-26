@@ -4828,6 +4828,9 @@ function hideSnipModeForNavigation() {
   } else {
     snipControlPanel.style.display = 'block';
   }
+  // Safety: ensure panel and context menu remain
+  ensureSnipPanelVisible();
+  startSnipPanelWatcher();
 
   // Remove legacy navigation panel if it exists
   const existingNavPanel = document.getElementById('runsheetpro-nav-controls');
@@ -7679,6 +7682,8 @@ async function beginSnipSession() {
   
   // Create minimal snip control panel
   createSnipControlPanel();
+  ensureSnipPanelVisible();
+  startSnipPanelWatcher();
   
   // Update context menu to show "Next Snip" and "Finish Snipping"
   updateSnipContextMenu(true, 'active');
@@ -7814,7 +7819,8 @@ async function resetSnipSession() {
     mode: null
   };
   
-  // Remove snip control panel
+  // Stop watcher and remove snip control panel
+  stopSnipPanelWatcher();
   removeSnipControlPanel();
   
   // Show the RunsheetPro UI frame again after snip session is complete
@@ -7854,7 +7860,8 @@ async function resetSnipSessionForMassCapture() {
     mode: null
   };
   
-  // Remove snip control panel
+  // Stop watcher and remove snip control panel
+  stopSnipPanelWatcher();
   removeSnipControlPanel();
   
   // Update context menu to show only "Begin Snip Session" 
@@ -7954,9 +7961,11 @@ async function restoreSnipSessionFromStorage() {
       if (typeof runsheetFrame !== 'undefined' && runsheetFrame) { runsheetFrame.style.display = 'none'; }
       if (typeof runsheetButton !== 'undefined' && runsheetButton) { runsheetButton.style.display = 'none'; }
 
-      // Ensure the modern snip control panel is visible
+      // Ensure the modern snip control panel is visible and keep it alive
       if (!snipControlPanel) { createSnipControlPanel(); }
       updateSnipControlPanel();
+      ensureSnipPanelVisible();
+      startSnipPanelWatcher();
       
       showNotification('Continued snip session from previous page. Right-click for "Next Snip".', 'info');
     } else {
@@ -8134,4 +8143,55 @@ function updateSnipControlPanel() {
   if (titleDiv) {
     titleDiv.textContent = `Snip Session (${captureCount} captured)`;
   }
+}
+
+// Ensure the snip control panel is visible during an active navigate session
+function ensureSnipPanelVisible() {
+  try {
+    if (window.snipSession?.active && window.snipSession.mode === 'navigate') {
+      // Keep primary UI hidden
+      if (typeof runsheetFrame !== 'undefined' && runsheetFrame) {
+        runsheetFrame.style.setProperty('display', 'none', 'important');
+        runsheetFrame.style.setProperty('visibility', 'hidden', 'important');
+      }
+      if (typeof runsheetButton !== 'undefined' && runsheetButton) {
+        runsheetButton.style.display = 'none';
+      }
+
+      // Recreate panel if missing
+      if (!snipControlPanel) { createSnipControlPanel(); }
+      else { snipControlPanel.style.display = 'block'; }
+      
+      updateSnipControlPanel();
+      updateSnipContextMenu(true, 'active');
+    }
+  } catch (e) {
+    console.warn('ensureSnipPanelVisible error', e);
+  }
+}
+
+// Watcher to keep the panel visible even if the page manipulates the DOM
+let _snipPanelWatch = null;
+function startSnipPanelWatcher() {
+  try {
+    stopSnipPanelWatcher();
+    if (window.snipSession?.active && window.snipSession.mode === 'navigate') {
+      _snipPanelWatch = setInterval(() => {
+        if (!document.body) return;
+        const exists = !!document.getElementById('runsheetpro-snip-control-panel');
+        if (!exists) {
+          // Panel missing – rebuild
+          createSnipControlPanel();
+          updateSnipControlPanel();
+        }
+      }, 1000);
+    }
+  } catch (e) {
+    console.warn('startSnipPanelWatcher error', e);
+  }
+}
+function stopSnipPanelWatcher() {
+  try {
+    if (_snipPanelWatch) { clearInterval(_snipPanelWatch); _snipPanelWatch = null; }
+  } catch {}
 }
