@@ -283,11 +283,96 @@ function restoreSnipSession(retryCount = 0) {
       window.snipMode = 'navigate';
       window.isSnipMode = false; // We're between snips during navigation
       
-      // Create the modern navigate control panel (dark panel with counter)
-      if (typeof createSnipControlPanel === 'function') {
-        createSnipControlPanel();
-      }
-      updateSnipCounter();
+      // Create the modern navigate control panel (dark panel with counter) using a delayed approach
+      // to ensure the content script functions are available
+      setTimeout(() => {
+        // Find and call the modern createSnipControlPanel function (not the old one)
+        if (typeof window.createModernSnipControlPanel === 'function') {
+          window.createModernSnipControlPanel();
+        } else {
+          // Fallback: create the panel directly using the modern style
+          let snipControlPanel = document.getElementById('runsheetpro-snip-control-panel');
+          if (!snipControlPanel) {
+            snipControlPanel = document.createElement('div');
+            snipControlPanel.id = 'runsheetpro-snip-control-panel';
+            snipControlPanel.style.cssText = \`
+              position: fixed !important;
+              bottom: 20px !important;
+              right: 20px !important;
+              background: rgba(0, 0, 0, 0.8) !important;
+              color: white !important;
+              padding: 12px 16px !important;
+              border-radius: 8px !important;
+              box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+              font-size: 14px !important;
+              z-index: 2147483647 !important;
+              display: flex !important;
+              align-items: center !important;
+              gap: 12px !important;
+              user-select: none !important;
+            \`;
+            
+            snipControlPanel.innerHTML = \`
+              <span id="snip-counter">Snip 1 of ∞</span>
+              <button id="next-snip-btn" style="
+                background: #3b82f6 !important;
+                color: white !important;
+                border: none !important;
+                padding: 6px 12px !important;
+                border-radius: 4px !important;
+                cursor: pointer !important;
+                font-size: 12px !important;
+                font-weight: 500 !important;
+              ">Next Snip</button>
+              <button id="finish-snipping-btn" style="
+                background: #10b981 !important;
+                color: white !important;
+                border: none !important;
+                padding: 6px 12px !important;
+                border-radius: 4px !important;
+                cursor: pointer !important;
+                font-size: 12px !important;
+                font-weight: 500 !important;
+              ">Finish</button>
+            \`;
+            
+            document.body.appendChild(snipControlPanel);
+            
+            // Add event listeners
+            const nextBtn = snipControlPanel.querySelector('#next-snip-btn');
+            const finishBtn = snipControlPanel.querySelector('#finish-snipping-btn');
+            
+            if (nextBtn) {
+              nextBtn.addEventListener('click', () => {
+                if (typeof window.continueSnipping === 'function') {
+                  window.continueSnipping();
+                }
+              });
+            }
+            
+            if (finishBtn) {
+              finishBtn.addEventListener('click', () => {
+                if (typeof window.finishSnipping === 'function') {
+                  window.finishSnipping();
+                }
+              });
+            }
+          }
+        }
+        
+        // Update the counter
+        if (typeof window.updateSnipCounter === 'function') {
+          window.updateSnipCounter();
+        } else {
+          // Fallback: update counter directly
+          const counter = document.getElementById('snip-counter');
+          if (counter && window.snipSession && window.snipSession.captures) {
+            counter.textContent = \`Snip \${window.snipSession.captures.length + 1} of ∞\`;
+          }
+        }
+      }, 100);
+      
       
       // No preview needed - session continues until finished
       console.log('🔧 RunsheetPro Extension: Snip session restored with', window.snipSession.captures.length, 'captures');
