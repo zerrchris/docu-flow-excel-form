@@ -7921,6 +7921,15 @@ async function restoreSnipSessionFromStorage() {
       updateSnipContextMenu(true, 'active');
       // Ensure our quick right-click handler is active
       attachSnipContextMenuHandler();
+
+      // Align local mode and hide main UI on restore
+      try { snipMode = window.snipSession.mode || snipMode; } catch {}
+      if (typeof runsheetFrame !== 'undefined' && runsheetFrame) { runsheetFrame.style.display = 'none'; }
+      if (typeof runsheetButton !== 'undefined' && runsheetButton) { runsheetButton.style.display = 'none'; }
+
+      // Ensure the modern snip control panel is visible
+      if (!snipControlPanel) { createSnipControlPanel(); }
+      updateSnipControlPanel();
       
       showNotification('Continued snip session from previous page. Right-click for "Next Snip".', 'info');
     } else {
@@ -7981,7 +7990,8 @@ function createSnipControlPanel() {
   // Create buttons based on snip mode
   let buttonsHtml = '';
   
-  if (snipMode === 'navigate') {
+  const effectiveMode = (window.snipSession?.mode) || snipMode;
+  if (effectiveMode === 'navigate') {
     // Navigate mode: Cancel, Next Snip, Finish
     buttonsHtml = `
       <button id="snip-control-cancel" style="
@@ -8088,7 +8098,8 @@ function updateSnipControlPanel() {
   if (!snipControlPanel) return;
   
   // Use the appropriate capture count based on mode
-  const captureCount = (snipMode === 'navigate' || snipMode === 'scroll') ? 
+  const mode = (window.snipSession?.mode) || snipMode;
+  const captureCount = (mode === 'navigate' || mode === 'scroll') ? 
     (window.snipSession?.captures?.length || 0) : 
     (capturedSnips?.length || 0);
   

@@ -409,9 +409,10 @@ async function initializeExtensionWithStateRestore() {
       // Update context menu to show proper options
       const snipCount = window.snipSession.captures?.length || 0;
       chrome.runtime.sendMessage({
-        action: 'updateContextMenu',
-        mode: 'snip_navigate',
-        snipCount: snipCount
+        action: 'updateSnipContextMenu',
+        enabled: true,
+        state: 'active',
+        fullscreenMode: false
       });
 
       // Recreate the modern control panel shortly (after content.js functions are ready)
