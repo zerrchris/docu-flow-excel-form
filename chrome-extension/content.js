@@ -443,18 +443,21 @@ function createRunsheetButton() {
   console.log('🔧 RunsheetPro Extension: Runsheet button created and added to DOM');
   console.log('🔧 RunsheetPro Extension: Button is in DOM:', document.body.contains(runsheetButton));
   
-  // Add debug button for testing
-  const debugButton = document.createElement('div');
-  debugButton.style.cssText = runsheetButton.style.cssText;
-  debugButton.style.right = '90px !important';
-  debugButton.innerHTML = '🔧';
-  debugButton.title = 'Debug Extension';
-  debugButton.addEventListener('click', () => {
-    console.log('🔧 Debug clicked');
-    // Force show sign-in popup
-    showSignInPopup();
-  });
-  document.body.appendChild(debugButton);
+  // Optional debug button (disabled by default)
+  try {
+    if (window.__RUNSHEETPRO_DEBUG__ === true) {
+      const debugButton = document.createElement('div');
+      debugButton.style.cssText = runsheetButton.style.cssText;
+      debugButton.style.right = '90px !important';
+      debugButton.innerHTML = '🔧';
+      debugButton.title = 'Debug Extension';
+      debugButton.addEventListener('click', () => {
+        console.log('🔧 Debug clicked');
+        showSignInPopup();
+      });
+      document.body.appendChild(debugButton);
+    }
+  } catch {}
 }
 
 // Show sign-in popup
