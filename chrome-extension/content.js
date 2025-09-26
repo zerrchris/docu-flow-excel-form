@@ -4952,6 +4952,12 @@ function createNavigationControlPanel() {
 
 // Resume snip mode after navigation
 function resumeSnipMode() {
+  // Align mode/state for navigate sessions
+  if (window.snipSession?.active) {
+    snipMode = window.snipSession.mode || 'navigate';
+  }
+  isSnipMode = true;
+  
   // Restore captured snips from session
   if (window.snipSession.active && window.snipSession.captures.length > 0) {
     capturedSnips = [...window.snipSession.captures];
@@ -4968,6 +4974,10 @@ function resumeSnipMode() {
   } else {
     createSnipOverlay();
   }
+  
+  // Keep context menu and panel active
+  updateSnipContextMenu(true, 'active');
+  ensureSnipPanelVisible();
   
   // Don't create a separate control panel - session persists with navigation panel
   showNotification('Ready for next snip! Drag to select area.', 'info');
@@ -7704,7 +7714,7 @@ async function beginSnipSession() {
   
   // Immediately start snip mode with crosshairs instead of just notifying
   try {
-    startSnipModeWithMode('single', true);
+    startSnipModeWithMode('navigate', true);
     showNotification('Snip session started! Drag to select area.', 'success');
   } catch (error) {
     console.error('🔧 RunsheetPro Extension: Error starting snip mode:', error);
