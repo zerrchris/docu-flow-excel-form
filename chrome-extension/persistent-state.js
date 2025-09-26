@@ -73,6 +73,12 @@ async function restoreExtensionState() {
       if (result[STATE_KEYS.SNIP_SESSION]) {
         window.snipSession = result[STATE_KEYS.SNIP_SESSION];
         console.log('🔧 RunsheetPro Extension: Restored snip session:', window.snipSession);
+        
+        // Update global currentSnipSession to match the restored state
+        if (typeof window.currentSnipSession !== 'undefined') {
+          window.currentSnipSession.isActive = window.snipSession.active;
+          window.currentSnipSession.captures = window.snipSession.captures || [];
+        }
       }
       
       if (result[STATE_KEYS.VIEW_MODE]) {
@@ -372,6 +378,13 @@ async function initializeExtensionWithStateRestore() {
     // Check if we're in navigate snip mode - if so, skip regular UI creation but restore the panel
     if (window.snipSession && window.snipSession.active && window.snipSession.mode === 'navigate') {
       console.log('🔧 RunsheetPro Extension: Navigate mode active, skipping regular UI initialization and restoring snip panel');
+      console.log('🔧 RunsheetPro Extension: Snip session has', window.snipSession.captures?.length || 0, 'captures');
+
+      // Update global currentSnipSession to match the restored state
+      if (typeof window.currentSnipSession !== 'undefined') {
+        window.currentSnipSession.isActive = window.snipSession.active;
+        window.currentSnipSession.captures = window.snipSession.captures || [];
+      }
 
       // Hide main UI
       const runsheetFrameEl = document.getElementById('runsheetpro-runsheet-frame');
@@ -393,6 +406,14 @@ async function initializeExtensionWithStateRestore() {
       // Ensure mode globals
       window.snipMode = 'navigate';
 
+      // Update context menu to show proper options
+      const snipCount = window.snipSession.captures?.length || 0;
+      chrome.runtime.sendMessage({
+        action: 'updateContextMenu',
+        mode: 'snip_navigate',
+        snipCount: snipCount
+      });
+
       // Recreate the modern control panel shortly (after content.js functions are ready)
       setTimeout(() => {
         if (typeof window.createSnipControlPanel === 'function') {
@@ -401,8 +422,8 @@ async function initializeExtensionWithStateRestore() {
             window.updateSnipControlPanel();
           }
         } else {
-          // Fallback to full restoration logic
-          restoreSnipSession();
+          // Create snip panel directly with fallback
+          createNavigateSnipPanel(snipCount);
         }
       }, 100);
 
@@ -606,6 +627,95 @@ function clearSnipSession() {
 
 // Initialize when content script loads
 console.log('🔧 RunsheetPro Extension: Persistent state script loaded');
+
+// Create fallback snip panel for navigate mode
+function createNavigateSnipPanel(snipCount = 0) {
+  console.log('🔧 RunsheetPro Extension: Creating navigate snip panel with count:', snipCount);
+  
+  // Remove any existing panels first
+  ['runsheetpro-nav-controls','runsheetpro-snip-controls','runsheetpro-snip-control-panel'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.remove();
+  });
+  
+  // Create the modern snip control panel
+  const panel = document.createElement('div');
+  panel.id = 'runsheetpro-snip-control-panel';
+  panel.style.cssText = `
+    position: fixed !important;
+    bottom: 20px !important;
+    right: 20px !important;
+    background: #1a1f2e !important;
+    border: 1px solid #333 !important;
+    border-radius: 8px !important;
+    padding: 12px !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4) !important;
+    z-index: 2147483647 !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+    color: white !important;
+    min-width: 200px !important;
+  `;
+  
+  panel.innerHTML = `
+    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+      <span style="font-size: 14px; font-weight: 500;">📸 Snip & Navigate</span>
+      <span style="background: #4f46e5; color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px;">${snipCount}</span>
+    </div>
+    <div style="display: flex; gap: 8px;">
+      <button id="nextSnipBtn" style="
+        background: #4f46e5;
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        flex: 1;
+      ">Next Snip</button>
+      <button id="finishSnipBtn" style="
+        background: #059669;
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+        flex: 1;
+      ">Finish</button>
+    </div>
+  `;
+  
+  // Add event listeners with fallbacks
+  const nextBtn = panel.querySelector('#nextSnipBtn');
+  const finishBtn = panel.querySelector('#finishSnipBtn');
+  
+  if (nextBtn) {
+    nextBtn.addEventListener('click', () => {
+      if (typeof performNextSnip === 'function') {
+        performNextSnip();
+      } else if (typeof window.performNextSnip === 'function') {
+        window.performNextSnip();
+      } else {
+        chrome.runtime.sendMessage({ action: 'performNextSnip' });
+      }
+    });
+  }
+  
+  if (finishBtn) {
+    finishBtn.addEventListener('click', () => {
+      if (typeof finishSnipping === 'function') {
+        finishSnipping();
+      } else if (typeof window.finishSnipping === 'function') {
+        window.finishSnipping();
+      } else {
+        chrome.runtime.sendMessage({ action: 'finishSnipping' });
+      }
+    });
+  }
+  
+  document.body.appendChild(panel);
+  console.log('🔧 RunsheetPro Extension: Navigate snip panel created with', snipCount, 'captures');
+}
 
 // Don't auto-initialize from here - let content.js handle it
 // The content.js will call this when needed
