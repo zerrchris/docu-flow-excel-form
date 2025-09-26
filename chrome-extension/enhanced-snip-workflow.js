@@ -47,7 +47,8 @@ window.EnhancedSnipWorkflow = {
           runsheet_id: activeRunsheet.id,
           document_name: metadata.filename || `capture_${Date.now()}.png`,
           extraction_preferences: {
-            columns: activeRunsheet.columns || []
+            columns: activeRunsheet.columns || [],
+            column_instructions: activeRunsheet.column_instructions || {}
           }
         }, authData.supabase_session.access_token);
         
@@ -114,14 +115,9 @@ window.EnhancedSnipWorkflow = {
     return await response.json();
   },
   
-  // Analyze document with same function as web app
+  // Analyze document with enhanced function used by web app
   async analyzeWithEnhancedAI(base64Data, options, accessToken) {
-    // Build extraction prompt like the web app does
-    const columns = options.extraction_preferences?.columns || [];
-    const extractionFields = columns.map(col => `${col}: [extracted value]`).join('\n');
-    const extractionPrompt = `Extract information from this document for the following fields and return as valid JSON:\n${extractionFields}\n\nReturn only a JSON object with field names as keys and extracted values as values. Do not include any markdown, explanations, or additional text.`;
-    
-    const response = await fetch('https://xnpmrafjjqsissbtempj.supabase.co/functions/v1/analyze-document', {
+    const response = await fetch('https://xnpmrafjjqsissbtempj.supabase.co/functions/v1/enhanced-document-analysis', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
@@ -129,8 +125,10 @@ window.EnhancedSnipWorkflow = {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        prompt: extractionPrompt,
-        imageData: base64Data
+        document_data: base64Data,
+        runsheet_id: options.runsheet_id,
+        document_name: options.document_name,
+        extraction_preferences: options.extraction_preferences
       })
     });
     
@@ -141,15 +139,9 @@ window.EnhancedSnipWorkflow = {
     
     const result = await response.json();
     
-    // Transform the result to match the expected format
+    // Return the result in the expected format
     return {
-      analysis: {
-        extracted_data: result.extractedData || result,
-        document_type: result.documentType || 'Unknown',
-        confidence_scores: result.confidenceScores || {},
-        extraction_summary: result.summary || 'Data extraction completed',
-        processing_notes: result.notes || null
-      }
+      analysis: result.analysis
     };
   },
   
