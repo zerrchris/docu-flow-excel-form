@@ -1375,7 +1375,13 @@ async function createRunsheetFrame() {
   
   // Load current view mode from storage first, then create content
   const storageResult = await chrome.storage.local.get(['viewMode']);
-  currentViewMode = storageResult.viewMode || 'single';
+  const storedViewMode = storageResult.viewMode || 'single';
+  
+  // Only update if it's actually different to prevent unnecessary redraws
+  if (storedViewMode !== currentViewMode) {
+    console.log(`🔧 RunsheetPro Extension: Restoring view mode from storage: ${storedViewMode}`);
+    currentViewMode = storedViewMode;
+  }
   updateViewModeButton();
   
   // Create content based on view mode
@@ -3041,13 +3047,15 @@ async function switchViewMode(newMode) {
   if (newMode === currentViewMode) return;
   const prevMode = currentViewMode;
   
+  console.log(`🔧 RunsheetPro Extension: Switching view mode from ${prevMode} to ${newMode}`);
+  
   // Save current form data before switching views
   if (typeof saveCurrentFormData === 'function') {
     saveCurrentFormData();
   }
   
   currentViewMode = newMode;
-  chrome.storage.local.set({ viewMode: newMode });
+  await chrome.storage.local.set({ viewMode: newMode });
   
   // If leaving Quick View, persist all row changes to DB and clear any transient snips
   if (prevMode === 'full' && newMode === 'single') {
@@ -3197,6 +3205,10 @@ function setupFrameEventListeners() {
   const viewModeBtn = document.getElementById('view-mode-btn');
   if (viewModeBtn) {
     viewModeBtn.addEventListener('click', async () => {
+      // Prevent double-clicks during transition
+      if (viewModeBtn.disabled) return;
+      viewModeBtn.disabled = true;
+      
       // Determine effective mode robustly (storage, then UI label, then in-memory)
       let effectiveMode = currentViewMode;
       try {
@@ -3211,16 +3223,25 @@ function setupFrameEventListeners() {
       else if (label.includes('quick view')) effectiveMode = 'single';
 
       const newMode = effectiveMode === 'single' ? 'full' : 'single';
+      
+      console.log(`🔧 RunsheetPro Extension: View mode button clicked. Current: ${effectiveMode}, Target: ${newMode}`);
 
       // Only show warning when switching FROM single entry mode (where unsaved data can exist)
       // Never show when switching FROM Quick View (full mode) - that's a save operation
-      if (effectiveMode === 'single' && hasUnsavedData()) {
-        const actionText = newMode === 'full' ? 'switching to Quick View' : 'switching to Single Entry';
-        showUnsavedDataWarning(actionText, () => {
-          switchViewMode(newMode);
-        });
-      } else {
-        switchViewMode(newMode);
+      try {
+        if (effectiveMode === 'single' && hasUnsavedData()) {
+          const actionText = newMode === 'full' ? 'switching to Quick View' : 'switching to Single Entry';
+          showUnsavedDataWarning(actionText, async () => {
+            await switchViewMode(newMode);
+            viewModeBtn.disabled = false;
+          });
+        } else {
+          await switchViewMode(newMode);
+          viewModeBtn.disabled = false;
+        }
+      } catch (error) {
+        console.error('🔧 RunsheetPro Extension: Error switching view mode:', error);
+        viewModeBtn.disabled = false;
       }
     });
   }
@@ -5442,9 +5463,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       if (runsheetFrame) runsheetFrame.style.display = 'none';
     }
   } else if (request.action === 'switchViewMode') {
-    // Handle view mode switching from popup
-    switchViewMode(request.viewMode);
-    showNotification(`Switched to ${request.viewMode === 'single' ? 'single entry' : 'full view'} mode`, 'info');
+    // Handle view mode switching from popup - ensure it's not the same mode
+    if (request.viewMode !== currentViewMode) {
+      console.log(`🔧 RunsheetPro Extension: Popup requested view mode switch to ${request.viewMode}`);
+      await switchViewMode(request.viewMode);
+      showNotification(`Switched to ${request.viewMode === 'single' ? 'single entry' : 'full view'} mode`, 'info');
+    }
   } else if (request.action === 'showSnipModeSelector') {
     // Show snip mode selection modal
     showSnipModeSelector();
