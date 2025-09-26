@@ -4374,7 +4374,7 @@ function createSnipOverlay() {
         updateSnipControlPanel();
         showNotification(`Snip ${capturedSnips.length} captured! Continue scrolling and snipping or click "Snipping Complete"`, 'success');
       } else if (snipMode === 'navigate') {
-        // Navigate mode: hide crosshairs, show navigation controls with "Next Snip"
+        // Navigate mode: hide crosshairs, use the small control panel like scroll mode
         hideSnipModeForNavigation();
         updateSnipCounter();
         updateSnipControlPanel();
@@ -4810,10 +4810,11 @@ function hideSnipModeForNavigation() {
     runsheetFrame.style.setProperty('visibility', 'visible', 'important');
   }
   
-  // Don't remove the control panel - keep it for session persistence
-  // Just ensure navigation panel exists
-  if (!document.getElementById('runsheetpro-nav-controls')) {
-    createNavigationControlPanel();
+  // For navigate mode, we now use the small control panel like scroll mode
+  // Remove the old navigation panel if it exists
+  const existingNavPanel = document.getElementById('runsheetpro-nav-controls');
+  if (existingNavPanel) {
+    existingNavPanel.remove();
   }
 }
 
@@ -7959,11 +7960,12 @@ function createSnipControlPanel() {
   
   const captureCount = window.snipSession?.captures?.length || 0;
   
-  snipControlPanel.innerHTML = `
-    <div style="margin-bottom: 8px; font-weight: 600; text-align: center;">
-      Snip Session (${captureCount} captured)
-    </div>
-    <div style="display: flex; gap: 6px;">
+  // Create buttons based on snip mode
+  let buttonsHtml = '';
+  
+  if (snipMode === 'navigate') {
+    // Navigate mode: Cancel, Next Snip, Finish
+    buttonsHtml = `
       <button id="snip-control-cancel" style="
         background: rgba(220, 38, 38, 0.8) !important;
         color: white !important;
@@ -7984,7 +7986,7 @@ function createSnipControlPanel() {
         cursor: pointer !important;
         transition: all 0.2s ease !important;
         flex: 1 !important;
-      ">Next</button>
+      ">Next Snip</button>
       <button id="snip-control-finish" style="
         background: rgba(34, 197, 94, 0.8) !important;
         color: white !important;
@@ -7995,6 +7997,40 @@ function createSnipControlPanel() {
         cursor: pointer !important;
         transition: all 0.2s ease !important;
       ">Finish</button>
+    `;
+  } else {
+    // Scroll mode: Cancel, Finish (no Next button)
+    buttonsHtml = `
+      <button id="snip-control-cancel" style="
+        background: rgba(220, 38, 38, 0.8) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 4px !important;
+        padding: 6px 10px !important;
+        font-size: 12px !important;
+        cursor: pointer !important;
+        transition: all 0.2s ease !important;
+      ">Cancel</button>
+      <button id="snip-control-finish" style="
+        background: rgba(34, 197, 94, 0.8) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 4px !important;
+        padding: 6px 10px !important;
+        font-size: 12px !important;
+        cursor: pointer !important;
+        transition: all 0.2s ease !important;
+        flex: 1 !important;
+      ">Finish</button>
+    `;
+  }
+  
+  snipControlPanel.innerHTML = `
+    <div style="margin-bottom: 8px; font-weight: 600; text-align: center;">
+      Snip Session (${captureCount} captured)
+    </div>
+    <div style="display: flex; gap: 6px;">
+      ${buttonsHtml}
     </div>
   `;
   
@@ -8008,9 +8044,11 @@ function createSnipControlPanel() {
     showNotification('Snip session cancelled', 'info');
   });
   
-  nextBtn.addEventListener('click', () => {
-    resumeSnipMode();
-  });
+  if (nextBtn) {
+    nextBtn.addEventListener('click', () => {
+      resumeSnipMode();
+    });
+  }
   
   finishBtn.addEventListener('click', () => {
     finishSnipping();
