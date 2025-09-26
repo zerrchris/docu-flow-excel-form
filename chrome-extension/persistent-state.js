@@ -295,7 +295,7 @@ function restoreSnipSession(retryCount = 0) {
           if (!snipControlPanel) {
             snipControlPanel = document.createElement('div');
             snipControlPanel.id = 'runsheetpro-snip-control-panel';
-            snipControlPanel.style.cssText = \`
+            snipControlPanel.style.cssText = `
               position: fixed !important;
               bottom: 20px !important;
               right: 20px !important;
@@ -311,9 +311,9 @@ function restoreSnipSession(retryCount = 0) {
               align-items: center !important;
               gap: 12px !important;
               user-select: none !important;
-            \`;
+            `;
             
-            snipControlPanel.innerHTML = \`
+            snipControlPanel.innerHTML = `
               <span id="snip-counter">Snip 1 of ∞</span>
               <button id="next-snip-btn" style="
                 background: #3b82f6 !important;
@@ -335,7 +335,7 @@ function restoreSnipSession(retryCount = 0) {
                 font-size: 12px !important;
                 font-weight: 500 !important;
               ">Finish</button>
-            \`;
+            `;
             
             document.body.appendChild(snipControlPanel);
             
@@ -368,7 +368,7 @@ function restoreSnipSession(retryCount = 0) {
           // Fallback: update counter directly
           const counter = document.getElementById('snip-counter');
           if (counter && window.snipSession && window.snipSession.captures) {
-            counter.textContent = \`Snip \${window.snipSession.captures.length + 1} of ∞\`;
+            counter.textContent = `Snip ${window.snipSession.captures.length + 1} of ∞`;
           }
         }
       }, 100);
