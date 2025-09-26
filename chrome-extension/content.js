@@ -6717,6 +6717,33 @@ function cleanupSnipMode() {
 
 // Cleanup snip mode UI but preserve captured snip data for viewing
 function cleanupSnipModePreserveData() {
+  // If we're in navigate multi-snip mode, keep the session ACTIVE and keep the panel visible
+  if (window.snipSession?.active && window.snipSession.mode === 'navigate') {
+    isSnipMode = false; // between snips
+
+    // Remove overlays but KEEP the modern control panel
+    if (snipOverlay) { snipOverlay.remove(); snipOverlay = null; }
+    if (snipSelection) { snipSelection.remove(); snipSelection = null; }
+
+    // Ensure button/frame stay hidden during session
+    if (typeof runsheetButton !== 'undefined' && runsheetButton) runsheetButton.style.display = 'none';
+    if (typeof runsheetFrame !== 'undefined' && runsheetFrame) {
+      runsheetFrame.style.setProperty('display', 'none', 'important');
+      runsheetFrame.style.setProperty('visibility', 'hidden', 'important');
+    }
+
+    // Ensure context menu shows Next/Finish
+    updateSnipContextMenu(true, 'active');
+
+    // Rebuild or show the control panel with correct count
+    if (!snipControlPanel) { createSnipControlPanel(); }
+    updateSnipControlPanel();
+
+    console.log('🔧 RunsheetPro Extension: Navigate snip capture complete; session remains active with control panel shown');
+    return;
+  }
+
+  // Default behavior for single/scroll modes: clean UI but preserve last capture for viewing
   isSnipMode = false;
   snipMode = 'single';
   capturedSnips = [];
