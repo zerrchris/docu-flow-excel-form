@@ -7901,24 +7901,33 @@ async function resetSnipSession() {
   } else {
     // Recreate the frame if it didn't exist on this page (common after navigate sessions)
     try {
-      if (activeRunsheet && typeof createRunsheetFrame === 'function') {
-        await createRunsheetFrame();
-        if (runsheetFrame) {
-          runsheetFrame.style.display = 'block';
-          document.body.appendChild(runsheetFrame);
-          setupFrameEventListeners();
-          setTimeout(() => {
-            try { updateRowNavigationUI(); } catch {}
-            try { updateScreenshotIndicator(!!window.currentCapturedSnip); } catch {}
-          }, 50);
+      if (typeof createRunsheetFrame === 'function') {
+        if (!activeRunsheet) {
+          // No active sheet on this page — open selector automatically so user can attach snips
+          try { showRunsheetSelector(); } catch (e) { console.warn('Could not open runsheet selector after finish', e); }
+        } else {
+          await createRunsheetFrame();
+          if (runsheetFrame) {
+            runsheetFrame.style.display = 'block';
+            document.body.appendChild(runsheetFrame);
+            setupFrameEventListeners();
+            setTimeout(() => {
+              try { updateRowNavigationUI(); } catch {}
+              try { updateScreenshotIndicator(!!window.currentCapturedSnip); } catch {}
+            }, 50);
+          }
         }
       }
     } catch (e) { console.warn('Could not recreate runsheet frame after finish', e); }
   }
   
-  // Hide the floating button since we're showing the frame
+  // Hide the floating button since we're showing the frame (or selector is open)
   if (runsheetButton) {
-    runsheetButton.style.display = 'none';
+    // If selector is shown we can keep the button visible; otherwise hide
+    try {
+      const selectorOpen = document.getElementById('runsheetpro-runsheet-selector');
+      if (!selectorOpen) runsheetButton.style.display = 'none';
+    } catch { runsheetButton.style.display = 'none'; }
   }
   
   // Update context menu to show only "Begin Snip Session"
