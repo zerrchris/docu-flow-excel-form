@@ -7859,21 +7859,29 @@ async function resetSnipSession() {
   // Show the RunsheetPro UI frame again after snip session is complete
   if (runsheetFrame) {
     runsheetFrame.style.display = 'block';
+    // Ensure frame is appended to DOM if it got detached
+    if (!document.body.contains(runsheetFrame)) {
+      document.body.appendChild(runsheetFrame);
+    }
+    // Set up event listeners if they were lost
+    setupFrameEventListeners();
   } else {
     // Recreate the frame if it didn't exist on this page (common after navigate sessions)
     try {
       if (activeRunsheet && userSession && typeof createRunsheetFrame === 'function') {
         await createRunsheetFrame();
-        if (runsheetFrame) runsheetFrame.style.display = 'block';
+        if (runsheetFrame) {
+          runsheetFrame.style.display = 'block';
+          document.body.appendChild(runsheetFrame);
+          setupFrameEventListeners();
+        }
       }
     } catch (e) { console.warn('Could not recreate runsheet frame after finish', e); }
   }
   
+  // Hide the floating button since we're showing the frame
   if (runsheetButton) {
-    runsheetButton.style.display = 'block';
-  } else {
-    // Ensure the floating button exists
-    try { if (typeof createRunsheetButton === 'function') createRunsheetButton(); } catch {}
+    runsheetButton.style.display = 'none';
   }
   
   // Update context menu to show only "Begin Snip Session"
