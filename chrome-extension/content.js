@@ -7890,19 +7890,28 @@ async function resetSnipSession() {
     }
     // Set up event listeners if they were lost
     setupFrameEventListeners();
-    } else {
-      // Recreate the frame if it didn't exist on this page (common after navigate sessions)
-      try {
-        if (activeRunsheet && typeof createRunsheetFrame === 'function') {
-          await createRunsheetFrame();
-          if (runsheetFrame) {
-            runsheetFrame.style.display = 'block';
-            document.body.appendChild(runsheetFrame);
-            setupFrameEventListeners();
-          }
+    // Ensure UI reflects latest captured snip
+    setTimeout(() => {
+      try { updateRowNavigationUI(); } catch {}
+      try { updateScreenshotIndicator(!!window.currentCapturedSnip); } catch {}
+    }, 50);
+  } else {
+    // Recreate the frame if it didn't exist on this page (common after navigate sessions)
+    try {
+      if (activeRunsheet && typeof createRunsheetFrame === 'function') {
+        await createRunsheetFrame();
+        if (runsheetFrame) {
+          runsheetFrame.style.display = 'block';
+          document.body.appendChild(runsheetFrame);
+          setupFrameEventListeners();
+          setTimeout(() => {
+            try { updateRowNavigationUI(); } catch {}
+            try { updateScreenshotIndicator(!!window.currentCapturedSnip); } catch {}
+          }, 50);
         }
-      } catch (e) { console.warn('Could not recreate runsheet frame after finish', e); }
-    }
+      }
+    } catch (e) { console.warn('Could not recreate runsheet frame after finish', e); }
+  }
   
   // Hide the floating button since we're showing the frame
   if (runsheetButton) {
