@@ -386,6 +386,11 @@ async function initializeExtensionWithStateRestore() {
         window.currentSnipSession.captures = window.snipSession.captures || [];
       }
 
+      // Update context menu to show active state since we have an active snip session
+      if (typeof window.updateSnipContextMenu === 'function') {
+        window.updateSnipContextMenu(true, 'active');
+      }
+
       // Hide main UI
       const runsheetFrameEl = document.getElementById('runsheetpro-runsheet-frame');
       const runsheetButtonEl = document.getElementById('runsheetpro-runsheet-button');
