@@ -7767,9 +7767,32 @@ async function finishSnipSession() {
         isMultiSnip: true
       });
     } else {
-      console.error('EnhancedSnipWorkflow not available');
-      showNotification('Failed to process snip session', 'error');
-      return;
+      console.warn('EnhancedSnipWorkflow not available — using standard processing fallback');
+      // Fallback: store locally and update UI like the standard flow
+      window.currentCapturedSnip = combinedBlob;
+      snipStagedAt = Date.now();
+      window.currentSnipFilename = `snip_session_${Date.now()}.png`;
+
+      // Update Document File Name in UI
+      const input = document.querySelector(`input[data-column="Document File Name"]`);
+      if (input) {
+        input.value = window.currentSnipFilename;
+      }
+      // Switch header to document interface if present
+      const headerContainer = document.querySelector('.document-header-container');
+      if (headerContainer) {
+        const uploadInterface = headerContainer.querySelector('.upload-interface');
+        const documentInterface = headerContainer.querySelector('.document-interface');
+        const filenameText = headerContainer.querySelector('.filename-text');
+        if (uploadInterface && documentInterface && filenameText) {
+          uploadInterface.style.display = 'none';
+          documentInterface.style.display = 'flex';
+          filenameText.textContent = window.currentSnipFilename;
+          headerContainer.style.border = '1px solid hsl(var(--border, 214 32% 91%))';
+        }
+      }
+      // Update screenshot indicator state
+      updateScreenshotIndicator(true);
     }
     
     // Check if we're in mass capture mode
