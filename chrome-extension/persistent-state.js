@@ -394,7 +394,6 @@ async function initializeExtensionWithStateRestore() {
       // Navigate/scroll modes persist across navigation - recreate the UI
       
       // Additional check: if runsheet frame is visible and NOT in navigate/scroll mode, we're likely in quick view
-      const isNavigateOrScrollMode = (window.snipSession.mode === 'navigate' || window.snipSession.mode === 'scroll');
       if (runsheetFrame && runsheetFrame.style.display !== 'none' && !isNavigateOrScrollMode) {
         console.log('🔧 RunsheetPro Extension: Skipping snip session restoration - runsheet frame is visible (likely quick view) and not in navigate/scroll mode');
         return;
