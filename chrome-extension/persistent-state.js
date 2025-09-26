@@ -286,89 +286,32 @@ function restoreSnipSession(retryCount = 0) {
       // Create the modern navigate control panel (dark panel with counter) using a delayed approach
       // to ensure the content script functions are available
       setTimeout(() => {
-        // Find and call the modern createSnipControlPanel function (not the old one)
-        if (typeof window.createModernSnipControlPanel === 'function') {
-          window.createModernSnipControlPanel();
-        } else {
-          // Fallback: create the panel directly using the modern style
-          let snipControlPanel = document.getElementById('runsheetpro-snip-control-panel');
-          if (!snipControlPanel) {
-            snipControlPanel = document.createElement('div');
-            snipControlPanel.id = 'runsheetpro-snip-control-panel';
-            snipControlPanel.style.cssText = `
-              position: fixed !important;
-              bottom: 20px !important;
-              right: 20px !important;
-              background: rgba(0, 0, 0, 0.8) !important;
-              color: white !important;
-              padding: 12px 16px !important;
-              border-radius: 8px !important;
-              box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
-              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-              font-size: 14px !important;
-              z-index: 2147483647 !important;
-              display: flex !important;
-              align-items: center !important;
-              gap: 12px !important;
-              user-select: none !important;
-            `;
-            
-            snipControlPanel.innerHTML = `
-              <span id="snip-counter">Snip 1 of ∞</span>
-              <button id="next-snip-btn" style="
-                background: #3b82f6 !important;
-                color: white !important;
-                border: none !important;
-                padding: 6px 12px !important;
-                border-radius: 4px !important;
-                cursor: pointer !important;
-                font-size: 12px !important;
-                font-weight: 500 !important;
-              ">Next Snip</button>
-              <button id="finish-snipping-btn" style="
-                background: #10b981 !important;
-                color: white !important;
-                border: none !important;
-                padding: 6px 12px !important;
-                border-radius: 4px !important;
-                cursor: pointer !important;
-                font-size: 12px !important;
-                font-weight: 500 !important;
-              ">Finish</button>
-            `;
-            
-            document.body.appendChild(snipControlPanel);
-            
-            // Add event listeners
-            const nextBtn = snipControlPanel.querySelector('#next-snip-btn');
-            const finishBtn = snipControlPanel.querySelector('#finish-snipping-btn');
-            
-            if (nextBtn) {
-              nextBtn.addEventListener('click', () => {
-                if (typeof window.continueSnipping === 'function') {
-                  window.continueSnipping();
-                }
-              });
-            }
-            
-            if (finishBtn) {
-              finishBtn.addEventListener('click', () => {
-                if (typeof window.finishSnipping === 'function') {
-                  window.finishSnipping();
-                }
-              });
-            }
+        // Remove any legacy panels just in case
+        const legacy = document.getElementById('runsheetpro-snip-controls');
+        if (legacy) legacy.remove();
+
+        if (typeof window.createSnipControlPanel === 'function') {
+          window.createSnipControlPanel();
+          if (typeof window.updateSnipControlPanel === 'function') {
+            window.updateSnipControlPanel();
           }
-        }
-        
-        // Update the counter
-        if (typeof window.updateSnipCounter === 'function') {
-          window.updateSnipCounter();
         } else {
-          // Fallback: update counter directly
-          const counter = document.getElementById('snip-counter');
-          if (counter && window.snipSession && window.snipSession.captures) {
-            counter.textContent = `Snip ${window.snipSession.captures.length + 1} of ∞`;
+          // Minimal fallback panel
+          let panel = document.getElementById('runsheetpro-snip-control-panel');
+          if (!panel) {
+            panel = document.createElement('div');
+            panel.id = 'runsheetpro-snip-control-panel';
+            panel.style.cssText = 'position: fixed !important; bottom: 20px !important; right: 20px !important; background: rgba(0,0,0,.8) !important; color:#fff !important; border-radius:8px !important; padding:12px !important; z-index:2147483647 !important; display:flex !important; gap:8px !important; align-items:center !important;';
+            panel.innerHTML = '<div style="font-weight:600;">Snip Session</div><button id="snip-fallback-next" style="background:#3b82f6;color:#fff;border:none;border-radius:4px;padding:6px 10px;cursor:pointer;">Next Snip</button><button id="snip-fallback-finish" style="background:#22c55e;color:#fff;border:none;border-radius:4px;padding:6px 10px;cursor:pointer;">Finish</button>';
+            document.body.appendChild(panel);
+            const nextBtn = panel.querySelector('#snip-fallback-next');
+            const finBtn = panel.querySelector('#snip-fallback-finish');
+            if (nextBtn) nextBtn.addEventListener('click', () => {
+              if (typeof window.resumeSnipMode === 'function') window.resumeSnipMode();
+            });
+            if (finBtn) finBtn.addEventListener('click', () => {
+              if (typeof window.finishSnipping === 'function') window.finishSnipping();
+            });
           }
         }
       }, 100);
@@ -388,7 +331,7 @@ function restoreSnipSession(retryCount = 0) {
       }
       
       createSnipControlPanel();
-      updateSnipCounter();
+      if (typeof window.updateSnipControlPanel === 'function') { window.updateSnipControlPanel(); }
       
       // No preview needed - session continues until finished
       console.log('🔧 RunsheetPro Extension: Scroll snip session restored with', window.snipSession.captures.length, 'captures');
@@ -426,9 +369,43 @@ async function initializeExtensionWithStateRestore() {
       await checkAuth();
     }
     
-    // Check if we're in navigate snip mode - if so, skip regular UI creation
+    // Check if we're in navigate snip mode - if so, skip regular UI creation but restore the panel
     if (window.snipSession && window.snipSession.active && window.snipSession.mode === 'navigate') {
-      console.log('🔧 RunsheetPro Extension: Navigate mode active, skipping regular UI initialization');
+      console.log('🔧 RunsheetPro Extension: Navigate mode active, skipping regular UI initialization and restoring snip panel');
+
+      // Hide main UI
+      const runsheetFrameEl = document.getElementById('runsheetpro-runsheet-frame');
+      const runsheetButtonEl = document.getElementById('runsheetpro-runsheet-button');
+      if (runsheetFrameEl) {
+        runsheetFrameEl.style.setProperty('display', 'none', 'important');
+        runsheetFrameEl.style.setProperty('visibility', 'hidden', 'important');
+      }
+      if (runsheetButtonEl) {
+        runsheetButtonEl.style.display = 'none';
+      }
+
+      // Remove any existing panels (old and new)
+      ['runsheetpro-nav-controls','runsheetpro-snip-controls','runsheetpro-snip-control-panel'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.remove();
+      });
+
+      // Ensure mode globals
+      window.snipMode = 'navigate';
+
+      // Recreate the modern control panel shortly (after content.js functions are ready)
+      setTimeout(() => {
+        if (typeof window.createSnipControlPanel === 'function') {
+          window.createSnipControlPanel();
+          if (typeof window.updateSnipControlPanel === 'function') {
+            window.updateSnipControlPanel();
+          }
+        } else {
+          // Fallback to full restoration logic
+          restoreSnipSession();
+        }
+      }, 100);
+
       return;
     }
     
