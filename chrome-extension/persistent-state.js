@@ -389,6 +389,13 @@ async function initializeExtensionWithStateRestore() {
       // Update context menu to show active state since we have an active snip session
       if (typeof window.updateSnipContextMenu === 'function') {
         window.updateSnipContextMenu(true, 'active');
+      } else {
+        // Direct message to background script as fallback
+        chrome.runtime.sendMessage({
+          action: 'updateSnipContextMenu',
+          enabled: true,
+          state: 'active'
+        });
       }
 
       // Hide main UI

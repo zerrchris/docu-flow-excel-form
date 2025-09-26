@@ -6,16 +6,37 @@ window.onerror = function(message, source, lineno, colno, error) {
   // Suppress jQuery/Bootstrap syntax errors from external scripts
   if (message && message.includes && (
     message.includes('Syntax error, unrecognized expression') ||
+    message.includes('not a valid selector') ||
     message.includes('jquery') ||
     message.includes('bootstrap')
   )) {
-    console.warn('🔧 RunsheetPro Extension: Suppressed external script error');
+    console.warn('🔧 RunsheetPro Extension: Suppressed external script error:', message);
     return true; // Prevent default error handling
   }
   
   // Call original error handler for other errors
   if (originalError) {
     return originalError.apply(this, arguments);
+  }
+  return false;
+};
+
+// Also suppress uncaught promise rejections related to external scripts
+const originalUnhandledRejection = window.onunhandledrejection;
+window.onunhandledrejection = function(event) {
+  if (event && event.reason && event.reason.message && (
+    event.reason.message.includes('Syntax error, unrecognized expression') ||
+    event.reason.message.includes('not a valid selector') ||
+    event.reason.message.includes('jquery') ||
+    event.reason.message.includes('bootstrap')
+  )) {
+    console.warn('🔧 RunsheetPro Extension: Suppressed external script promise rejection');
+    event.preventDefault();
+    return true;
+  }
+  
+  if (originalUnhandledRejection) {
+    return originalUnhandledRejection.apply(this, arguments);
   }
   return false;
 };
@@ -7773,10 +7794,14 @@ async function finishSnipSession() {
       snipStagedAt = Date.now();
       window.currentSnipFilename = `snip_session_${Date.now()}.png`;
 
-      // Update Document File Name in UI
-      const input = document.querySelector(`input[data-column="Document File Name"]`);
-      if (input) {
-        input.value = window.currentSnipFilename;
+      // Update Document File Name in UI - safely
+      try {
+        const input = document.querySelector('input[data-column="Document File Name"]');
+        if (input) {
+          input.value = window.currentSnipFilename;
+        }
+      } catch (e) {
+        console.warn('Failed to update document filename input:', e);
       }
       // Switch header to document interface if present
       const headerContainer = document.querySelector('.document-header-container');
