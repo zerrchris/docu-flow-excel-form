@@ -261,14 +261,32 @@ function restoreSnipSession(retryCount = 0) {
         console.log('🔧 RunsheetPro Extension: Restored', capturedSnips.length, 'captured snips');
       }
       
-      // Check if navigation panel already exists
-      const existingPanel = document.getElementById('runsheetpro-nav-controls');
-      if (existingPanel) {
-        console.log('🔧 RunsheetPro Extension: Navigation panel already exists, removing old one');
-        existingPanel.remove();
+      // Hide main UI and create the modern navigate control panel
+      const runsheetFrame = document.getElementById('runsheetpro-runsheet-frame');
+      const runsheetButton = document.getElementById('runsheetpro-runsheet-button');
+      
+      if (runsheetFrame) {
+        runsheetFrame.style.setProperty('display', 'none', 'important');
+        runsheetFrame.style.setProperty('visibility', 'hidden', 'important');
+      }
+      if (runsheetButton) {
+        runsheetButton.style.display = 'none';
       }
       
-      createNavigationControlPanel();
+      // Remove any existing panels (old and new)
+      const existingOldPanel = document.getElementById('runsheetpro-nav-controls');
+      const existingNewPanel = document.getElementById('runsheetpro-snip-control-panel');
+      if (existingOldPanel) existingOldPanel.remove();
+      if (existingNewPanel) existingNewPanel.remove();
+      
+      // Set the global snip mode properly  
+      window.snipMode = 'navigate';
+      window.isSnipMode = false; // We're between snips during navigation
+      
+      // Create the modern navigate control panel (dark panel with counter)
+      if (typeof createSnipControlPanel === 'function') {
+        createSnipControlPanel();
+      }
       updateSnipCounter();
       
       // No preview needed - session continues until finished
@@ -321,6 +339,12 @@ async function initializeExtensionWithStateRestore() {
     } else {
       // Try to check auth normally
       await checkAuth();
+    }
+    
+    // Check if we're in navigate snip mode - if so, skip regular UI creation
+    if (window.snipSession && window.snipSession.active && window.snipSession.mode === 'navigate') {
+      console.log('🔧 RunsheetPro Extension: Navigate mode active, skipping regular UI initialization');
+      return;
     }
     
     // Create the UI
