@@ -7886,11 +7886,29 @@ async function resetSnipSessionForMassCapture() {
 
 // Combine multiple snip captures into a single blob
 async function combineSnipCaptures(captures) {
-  // Filter out any invalid captures
-  const validCaptures = captures.filter(capture => capture instanceof Blob);
+  console.log('🔧 RunsheetPro Extension: Combining captures:', captures);
+  
+  // Filter and validate captures - handle both Blob and dataUrl formats
+  const validCaptures = [];
+  for (const capture of captures) {
+    if (capture instanceof Blob) {
+      validCaptures.push(capture);
+    } else if (capture && capture.blob instanceof Blob) {
+      validCaptures.push(capture.blob);
+    } else if (capture && capture.dataUrl && typeof capture.dataUrl === 'string') {
+      // Convert dataUrl back to Blob
+      try {
+        const response = await fetch(capture.dataUrl);
+        const blob = await response.blob();
+        validCaptures.push(blob);
+      } catch (error) {
+        console.warn('🔧 RunsheetPro Extension: Failed to convert dataUrl to blob:', error);
+      }
+    }
+  }
   
   if (validCaptures.length === 0) {
-    throw new Error('No valid blob captures found');
+    throw new Error('No valid captures found - all were invalid or corrupted');
   }
   
   if (validCaptures.length === 1) {
@@ -8125,7 +8143,8 @@ function createSnipControlPanel() {
   }
   
   finishBtn.addEventListener('click', () => {
-    finishSnipping();
+    console.log('🔧 RunsheetPro Extension: Finish button clicked');
+    finishSnipSession();
   });
   
   document.body.appendChild(snipControlPanel);
