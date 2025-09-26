@@ -4178,6 +4178,12 @@ async function loadSelectedRunsheet(runsheetData) {
 
 // Start snip mode with specific mode
 function startSnipModeWithMode(mode = 'single', skipOverwriteCheck = false) {
+  // If a navigate session is already active, just resume with the minimal panel
+  if (mode === 'navigate' && window.snipSession && window.snipSession.active) {
+    if (!snipControlPanel) { createSnipControlPanel(); } else { snipControlPanel.style.display = 'block'; }
+    resumeSnipMode();
+    return;
+  }
   if (isSnipMode) return;
   
   // Check if there's already a file for this row and warn user (unless skipping)
@@ -4799,19 +4805,31 @@ function cancelSnipping() {
 
 // Hide snip mode temporarily for navigation
 function hideSnipModeForNavigation() {
-  // Only hide the overlay crosshairs for navigation, but keep session active
+  // Hide crosshairs but keep session active; do NOT show the main Runsheet UI
   if (snipOverlay) {
     snipOverlay.style.display = 'none';
   }
-  
-  // Restore extension frame when crosshairs are hidden
+
+  // We are not actively snipping while navigating between pages
+  isSnipMode = false;
+
+  // Keep the Runsheet UI hidden during navigate sessions
   if (runsheetFrame) {
-    runsheetFrame.style.setProperty('display', 'block', 'important');
-    runsheetFrame.style.setProperty('visibility', 'visible', 'important');
+    runsheetFrame.style.setProperty('display', 'none', 'important');
+    runsheetFrame.style.setProperty('visibility', 'hidden', 'important');
   }
-  
-  // For navigate mode, we now use the small control panel like scroll mode
-  // Remove the old navigation panel if it exists
+  if (runsheetButton) {
+    runsheetButton.style.display = 'none';
+  }
+
+  // Ensure the minimal control panel is visible
+  if (!snipControlPanel) {
+    createSnipControlPanel();
+  } else {
+    snipControlPanel.style.display = 'block';
+  }
+
+  // Remove legacy navigation panel if it exists
   const existingNavPanel = document.getElementById('runsheetpro-nav-controls');
   if (existingNavPanel) {
     existingNavPanel.remove();
