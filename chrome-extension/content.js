@@ -7886,7 +7886,8 @@ async function resetSnipSession() {
   
   // Show the RunsheetPro UI frame again after snip session is complete
   if (runsheetFrame) {
-    runsheetFrame.style.display = 'block';
+    runsheetFrame.style.setProperty('display', 'block', 'important');
+    runsheetFrame.style.setProperty('visibility', 'visible', 'important');
     // Ensure frame is appended to DOM if it got detached
     if (!document.body.contains(runsheetFrame)) {
       document.body.appendChild(runsheetFrame);
@@ -7906,9 +7907,10 @@ async function resetSnipSession() {
           // No active sheet on this page — open selector automatically so user can attach snips
           try { showRunsheetSelector(); } catch (e) { console.warn('Could not open runsheet selector after finish', e); }
         } else {
-          await createRunsheetFrame();
-          if (runsheetFrame) {
-            runsheetFrame.style.display = 'block';
+        await createRunsheetFrame();
+        if (runsheetFrame) {
+          runsheetFrame.style.setProperty('display', 'block', 'important');
+          runsheetFrame.style.setProperty('visibility', 'visible', 'important');
             document.body.appendChild(runsheetFrame);
             setupFrameEventListeners();
             setTimeout(() => {
