@@ -5443,7 +5443,7 @@ async function linkSnipToRunsheet(snipUrl) {
   }
 }
 // Listen for messages from other extension parts
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
   console.log('🔧 RunsheetPro Extension: Received message:', request);
   
   if (request.action === 'toggle') {
