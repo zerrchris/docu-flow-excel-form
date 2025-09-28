@@ -463,7 +463,7 @@ async function initializeExtensionWithStateRestore() {
     
     // Restore mass capture mode if it was active
     if (isMassCaptureMode && activeRunsheet) {
-      console.log('🔧 RunsheetPro Extension: Restoring mass capture mode');
+      console.log('🔧 RunsheetPro Extension: Restoring mass capture mode with count:', massCaptureCount);
       // Hide the button and frame since we're in mass capture mode
       if (runsheetButton) {
         runsheetButton.style.display = 'none';
@@ -471,8 +471,27 @@ async function initializeExtensionWithStateRestore() {
       if (runsheetFrame) {
         runsheetFrame.style.display = 'none';
       }
-      // Recreate the mass capture panel
-      createMassCapturePanel();
+      // Recreate the mass capture panel with a delay to ensure content.js functions are available
+      setTimeout(() => {
+        if (typeof window.createMassCapturePanel === 'function') {
+          window.createMassCapturePanel();
+          // Update the panel to show the correct count
+          if (typeof window.updateMassCapturePanel === 'function') {
+            window.updateMassCapturePanel();
+          }
+        } else {
+          console.warn('🔧 RunsheetPro Extension: createMassCapturePanel function not available, will retry');
+          // Retry after a longer delay
+          setTimeout(() => {
+            if (typeof window.createMassCapturePanel === 'function') {
+              window.createMassCapturePanel();
+              if (typeof window.updateMassCapturePanel === 'function') {
+                window.updateMassCapturePanel();
+              }
+            }
+          }, 500);
+        }
+      }, 100);
       // Disable context menu initially (will be enabled when user starts a document session)
       chrome.runtime.sendMessage({ action: 'updateSnipContextMenu', enabled: false });
     }
