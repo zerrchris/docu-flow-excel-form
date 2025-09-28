@@ -4636,17 +4636,23 @@ async function captureSelectedArea(left, top, width, height) {
               const enhancedPromise = new Promise(async (resolve) => {
                 if (window.EnhancedSnipWorkflow) {
                   try {
+                    console.log('🔧 RunsheetPro Extension: Attempting enhanced snip processing...');
                     const result = await window.EnhancedSnipWorkflow.processEnhancedSnip(blob, {
                       filename: window.currentSnipFilename,
                       row_index: currentRowIndex
                     });
+                    console.log('🔧 RunsheetPro Extension: Enhanced processing result:', result);
                     if (result.success) {
                       enhancedProcessingComplete = true;
                       resolve(true);
                       return;
                     }
                   } catch (error) {
-                    console.log('Enhanced processing failed:', error);
+                    console.error('🔧 RunsheetPro Extension: Enhanced processing failed:', error);
+                    // Show error notification for mass capture debugging
+                    if (isMassCaptureMode) {
+                      showNotification(`Document link failed: ${error.message}`, 'error');
+                    }
                   }
                 }
                 resolve(false);
@@ -4654,15 +4660,24 @@ async function captureSelectedArea(left, top, width, height) {
               
               // Timeout for enhanced processing
               const timeoutPromise = new Promise(resolve => {
-                setTimeout(() => resolve(false), 2000); // 2 second timeout
+                setTimeout(() => {
+                  console.warn('🔧 RunsheetPro Extension: Enhanced processing timed out');
+                  resolve(false);
+                }, 10000); // Increased to 10 seconds for better reliability
               });
               
               const enhancedResult = await Promise.race([enhancedPromise, timeoutPromise]);
               
               if (enhancedResult && enhancedProcessingComplete) {
                 // Enhanced processing succeeded - UI will be handled by enhanced workflow
-                console.log('Enhanced processing completed successfully');
+                console.log('🔧 RunsheetPro Extension: Enhanced processing completed successfully');
                 return;
+              }
+              
+              // Enhanced processing failed - throw error for mass capture mode
+              if (isMassCaptureMode) {
+                console.error('🔧 RunsheetPro Extension: Enhanced processing required for mass capture but failed');
+                throw new Error('Document linking failed - please check your internet connection and try again');
               }
               
               // Fall back to standard processing

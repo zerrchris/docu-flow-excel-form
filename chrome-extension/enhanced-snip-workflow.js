@@ -18,19 +18,29 @@ window.EnhancedSnipWorkflow = {
       
       // Get current user session
       const authData = await chrome.storage.local.get(['supabase_session']);
+      console.log('🔧 Enhanced Snip: Auth data retrieved:', !!authData.supabase_session);
       if (!authData.supabase_session?.access_token) {
-        throw new Error('User not authenticated');
+        console.error('🔧 Enhanced Snip: No access token found in storage');
+        throw new Error('User not authenticated - please sign in again');
       }
       
       // Get active runsheet info
       const runsheetData = await chrome.storage.local.get(['activeRunsheet']);
       const activeRunsheet = runsheetData.activeRunsheet;
+      console.log('🔧 Enhanced Snip: Active runsheet:', !!activeRunsheet, activeRunsheet?.id);
       
       if (!activeRunsheet?.id) {
-        throw new Error('No active runsheet found');
+        console.error('🔧 Enhanced Snip: No active runsheet found');
+        throw new Error('No active runsheet found - please select a runsheet first');
       }
       
       // First, link document to runsheet with extracted data (without analysis)
+      console.log('🔧 Enhanced Snip: Linking document to runsheet...', {
+        runsheetId: activeRunsheet.id,
+        rowIndex: metadata.row_index || 0,
+        filename: metadata.filename || `capture_${Date.now()}.png`
+      });
+      
       const linkResult = await this.linkDocumentToRunsheet(
         base64Data,
         activeRunsheet.id,
@@ -39,6 +49,8 @@ window.EnhancedSnipWorkflow = {
         null, // No extracted data initially
         authData.supabase_session.access_token
       );
+      
+      console.log('🔧 Enhanced Snip: Document linked successfully:', linkResult);
       
       // Then analyze document with enhanced AI if available
       let analysisResult = { analysis: null };
@@ -147,28 +159,43 @@ window.EnhancedSnipWorkflow = {
   
   // Link document to runsheet with extracted data
   async linkDocumentToRunsheet(base64Data, runsheetId, rowIndex, filename, extractedData, accessToken) {
-    const response = await fetch('https://xnpmrafjjqsissbtempj.supabase.co/functions/v1/extension-document-link', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhucG1yYWZqanFzaXNzYnRlbXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4NzMyNjcsImV4cCI6MjA2ODQ0OTI2N30.aQG15Ed8IOLJfM5p7XF_kEM5FUz8zJug1pxAi9rTTsg',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        document_blob: base64Data,
-        runsheet_id: runsheetId,
-        row_index: rowIndex,
-        filename: filename,
-        extracted_data: extractedData
-      })
-    });
+    console.log('🔧 Enhanced Snip: Making document link request...');
     
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Document linking failed: ${response.status} - ${errorText}`);
+    try {
+      const response = await fetch('https://xnpmrafjjqsissbtempj.supabase.co/functions/v1/extension-document-link', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhucG1yYWZqanFzaXNzYnRlbXBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4NzMyNjcsImV4cCI6MjA2ODQ0OTI2N30.aQG15Ed8IOLJfM5p7XF_kEM5FUz8zJug1pxAi9rTTsg',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          document_blob: base64Data,
+          runsheet_id: runsheetId,
+          row_index: rowIndex,
+          filename: filename,
+          extracted_data: extractedData
+        })
+      });
+      
+      console.log('🔧 Enhanced Snip: Document link response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('🔧 Enhanced Snip: Document link failed:', errorText);
+        throw new Error(`Document linking failed: ${response.status} - ${errorText}`);
+      }
+      
+      const result = await response.json();
+      console.log('🔧 Enhanced Snip: Document link result:', result);
+      return result;
+      
+    } catch (error) {
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        throw new Error('Network error - please check your internet connection');
+      }
+      throw error;
     }
-    
-    return await response.json();
   },
   
   // Convert blob to base64
