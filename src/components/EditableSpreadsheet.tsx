@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { Plus, Trash2, Check, X, ArrowUp, ArrowDown, Save, FolderOpen, Download, Upload, AlignLeft, AlignCenter, AlignRight, Cloud, ChevronDown, FileText, Archive, ExternalLink, AlertTriangle, FileStack, Settings, Eye, EyeOff, Sparkles, Bug, AlertCircle, Brain, FileEdit } from 'lucide-react';
+import { Plus, Trash2, Check, X, ArrowUp, ArrowDown, Save, FolderOpen, Download, Upload, AlignLeft, AlignCenter, AlignRight, Cloud, ChevronDown, FileText, Archive, ExternalLink, AlertTriangle, FileStack, Settings, Eye, EyeOff, Sparkles, Bug, AlertCircle, Brain, FileEdit, Wand2 } from 'lucide-react';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -62,6 +62,7 @@ import { AutoSaveIndicator } from './AutoSaveIndicator';
 import { useImmediateSave } from '@/hooks/useImmediateSave';
 import ReExtractDialog from './ReExtractDialog';
 import RunsheetNameDialog from './RunsheetNameDialog';
+import TextReformatDialog from './TextReformatDialog';
 import { convertPDFToImages, createFileFromBlob } from '@/utils/pdfToImage';
 import { combineImages } from '@/utils/imageCombiner';
 import { backgroundAnalyzer } from '@/utils/backgroundAnalyzer';
@@ -190,6 +191,8 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   const [pendingSaveData, setPendingSaveData] = useState<{ isUpdate: boolean; runsheetId?: string; shouldClose?: boolean } | null>(null);
   const [pendingUploadRequest, setPendingUploadRequest] = useState<any>(null);
   const [showDocumentNamingDialog, setShowDocumentNamingDialog] = useState(false);
+  const [showTextReformatDialog, setShowTextReformatDialog] = useState(false);
+  const [reformatCellInfo, setReformatCellInfo] = useState<{rowIndex: number, column: string, text: string} | null>(null);
   
   // Helper function to ensure document columns exist
   const ensureDocumentColumns = (columnsList: string[]): string[] => {
@@ -7389,10 +7392,12 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
                                     // Keep the height fixed to fill the cell
                                   }}
                               />
-                         ) : (
-                                <div
-                                  data-cell={`${rowIndex}-${column}`}
-                                  className={`relative w-full h-full min-h-[2rem] py-2 px-3 flex items-start transition-all duration-200 break-words overflow-hidden select-none ${(isInRange || isInCopiedRange) ? '' : 'rounded-sm'}
+                          ) : (
+                            <ContextMenu>
+                              <ContextMenuTrigger asChild>
+                                 <div
+                                   data-cell={`${rowIndex}-${column}`}
+                                   className={`relative w-full h-full min-h-[2rem] py-2 px-3 flex items-start transition-all duration-200 break-words overflow-hidden select-none ${(isInRange || isInCopiedRange) ? '' : 'rounded-sm'}
                                       ${isInRange || isInCopiedRange
                                         ? `bg-primary/5 ${getRangeBorderStyle(rowIndex, columnIndex)}`
                                         : isSelected && !selectedRange && !copiedRange
@@ -7413,9 +7418,9 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
                                    onMouseLeave={() => setHoveredCell(null)}
                                    onMouseUp={handleMouseUp}
                                   onKeyDown={(e) => handleKeyDown(e, rowIndex, column)}
-                                  tabIndex={isSelected ? 0 : -1}
-                                  title={cellValidationErrors[`${rowIndex}-${column}`] || undefined}
-                               >
+                                   tabIndex={isSelected ? 0 : -1}
+                                   title={cellValidationErrors[`${rowIndex}-${column}`] || undefined}
+                                >
                                   <span className="block w-full break-words overflow-hidden text-sm leading-tight whitespace-pre-wrap">{
                                     (() => {
                                       const value = row[column];
@@ -7449,10 +7454,72 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
                                    >
                                      <Sparkles className="w-3 h-3" />
                                    </button>
-                                 )}
-                              </div>
-                         )}
-                         </td>
+                                  )}
+                               </div>
+                              </ContextMenuTrigger>
+                              <ContextMenuContent>
+                                <ContextMenuItem 
+                                  onClick={() => {
+                                    const cellText = row[column]?.toString() || '';
+                                    if (cellText.trim()) {
+                                      setReformatCellInfo({ rowIndex, column, text: cellText });
+                                      setShowTextReformatDialog(true);
+                                    }
+                                  }}
+                                  disabled={!row[column]?.toString()?.trim()}
+                                >
+                                  <Sparkles className="h-4 w-4 mr-2" />
+                                  Reformat Text
+                                </ContextMenuItem>
+                                <ContextMenuSeparator />
+                                <ContextMenuItem onClick={() => {
+                                  setCopiedCell({ rowIndex, column });
+                                  setCutData(null);
+                                  const value = row[column] || '';
+                                  navigator.clipboard.writeText(value);
+                                  toast({ title: "Cell copied", description: "Cell content copied to clipboard." });
+                                }}>
+                                  Copy
+                                </ContextMenuItem>
+                                <ContextMenuItem onClick={() => {
+                                  setCutData({ cell: { rowIndex, column } });
+                                  setCopiedCell(null);
+                                  const value = row[column] || '';
+                                  navigator.clipboard.writeText(value);
+                                  toast({ title: "Cell cut", description: "Cell content cut to clipboard." });
+                                }}>
+                                  Cut
+                                </ContextMenuItem>
+                                <ContextMenuItem 
+                                  onClick={async () => {
+                                    try {
+                                      const clipboardText = await navigator.clipboard.readText();
+                                      const newData = [...data];
+                                      newData[rowIndex] = {
+                                        ...newData[rowIndex],
+                                        [column]: clipboardText
+                                      };
+                                      setData(newData);
+                                      dataRef.current = newData;
+                                      onDataChange?.(newData);
+                                      setHasUnsavedChanges(true);
+                                      onUnsavedChanges?.(true);
+                                      
+                                      // Clear cut data if this was a cut operation
+                                      if (cutData) setCutData(null);
+                                      
+                                      toast({ title: "Cell pasted", description: "Content pasted to cell." });
+                                    } catch (err) {
+                                      toast({ title: "Paste failed", description: "Could not access clipboard.", variant: "destructive" });
+                                    }
+                                  }}
+                                >
+                                  Paste
+                                </ContextMenuItem>
+                              </ContextMenuContent>
+                            </ContextMenu>
+                          )}
+                          </td>
                      );
                     })}
                     
@@ -8339,6 +8406,43 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
           onShowDialog={() => setShowBatchAnalysisDialog(true)}
           isMainDialogOpen={showBatchAnalysisDialog}
         />
+
+        {/* Text Reformat Dialog */}
+        {reformatCellInfo && (
+          <TextReformatDialog
+            isOpen={showTextReformatDialog}
+            onClose={() => {
+              setShowTextReformatDialog(false);
+              setReformatCellInfo(null);
+            }}
+            onConfirm={(reformattedText) => {
+              if (reformatCellInfo) {
+                const newData = [...data];
+                newData[reformatCellInfo.rowIndex] = {
+                  ...newData[reformatCellInfo.rowIndex],
+                  [reformatCellInfo.column]: reformattedText
+                };
+                setData(newData);
+                dataRef.current = newData;
+                onDataChange?.(newData);
+                
+                // Mark as unsaved changes
+                setHasUnsavedChanges(true);
+                onUnsavedChanges?.(true);
+                
+                toast({
+                  title: "Text reformatted",
+                  description: `Cell ${reformatCellInfo.column}-${reformatCellInfo.rowIndex + 1} has been updated.`,
+                });
+              }
+            }}
+            originalText={reformatCellInfo.text}
+            cellInfo={{
+              rowIndex: reformatCellInfo.rowIndex,
+              column: reformatCellInfo.column
+            }}
+          />
+        )}
 
       </div>
     );
