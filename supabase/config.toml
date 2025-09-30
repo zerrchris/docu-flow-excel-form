@@ -80,6 +80,8 @@ verify_jwt = true
 verify_jwt = true
 [functions.realtime-voice]
 verify_jwt = true
+[functions.reformat-text]
+verify_jwt = true
 [functions.save-runsheet]
 verify_jwt = true
 [functions.send-confirmation-email]
