@@ -96,24 +96,28 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             });
           }
         } else if (message.state === 'active') {
-          // Show "Next Snip" and "Finish Snipping" - make them prominent
+          // Create a parent menu item for RunsheetPro
           chrome.contextMenus.create({
-            id: 'runsheetpro-next-snip',
-            title: message.fullscreenMode ? '🎯 Next Snip (Ctrl+Shift+S)' : '🎯 Next Snip',
+            id: 'runsheetpro-parent',
+            title: '🎯 Next Snip' + (message.fullscreenMode ? ' (Ctrl+Shift+S)' : ''),
             contexts: ['all'],
             documentUrlPatterns: ['<all_urls>']
           });
+          
+          // Add "Finish Snipping" as a child to minimize clutter
           chrome.contextMenus.create({
             id: 'runsheetpro-finish-snip',
+            parentId: 'runsheetpro-parent',
             title: message.fullscreenMode ? '✅ Finish Snipping (Ctrl+Shift+F)' : '✅ Finish Snipping',
             contexts: ['all'],
             documentUrlPatterns: ['<all_urls>']
           });
           
-          // Add help option in fullscreen mode
+          // Add help option in fullscreen mode as a child
           if (message.fullscreenMode) {
             chrome.contextMenus.create({
               id: 'runsheetpro-fullscreen-help',
+              parentId: 'runsheetpro-parent',
               title: '❓ Keyboard Shortcuts',
               contexts: ['all'],
               documentUrlPatterns: ['<all_urls>']
@@ -196,7 +200,8 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   
   if (info.menuItemId === 'runsheetpro-begin-snip') {
     chrome.tabs.sendMessage(tab.id, { action: 'beginSnipSession' });
-  } else if (info.menuItemId === 'runsheetpro-next-snip') {
+  } else if (info.menuItemId === 'runsheetpro-parent' || info.menuItemId === 'runsheetpro-next-snip') {
+    // Both parent and next-snip trigger the next snip action
     chrome.tabs.sendMessage(tab.id, { action: 'nextSnip' });
   } else if (info.menuItemId === 'runsheetpro-finish-snip') {
     chrome.tabs.sendMessage(tab.id, { action: 'finishSnipping' });
