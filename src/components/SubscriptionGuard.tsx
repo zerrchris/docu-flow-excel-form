@@ -18,16 +18,33 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({ children, fallbac
 
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user || null);
-      setAuthLoading(false);
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        // If there's an error or no session, clear auth and sign out
+        if (error || !session) {
+          console.error('Auth session error:', error);
+          await supabase.auth.signOut();
+          setUser(null);
+        } else {
+          setUser(session.user);
+        }
+      } catch (error) {
+        console.error('Failed to check auth:', error);
+        await supabase.auth.signOut();
+        setUser(null);
+      } finally {
+        setAuthLoading(false);
+      }
     };
 
     checkAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user || null);
-      setAuthLoading(false);
+      if (!session) {
+        setAuthLoading(false);
+      }
     });
 
     return () => subscription.unsubscribe();
