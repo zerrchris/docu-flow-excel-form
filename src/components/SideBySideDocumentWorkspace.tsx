@@ -108,7 +108,7 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
 
   const [abortController, setAbortController] = useState<AbortController | null>(null);
 
-  const handleAnalyzeDocument = async (forceOverwrite = false) => {
+  const handleAnalyzeDocument = async (forceOverwrite = false, fillEmptyOnly = false) => {
     console.log('🔍 SIDE-BY-SIDE: handleAnalyzeDocument called');
     console.log('🔍 SIDE-BY-SIDE: documentRecord:', documentRecord);
     
@@ -224,7 +224,11 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
         const updatedRowData = { ...rowData };
         Object.keys(extractedData).forEach(key => {
           if (columns.includes(key) && extractedData[key]) {
-            updatedRowData[key] = extractedData[key];
+            // Only update if fillEmptyOnly is false or field is empty
+            if (!fillEmptyOnly || !updatedRowData[key] || updatedRowData[key].toString().trim() === '' || 
+                updatedRowData[key].toString().trim().toLowerCase() === 'n/a') {
+              updatedRowData[key] = extractedData[key];
+            }
           }
         });
 
@@ -909,18 +913,31 @@ Return only the filename, nothing else.`,
               Replace Existing Data?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              This row already contains data. Analyzing the document will replace the existing information with newly extracted data.
+              This row already contains data. Choose how to proceed:
+              <br /><br />
+              <strong>Replace All:</strong> Overwrite all existing data with newly extracted values
+              <br />
+              <strong>Keep & Fill Empty:</strong> Keep existing data and only fill empty fields
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
             <AlertDialogCancel onClick={() => setShowAnalyzeWarning(false)}>
               Cancel
             </AlertDialogCancel>
+            <Button
+              variant="secondary"
+              onClick={() => { 
+                setShowAnalyzeWarning(false); 
+                handleAnalyzeDocument(true, true); // forceOverwrite=true, fillEmptyOnly=true
+              }}
+            >
+              Keep & Fill Empty
+            </Button>
             <AlertDialogAction onClick={() => { 
               setShowAnalyzeWarning(false); 
-              handleAnalyzeDocument(true); // Force overwrite
+              handleAnalyzeDocument(true, false); // forceOverwrite=true, fillEmptyOnly=false
             }}>
-              Replace Data
+              Replace All
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
