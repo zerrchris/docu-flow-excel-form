@@ -194,6 +194,22 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
     setHasUnsavedChanges(false);
   }, [initialRowData, rowIndex]);
 
+  // Prevent accidental page refreshes while working
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      // Always warn about refreshing to prevent data loss during analysis
+      e.preventDefault();
+      e.returnValue = ''; // Modern browsers require this
+      return ''; // Legacy support
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, []);
+
   const [abortController, setAbortController] = useState<AbortController | null>(null);
 
   const handleAnalyzeDocument = async (forceOverwrite = false, fillEmptyOnly = false, selectedInstrument?: number) => {
