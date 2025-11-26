@@ -398,22 +398,28 @@ const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
             <div className="flex-1 overflow-y-auto border rounded-lg p-4 mb-4">
               <div className="space-y-2">
                 {columns.map((column, index) => (
-                  <div
-                    key={column}
-                    data-column-item
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, column)}
-                    onDragOver={(e) => handleDragOver(e, index)}
-                    onDragLeave={handleDragLeave}
-                    onDrop={(e) => handleDrop(e, index)}
-                    onDragEnd={handleDragEnd}
-                    className={`flex items-center gap-2 p-3 border rounded-lg transition-all cursor-pointer ${
-                      selectedColumn === column ? 'bg-primary/10 border-primary' : 'hover:bg-muted'
-                    } ${draggedColumn === column ? 'opacity-50' : ''} ${
-                      dragOverIndex === index && draggedColumn !== column ? 'border-primary border-2' : ''
-                    }`}
-                    onClick={() => setSelectedColumn(column)}
-                  >
+                  <React.Fragment key={column}>
+                    {/* Drop indicator line above the target */}
+                    {dragOverIndex === index && draggedColumn !== column && (
+                      <div className="h-1 bg-primary rounded-full my-1 animate-pulse shadow-lg shadow-primary/50" />
+                    )}
+                    
+                    <div
+                      data-column-item
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, column)}
+                      onDragOver={(e) => handleDragOver(e, index)}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => handleDrop(e, index)}
+                      onDragEnd={handleDragEnd}
+                      className={`
+                        flex items-center gap-2 p-3 border rounded-lg 
+                        transition-all cursor-pointer
+                        ${selectedColumn === column ? 'bg-primary/10 border-primary' : 'hover:bg-muted'}
+                        ${draggedColumn === column ? 'opacity-40 scale-95 border-dashed shadow-xl' : ''}
+                      `}
+                      onClick={() => setSelectedColumn(column)}
+                    >
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -482,10 +488,11 @@ const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
                         title="Remove column"
                       >
                         <X className="h-3 w-3" />
-                      </Button>
-                    </div>
+                    </Button>
                   </div>
-                ))}
+                </div>
+              </React.Fragment>
+              ))}
                 
                 {columns.length === 0 && (
                   <div className="text-center py-8 text-muted-foreground">
