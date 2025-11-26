@@ -52,6 +52,8 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [documentRecord, setDocumentRecord] = useState<DocumentRecord | undefined>(providedDocumentRecord);
   const [isLoadingDocument, setIsLoadingDocument] = useState(false);
+  const [documentUrl, setDocumentUrl] = useState<string | null>(null);
+  const [documentError, setDocumentError] = useState<string | null>(null);
   
   const [lastAnalyzedData, setLastAnalyzedData] = useState<Record<string, string>>({});
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -72,15 +74,52 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
   const [isReExtracting, setIsReExtracting] = useState(false);
   const [showColumnPreferences, setShowColumnPreferences] = useState(false);
   
-  // Multi-instrument detection state
-  const [showInstrumentSelectionDialog, setShowInstrumentSelectionDialog] = useState(false);
-  const [detectedInstruments, setDetectedInstruments] = useState<any[]>([]);
+  // Multi-instrument detection state with persistence across page refreshes
+  const sessionStorageKey = `instrument_selection_sidebyside_${runsheetId}_${rowIndex}`;
+  
+  const [showInstrumentSelectionDialog, setShowInstrumentSelectionDialog] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem(sessionStorageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return !!parsed.instruments && parsed.instruments.length > 0;
+      }
+    } catch (e) {
+      console.error('Failed to restore instrument selection state:', e);
+    }
+    return false;
+  });
+  
+  const [detectedInstruments, setDetectedInstruments] = useState<any[]>(() => {
+    try {
+      const saved = sessionStorage.getItem(sessionStorageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.instruments || [];
+      }
+    } catch (e) {
+      console.error('Failed to restore instruments:', e);
+    }
+    return [];
+  });
+  
   const [pendingInstrumentAnalysis, setPendingInstrumentAnalysis] = useState<{
     imageData: string;
     extractionFields: string;
     fillEmptyOnly: boolean;
     forceOverwrite: boolean;
-  } | null>(null);
+  } | null>(() => {
+    try {
+      const saved = sessionStorage.getItem(sessionStorageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.pendingAnalysis || null;
+      }
+    } catch (e) {
+      console.error('Failed to restore pending analysis:', e);
+    }
+    return null;
+  });
   
   // Individual field instruction editing
   const [fieldInstructionDialog, setFieldInstructionDialog] = useState<{
@@ -97,6 +136,7 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
   useEffect(() => {
     if (!providedDocumentRecord && runsheetId && rowIndex !== undefined) {
       setIsLoadingDocument(true);
+      setDocumentError(null);
       DocumentService.getDocumentForRow(runsheetId, rowIndex)
         .then(document => {
           setDocumentRecord(document || undefined);
@@ -104,12 +144,49 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
         })
         .catch(error => {
           console.error('Error loading document:', error);
+          setDocumentError('Failed to load document');
           setIsLoadingDocument(false);
         });
     } else {
       setDocumentRecord(providedDocumentRecord);
     }
   }, [providedDocumentRecord, runsheetId, rowIndex]);
+
+  // Load document URL when document record changes
+  useEffect(() => {
+    const loadDocumentUrl = async () => {
+      if (!documentRecord) {
+        setDocumentUrl(null);
+        return;
+      }
+
+      try {
+        console.log('🔍 SideBySide: Loading document URL for:', documentRecord.file_path);
+        setDocumentError(null);
+        const url = await DocumentService.getDocumentUrl(documentRecord.file_path);
+        console.log('✅ SideBySide: Document URL loaded:', url);
+        setDocumentUrl(url);
+      } catch (error) {
+        console.error('❌ SideBySide: Error loading document URL:', error);
+        setDocumentError('Failed to load document URL');
+        setDocumentUrl(null);
+      }
+    };
+
+    loadDocumentUrl();
+  }, [documentRecord]);
+
+  // Restore instrument selection dialog after page refresh
+  useEffect(() => {
+    if (showInstrumentSelectionDialog && detectedInstruments.length > 0) {
+      console.log('🔄 SideBySide: Restored instrument selection dialog after page refresh');
+      toast({
+        title: "Session Restored",
+        description: "Your instrument selection dialog has been restored. Please select an instrument to continue.",
+        variant: "default"
+      });
+    }
+  }, []); // Only run on mount
 
   // Update local row data when props change
   useEffect(() => {
@@ -191,16 +268,31 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
         console.log('🔍 Multiple instruments detected:', analysisResult.analysis.instrument_count);
         console.log('🔍 Instruments:', analysisResult.analysis.instruments);
         
-        // Store the analysis context for later use
-        setPendingInstrumentAnalysis({
+        const pendingAnalysis = {
           imageData,
           extractionFields,
           fillEmptyOnly,
           forceOverwrite
-        });
+        };
+        
+        // Store the analysis context for later use (both in state and sessionStorage)
+        setPendingInstrumentAnalysis(pendingAnalysis);
+        const instruments = analysisResult.analysis.instruments || [];
+        setDetectedInstruments(instruments);
+        
+        // Persist to sessionStorage to survive page refreshes
+        try {
+          sessionStorage.setItem(sessionStorageKey, JSON.stringify({
+            instruments,
+            pendingAnalysis,
+            timestamp: Date.now()
+          }));
+          console.log('✅ SideBySide: Saved instrument selection state to sessionStorage');
+        } catch (e) {
+          console.error('Failed to save instrument selection state:', e);
+        }
         
         // Show instrument selection dialog
-        setDetectedInstruments(analysisResult.analysis.instruments || []);
         setShowInstrumentSelectionDialog(true);
         setIsAnalyzing(false);
         return;
@@ -844,7 +936,15 @@ Return only the filename, nothing else.`,
                     </p>
                   </CardContent>
                 </Card>
-              ) : documentRecord ? (
+              ) : documentError ? (
+                <Card className="h-full flex items-center justify-center m-4">
+                  <CardContent className="text-center">
+                    <p className="text-destructive">
+                      {documentError}
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : documentRecord && documentUrl ? (
                 <div className="h-full w-full">
                   {/* Always use image viewer since PDFs are converted to images */}
                   <div className="h-full w-full relative overflow-hidden">
@@ -892,11 +992,30 @@ Return only the filename, nothing else.`,
                       }}
                     >
                       <img 
-                        src={DocumentService.getDocumentUrlSync(documentRecord.file_path)}
+                        src={documentUrl}
                         alt={documentRecord.stored_filename}
                         className={`transition-all duration-200 ease-out select-none ${
                           imageFitToWidth ? 'w-full h-auto object-contain' : 'max-w-none object-contain cursor-zoom-in'
                         }`}
+                        onError={(e) => {
+                          console.error('❌ SideBySide: Failed to load document image:', documentUrl);
+                          setDocumentError('Failed to load document image. Please try reloading the page.');
+                          // Retry loading once after a short delay
+                          setTimeout(async () => {
+                            if (documentRecord) {
+                              try {
+                                const url = await DocumentService.getDocumentUrl(documentRecord.file_path);
+                                if (url && url !== documentUrl) {
+                                  console.log('🔄 SideBySide: Retrying with refreshed document URL');
+                                  setDocumentUrl(url);
+                                  setDocumentError(null);
+                                }
+                              } catch (retryError) {
+                                console.error('❌ SideBySide: Failed to retry loading document:', retryError);
+                              }
+                            }
+                          }, 1000);
+                        }}
                         style={{ 
                           minHeight: imageFitToWidth ? 'auto' : '100%',
                           transformOrigin: 'center',
@@ -1071,6 +1190,12 @@ Return only the filename, nothing else.`,
           setShowInstrumentSelectionDialog(false);
           setDetectedInstruments([]);
           setPendingInstrumentAnalysis(null);
+          // Clear sessionStorage on cancel
+          try {
+            sessionStorage.removeItem(sessionStorageKey);
+          } catch (e) {
+            console.error('Failed to clear instrument selection state:', e);
+          }
         }}
         instruments={detectedInstruments}
         onSelect={(instrumentId) => {
@@ -1086,7 +1211,13 @@ Return only the filename, nothing else.`,
             );
           }
           
+          // Clear state after selection
           setPendingInstrumentAnalysis(null);
+          try {
+            sessionStorage.removeItem(sessionStorageKey);
+          } catch (e) {
+            console.error('Failed to clear instrument selection state:', e);
+          }
         }}
       />
     </div>
