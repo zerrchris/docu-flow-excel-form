@@ -426,6 +426,56 @@ const DocumentProcessor: React.FC = () => {
     const timeoutId = setTimeout(saveToDatabase, 2000);
     return () => clearTimeout(timeoutId);
   }, [spreadsheetData, columns, columnInstructions, activeRunsheet?.id, currentUser]);
+  
+  // Track previous column count to detect structural changes
+  const previousColumnCountRef = useRef<number>(columns.length);
+  
+  // Immediate save for column structure changes (add/remove columns)
+  useEffect(() => {
+    const currentColumnCount = columns.length;
+    const previousColumnCount = previousColumnCountRef.current;
+    
+    // Only trigger if columns actually changed (not just initial load)
+    if (previousColumnCount !== 0 && currentColumnCount !== previousColumnCount && activeRunsheet?.id && currentUser) {
+      console.log('🔄 Column structure changed, triggering immediate save', {
+        previous: previousColumnCount,
+        current: currentColumnCount,
+        columns: columns
+      });
+      
+      // Immediate save without debounce for structural changes
+      const saveImmediately = async () => {
+        try {
+          const { error } = await supabase
+            .from('runsheets')
+            .update({
+              data: spreadsheetData,
+              columns: columns,
+              column_instructions: columnInstructions,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', activeRunsheet.id);
+            
+          if (error) throw error;
+          
+          console.log('✅ Column changes saved immediately to database');
+          setHasUnsavedChanges(false);
+        } catch (error) {
+          console.error('❌ Failed to save column changes:', error);
+          toast({
+            title: "Save failed",
+            description: "Failed to save column changes. Please try again.",
+            variant: "destructive",
+          });
+        }
+      };
+      
+      saveImmediately();
+    }
+    
+    // Update ref for next comparison
+    previousColumnCountRef.current = currentColumnCount;
+  }, [columns, activeRunsheet?.id, currentUser, spreadsheetData, columnInstructions]);
 
   // Load runsheet data from database when activeRunsheet changes
   useEffect(() => {
