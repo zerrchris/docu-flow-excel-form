@@ -7059,12 +7059,12 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
                     </div>
                   </th>
                   
-                  {columns.map((column) => (
+                   {columns.map((column) => (
                    <th 
                         key={column}
                         className={`font-bold text-center border-r border-b border-border relative cursor-move transition-all duration-200 h-12 font-medium text-muted-foreground
                            ${draggedColumn === column ? 'opacity-50 transform scale-95' : ''}
-                           ${dragOverColumn === column ? 'bg-primary/20 shadow-lg' : 'bg-background/95'}
+                           ${dragOverColumn === column ? 'bg-primary/20 shadow-lg' : 'bg-background'}
                            ${localMissingColumns.includes(column) ? 'bg-yellow-100 border-2 border-yellow-400 dark:bg-yellow-900/20 dark:border-yellow-500 animate-pulse shadow-yellow-200 dark:shadow-yellow-900' : 'hover:bg-muted/30'}
                            backdrop-blur-sm`}
                         style={{ 
