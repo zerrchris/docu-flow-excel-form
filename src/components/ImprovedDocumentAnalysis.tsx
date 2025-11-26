@@ -19,6 +19,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import AdvancedDataVerificationDialog from './AdvancedDataVerificationDialog';
+import InstrumentSelectionDialog from './InstrumentSelectionDialog';
 
 interface ImprovedDocumentAnalysisProps {
   runsheetId: string;
@@ -34,6 +35,14 @@ interface AnalysisResult {
   document_type: string;
   extraction_summary: string;
   processing_notes: string;
+  multiple_instruments?: boolean;
+  instrument_count?: number;
+  instruments?: Array<{
+    id: number;
+    type: string;
+    description: string;
+    snippet?: string;
+  }>;
 }
 
 interface AnalysisStep {
@@ -55,8 +64,10 @@ const ImprovedDocumentAnalysis: React.FC<ImprovedDocumentAnalysisProps> = ({
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showVerificationDialog, setShowVerificationDialog] = useState(false);
+  const [showInstrumentDialog, setShowInstrumentDialog] = useState(false);
   const [analysisSteps, setAnalysisSteps] = useState<AnalysisStep[]>([]);
   const [analysisProgress, setAnalysisProgress] = useState(0);
+  const [base64Cache, setBase64Cache] = useState<string | null>(null);
   const { toast } = useToast();
 
   const initializeAnalysisSteps = () => {
@@ -131,7 +142,7 @@ const ImprovedDocumentAnalysis: React.FC<ImprovedDocumentAnalysisProps> = ({
     });
   };
 
-  const performAnalysis = useCallback(async (useVision: boolean = false) => {
+  const performAnalysis = useCallback(async (useVision: boolean = false, selectedInstrument?: number) => {
     if (!selectedFile) {
       toast({
         title: "No file selected",
@@ -143,14 +154,22 @@ const ImprovedDocumentAnalysis: React.FC<ImprovedDocumentAnalysisProps> = ({
 
     setIsAnalyzing(true);
     setError(null);
-    setAnalysisResult(null);
+    if (selectedInstrument) {
+      // Keep the result but update it
+      setAnalysisResult(prev => prev ? { ...prev, multiple_instruments: false } : null);
+    } else {
+      setAnalysisResult(null);
+    }
 
     const steps = initializeAnalysisSteps();
     
     try {
-      // Step 1: Upload
+      // Step 1: Upload (use cache if available)
       updateStep('upload', 'in-progress', 'Converting file to base64...');
-      const base64Data = await convertFileToBase64(selectedFile);
+      const base64Data = base64Cache || await convertFileToBase64(selectedFile);
+      if (!base64Cache) {
+        setBase64Cache(base64Data);
+      }
       updateStep('upload', 'completed', 'File successfully processed');
 
       // Step 2: Validation
@@ -192,7 +211,8 @@ const ImprovedDocumentAnalysis: React.FC<ImprovedDocumentAnalysisProps> = ({
             columns: extractionColumns,
             column_instructions: columnInstructions,
             use_vision: useVision
-          }
+          },
+          selected_instrument: selectedInstrument
         }
       });
 
@@ -209,6 +229,20 @@ const ImprovedDocumentAnalysis: React.FC<ImprovedDocumentAnalysisProps> = ({
       // Step 4: Data Extraction
       updateStep('data-extraction', 'in-progress', 'Extracting structured data...');
       const analysis = response.data.analysis;
+      
+      // Check for multiple instruments
+      if (analysis.multiple_instruments && analysis.instrument_count > 1 && !selectedInstrument) {
+        setAnalysisResult(analysis);
+        updateStep('data-extraction', 'completed', `Detected ${analysis.instrument_count} instruments`);
+        updateStep('verification', 'in-progress', 'Waiting for instrument selection...');
+        setShowInstrumentDialog(true);
+        
+        toast({
+          title: "Multiple Instruments Detected",
+          description: `Found ${analysis.instrument_count} instruments on this page. Please select which one to extract.`,
+        });
+        return;
+      }
       
       if (!analysis.extracted_data || Object.keys(analysis.extracted_data).length === 0) {
         throw new Error('No data could be extracted from the document');
@@ -310,6 +344,17 @@ const ImprovedDocumentAnalysis: React.FC<ImprovedDocumentAnalysisProps> = ({
     setAnalysisSteps([]);
     setAnalysisProgress(0);
     setShowVerificationDialog(false);
+    setShowInstrumentDialog(false);
+    setBase64Cache(null);
+  };
+
+  const handleInstrumentSelection = (instrumentId: number) => {
+    setShowInstrumentDialog(false);
+    toast({
+      title: "Instrument Selected",
+      description: `Extracting data from Instrument #${instrumentId}...`,
+    });
+    performAnalysis(false, instrumentId);
   };
 
   return (
@@ -499,6 +544,16 @@ const ImprovedDocumentAnalysis: React.FC<ImprovedDocumentAnalysisProps> = ({
           availableColumns={availableColumns}
           currentRunsheetData={currentRunsheetData}
           onRetryAnalysis={retryAnalysis}
+        />
+      )}
+
+      {/* Instrument Selection Dialog */}
+      {analysisResult?.instruments && (
+        <InstrumentSelectionDialog
+          open={showInstrumentDialog}
+          onClose={() => setShowInstrumentDialog(false)}
+          instruments={analysisResult.instruments}
+          onSelect={handleInstrumentSelection}
         />
       )}
     </>
