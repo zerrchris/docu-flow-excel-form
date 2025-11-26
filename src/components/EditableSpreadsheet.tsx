@@ -4414,7 +4414,8 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       singleClickTimerRef.current = null;
     }
     singleClickTimerRef.current = window.setTimeout(() => {
-      selectCell(rowIndex, column, false);
+      // Start editing immediately on single click to show cursor
+      selectCell(rowIndex, column, true);
       singleClickTimerRef.current = null;
     }, 220);
   };
