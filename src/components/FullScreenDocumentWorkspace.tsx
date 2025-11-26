@@ -1056,7 +1056,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                                     ? (currentIndex - 1 + editableFields.length) % editableFields.length
                                     : (currentIndex + 1) % editableFields.length;
                                   const nextColumn = editableFields[nextIndex];
-                                  setTimeout(() => startEditing(nextColumn, false), 0);
+                                  setTimeout(() => startEditing(nextColumn, true), 0);
                                 }
                               }}
                               onBlur={finishEditing}
