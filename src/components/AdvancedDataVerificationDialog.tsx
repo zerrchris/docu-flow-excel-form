@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Checkbox } from '@/components/ui/checkbox';
 import { 
   CheckCircle, 
   AlertTriangle, 
@@ -17,7 +18,8 @@ import {
   Target,
   Database,
   RefreshCw,
-  AlertCircle
+  AlertCircle,
+  ShieldCheck
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -51,6 +53,7 @@ const AdvancedDataVerificationDialog: React.FC<AdvancedDataVerificationDialogPro
   const [editedData, setEditedData] = useState<Record<string, string>>(extractedData);
   const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [fieldsToReplace, setFieldsToReplace] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
 
   // Find the next available empty row
@@ -70,6 +73,26 @@ const AdvancedDataVerificationDialog: React.FC<AdvancedDataVerificationDialogPro
   };
 
   const nextEmptyRowIndex = findNextEmptyRow();
+
+  // Detect fields that would overwrite existing data
+  const conflictingFields = useMemo(() => {
+    const targetIndex = selectedRowIndex !== null ? selectedRowIndex : nextEmptyRowIndex;
+    if (targetIndex >= currentRunsheetData.length) return [];
+    
+    const targetRow = currentRunsheetData[targetIndex];
+    const conflicts: Array<{ field: string; existingValue: string; newValue: string }> = [];
+    
+    Object.entries(editedData).forEach(([field, newValue]) => {
+      const existingValue = targetRow[field];
+      if (existingValue && existingValue.toString().trim() !== '' && 
+          existingValue.toString().trim().toLowerCase() !== 'n/a' &&
+          newValue && newValue.trim() !== '') {
+        conflicts.push({ field, existingValue: existingValue.toString(), newValue });
+      }
+    });
+    
+    return conflicts;
+  }, [editedData, selectedRowIndex, nextEmptyRowIndex, currentRunsheetData]);
 
   const getConfidenceColor = (score: number) => {
     if (score >= 0.8) return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
@@ -93,9 +116,60 @@ const AdvancedDataVerificationDialog: React.FC<AdvancedDataVerificationDialogPro
     }));
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = (fillEmptyOnly: boolean = false) => {
     const targetRow = selectedRowIndex !== null ? selectedRowIndex : nextEmptyRowIndex;
-    onConfirm(editedData, targetRow);
+    
+    if (fillEmptyOnly && targetRow < currentRunsheetData.length) {
+      // Only fill empty fields, keep existing data
+      const existingRow = currentRunsheetData[targetRow];
+      const mergedData: Record<string, string> = { ...editedData };
+      
+      Object.keys(mergedData).forEach(field => {
+        const existingValue = existingRow[field];
+        if (existingValue && existingValue.toString().trim() !== '' && 
+            existingValue.toString().trim().toLowerCase() !== 'n/a') {
+          // Keep existing value, don't overwrite
+          mergedData[field] = existingValue.toString();
+        }
+      });
+      
+      onConfirm(mergedData, targetRow);
+    } else if (conflictingFields.length > 0 && Object.keys(fieldsToReplace).length > 0) {
+      // Selective replacement based on user choices
+      const existingRow = currentRunsheetData[targetRow];
+      const mergedData: Record<string, string> = { ...editedData };
+      
+      conflictingFields.forEach(({ field }) => {
+        if (!fieldsToReplace[field]) {
+          // Keep existing value
+          mergedData[field] = existingRow[field].toString();
+        }
+      });
+      
+      onConfirm(mergedData, targetRow);
+    } else {
+      // Replace all data
+      onConfirm(editedData, targetRow);
+    }
+  };
+
+  const toggleFieldReplacement = (field: string) => {
+    setFieldsToReplace(prev => ({
+      ...prev,
+      [field]: !prev[field]
+    }));
+  };
+
+  const selectAllConflicts = () => {
+    const allSelected: Record<string, boolean> = {};
+    conflictingFields.forEach(({ field }) => {
+      allSelected[field] = true;
+    });
+    setFieldsToReplace(allSelected);
+  };
+
+  const deselectAllConflicts = () => {
+    setFieldsToReplace({});
   };
 
   const previewTargetRow = () => {
@@ -305,6 +379,78 @@ const AdvancedDataVerificationDialog: React.FC<AdvancedDataVerificationDialogPro
             </TabsContent>
 
             <TabsContent value="target" className="space-y-4 mt-4">
+              {/* Conflicting Fields Warning */}
+              {conflictingFields.length > 0 && (
+                <Card className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm text-amber-800 dark:text-amber-200 flex items-center gap-2">
+                      <ShieldCheck className="h-4 w-4" />
+                      Data Conflict Detection ({conflictingFields.length} fields)
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <p className="text-sm text-amber-700 dark:text-amber-300">
+                      The target row already has data in some fields. Choose which fields to replace:
+                    </p>
+                    
+                    <div className="flex gap-2 mb-3">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={selectAllConflicts}
+                        className="text-xs"
+                      >
+                        Select All
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={deselectAllConflicts}
+                        className="text-xs"
+                      >
+                        Deselect All
+                      </Button>
+                    </div>
+
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {conflictingFields.map(({ field, existingValue, newValue }) => (
+                        <div 
+                          key={field}
+                          className="bg-white dark:bg-gray-900 p-3 rounded border border-amber-200 dark:border-amber-800"
+                        >
+                          <div className="flex items-start gap-3">
+                            <Checkbox
+                              id={`replace-${field}`}
+                              checked={fieldsToReplace[field] || false}
+                              onCheckedChange={() => toggleFieldReplacement(field)}
+                              className="mt-1"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <Label 
+                                htmlFor={`replace-${field}`}
+                                className="text-sm font-medium capitalize cursor-pointer"
+                              >
+                                {field.replace(/_/g, ' ')}
+                              </Label>
+                              <div className="grid grid-cols-2 gap-2 mt-2 text-xs">
+                                <div className="bg-red-50 dark:bg-red-950/30 p-2 rounded border border-red-200 dark:border-red-800">
+                                  <div className="font-medium text-red-700 dark:text-red-300 mb-1">Existing:</div>
+                                  <div className="text-red-600 dark:text-red-400 truncate">{existingValue}</div>
+                                </div>
+                                <div className="bg-green-50 dark:bg-green-950/30 p-2 rounded border border-green-200 dark:border-green-800">
+                                  <div className="font-medium text-green-700 dark:text-green-300 mb-1">New:</div>
+                                  <div className="text-green-600 dark:text-green-400 truncate">{newValue}</div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               <Card>
                 <CardHeader>
                   <CardTitle className="text-sm flex items-center gap-2">
@@ -391,24 +537,38 @@ const AdvancedDataVerificationDialog: React.FC<AdvancedDataVerificationDialogPro
           </Tabs>
         </div>
 
-        <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          {onRetryAnalysis && (
-            <Button variant="outline" onClick={() => onRetryAnalysis(true)}>
-              <Eye className="h-4 w-4 mr-1" />
-              Try Vision Analysis
+        <DialogFooter className="gap-2 flex-col sm:flex-row">
+          <div className="flex gap-2 flex-1">
+            <Button variant="outline" onClick={onClose}>
+              Cancel
             </Button>
-          )}
-          <Button 
-            onClick={handleConfirm}
-            className="flex items-center gap-2"
-          >
-            <CheckCircle className="h-4 w-4" />
-            Add to {previewTargetRow()}
-            <ArrowRight className="h-4 w-4" />
-          </Button>
+            {onRetryAnalysis && (
+              <Button variant="outline" onClick={() => onRetryAnalysis(true)}>
+                <Eye className="h-4 w-4 mr-1" />
+                Try Vision
+              </Button>
+            )}
+          </div>
+          <div className="flex gap-2">
+            {conflictingFields.length > 0 && (
+              <Button 
+                variant="secondary"
+                onClick={() => handleConfirm(true)}
+                className="flex items-center gap-2"
+              >
+                <ShieldCheck className="h-4 w-4" />
+                Keep Existing & Fill Empty
+              </Button>
+            )}
+            <Button 
+              onClick={() => handleConfirm(false)}
+              className="flex items-center gap-2"
+            >
+              <CheckCircle className="h-4 w-4" />
+              {conflictingFields.length > 0 ? 'Replace Selected' : 'Add to'} {previewTargetRow()}
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
