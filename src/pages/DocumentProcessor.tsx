@@ -3008,7 +3008,7 @@ Image: [base64 image data]`;
         setShowMultipleFileUpload(open);
         if (!open) setMultipleUploadFileCount(0);
       }}>
-        <DialogContent className={`${multipleUploadFileCount > 0 ? 'max-w-4xl h-[90vh]' : 'max-w-lg h-auto'} min-h-0 overflow-hidden p-0 transition-all duration-300`}>
+        <DialogContent className={`${multipleUploadFileCount > 0 ? 'max-w-6xl h-[90vh]' : 'max-w-lg h-auto'} min-h-0 overflow-hidden p-0 transition-all duration-300`}>
           <MultipleFileUpload
             runsheetData={{
               id: activeRunsheet?.id || location.state?.runsheetId || 'temp-id',

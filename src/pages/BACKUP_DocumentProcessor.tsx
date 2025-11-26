@@ -2827,7 +2827,7 @@ Image: [base64 image data]`;
 
       {/* Multiple File Upload Dialog */}
       <Dialog open={showMultipleFileUpload} onOpenChange={setShowMultipleFileUpload}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden p-0">
+        <DialogContent className="max-w-6xl max-h-[80vh] overflow-hidden p-0">
           <MultipleFileUpload
             runsheetData={{
               id: activeRunsheet?.id || location.state?.runsheetId || 'temp-id',
