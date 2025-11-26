@@ -3039,19 +3039,21 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     setIsLoadingRunsheet(true);
     
     // Load column instructions first before setting columns to avoid false "missing" highlights
+    // PRIORITY: Use runsheet-specific instructions first, fall back to user defaults
     let finalColumnInstructions = {};
     
     try {
-      const userPreferences = await ExtractionPreferencesService.getDefaultPreferences();
-      
-      if (userPreferences && userPreferences.column_instructions) {
-        // Use user's saved extraction preferences
-        finalColumnInstructions = userPreferences.column_instructions as Record<string, string>;
-        console.log('Applied user extraction preferences to runsheet');
-      } else if (runsheet.column_instructions) {
-        // Fall back to runsheet's embedded column instructions
+      if (runsheet.column_instructions && Object.keys(runsheet.column_instructions).length > 0) {
+        // Use runsheet-specific column instructions (highest priority)
         finalColumnInstructions = runsheet.column_instructions;
-        console.log('Applied runsheet embedded column instructions');
+        console.log('Applied runsheet-specific column instructions');
+      } else {
+        // Fall back to user's default extraction preferences if runsheet has no instructions
+        const userPreferences = await ExtractionPreferencesService.getDefaultPreferences();
+        if (userPreferences && userPreferences.column_instructions) {
+          finalColumnInstructions = userPreferences.column_instructions as Record<string, string>;
+          console.log('Applied user default extraction preferences (no runsheet instructions found)');
+        }
       }
     } catch (error) {
       console.error('Error loading extraction preferences:', error);
