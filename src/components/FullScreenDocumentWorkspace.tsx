@@ -402,7 +402,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
 
   const [abortController, setAbortController] = useState<AbortController | null>(null);
 
-  const analyzeDocumentAndPopulateRow = async () => {
+  const analyzeDocumentAndPopulateRow = async (fillEmptyOnly: boolean = false) => {
     if (!documentUrl || isAnalyzing) return;
     
     const controller = new AbortController();
@@ -498,8 +498,14 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
           console.log(`🔍 FullScreen Analysis - Field "${field}" is in editableFields:`, editableFields.includes(field));
           
           if (editableFields.includes(field) && value && typeof value === 'string') {
-            updatedData[field] = value;
-            console.log(`✅ FullScreen Analysis - Updated field "${field}" with value:`, value);
+            // Only update if fillEmptyOnly is false or field is empty
+            if (!fillEmptyOnly || !updatedData[field] || updatedData[field].toString().trim() === '' || 
+                updatedData[field].toString().trim().toLowerCase() === 'n/a') {
+              updatedData[field] = value;
+              console.log(`✅ FullScreen Analysis - Updated field "${field}" with value:`, value);
+            } else {
+              console.log(`⏭️ FullScreen Analysis - Skipped field "${field}" - keeping existing value`);
+            }
           } else {
             console.log(`❌ FullScreen Analysis - Skipped field "${field}" - reason: not in editableFields(${editableFields.includes(field)}) or invalid value(${!!value && typeof value === 'string'})`);
           }
@@ -972,16 +978,31 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
               Replace Existing Data?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              This row already contains data. Analyzing will replace existing values with extracted information.
-              Are you sure you want to continue?
+              This row already contains data. Choose how to proceed:
+              <br /><br />
+              <strong>Replace All:</strong> Overwrite all existing data with newly extracted values
+              <br />
+              <strong>Keep & Fill Empty:</strong> Keep existing data and only fill empty fields
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
             <AlertDialogCancel onClick={() => setShowAnalyzeWarning(false)}>
               Cancel
             </AlertDialogCancel>
-            <AlertDialogAction onClick={() => { setShowAnalyzeWarning(false); analyzeDocumentAndPopulateRow(); }}>
-              Replace Data
+            <Button
+              variant="secondary"
+              onClick={() => { 
+                setShowAnalyzeWarning(false); 
+                analyzeDocumentAndPopulateRow(true); // fillEmptyOnly = true
+              }}
+            >
+              Keep & Fill Empty
+            </Button>
+            <AlertDialogAction onClick={() => { 
+              setShowAnalyzeWarning(false); 
+              analyzeDocumentAndPopulateRow(false); // fillEmptyOnly = false
+            }}>
+              Replace All
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

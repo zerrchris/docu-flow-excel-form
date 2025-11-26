@@ -5995,7 +5995,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     setPendingRunsheetData(null);
   }, [pendingRunsheetData, user, onDataChange, onColumnChange, clearActiveRunsheet, setCurrentRunsheet, setActiveRunsheet, toast]);
 
-  const analyzeDocumentAndPopulateRow = async (file: File, targetRowIndex: number, forceOverwrite: boolean = false) => {
+  const analyzeDocumentAndPopulateRow = async (file: File, targetRowIndex: number, forceOverwrite: boolean = false, fillEmptyOnly: boolean = false) => {
     try {
       console.log('🔍 Starting document analysis for:', file.name, 'type:', file.type, 'size:', file.size);
       console.log('🔍 Target row index:', targetRowIndex, 'Force overwrite:', forceOverwrite);
@@ -6410,11 +6410,29 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
       const newData = [...data];
       console.log('🔍 Row data before update:', newData[targetRowIndex]);
       
-      // Merge with existing data (in case of partial updates)
-      newData[targetRowIndex] = {
-        ...newData[targetRowIndex],
-        ...cleanMappedData
-      };
+      // Merge with existing data
+      if (fillEmptyOnly) {
+        // Only fill empty fields, keep existing data
+        const existingRow = newData[targetRowIndex];
+        const mergedData: Record<string, string> = { ...existingRow };
+        
+        Object.keys(cleanMappedData).forEach(field => {
+          const existingValue = existingRow[field];
+          // Only replace if field is empty or N/A
+          if (!existingValue || existingValue.toString().trim() === '' || 
+              existingValue.toString().trim().toLowerCase() === 'n/a') {
+            mergedData[field] = cleanMappedData[field];
+          }
+        });
+        
+        newData[targetRowIndex] = mergedData;
+      } else {
+        // Replace all data (or merge for partial updates)
+        newData[targetRowIndex] = {
+          ...newData[targetRowIndex],
+          ...cleanMappedData
+        };
+      }
       
       console.log('🔍 Row data after update:', newData[targetRowIndex]);
       console.log('🔍 Full updated data array:', newData);
@@ -8000,12 +8018,14 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
                 Replace Existing Data?
               </AlertDialogTitle>
               <AlertDialogDescription>
-                This row already contains data. Analyzing the document will replace all existing data in this row with the extracted information from the document.
+                This row already contains data. Choose how to proceed:
                 <br /><br />
-                Are you sure you want to continue?
+                <strong>Replace All:</strong> Overwrite all existing data with newly extracted values
+                <br />
+                <strong>Keep & Fill Empty:</strong> Keep existing data and only fill empty fields
               </AlertDialogDescription>
             </AlertDialogHeader>
-            <AlertDialogFooter>
+            <AlertDialogFooter className="flex-col sm:flex-row gap-2">
               <AlertDialogCancel onClick={() => {
                 setShowAnalyzeWarningDialog(false);
                 setShowInsertionPreview(false);
@@ -8014,16 +8034,30 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
               }}>
                 Cancel
               </AlertDialogCancel>
+              <Button
+                variant="secondary"
+                onClick={async () => {
+                  if (pendingAnalysis) {
+                    setShowAnalyzeWarningDialog(false);
+                    setShowInsertionPreview(false);
+                    setPendingDataInsertion(null);
+                    await analyzeDocumentAndPopulateRow(pendingAnalysis.file, pendingAnalysis.rowIndex, false, true);
+                    setPendingAnalysis(null);
+                  }
+                }}
+              >
+                Keep & Fill Empty
+              </Button>
               <AlertDialogAction onClick={async () => {
                 if (pendingAnalysis) {
                   setShowAnalyzeWarningDialog(false);
                   setShowInsertionPreview(false);
                   setPendingDataInsertion(null);
-                  await analyzeDocumentAndPopulateRow(pendingAnalysis.file, pendingAnalysis.rowIndex, true);
+                  await analyzeDocumentAndPopulateRow(pendingAnalysis.file, pendingAnalysis.rowIndex, true, false);
                   setPendingAnalysis(null);
                 }
               }}>
-                Replace Data
+                Replace All
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
