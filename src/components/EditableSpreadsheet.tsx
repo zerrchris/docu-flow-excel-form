@@ -48,6 +48,7 @@ import { DocumentService, type DocumentRecord } from '@/services/documentService
 import { ExtractionPreferencesService } from '@/services/extractionPreferences';
 import { ColumnWidthPreferencesService } from '@/services/columnWidthPreferences';
 import DocumentNamingSettings from './DocumentNamingSettings';
+import InstrumentSelectionDialog from './InstrumentSelectionDialog';
 import InlineDocumentViewer from './InlineDocumentViewer';
 import ColumnPreferencesDialog from './ColumnPreferencesDialog';
 import FullScreenDocumentWorkspace from './FullScreenDocumentWorkspace';
@@ -412,6 +413,9 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   const [newRunsheetName, setNewRunsheetName] = useState('');
   const [showAnalyzeWarningDialog, setShowAnalyzeWarningDialog] = useState(false);
   const [pendingAnalysis, setPendingAnalysis] = useState<{file: File, filename: string, rowIndex: number} | null>(null);
+  const [showInstrumentSelectionDialog, setShowInstrumentSelectionDialog] = useState(false);
+  const [detectedInstruments, setDetectedInstruments] = useState<Array<{id: number; type: string; description: string; snippet?: string}>>([]);
+  const [pendingInstrumentAnalysis, setPendingInstrumentAnalysis] = useState<{file: File, rowIndex: number, forceOverwrite: boolean, fillEmptyOnly: boolean} | null>(null);
   const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] = useState(false);
   const [columnAlignments, setColumnAlignments] = useState<Record<string, 'left' | 'center' | 'right'>>({});
   const [editingColumnAlignment, setEditingColumnAlignment] = useState<'left' | 'center' | 'right'>('left');
@@ -5995,7 +5999,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     setPendingRunsheetData(null);
   }, [pendingRunsheetData, user, onDataChange, onColumnChange, clearActiveRunsheet, setCurrentRunsheet, setActiveRunsheet, toast]);
 
-  const analyzeDocumentAndPopulateRow = async (file: File, targetRowIndex: number, forceOverwrite: boolean = false, fillEmptyOnly: boolean = false) => {
+  const analyzeDocumentAndPopulateRow = async (file: File, targetRowIndex: number, forceOverwrite: boolean = false, fillEmptyOnly: boolean = false, selectedInstrument?: number) => {
     try {
       console.log('🔍 Starting document analysis for:', file.name, 'type:', file.type, 'size:', file.size);
       console.log('🔍 Target row index:', targetRowIndex, 'Force overwrite:', forceOverwrite);
@@ -6217,7 +6221,8 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
             extraction_preferences: {
               columns: extractionPrefs?.columns || columns.filter(col => col !== 'Document File Name'),
               column_instructions: extractionPrefs?.column_instructions || {}
-            }
+            },
+            selected_instrument: selectedInstrument
           }
         }));
       } else {
@@ -6231,7 +6236,8 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
             extraction_preferences: {
               columns: extractionPrefs?.columns || columns.filter(col => col !== 'Document File Name'),
               column_instructions: extractionPrefs?.column_instructions || {}
-            }
+            },
+            selected_instrument: selectedInstrument
           }
         }));
       }
@@ -6246,6 +6252,20 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
       }
 
       const analysis = analysisResult.analysis;
+      
+      // Check for multiple instruments
+      if (analysis.multiple_instruments && analysis.instrument_count > 1 && !selectedInstrument) {
+        console.log('🔍 Multiple instruments detected:', analysis.instrument_count);
+        setDetectedInstruments(analysis.instruments || []);
+        setPendingInstrumentAnalysis({ file, rowIndex: targetRowIndex, forceOverwrite, fillEmptyOnly });
+        setShowInstrumentSelectionDialog(true);
+        toast({
+          title: "Multiple Instruments Detected",
+          description: `Found ${analysis.instrument_count} instruments on this page. Please select which one to extract.`,
+        });
+        return;
+      }
+      
       if (!analysis?.extracted_data) {
         throw new Error('No data extracted from document');
       }
@@ -8062,6 +8082,37 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
             </AlertDialogFooter>
           </AlertDialogContent>
          </AlertDialog>
+
+         {/* Instrument Selection Dialog */}
+         {detectedInstruments.length > 0 && (
+           <InstrumentSelectionDialog
+             open={showInstrumentSelectionDialog}
+             onClose={() => {
+               setShowInstrumentSelectionDialog(false);
+               setDetectedInstruments([]);
+               setPendingInstrumentAnalysis(null);
+             }}
+             instruments={detectedInstruments}
+             onSelect={async (instrumentId) => {
+               setShowInstrumentSelectionDialog(false);
+               if (pendingInstrumentAnalysis) {
+                 toast({
+                   title: "Instrument Selected",
+                   description: `Extracting data from Instrument #${instrumentId}...`,
+                 });
+                 await analyzeDocumentAndPopulateRow(
+                   pendingInstrumentAnalysis.file,
+                   pendingInstrumentAnalysis.rowIndex,
+                   pendingInstrumentAnalysis.forceOverwrite,
+                   pendingInstrumentAnalysis.fillEmptyOnly,
+                   instrumentId
+                 );
+                 setPendingInstrumentAnalysis(null);
+                 setDetectedInstruments([]);
+               }
+             }}
+           />
+         )}
 
          {/* Row Insertion Preview */}
          {showInsertionPreview && pendingDataInsertion && (
