@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { X, Plus, GripVertical, Save, RotateCcw, Sparkles, Wand2 } from 'lucide-react';
 import { ExtractionPreferencesService } from '@/services/extractionPreferences';
 import { supabase } from '@/integrations/supabase/client';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface ColumnPreferencesDialogProps {
   open: boolean;
@@ -31,6 +32,8 @@ const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const [isGeneratingAllAI, setIsGeneratingAllAI] = useState(false);
+  const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const { toast } = useToast();
 
   // Load current preferences when dialog opens
@@ -151,6 +154,56 @@ const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
       [newColumns[index], newColumns[newIndex]] = [newColumns[newIndex], newColumns[index]];
       setColumns(newColumns);
     }
+  };
+
+  // Drag and drop handlers
+  const handleDragStart = (e: React.DragEvent, column: string) => {
+    setDraggedColumn(column);
+    e.dataTransfer.effectAllowed = 'move';
+    // Set a custom drag image or data
+    e.dataTransfer.setData('text/plain', column);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverIndex(index);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    // Only clear if we're leaving the container, not moving between children
+    const relatedTarget = e.relatedTarget as HTMLElement;
+    if (!relatedTarget || !relatedTarget.closest('[data-column-item]')) {
+      setDragOverIndex(null);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent, targetIndex: number) => {
+    e.preventDefault();
+    
+    if (!draggedColumn) return;
+    
+    const draggedIndex = columns.indexOf(draggedColumn);
+    if (draggedIndex === -1 || draggedIndex === targetIndex) {
+      setDraggedColumn(null);
+      setDragOverIndex(null);
+      return;
+    }
+
+    const newColumns = [...columns];
+    // Remove the dragged column
+    newColumns.splice(draggedIndex, 1);
+    // Insert it at the target position
+    newColumns.splice(targetIndex, 0, draggedColumn);
+    
+    setColumns(newColumns);
+    setDraggedColumn(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedColumn(null);
+    setDragOverIndex(null);
   };
 
   const savePreferences = async () => {
@@ -347,12 +400,32 @@ const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
                 {columns.map((column, index) => (
                   <div
                     key={column}
-                    className={`flex items-center gap-2 p-3 border rounded-lg transition-colors cursor-pointer ${
+                    data-column-item
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, column)}
+                    onDragOver={(e) => handleDragOver(e, index)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleDrop(e, index)}
+                    onDragEnd={handleDragEnd}
+                    className={`flex items-center gap-2 p-3 border rounded-lg transition-all cursor-pointer ${
                       selectedColumn === column ? 'bg-primary/10 border-primary' : 'hover:bg-muted'
+                    } ${draggedColumn === column ? 'opacity-50' : ''} ${
+                      dragOverIndex === index && draggedColumn !== column ? 'border-primary border-2' : ''
                     }`}
                     onClick={() => setSelectedColumn(column)}
                   >
-                    <GripVertical className="h-4 w-4 text-muted-foreground cursor-move" />
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="cursor-move">
+                            <GripVertical className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Drag to reorder columns</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                     <Badge variant={selectedColumn === column ? "default" : "outline"} className="flex-1 justify-start text-sm">
                       {column}
                     </Badge>
