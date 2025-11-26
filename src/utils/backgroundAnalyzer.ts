@@ -201,11 +201,8 @@ export class BackgroundAnalyzer {
       if (documentCache.has(cacheKey)) {
         imageData = documentCache.get(cacheKey)!;
       } else {
-        // Use public URL directly to avoid signed URL overhead
-        const { data } = supabase.storage
-          .from('documents')
-          .getPublicUrl(document.file_path);
-        const documentUrl = data.publicUrl;
+        // Use signed URL for private storage bucket with RLS
+        const documentUrl = await DocumentService.getDocumentUrl(document.file_path);
         
         const response = await fetch(documentUrl);
         const blob = await response.blob();
