@@ -306,12 +306,30 @@ export class BackgroundAnalyzer {
   }
 
   private saveJobToStorage(job: AnalysisJob) {
-    // Exclude cache from storage to avoid localStorage bloat
-    const jobToStore = {
-      ...job,
-      documentCache: undefined // Don't persist cache
-    };
-    localStorage.setItem('background_analysis_job', JSON.stringify(jobToStore));
+    try {
+      // Store only minimal metadata to avoid localStorage quota issues
+      // Don't store documentMap, currentData, or cache as they can be very large
+      const jobMetadata = {
+        id: job.id,
+        runsheetId: job.runsheetId,
+        runsheetName: job.runsheetName,
+        columns: job.columns,
+        columnInstructions: job.columnInstructions,
+        currentIndex: job.currentIndex,
+        status: job.status,
+        skipRowsWithData: job.skipRowsWithData,
+        lastSaveIndex: job.lastSaveIndex,
+        resultsCount: job.results.length
+      };
+      localStorage.setItem('background_analysis_job', JSON.stringify(jobMetadata));
+    } catch (error) {
+      // Handle QuotaExceededError gracefully - job will continue in memory
+      if (error instanceof Error && error.name === 'QuotaExceededError') {
+        console.warn('localStorage quota exceeded - job will run in memory only');
+      } else {
+        console.error('Error saving job to storage:', error);
+      }
+    }
   }
 
   private loadJobFromStorage(): AnalysisJob | null {
