@@ -124,11 +124,16 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
           
           toast({
             title: "Batch analysis completed",
-            description: `Successfully analyzed ${successCount} documents.${errorCount > 0 ? ` ${errorCount} failed.` : ''}${skippedCount > 0 ? ` ${skippedCount} skipped.` : ''} You can now close this dialog.`,
+            description: `Successfully analyzed ${successCount} documents.${errorCount > 0 ? ` ${errorCount} failed.` : ''}${skippedCount > 0 ? ` ${skippedCount} skipped.` : ''}`,
           });
           
           setCurrentJobId(null);
           setIsAnalyzing(false);
+          
+          // Auto-close dialog after a brief delay to show completion
+          setTimeout(() => {
+            onClose();
+          }, 2000);
         }
       }
     });
