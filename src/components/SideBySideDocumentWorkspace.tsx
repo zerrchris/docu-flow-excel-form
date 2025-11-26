@@ -17,6 +17,7 @@ import ReExtractDialog from './ReExtractDialog';
 import { ExtractionPreferencesService } from '@/services/extractionPreferences';
 import ColumnPreferencesDialog from './ColumnPreferencesDialog';
 import { DocumentService, type DocumentRecord } from '@/services/documentService';
+import InstrumentSelectionDialog from './InstrumentSelectionDialog';
 
 interface ExtractedField {
   key: string;
@@ -71,6 +72,16 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
   const [isReExtracting, setIsReExtracting] = useState(false);
   const [showColumnPreferences, setShowColumnPreferences] = useState(false);
   
+  // Multi-instrument detection state
+  const [showInstrumentSelectionDialog, setShowInstrumentSelectionDialog] = useState(false);
+  const [detectedInstruments, setDetectedInstruments] = useState<any[]>([]);
+  const [pendingInstrumentAnalysis, setPendingInstrumentAnalysis] = useState<{
+    imageData: string;
+    extractionFields: string;
+    fillEmptyOnly: boolean;
+    forceOverwrite: boolean;
+  } | null>(null);
+  
   // Individual field instruction editing
   const [fieldInstructionDialog, setFieldInstructionDialog] = useState<{
     isOpen: boolean;
@@ -108,7 +119,7 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
 
   const [abortController, setAbortController] = useState<AbortController | null>(null);
 
-  const handleAnalyzeDocument = async (forceOverwrite = false, fillEmptyOnly = false) => {
+  const handleAnalyzeDocument = async (forceOverwrite = false, fillEmptyOnly = false, selectedInstrument?: number) => {
     console.log('🔍 SIDE-BY-SIDE: handleAnalyzeDocument called');
     console.log('🔍 SIDE-BY-SIDE: documentRecord:', documentRecord);
     
@@ -146,9 +157,6 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
         columns.map(col => `${col}: Extract this field`).join('\n');
 
       const documentUrl = await DocumentService.getDocumentUrl(documentRecord.file_path);
-      const isPdf = documentRecord.content_type === 'application/pdf' || documentRecord.stored_filename.toLowerCase().endsWith('.pdf');
-      
-      let analysisResult;
       
       // Convert document to base64 image data for analysis API
       const response = await fetch(documentUrl);
@@ -159,18 +167,44 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
         reader.readAsDataURL(blob);
       });
       
-      const { data, error } = await supabase.functions.invoke('analyze-document', {
+      const { data, error } = await supabase.functions.invoke('enhanced-document-analysis', {
         body: {
-          prompt: `Extract information from this document for the following fields and return as valid JSON:\n${extractionFields}\n\nReturn only a JSON object with field names as keys and extracted values as values. Do not include any markdown, explanations, or additional text.`,
-          imageData,
+          document_data: imageData,
+          runsheet_id: runsheetId,
+          document_name: documentRecord.stored_filename,
+          extraction_preferences: {
+            columns: extractionPrefs?.columns || columns,
+            column_instructions: extractionPrefs?.column_instructions || {}
+          },
+          selected_instrument: selectedInstrument
         }
       });
 
       if (error) {
-        throw new Error(error.message || 'OpenAI analysis failed');
+        throw new Error(error.message || 'Document analysis failed');
       }
       
-      analysisResult = data;
+      const analysisResult = data;
+      
+      // Check if multiple instruments were detected
+      if (analysisResult?.analysis?.multiple_instruments && analysisResult?.analysis?.instrument_count > 1) {
+        console.log('🔍 Multiple instruments detected:', analysisResult.analysis.instrument_count);
+        console.log('🔍 Instruments:', analysisResult.analysis.instruments);
+        
+        // Store the analysis context for later use
+        setPendingInstrumentAnalysis({
+          imageData,
+          extractionFields,
+          fillEmptyOnly,
+          forceOverwrite
+        });
+        
+        // Show instrument selection dialog
+        setDetectedInstruments(analysisResult.analysis.instruments || []);
+        setShowInstrumentSelectionDialog(true);
+        setIsAnalyzing(false);
+        return;
+      }
 
       console.log('📡 Analysis function response (side-by-side):', { data: analysisResult });
 
@@ -183,37 +217,27 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
         return;
       }
 
-      if (analysisResult?.generatedText) {
-        console.log('✅ Analysis successful (side-by-side), raw response:', analysisResult.generatedText);
+      // Handle the response from enhanced-document-analysis
+      if (analysisResult?.success && analysisResult?.analysis) {
+        console.log('✅ Analysis successful (side-by-side), response:', analysisResult.analysis);
         
-        // Parse the JSON response from AI (same as expanded workspace)
-        let extractedData = {};
-        try {
-          // Try to parse as JSON first
-          extractedData = JSON.parse(analysisResult.generatedText);
-          console.log('✅ Parsed extracted data (side-by-side):', extractedData);
-        } catch (e) {
-          console.warn('⚠️ Failed to parse as JSON, trying to extract JSON from text...');
-          // Try to extract JSON from the text
-          const jsonMatch = analysisResult.generatedText.match(/\{[\s\S]*\}/);
-          if (jsonMatch) {
-            try {
-              extractedData = JSON.parse(jsonMatch[0]);
-              console.log('✅ Extracted JSON from text (side-by-side):', extractedData);
-            } catch (e2) {
-              console.error('❌ Could not parse extracted JSON (side-by-side):', e2);
-              toast({
-                title: "Analysis completed with errors",
-                description: "The document was analyzed but the data format was unexpected. Please check the results.",
-                variant: "destructive"
-              });
-              return;
-            }
-          } else {
-            console.error('❌ No JSON found in response (side-by-side)');
+        let extractedData = analysisResult.analysis;
+        
+        // If the analysis contains a nested data structure, extract it
+        if (extractedData.extracted_data) {
+          extractedData = extractedData.extracted_data;
+        }
+        
+        // Parse if it's a string
+        if (typeof extractedData === 'string') {
+          try {
+            extractedData = JSON.parse(extractedData);
+            console.log('✅ Parsed extracted data (side-by-side):', extractedData);
+          } catch (e) {
+            console.error('❌ Could not parse extracted JSON (side-by-side):', e);
             toast({
-              title: "Analysis failed",
-              description: "Could not extract structured data from the document",
+              title: "Analysis completed with errors",
+              description: "The document was analyzed but the data format was unexpected.",
               variant: "destructive"
             });
             return;
@@ -1037,8 +1061,34 @@ Return only the filename, nothing else.`,
               Save Instructions
             </AlertDialogAction>
           </AlertDialogFooter>
-        </AlertDialogContent>
+          </AlertDialogContent>
       </AlertDialog>
+      
+      {/* Instrument Selection Dialog */}
+      <InstrumentSelectionDialog
+        open={showInstrumentSelectionDialog}
+        onClose={() => {
+          setShowInstrumentSelectionDialog(false);
+          setDetectedInstruments([]);
+          setPendingInstrumentAnalysis(null);
+        }}
+        instruments={detectedInstruments}
+        onSelect={(instrumentId) => {
+          console.log('🔍 User selected instrument:', instrumentId);
+          setShowInstrumentSelectionDialog(false);
+          
+          if (pendingInstrumentAnalysis) {
+            // Re-run analysis with selected instrument
+            handleAnalyzeDocument(
+              pendingInstrumentAnalysis.forceOverwrite,
+              pendingInstrumentAnalysis.fillEmptyOnly,
+              instrumentId
+            );
+          }
+          
+          setPendingInstrumentAnalysis(null);
+        }}
+      />
     </div>
   );
 };

@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import ReExtractDialog from './ReExtractDialog';
+import InstrumentSelectionDialog from './InstrumentSelectionDialog';
 
 interface FullScreenDocumentWorkspaceProps {
   runsheetId: string;
@@ -84,6 +85,15 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
     currentValue: ''
   });
   const [isReExtracting, setIsReExtracting] = useState(false);
+  
+  // Multi-instrument detection state
+  const [showInstrumentSelectionDialog, setShowInstrumentSelectionDialog] = useState(false);
+  const [detectedInstruments, setDetectedInstruments] = useState<any[]>([]);
+  const [pendingInstrumentAnalysis, setPendingInstrumentAnalysis] = useState<{
+    imageData: string;
+    extractionFields: string;
+    fillEmptyOnly: boolean;
+  } | null>(null);
   
   // Get runsheet management hook for auto-saving changes
   const { activeRunsheet, setCurrentRunsheet } = useActiveRunsheet();
@@ -402,7 +412,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
 
   const [abortController, setAbortController] = useState<AbortController | null>(null);
 
-  const analyzeDocumentAndPopulateRow = async (fillEmptyOnly: boolean = false) => {
+  const analyzeDocumentAndPopulateRow = async (fillEmptyOnly: boolean = false, selectedInstrument?: number) => {
     if (!documentUrl || isAnalyzing) return;
     
     const controller = new AbortController();
@@ -419,8 +429,8 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
 
       let analysisResult;
       
-      // Since PDFs are now converted to images at upload time, use OpenAI for all files
-      console.log('🔧 Analyzing document with OpenAI (PDFs are pre-converted to images)...');
+      // Since PDFs are now converted to images at upload time, use enhanced analysis for all files
+      console.log('🔧 Analyzing document with enhanced analysis (multi-instrument support)...');
       
       // Fetch the document and convert to base64 image data URL
       const response = await fetch(documentUrl);
@@ -431,18 +441,43 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
         reader.readAsDataURL(blob);
       });
       
-      const { data, error } = await supabase.functions.invoke('analyze-document', {
+      const { data, error } = await supabase.functions.invoke('enhanced-document-analysis', {
         body: {
-          imageData,
-          prompt: `Extract information from this document for the following fields and return as valid JSON:\n${extractionFields}\n\nReturn only a JSON object with field names as keys and extracted values as values. Do not include any markdown, explanations, or additional text.`
+          document_data: imageData,
+          runsheet_id: runsheetId,
+          document_name: documentName,
+          extraction_preferences: {
+            columns: extractionPrefs?.columns || editableFields,
+            column_instructions: extractionPrefs?.column_instructions || {}
+          },
+          selected_instrument: selectedInstrument
         }
       });
 
       if (error) {
-        throw new Error(error.message || 'OpenAI analysis failed');
+        throw new Error(error.message || 'Document analysis failed');
       }
       
       analysisResult = data;
+      
+      // Check if multiple instruments were detected
+      if (analysisResult?.analysis?.multiple_instruments && analysisResult?.analysis?.instrument_count > 1) {
+        console.log('🔍 Multiple instruments detected:', analysisResult.analysis.instrument_count);
+        console.log('🔍 Instruments:', analysisResult.analysis.instruments);
+        
+        // Store the analysis context for later use
+        setPendingInstrumentAnalysis({
+          imageData,
+          extractionFields,
+          fillEmptyOnly
+        });
+        
+        // Show instrument selection dialog
+        setDetectedInstruments(analysisResult.analysis.instruments || []);
+        setShowInstrumentSelectionDialog(true);
+        setIsAnalyzing(false);
+        return;
+      }
 
       console.log('📡 Analysis function response:', { data: analysisResult });
 
@@ -455,33 +490,30 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
         return;
       }
 
-      if (analysisResult?.generatedText) {
-        console.log('✅ Analysis successful, raw response:', analysisResult.generatedText);
+      // Handle the response from enhanced-document-analysis
+      if (analysisResult?.success && analysisResult?.analysis) {
+        console.log('✅ Analysis successful, response:', analysisResult.analysis);
         
-        // Parse the JSON response from AI
-        let extractedData = {};
-        try {
-          // Try to parse as JSON first
-          extractedData = JSON.parse(analysisResult.generatedText);
-          console.log('✅ Parsed extracted data:', extractedData);
-        } catch (e) {
-          console.log('🔍 JSON parsing failed, trying to extract JSON from text...');
-          // If JSON parsing fails, try to extract JSON from the text
-          const jsonMatch = analysisResult.generatedText.match(/\{[\s\S]*\}/);
-          if (jsonMatch) {
-            try {
-              extractedData = JSON.parse(jsonMatch[0]);
-              console.log('✅ Extracted data from regex match:', extractedData);
-            } catch (parseError) {
-              console.error('🔍 JSON parsing of matched content failed:', parseError);
-              // If all parsing fails, show the raw response and continue with empty data
-              console.log('Raw response that failed to parse:', analysisResult.generatedText);
-              extractedData = {};
-            }
-          } else {
-            console.error('🔍 Could not find JSON in response:', analysisResult.generatedText);
-            // Don't throw error, just use empty data
-            extractedData = {};
+        let extractedData = analysisResult.analysis;
+        
+        // If the analysis contains a nested data structure, extract it
+        if (extractedData.extracted_data) {
+          extractedData = extractedData.extracted_data;
+        }
+        
+        // Parse if it's a string
+        if (typeof extractedData === 'string') {
+          try {
+            extractedData = JSON.parse(extractedData);
+            console.log('✅ Parsed extracted data:', extractedData);
+          } catch (e) {
+            console.error('❌ Could not parse extracted JSON:', e);
+            toast({
+              title: "Analysis completed with errors",
+              description: "The document was analyzed but the data format was unexpected.",
+              variant: "destructive"
+            });
+            return;
           }
         }
         
@@ -1016,6 +1048,31 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
         currentValue={reExtractDialog.currentValue}
         onReExtract={handleReExtractWithNotes}
         isLoading={isReExtracting}
+      />
+      
+      {/* Instrument Selection Dialog */}
+      <InstrumentSelectionDialog
+        open={showInstrumentSelectionDialog}
+        onClose={() => {
+          setShowInstrumentSelectionDialog(false);
+          setDetectedInstruments([]);
+          setPendingInstrumentAnalysis(null);
+        }}
+        instruments={detectedInstruments}
+        onSelect={(instrumentId) => {
+          console.log('🔍 User selected instrument:', instrumentId);
+          setShowInstrumentSelectionDialog(false);
+          
+          if (pendingInstrumentAnalysis) {
+            // Re-run analysis with selected instrument
+            analyzeDocumentAndPopulateRow(
+              pendingInstrumentAnalysis.fillEmptyOnly,
+              instrumentId
+            );
+          }
+          
+          setPendingInstrumentAnalysis(null);
+        }}
       />
     </div>
   );
