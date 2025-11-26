@@ -160,8 +160,20 @@ const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
   const handleDragStart = (e: React.DragEvent, column: string) => {
     setDraggedColumn(column);
     e.dataTransfer.effectAllowed = 'move';
-    // Set a custom drag image or data
     e.dataTransfer.setData('text/plain', column);
+    
+    // Create a transparent drag image to prevent text/button labels from showing
+    const dragImage = document.createElement('div');
+    dragImage.style.opacity = '0';
+    dragImage.style.position = 'absolute';
+    dragImage.style.top = '-999px';
+    document.body.appendChild(dragImage);
+    e.dataTransfer.setDragImage(dragImage, 0, 0);
+    
+    // Clean up the temporary element after drag starts
+    setTimeout(() => {
+      document.body.removeChild(dragImage);
+    }, 0);
   };
 
   const handleDragOver = (e: React.DragEvent, index: number) => {
@@ -414,7 +426,7 @@ const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
                       onDragEnd={handleDragEnd}
                       className={`
                         flex items-center gap-2 p-3 border rounded-lg 
-                        transition-all cursor-pointer
+                        transition-all cursor-pointer select-none
                         ${selectedColumn === column ? 'bg-primary/10 border-primary' : 'hover:bg-muted'}
                         ${draggedColumn === column ? 'opacity-40 scale-95 border-dashed shadow-xl' : ''}
                       `}
