@@ -74,7 +74,7 @@ const Home: React.FC = () => {
           <h2 className="text-5xl font-bold tracking-tight mb-6">
             Deed to Data — AI scans. You approve.
           </h2>
-          <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">Save hours of manual entry—AI pulls key details from leases, deeds, and other instruments straight into your runsheets so landmen can focus on decisions, not data entry.</p>
+          <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">Save hours of typing—Runsheet Pro extracts names, dates, legal descriptions, and lease terms directly into your runsheet, so you spend time analyzing title, not entering data.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             {user ? <>
                 <Link to="/app">
