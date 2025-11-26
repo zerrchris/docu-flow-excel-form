@@ -49,12 +49,13 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    const { document_data, runsheet_id, document_name, extraction_preferences } = await req.json();
+    const { document_data, runsheet_id, document_name, extraction_preferences, selected_instrument } = await req.json();
     
     console.log('📋 Extraction preferences received:', {
       columns: extraction_preferences?.columns?.length || 0,
       hasInstructions: !!extraction_preferences?.column_instructions,
-      instructionsKeys: extraction_preferences?.column_instructions ? Object.keys(extraction_preferences.column_instructions) : []
+      instructionsKeys: extraction_preferences?.column_instructions ? Object.keys(extraction_preferences.column_instructions) : [],
+      selectedInstrument: selected_instrument
     });
 
     // Comprehensive document format validation
@@ -156,6 +157,18 @@ serve(async (req) => {
             role: "system",
             content: `You are an expert document analyst specializing in real estate and legal documents. You MUST extract structured data and return ONLY valid JSON format.
 
+🔍 MULTI-INSTRUMENT DETECTION:
+${selected_instrument ? `
+- THIS IS A FOCUSED EXTRACTION: Extract data ONLY from Instrument #${selected_instrument}
+- Ignore all other instruments on the page
+- Focus exclusively on the selected instrument's details
+` : `
+- FIRST, count how many separate legal instruments appear on this page
+- Each instrument is a distinct legal document (deed, mortgage, assignment, etc.)
+- If multiple instruments exist, identify each one clearly
+- Return instrument details so the user can choose which to extract
+`}
+
 🔍 ANALYSIS REQUIREMENTS:
 - Scan the document carefully and extract all visible information
 - Focus on consistency - extract the same information the same way every time
@@ -184,6 +197,7 @@ CONSISTENCY GUIDELINES:
 ${globalInstructions ? `\nGlobal Admin Instructions: ${globalInstructions}\n` : ''}
 
 RESPONSE FORMAT: Return ONLY a valid JSON object with:
+${selected_instrument ? `
 {
   "extracted_data": {
     "field_name": "extracted_value_or_empty_string_if_not_found"
@@ -192,11 +206,32 @@ RESPONSE FORMAT: Return ONLY a valid JSON object with:
     "field_name": 0.95
   },
   "document_type": "detected document type",
-  "instruments_detected": "number and types of instruments found on page",
-  "target_instrument": "which instrument was selected for analysis and why",
-  "extraction_summary": "brief summary of what was extracted from the target instrument",
+  "selected_instrument_number": ${selected_instrument},
+  "extraction_summary": "brief summary of what was extracted",
   "processing_notes": "any notes about extraction quality or issues"
-}`
+}` : `
+{
+  "multiple_instruments": true/false,
+  "instrument_count": number,
+  "instruments": [
+    {
+      "id": 1,
+      "type": "instrument type (e.g., Warranty Deed, Mortgage, Assignment)",
+      "description": "brief description of this instrument",
+      "snippet": "short text snippet from document identifying this instrument"
+    }
+  ],
+  "extracted_data": {
+    "field_name": "if only 1 instrument, extract data; otherwise leave empty"
+  },
+  "confidence_scores": {
+    "field_name": 0.95
+  },
+  "document_type": "detected document type",
+  "extraction_summary": "brief summary",
+  "processing_notes": "any notes about extraction quality or issues"
+}`}
+`
           },
           {
             role: "user",
