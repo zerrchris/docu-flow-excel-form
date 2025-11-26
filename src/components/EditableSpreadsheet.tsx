@@ -382,6 +382,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   const [lastClickedCell, setLastClickedCell] = useState<{rowIndex: number, column: string} | null>(null);
   const [editingCell, setEditingCell] = useState<{rowIndex: number, column: string} | null>(null);
   const [cellValue, setCellValue] = useState<string>('');
+  const cellValueRef = useRef<string>(''); // Track value without re-renders
   const [selectedCell, setSelectedCell] = useState<{rowIndex: number, column: string} | null>(null);
   const [lastSavedState, setLastSavedState] = useState<string>('');
   const [selectedRange, setSelectedRange] = useState<{start: {rowIndex: number, columnIndex: number}, end: {rowIndex: number, columnIndex: number}} | null>(null);
@@ -4453,6 +4454,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
   const startEditing = useCallback((rowIndex: number, column: string, value: string, clickEvent?: React.MouseEvent, selectionType: 'none' | 'word' | 'all' = 'none') => {
     setEditingCell({ rowIndex, column });
     setCellValue(value);
+    cellValueRef.current = value; // Also update ref
     setSelectedCell({ rowIndex, column });
     
     // Focus the textarea after it's rendered and handle selection
@@ -4648,11 +4650,13 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
 
   const saveEdit = useCallback(async () => {
     if (editingCell) {
-      console.log('🔧 SAVE_EDIT: Saving cell edit for row', editingCell.rowIndex, 'column', editingCell.column, 'value:', cellValue);
+      // Read from ref for the latest typed value
+      const currentValue = cellValueRef.current;
+      console.log('🔧 SAVE_EDIT: Saving cell edit for row', editingCell.rowIndex, 'column', editingCell.column, 'value:', currentValue);
       const newData = [...data];
       newData[editingCell.rowIndex] = {
         ...newData[editingCell.rowIndex],
-        [editingCell.column]: cellValue
+        [editingCell.column]: currentValue
       };
       console.log('🔧 SAVE_EDIT: Updated row data:', JSON.stringify(newData[editingCell.rowIndex], null, 2));
       setData(newData);
@@ -4675,12 +4679,12 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       }
       
       // Handle Document File Name column edits specially - update the actual document filename
-      if (editingCell.column === 'Document File Name' && currentRunsheetId && cellValue.trim()) {
+      if (editingCell.column === 'Document File Name' && currentRunsheetId && currentValue.trim()) {
         const document = documentMap.get(editingCell.rowIndex);
         if (document) {
           try {
             // For direct filename edits, use the exact filename entered by the user
-            const sanitizedFilename = cellValue.trim();
+            const sanitizedFilename = currentValue.trim();
             
             // Construct new file path with the user's exact filename
             const pathParts = document.file_path.split('/');
@@ -4751,7 +4755,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       
       setEditingCell(null);
     }
-   }, [editingCell, cellValue, data, onDataChange, currentRunsheetId, user, documentMap, setDocumentMap, onDocumentMapChange, toast, runsheetName, columns, columnInstructions, saveToDatabase]);
+   }, [editingCell, data, onDataChange, currentRunsheetId, user, documentMap, setDocumentMap, onDocumentMapChange, toast, runsheetName, columns, columnInstructions, saveToDatabase]);
 
    // Handle re-extract functionality
    const handleReExtract = useCallback(async (rowIndex: number, column: string, notes: string, saveToPreferences?: boolean) => {
@@ -4850,6 +4854,7 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
    const cancelEdit = useCallback(() => {
      setEditingCell(null);
      setCellValue('');
+     cellValueRef.current = ''; // Also clear ref
    }, []);
 
   // Keyboard navigation
@@ -7400,10 +7405,13 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
                         >
                            {isEditing ? (
                                <Textarea
-                                 ref={textareaRef}
-                                 value={cellValue}
-                                 onChange={(e) => setCellValue(e.target.value)}
-                                 onKeyDown={(e) => {
+                                  ref={textareaRef}
+                                  defaultValue={cellValue}
+                                  onChange={(e) => {
+                                    // Update ref immediately for instant typing feel
+                                    cellValueRef.current = e.target.value;
+                                  }}
+                                  onKeyDown={(e) => {
                                    // Allow Shift+Enter for line breaks, but handle Tab/Enter/Escape/Arrow keys
                                    if ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Tab' || e.key === 'Escape' || 
                                        ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
@@ -7431,12 +7439,12 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
                                     // Keep the height fixed to fill the cell
                                   }}
                               />
-                          ) : (
-                            <ContextMenu>
-                              <ContextMenuTrigger asChild>
-                                 <div
-                                   data-cell={`${rowIndex}-${column}`}
-                                   className={`relative w-full h-full min-h-[2rem] py-2 px-3 flex items-start transition-all duration-200 break-words overflow-hidden select-none ${(isInRange || isInCopiedRange) ? '' : 'rounded-sm'}
+                           ) : (
+                             <ContextMenu>
+                               <ContextMenuTrigger asChild>
+                                  <div
+                                    data-cell={`${rowIndex}-${column}`}
+                                    className={`relative w-full h-full min-h-[2rem] py-2 px-3 flex items-start transition-all duration-200 break-words overflow-hidden select-none ${(isInRange || isInCopiedRange) ? '' : 'rounded-sm'}
                                       ${isInRange || isInCopiedRange
                                         ? `bg-primary/5 ${getRangeBorderStyle(rowIndex, columnIndex)}`
                                         : isSelected && !selectedRange && !copiedRange
