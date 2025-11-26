@@ -34,14 +34,31 @@ const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
   const [isGeneratingAllAI, setIsGeneratingAllAI] = useState(false);
   const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+  const autoScrollIntervalRef = React.useRef<number | null>(null);
   const { toast } = useToast();
 
   // Load current preferences when dialog opens
   useEffect(() => {
     if (open) {
       loadPreferences();
+    } else {
+      // Clean up auto-scroll interval when dialog closes
+      if (autoScrollIntervalRef.current) {
+        clearInterval(autoScrollIntervalRef.current);
+        autoScrollIntervalRef.current = null;
+      }
     }
   }, [open]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (autoScrollIntervalRef.current) {
+        clearInterval(autoScrollIntervalRef.current);
+      }
+    };
+  }, []);
 
   const loadPreferences = async () => {
     setIsLoading(true);
@@ -162,17 +179,20 @@ const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', column);
     
-    // Create a transparent drag image to prevent text/button labels from showing
-    const dragImage = document.createElement('div');
-    dragImage.style.opacity = '0';
-    dragImage.style.position = 'absolute';
-    dragImage.style.top = '-999px';
-    document.body.appendChild(dragImage);
-    e.dataTransfer.setDragImage(dragImage, 0, 0);
+    // Create a simple custom drag preview to avoid showing random text
+    const dragPreview = document.createElement('div');
+    dragPreview.className = 'px-3 py-2 bg-primary text-primary-foreground rounded-lg shadow-lg';
+    dragPreview.textContent = column;
+    dragPreview.style.position = 'absolute';
+    dragPreview.style.top = '-9999px';
+    document.body.appendChild(dragPreview);
+    e.dataTransfer.setDragImage(dragPreview, 0, 0);
     
-    // Clean up the temporary element after drag starts
+    // Clean up after a short delay
     setTimeout(() => {
-      document.body.removeChild(dragImage);
+      if (document.body.contains(dragPreview)) {
+        document.body.removeChild(dragPreview);
+      }
     }, 0);
   };
 
@@ -180,6 +200,49 @@ const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     setDragOverIndex(index);
+    
+    // Auto-scroll logic
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    
+    const rect = container.getBoundingClientRect();
+    const scrollThreshold = 50; // pixels from edge to trigger scroll
+    const scrollSpeed = 10; // pixels per interval
+    const mouseY = e.clientY;
+    
+    // Clear existing interval
+    if (autoScrollIntervalRef.current) {
+      clearInterval(autoScrollIntervalRef.current);
+      autoScrollIntervalRef.current = null;
+    }
+    
+    // Scroll up when near top
+    if (mouseY - rect.top < scrollThreshold && container.scrollTop > 0) {
+      autoScrollIntervalRef.current = window.setInterval(() => {
+        if (container.scrollTop > 0) {
+          container.scrollTop -= scrollSpeed;
+        } else {
+          if (autoScrollIntervalRef.current) {
+            clearInterval(autoScrollIntervalRef.current);
+            autoScrollIntervalRef.current = null;
+          }
+        }
+      }, 50);
+    }
+    // Scroll down when near bottom
+    else if (rect.bottom - mouseY < scrollThreshold && 
+             container.scrollTop < container.scrollHeight - container.clientHeight) {
+      autoScrollIntervalRef.current = window.setInterval(() => {
+        if (container.scrollTop < container.scrollHeight - container.clientHeight) {
+          container.scrollTop += scrollSpeed;
+        } else {
+          if (autoScrollIntervalRef.current) {
+            clearInterval(autoScrollIntervalRef.current);
+            autoScrollIntervalRef.current = null;
+          }
+        }
+      }, 50);
+    }
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
@@ -187,11 +250,22 @@ const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
     const relatedTarget = e.relatedTarget as HTMLElement;
     if (!relatedTarget || !relatedTarget.closest('[data-column-item]')) {
       setDragOverIndex(null);
+      // Clear auto-scroll when leaving the drag area
+      if (autoScrollIntervalRef.current) {
+        clearInterval(autoScrollIntervalRef.current);
+        autoScrollIntervalRef.current = null;
+      }
     }
   };
 
   const handleDrop = (e: React.DragEvent, targetIndex: number) => {
     e.preventDefault();
+    
+    // Clear auto-scroll interval
+    if (autoScrollIntervalRef.current) {
+      clearInterval(autoScrollIntervalRef.current);
+      autoScrollIntervalRef.current = null;
+    }
     
     if (!draggedColumn) return;
     
@@ -214,6 +288,11 @@ const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
   };
 
   const handleDragEnd = () => {
+    // Clean up auto-scroll interval
+    if (autoScrollIntervalRef.current) {
+      clearInterval(autoScrollIntervalRef.current);
+      autoScrollIntervalRef.current = null;
+    }
     setDraggedColumn(null);
     setDragOverIndex(null);
   };
@@ -407,7 +486,7 @@ const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
               </Button>
             </div>
             
-            <div className="flex-1 overflow-y-auto border rounded-lg p-4 mb-4">
+            <div ref={scrollContainerRef} className="flex-1 overflow-y-auto border rounded-lg p-4 mb-4">
               <div className="space-y-2">
                 {columns.map((column, index) => (
                   <React.Fragment key={column}>
