@@ -86,14 +86,51 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
   });
   const [isReExtracting, setIsReExtracting] = useState(false);
   
-  // Multi-instrument detection state
-  const [showInstrumentSelectionDialog, setShowInstrumentSelectionDialog] = useState(false);
-  const [detectedInstruments, setDetectedInstruments] = useState<any[]>([]);
+  // Multi-instrument detection state with persistence across page refreshes
+  const sessionStorageKey = `instrument_selection_${runsheetId}_${rowIndex}`;
+  
+  const [showInstrumentSelectionDialog, setShowInstrumentSelectionDialog] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem(sessionStorageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return !!parsed.instruments && parsed.instruments.length > 0;
+      }
+    } catch (e) {
+      console.error('Failed to restore instrument selection state:', e);
+    }
+    return false;
+  });
+  
+  const [detectedInstruments, setDetectedInstruments] = useState<any[]>(() => {
+    try {
+      const saved = sessionStorage.getItem(sessionStorageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.instruments || [];
+      }
+    } catch (e) {
+      console.error('Failed to restore instruments:', e);
+    }
+    return [];
+  });
+  
   const [pendingInstrumentAnalysis, setPendingInstrumentAnalysis] = useState<{
     imageData: string;
     extractionFields: string;
     fillEmptyOnly: boolean;
-  } | null>(null);
+  } | null>(() => {
+    try {
+      const saved = sessionStorage.getItem(sessionStorageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.pendingAnalysis || null;
+      }
+    } catch (e) {
+      console.error('Failed to restore pending analysis:', e);
+    }
+    return null;
+  });
   
   // Get runsheet management hook for auto-saving changes
   const { activeRunsheet, setCurrentRunsheet } = useActiveRunsheet();
@@ -133,12 +170,42 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
   
   // Filter out Document File Name column for editing
   const editableFields = fields.filter(field => field !== 'Document File Name');
+  
   // Set initial focus to first column when component mounts
   useEffect(() => {
     if (editableFields.length > 0 && !focusedColumn && !editingColumn) {
       setFocusedColumn(editableFields[0]);
     }
   }, [editableFields, focusedColumn, editingColumn]);
+
+  // Restore instrument selection dialog after page refresh
+  useEffect(() => {
+    if (showInstrumentSelectionDialog && detectedInstruments.length > 0) {
+      console.log('🔄 Restored instrument selection dialog after page refresh');
+      toast({
+        title: "Session Restored",
+        description: "Your instrument selection dialog has been restored. Please select an instrument to continue.",
+        variant: "default"
+      });
+    }
+  }, []); // Only run on mount
+
+  // Prevent accidental page refresh/close during analysis or when instrument dialog is open
+  useEffect(() => {
+    if (isAnalyzing || showInstrumentSelectionDialog) {
+      const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+        e.preventDefault();
+        e.returnValue = ''; // Chrome requires returnValue to be set
+        return ''; // Legacy browsers
+      };
+
+      window.addEventListener('beforeunload', handleBeforeUnload);
+      
+      return () => {
+        window.removeEventListener('beforeunload', handleBeforeUnload);
+      };
+    }
+  }, [isAnalyzing, showInstrumentSelectionDialog]);
 
   // Load document - simplified approach like SideBySideDocumentWorkspace
   useEffect(() => {
@@ -465,15 +532,30 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
         console.log('🔍 Multiple instruments detected:', analysisResult.analysis.instrument_count);
         console.log('🔍 Instruments:', analysisResult.analysis.instruments);
         
-        // Store the analysis context for later use
-        setPendingInstrumentAnalysis({
+        const pendingAnalysis = {
           imageData,
           extractionFields,
           fillEmptyOnly
-        });
+        };
+        
+        // Store the analysis context for later use (both in state and sessionStorage)
+        setPendingInstrumentAnalysis(pendingAnalysis);
+        const instruments = analysisResult.analysis.instruments || [];
+        setDetectedInstruments(instruments);
+        
+        // Persist to sessionStorage to survive page refreshes
+        try {
+          sessionStorage.setItem(sessionStorageKey, JSON.stringify({
+            instruments,
+            pendingAnalysis,
+            timestamp: Date.now()
+          }));
+          console.log('✅ Saved instrument selection state to sessionStorage');
+        } catch (e) {
+          console.error('Failed to save instrument selection state:', e);
+        }
         
         // Show instrument selection dialog
-        setDetectedInstruments(analysisResult.analysis.instruments || []);
         setShowInstrumentSelectionDialog(true);
         setIsAnalyzing(false);
         return;
@@ -805,7 +887,25 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                       onMouseDown={fitToWidth ? undefined : handleImageMouseDown}
                       onMouseMove={fitToWidth ? undefined : handleImageMouseMove}
                       onMouseUp={fitToWidth ? undefined : handleImageMouseUp}
-                      onError={() => setError('Failed to load image')}
+                      onError={(e) => {
+                        console.error('Failed to load document image:', documentUrl);
+                        setError('Failed to load document image. The document may have been moved or the page was refreshed during analysis. Please close this view and try again.');
+                        // Retry loading once after a short delay
+                        setTimeout(async () => {
+                          if (documentRecord) {
+                            try {
+                              const url = await DocumentService.getDocumentUrl(documentRecord.file_path);
+                              if (url && url !== documentUrl) {
+                                console.log('🔄 Retrying with refreshed document URL');
+                                setDocumentUrl(url);
+                                setError(null);
+                              }
+                            } catch (retryError) {
+                              console.error('Failed to retry loading document:', retryError);
+                            }
+                          }
+                        }, 1000);
+                      }}
                     />
                   </div>
                 </div>
@@ -1057,6 +1157,12 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
           setShowInstrumentSelectionDialog(false);
           setDetectedInstruments([]);
           setPendingInstrumentAnalysis(null);
+          // Clear sessionStorage on cancel
+          try {
+            sessionStorage.removeItem(sessionStorageKey);
+          } catch (e) {
+            console.error('Failed to clear instrument selection state:', e);
+          }
         }}
         instruments={detectedInstruments}
         onSelect={(instrumentId) => {
@@ -1071,7 +1177,13 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
             );
           }
           
+          // Clear state after selection
           setPendingInstrumentAnalysis(null);
+          try {
+            sessionStorage.removeItem(sessionStorageKey);
+          } catch (e) {
+            console.error('Failed to clear instrument selection state:', e);
+          }
         }}
       />
     </div>
