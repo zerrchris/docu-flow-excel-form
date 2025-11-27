@@ -365,6 +365,9 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
         : (currentIndex + 1) % editableFields.length;
       const nextColumn = editableFields[nextIndex];
       setFocusedColumn(nextColumn);
+      // Start editing the next field and select all text if present
+      const hasText = localRowData[nextColumn] && localRowData[nextColumn].trim() !== '';
+      startEditing(nextColumn, hasText);
     } else if (e.key === 'ArrowLeft') {
       e.preventDefault();
       const prevIndex = (currentIndex - 1 + editableFields.length) % editableFields.length;
@@ -1056,7 +1059,8 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                                     ? (currentIndex - 1 + editableFields.length) % editableFields.length
                                     : (currentIndex + 1) % editableFields.length;
                                   const nextColumn = editableFields[nextIndex];
-                                  setTimeout(() => startEditing(nextColumn, true), 0);
+                                  const hasText = localRowData[nextColumn] && localRowData[nextColumn].trim() !== '';
+                                  setTimeout(() => startEditing(nextColumn, hasText), 0);
                                 }
                               }}
                               onBlur={finishEditing}
