@@ -983,7 +983,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                 <div className="h-full w-full overflow-auto">
                   <div ref={tableRef} className="min-w-max flex-1 flex flex-col" style={{ minWidth: 'fit-content' }}>
                   {/* Sticky Header */}
-                  <div className="sticky top-0 z-10 bg-muted/50 border-b border-border">
+                  <div className="sticky top-0 z-10 bg-background border-b border-border">
                     <div className="flex">
                       {editableFields.map((column) => (
                         <div 
