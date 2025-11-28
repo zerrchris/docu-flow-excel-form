@@ -90,7 +90,10 @@ Format Instructions: ${formatInstructions}`;
     }
 
     const data = await response.json();
-    const reformattedText = data.choices[0].message.content.trim();
+    let reformattedText = data.choices[0].message.content.trim();
+    
+    // Replace literal \n with actual newlines if the model returned escaped newlines
+    reformattedText = reformattedText.replace(/\\n/g, '\n');
 
     return new Response(
       JSON.stringify({ 
