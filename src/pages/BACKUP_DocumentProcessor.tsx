@@ -325,11 +325,9 @@ const DocumentProcessor: React.FC = () => {
   // Ensure form fields match the active runsheet columns
   useEffect(() => {
     if (activeRunsheet?.columns && activeRunsheet.columns.length) {
-      // Clean up preferences to match active runsheet columns
-      ExtractionPreferencesService.cleanupPreferences(activeRunsheet.columns);
-      
+      // Use active runsheet columns without modifying saved default preferences
       setColumns(activeRunsheet.columns);
-      
+
       // If runsheet has column instructions, use them. Otherwise, load from user preferences.
       const loadColumnInstructions = async () => {
         if (activeRunsheet.columnInstructions && Object.keys(activeRunsheet.columnInstructions).length > 0) {
