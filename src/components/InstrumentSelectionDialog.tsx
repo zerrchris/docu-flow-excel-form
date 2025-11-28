@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -37,8 +37,17 @@ const InstrumentSelectionDialog: React.FC<InstrumentSelectionDialogProps> = ({
     instruments.length > 0 ? instruments[0].id : null
   );
 
+  // Reset selection when instruments change
+  useEffect(() => {
+    if (instruments.length > 0) {
+      setSelectedId(instruments[0].id);
+      console.log('🔄 Reset instrument selection to first instrument:', instruments[0].id);
+    }
+  }, [instruments]);
+
   const handleConfirm = () => {
     if (selectedId !== null) {
+      console.log('✅ Confirming instrument selection:', selectedId);
       onSelect(selectedId);
     }
   };
@@ -59,7 +68,11 @@ const InstrumentSelectionDialog: React.FC<InstrumentSelectionDialogProps> = ({
         <div className="py-4">
           <RadioGroup
             value={selectedId?.toString()}
-            onValueChange={(value) => setSelectedId(Number(value))}
+            onValueChange={(value) => {
+              const newId = Number(value);
+              console.log('🔍 Instrument selection changed:', { from: selectedId, to: newId });
+              setSelectedId(newId);
+            }}
             className="space-y-3"
           >
             {instruments.map((instrument) => (
@@ -70,7 +83,10 @@ const InstrumentSelectionDialog: React.FC<InstrumentSelectionDialogProps> = ({
                     ? 'border-primary bg-primary/5'
                     : 'hover:border-muted-foreground/50'
                 }`}
-                onClick={() => setSelectedId(instrument.id)}
+                onClick={() => {
+                  console.log('🔍 Instrument card clicked:', instrument.id);
+                  setSelectedId(instrument.id);
+                }}
               >
                 <div className="flex items-start gap-3">
                   <RadioGroupItem value={instrument.id.toString()} id={`instrument-${instrument.id}`} />
