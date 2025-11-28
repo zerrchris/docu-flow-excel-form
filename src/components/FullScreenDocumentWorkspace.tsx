@@ -477,10 +477,24 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
     setIsDraggingLine(true);
   };
   
-  const handleLineMouseMove = (e: MouseEvent, containerRect: DOMRect) => {
-    if (!isDraggingLine) return;
+  const handleLineMouseMove = (e: MouseEvent, imageElement: HTMLImageElement, scrollContainer: HTMLDivElement) => {
+    if (!isDraggingLine || !imageElement) return;
     
-    const relativeY = Math.max(0, Math.min(1, (e.clientY - containerRect.top) / containerRect.height));
+    // Get the scroll position
+    const scrollTop = scrollContainer.scrollTop;
+    const scrollLeft = scrollContainer.scrollLeft;
+    
+    // Get mouse position relative to the scroll container
+    const containerRect = scrollContainer.getBoundingClientRect();
+    const mouseY = e.clientY - containerRect.top + scrollTop;
+    
+    // Calculate position relative to the actual image height
+    const imageRect = imageElement.getBoundingClientRect();
+    const imageTop = imageElement.offsetTop;
+    const imageHeight = imageElement.offsetHeight;
+    
+    // Position relative to full image (0 to 1)
+    const relativeY = Math.max(0, Math.min(1, mouseY / imageHeight));
     setSelectedStartPoint({ page: 1, y: relativeY });
   };
   
@@ -922,8 +936,11 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                   className="h-full w-full relative overflow-hidden"
                   onMouseMove={(e) => {
                     if (isDraggingLine) {
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      handleLineMouseMove(e.nativeEvent, rect);
+                      const scrollContainer = e.currentTarget.querySelector('.overflow-auto') as HTMLDivElement;
+                      const imageElement = scrollContainer?.querySelector('img') as HTMLImageElement;
+                      if (scrollContainer && imageElement) {
+                        handleLineMouseMove(e.nativeEvent, imageElement, scrollContainer);
+                      }
                     }
                   }}
                   onMouseUp={() => {
