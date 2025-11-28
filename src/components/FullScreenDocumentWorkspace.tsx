@@ -1068,6 +1068,8 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                                onFocus={(e) => {
                                  if (autoSelectColumn === column && e.currentTarget.value.length > 0) {
                                    e.currentTarget.setSelectionRange(0, e.currentTarget.value.length);
+                                   // Ensure the textarea content is scrolled to the very top
+                                   e.currentTarget.scrollTop = 0;
                                  }
                                }}
                                onMouseDown={() => {
