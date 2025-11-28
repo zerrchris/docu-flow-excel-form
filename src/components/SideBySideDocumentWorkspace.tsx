@@ -260,6 +260,11 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
         reader.readAsDataURL(blob);
       });
       
+      // Find the selected instrument's details if an ID was provided
+      const selectedInstrumentDetails = selectedInstrument !== undefined
+        ? detectedInstruments.find(inst => inst.id === selectedInstrument)
+        : undefined;
+
       const { data, error } = await supabase.functions.invoke('enhanced-document-analysis', {
         body: {
           document_data: imageData,
@@ -269,7 +274,12 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
             columns: extractionPrefs?.columns || columns,
             column_instructions: extractionPrefs?.column_instructions || {}
           },
-          selected_instrument: selectedInstrument
+          selected_instrument: selectedInstrumentDetails ? {
+            id: selectedInstrumentDetails.id,
+            type: selectedInstrumentDetails.type,
+            description: selectedInstrumentDetails.description,
+            snippet: selectedInstrumentDetails.snippet
+          } : undefined
         }
       });
 
@@ -279,8 +289,8 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
       
       const analysisResult = data;
       
-      // Check if multiple instruments were detected
-      if (analysisResult?.analysis?.multiple_instruments && analysisResult?.analysis?.instrument_count > 1) {
+      // Check if multiple instruments were detected (only when no specific instrument has been selected yet)
+      if (!selectedInstrument && analysisResult?.analysis?.multiple_instruments && analysisResult?.analysis?.instrument_count > 1) {
         console.log('🔍 Multiple instruments detected:', analysisResult.analysis.instrument_count);
         console.log('🔍 Instruments:', analysisResult.analysis.instruments);
         

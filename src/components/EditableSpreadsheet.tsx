@@ -6221,6 +6221,11 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
         });
 
         // 5) Analyze with enhanced document analysis
+        // Find the selected instrument's details if an ID was provided
+        const selectedInstrumentDetails = selectedInstrument !== undefined
+          ? detectedInstruments.find(inst => inst.id === selectedInstrument)
+          : undefined;
+
         ({ data: analysisResult, error: functionError } = await supabase.functions.invoke('enhanced-document-analysis', {
           body: {
             document_data: combinedImageData,
@@ -6230,12 +6235,23 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
               columns: extractionPrefs?.columns || columns.filter(col => col !== 'Document File Name'),
               column_instructions: extractionPrefs?.column_instructions || {}
             },
-            selected_instrument: selectedInstrument
+            selected_instrument: selectedInstrumentDetails ? {
+              id: selectedInstrumentDetails.id,
+              type: selectedInstrumentDetails.type,
+              description: selectedInstrumentDetails.description,
+              snippet: selectedInstrumentDetails.snippet
+            } : undefined
           }
         }));
       } else {
         console.log('🔍 Non-PDF file detected - using enhanced document analysis');
         console.log('🔍 Calling enhanced-document-analysis edge function...');
+
+        // Find the selected instrument's details if an ID was provided
+        const selectedInstrumentDetails = selectedInstrument !== undefined
+          ? detectedInstruments.find(inst => inst.id === selectedInstrument)
+          : undefined;
+
         ({ data: analysisResult, error: functionError } = await supabase.functions.invoke('enhanced-document-analysis', {
           body: {
             document_data: imageData,
@@ -6245,7 +6261,12 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
               columns: extractionPrefs?.columns || columns.filter(col => col !== 'Document File Name'),
               column_instructions: extractionPrefs?.column_instructions || {}
             },
-            selected_instrument: selectedInstrument
+            selected_instrument: selectedInstrumentDetails ? {
+              id: selectedInstrumentDetails.id,
+              type: selectedInstrumentDetails.type,
+              description: selectedInstrumentDetails.description,
+              snippet: selectedInstrumentDetails.snippet
+            } : undefined
           }
         }));
       }
