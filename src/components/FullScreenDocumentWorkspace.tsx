@@ -298,6 +298,8 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
       const textarea = document.querySelector(`textarea[data-editing="${column}"]`) as HTMLTextAreaElement | null;
       if (textarea) {
         textarea.focus();
+        // Scroll the cell into view, ensuring it's fully visible
+        textarea.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
         // Text selection (if any) is handled in the onFocus handler based on autoSelectColumn
       }
     });
