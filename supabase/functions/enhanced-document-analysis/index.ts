@@ -159,9 +159,14 @@ serve(async (req) => {
 
 🔍 MULTI-INSTRUMENT DETECTION:
 ${selected_instrument ? `
-- THIS IS A FOCUSED EXTRACTION: Extract data ONLY from Instrument #${selected_instrument}
+- THIS IS A FOCUSED EXTRACTION: Extract data ONLY from the following specific instrument:
+  * Instrument ID: ${selected_instrument.id}
+  * Type: ${selected_instrument.type}
+  * Description: ${selected_instrument.description}
+  * Legal Description Snippet: ${selected_instrument.snippet || 'N/A'}
 - Ignore all other instruments on the page
-- Focus exclusively on the selected instrument's details
+- Focus exclusively on this instrument - match it by its type, description, and legal description
+- Extract data ONLY from this specific instrument
 ` : `
 - FIRST, count how many separate legal instruments appear on this page
 - Each instrument is a distinct legal document (deed, mortgage, assignment, etc.)
@@ -207,8 +212,9 @@ ${selected_instrument ? `
     "field_name": 0.95
   },
   "document_type": "detected document type",
-  "selected_instrument_number": ${selected_instrument},
-  "extraction_summary": "brief summary of what was extracted",
+  "selected_instrument_id": ${selected_instrument.id},
+  "selected_instrument_type": "${selected_instrument.type}",
+  "extraction_summary": "brief summary of what was extracted from the selected instrument",
   "processing_notes": "any notes about extraction quality or issues"
 }` : `
 {
