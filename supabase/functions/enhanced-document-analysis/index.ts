@@ -55,7 +55,8 @@ serve(async (req) => {
       columns: extraction_preferences?.columns?.length || 0,
       hasInstructions: !!extraction_preferences?.column_instructions,
       instructionsKeys: extraction_preferences?.column_instructions ? Object.keys(extraction_preferences.column_instructions) : [],
-      selectedInstrument: selected_instrument
+      selectedInstrument: selected_instrument,
+      visualStartPoint: visual_start_point
     });
 
     // Comprehensive document format validation
@@ -229,43 +230,59 @@ EXTRACTION ACCURACY GUIDELINES:
 
 ${globalInstructions ? `\nGlobal Admin Instructions: ${globalInstructions}\n` : ''}
 
-RESPONSE FORMAT: Return ONLY a valid JSON object with:
-${selected_instrument ? `
-{
-  "extracted_data": {
-    "field_name": "extracted_value_OR_Not_found_if_not_clearly_visible"
-  },
-  "confidence_scores": {
-    "field_name": 0.95
-  },
-  "document_type": "detected document type",
-  "selected_instrument_id": ${selected_instrument.id},
-  "selected_instrument_type": "${selected_instrument.type}",
-  "extraction_summary": "brief summary of what was extracted from the selected instrument",
-  "processing_notes": "any notes about extraction quality or issues"
-}` : `
-{
-  "multiple_instruments": true/false,
-  "instrument_count": number,
-  "instruments": [
+    RESPONSE FORMAT: Return ONLY a valid JSON object with:
+    ${selected_instrument ? `
     {
-      "id": 1,
-      "type": "instrument type (e.g., Warranty Deed, Mortgage, Assignment)",
-      "description": "brief description of this instrument",
-      "snippet": "first 100-150 characters of the legal description from this instrument to help user identify it"
-    }
-  ],
-  "extracted_data": {
-    "field_name": "if only 1 instrument, extract visible data; otherwise use Not_found"
-  },
-  "confidence_scores": {
-    "field_name": 0.95
-  },
-  "document_type": "detected document type",
-  "extraction_summary": "brief summary",
-  "processing_notes": "any notes about extraction quality or issues"
-}`}
-`
+      "extracted_data": {
+        "field_name": "extracted_value_OR_Not_found_if_not_clearly_visible"
+      },
+      "confidence_scores": {
+        "field_name": 0.95
+      },
+      "document_type": "detected document type",
+      "selected_instrument_id": ${selected_instrument.id},
+      "selected_instrument_type": "${selected_instrument.type}",
+      "extraction_summary": "brief summary of what was extracted from the selected instrument",
+      "processing_notes": "any notes about extraction quality or issues"
+    }` : visual_start_point ? `
+    {
+      "extracted_data": {
+        "field_name": "extracted_value_OR_Not_found_if_not_clearly_visible"
+      },
+      "confidence_scores": {
+        "field_name": 0.95
+      },
+      "document_type": "detected document type",
+      "visual_start_point_used": true,
+      "visual_start_point": {
+        "page": ${visual_start_point.page ?? 1},
+        "y": ${visual_start_point.y}
+      },
+      "extraction_summary": "brief summary of what was extracted from the instrument beginning at the marked visual position",
+      "processing_notes": "any notes about extraction quality or issues related to the visually selected start point"
+    }` : `
+    {
+      "multiple_instruments": true/false,
+      "instrument_count": number,
+      "instruments": [
+        {
+          "id": 1,
+          "type": "instrument type (e.g., Warranty Deed, Mortgage, Assignment)",
+          "description": "brief description of this instrument",
+          "snippet": "first 100-150 characters of the legal description from this instrument to help user identify it"
+        }
+      ],
+      "extracted_data": {
+        "field_name": "if only 1 instrument, extract visible data; otherwise use Not_found"
+      },
+      "confidence_scores": {
+        "field_name": 0.95
+      },
+      "document_type": "detected document type",
+      "extraction_summary": "brief summary",
+      "processing_notes": "any notes about extraction quality or issues"
+    }`}
+    `
           },
           {
             role: "user",
