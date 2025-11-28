@@ -178,10 +178,12 @@ ${selected_instrument ? `
 ` : visual_start_point ? `
 - VISUAL START POINT PROVIDED: The user has marked a specific location on the document as the start of their target instrument
   * Start position: ${Math.round(visual_start_point.y * 100)}% down from the top of the page
+- CRITICAL: DO NOT perform multi-instrument detection. The user has already selected their target instrument by marking its start location.
 - Focus your analysis starting from this position and proceeding downward
-- The instrument the user wants begins at or near this marked position
+- Extract data from the instrument that begins at or after this marked position
 - Ignore any content that appears ABOVE the marked position
-- Extract data from the instrument that begins at or after this point
+- Even if multiple instruments exist on the page, ONLY extract from the one starting at this marked position
+- DO NOT return multiple_instruments: true - proceed directly with extraction from the marked point
 ` : `
 - FIRST, count how many separate legal instruments appear on this page
 - Each instrument is a distinct legal document (deed, mortgage, assignment, etc.)
