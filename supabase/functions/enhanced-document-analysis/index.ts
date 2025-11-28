@@ -49,7 +49,7 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    const { document_data, runsheet_id, document_name, extraction_preferences, selected_instrument } = await req.json();
+    const { document_data, runsheet_id, document_name, extraction_preferences, selected_instrument, visual_start_point } = await req.json();
     
     console.log('📋 Extraction preferences received:', {
       columns: extraction_preferences?.columns?.length || 0,
@@ -175,6 +175,13 @@ ${selected_instrument ? `
 - Ignore all other instruments on the page
 - Focus exclusively on this instrument - match it by its type, description, and legal description
 - Extract data ONLY from this specific instrument
+` : visual_start_point ? `
+- VISUAL START POINT PROVIDED: The user has marked a specific location on the document as the start of their target instrument
+  * Start position: ${Math.round(visual_start_point.y * 100)}% down from the top of the page
+- Focus your analysis starting from this position and proceeding downward
+- The instrument the user wants begins at or near this marked position
+- Ignore any content that appears ABOVE the marked position
+- Extract data from the instrument that begins at or after this point
 ` : `
 - FIRST, count how many separate legal instruments appear on this page
 - Each instrument is a distinct legal document (deed, mortgage, assignment, etc.)
@@ -260,6 +267,10 @@ ${selected_instrument ? `
                 text: `Analyze this document and extract ONLY information that is clearly visible and readable. 
 
 CRITICAL: If you cannot clearly see a field's value in the document, you MUST return "Not found" for that field. Do NOT make up, infer, or fabricate any information. Do NOT use placeholder names like "John Doe" or generic addresses.
+
+${visual_start_point ? `
+VISUAL SELECTION: The user has marked a point approximately ${Math.round(visual_start_point.y * 100)}% down from the top of the document. This marks the START of the instrument they want to analyze. Focus your extraction on content that appears AT OR BELOW this marked position. Ignore content above this point.
+` : ''}
 
 Extract the requested data according to the requirements.`
               },

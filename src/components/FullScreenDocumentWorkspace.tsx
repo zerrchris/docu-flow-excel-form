@@ -87,6 +87,10 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
   });
   const [isReExtracting, setIsReExtracting] = useState(false);
   
+  // Visual instrument selection state
+  const [visualSelectionMode, setVisualSelectionMode] = useState(false);
+  const [selectedStartPoint, setSelectedStartPoint] = useState<{page: number; y: number} | null>(null);
+  
   // Multi-instrument detection state with persistence across page refreshes
   const sessionStorageKey = `instrument_selection_${runsheetId}_${rowIndex}`;
   
@@ -459,6 +463,21 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
   };
 
   const handleImageMouseDown = (e: React.MouseEvent) => {
+    // If in visual selection mode, capture the click position
+    if (visualSelectionMode) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const relativeY = (e.clientY - rect.top) / rect.height;
+      
+      setSelectedStartPoint({ page: 1, y: relativeY }); // For images, page is always 1
+      setVisualSelectionMode(false);
+      
+      toast({
+        title: "Instrument Start Point Selected",
+        description: "Analysis will focus from this point forward. Click Analyze Document to extract data.",
+      });
+      return;
+    }
+    
     setIsDraggingImage(true);
     setDragStart({ x: e.clientX - panX, y: e.clientY - panY });
   };
@@ -540,7 +559,8 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
             type: selectedInstrument.type,
             description: selectedInstrument.description,
             snippet: selectedInstrument.snippet
-          } : undefined
+          } : undefined,
+          visual_start_point: selectedStartPoint // Pass the selected start point if available
         }
       });
 
@@ -693,6 +713,20 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
       setIsAnalyzing(false);
       setAbortController(null);
     }
+  };
+  
+  const handleStartVisualSelection = () => {
+    setVisualSelectionMode(true);
+    toast({
+      title: "Visual Selection Mode Activated",
+      description: "Click on the document where your target instrument begins. The top of the instrument should be clicked.",
+      duration: 5000,
+    });
+  };
+  
+  const handleCancelVisualSelection = () => {
+    setVisualSelectionMode(false);
+    setSelectedStartPoint(null);
   };
 
   // Re-extract functionality for individual fields
@@ -898,7 +932,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                       alt={documentName}
                       className={`transition-all duration-200 ease-out select-none ${
                         fitToWidth ? 'w-full h-auto object-contain' : 'object-contain cursor-grab active:cursor-grabbing'
-                      }`}
+                      } ${visualSelectionMode ? 'cursor-crosshair' : ''}`}
                       style={{
                         minHeight: fitToWidth ? 'auto' : '100%',
                         minWidth: fitToWidth ? '100%' : 'auto',
@@ -907,7 +941,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                         willChange: fitToWidth ? 'auto' : 'transform'
                       }}
                       draggable={false}
-                      onMouseDown={fitToWidth ? undefined : handleImageMouseDown}
+                      onMouseDown={fitToWidth ? (visualSelectionMode ? handleImageMouseDown : undefined) : handleImageMouseDown}
                       onMouseMove={fitToWidth ? undefined : handleImageMouseMove}
                       onMouseUp={fitToWidth ? undefined : handleImageMouseUp}
                       onError={(e) => {
@@ -927,10 +961,19 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                               console.error('Failed to retry loading document:', retryError);
                             }
                           }
-                        }, 1000);
-                      }}
-                    />
-                  </div>
+                         }, 1000);
+                       }}
+                     />
+                     {selectedStartPoint && !visualSelectionMode && (
+                       <div 
+                         className="absolute left-0 right-0 h-0.5 bg-primary animate-pulse pointer-events-none z-10"
+                         style={{
+                           top: `${selectedStartPoint.y * 100}%`,
+                           boxShadow: '0 0 10px hsl(var(--primary) / 0.5)'
+                         }}
+                       />
+                     )}
+                   </div>
                 </div>
               )}
             </div>
@@ -943,11 +986,25 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
           <ResizablePanel defaultSize={20} minSize={15} maxSize={60}>
             <Card className="h-full border-t-2 border-primary border-b flex flex-col">
               <div className="p-4 border-b bg-muted/20 flex items-center justify-between">
-                <div className="flex items-center space-x-3">
+                 <div className="flex items-center space-x-3">
                   <h4 className="font-semibold">Working Row {rowIndex + 1}</h4>
                    {documentUrl && !isLoading && !error && (
                      <>
-                       {isAnalyzing ? (
+                       {visualSelectionMode ? (
+                         <>
+                           <Button
+                             variant="destructive"
+                             size="sm"
+                             onClick={handleCancelVisualSelection}
+                             className="gap-2"
+                           >
+                             Cancel Selection
+                           </Button>
+                           <span className="text-sm text-muted-foreground animate-pulse">
+                             Click on the document to mark instrument start...
+                           </span>
+                         </>
+                       ) : isAnalyzing ? (
                           <Button
                             variant="secondary"
                             size="sm"
@@ -968,23 +1025,41 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                             Cancel Analysis
                           </Button>
                        ) : (
-                         <Button
-                           variant="outline"
-                           size="sm"
-                           onClick={() => {
-                             const hasExisting = editableFields.some((c) => ((localRowData[c] || '').toString().trim() !== ''));
-                             if (hasExisting) {
-                               setShowAnalyzeWarning(true);
-                             } else {
-                               analyzeDocumentAndPopulateRow();
-                             }
-                           }}
-                           className="gap-2 text-blue-600 hover:text-blue-700 border-blue-200 hover:border-blue-300"
-                           title="Analyze document and extract data to populate row fields"
-                         >
-                           <Brain className="h-4 w-4" />
-                           Analyze
-                         </Button>
+                         <>
+                           {selectedStartPoint && (
+                             <div className="flex items-center gap-2 px-3 py-1 rounded-md bg-primary/10 text-primary text-sm">
+                               <Sparkles className="h-4 w-4" />
+                               Start point selected
+                             </div>
+                           )}
+                           <Button
+                             variant="outline"
+                             size="sm"
+                             onClick={handleStartVisualSelection}
+                             className="gap-2"
+                             title="Click to select where the instrument starts on the document"
+                           >
+                             <Sparkles className="h-4 w-4" />
+                             Select Start
+                           </Button>
+                           <Button
+                             variant="outline"
+                             size="sm"
+                             onClick={() => {
+                               const hasExisting = editableFields.some((c) => ((localRowData[c] || '').toString().trim() !== ''));
+                               if (hasExisting) {
+                                 setShowAnalyzeWarning(true);
+                               } else {
+                                 analyzeDocumentAndPopulateRow();
+                               }
+                             }}
+                             className="gap-2 text-blue-600 hover:text-blue-700 border-blue-200 hover:border-blue-300"
+                             title="Analyze document and extract data to populate row fields"
+                           >
+                             <Brain className="h-4 w-4" />
+                             Analyze
+                           </Button>
+                         </>
                        )}
                      </>
                    )}
