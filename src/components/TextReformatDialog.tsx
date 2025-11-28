@@ -180,11 +180,11 @@ const TextReformatDialog: React.FC<TextReformatDialogProps> = ({
                   variant="outline"
                   size="sm"
                   onClick={() => handlePresetSelect(preset)}
-                  className="text-left h-auto p-2"
+                  className="justify-start text-left h-auto p-3 w-full"
                 >
-                  <div>
-                    <div className="font-medium text-xs">{preset.name}</div>
-                    <div className="text-xs text-muted-foreground mt-1">
+                  <div className="w-full overflow-hidden">
+                    <div className="font-medium text-xs whitespace-normal break-words">{preset.name}</div>
+                    <div className="text-xs text-muted-foreground mt-1 whitespace-normal break-words">
                       {preset.example.split('→')[0].trim()}...
                     </div>
                   </div>
