@@ -166,6 +166,7 @@ ${selected_instrument ? `
 - FIRST, count how many separate legal instruments appear on this page
 - Each instrument is a distinct legal document (deed, mortgage, assignment, etc.)
 - If multiple instruments exist, identify each one clearly
+- For each instrument, extract a brief legal description snippet (first 100-150 characters) to help users identify which instrument they need
 - Return instrument details so the user can choose which to extract
 `}
 
@@ -218,7 +219,7 @@ ${selected_instrument ? `
       "id": 1,
       "type": "instrument type (e.g., Warranty Deed, Mortgage, Assignment)",
       "description": "brief description of this instrument",
-      "snippet": "short text snippet from document identifying this instrument"
+      "snippet": "first 100-150 characters of the legal description from this instrument to help user identify it"
     }
   ],
   "extracted_data": {
