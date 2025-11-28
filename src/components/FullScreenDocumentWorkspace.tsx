@@ -1108,7 +1108,8 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={(e) => {
+                                onMouseDown={(e) => {
+                                  e.preventDefault();
                                   e.stopPropagation();
                                   handleFormatClick(column, editingValue);
                                 }}
