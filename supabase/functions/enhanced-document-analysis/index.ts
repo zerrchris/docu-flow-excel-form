@@ -176,14 +176,20 @@ ${selected_instrument ? `
 - Focus exclusively on this instrument - match it by its type, description, and legal description
 - Extract data ONLY from this specific instrument
 ` : visual_start_point ? `
-- VISUAL START POINT PROVIDED: The user has marked a specific location on the document as the start of their target instrument
-  * Start position: ${Math.round(visual_start_point.y * 100)}% down from the top of the page
-- CRITICAL: DO NOT perform multi-instrument detection. The user has already selected their target instrument by marking its start location.
-- Focus your analysis starting from this position and proceeding downward
-- Extract data from the instrument that begins at or after this marked position
-- Ignore any content that appears ABOVE the marked position
-- Even if multiple instruments exist on the page, ONLY extract from the one starting at this marked position
-- DO NOT return multiple_instruments: true - proceed directly with extraction from the marked point
+- 🎯 VISUAL START POINT PROVIDED: The user has physically positioned a marker line on the document
+  * Marked position: ${Math.round(visual_start_point.y * 100)}% down from the top of the image
+  * This means the user's target instrument begins at approximately this vertical position
+  
+- ⚠️ CRITICAL INSTRUCTIONS FOR VISUAL SELECTION:
+  * DO NOT perform multi-instrument detection or counting
+  * DO NOT return multiple_instruments: true under any circumstances
+  * The user has ALREADY selected which instrument they want by positioning the line
+  * COMPLETELY IGNORE all content that appears ABOVE the ${Math.round(visual_start_point.y * 100)}% mark
+  * Begin your analysis ONLY from content at or below the marked line position
+  * Extract data ONLY from the instrument that starts at or immediately after this marked position
+  * If there are multiple instruments on the page, ignore any that appear above the line
+  * Even if you detect multiple instruments, proceed with extraction from the marked position only
+  * The user expects data from the instrument at this specific location, not from earlier instruments
 ` : `
 - FIRST, count how many separate legal instruments appear on this page
 - Each instrument is a distinct legal document (deed, mortgage, assignment, etc.)
