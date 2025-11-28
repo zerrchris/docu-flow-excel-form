@@ -552,10 +552,64 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
       const response = await fetch(documentUrl);
       const blob = await response.blob();
       const reader = new FileReader();
-      const imageData: string = await new Promise((resolve) => {
+      const baseImageData: string = await new Promise((resolve) => {
         reader.onloadend = () => resolve(reader.result as string);
         reader.readAsDataURL(blob);
       });
+
+      // If the user has selected a visual start point, crop everything above that line
+      let imageData = baseImageData;
+      if (selectedStartPoint) {
+        try {
+          console.log('🎯 Cropping document from visual start point:', selectedStartPoint);
+
+          const cropFromPercentage = async (dataUrl: string, startRatio: number): Promise<string> => {
+            return new Promise((resolve) => {
+              try {
+                const img = new Image();
+                img.onload = () => {
+                  try {
+                    const clampedRatio = Math.max(0, Math.min(1, startRatio || 0));
+                    const startY = Math.round(clampedRatio * img.height);
+                    const height = Math.max(1, img.height - startY);
+
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    if (!ctx) {
+                      console.warn('⚠️ Unable to get 2D context for cropping, using full image instead');
+                      return resolve(dataUrl);
+                    }
+
+                    // Draw the image so that the selected line becomes the top of the canvas
+                    ctx.drawImage(img, 0, -startY);
+                    const cropped = canvas.toDataURL();
+                    resolve(cropped);
+                  } catch (innerErr) {
+                    console.error('⚠️ Error during canvas crop, falling back to full image:', innerErr);
+                    resolve(dataUrl);
+                  }
+                };
+                img.onerror = (err) => {
+                  console.error('⚠️ Failed to load image for cropping, falling back to full image:', err);
+                  resolve(dataUrl);
+                };
+                img.src = dataUrl;
+              } catch (outerErr) {
+                console.error('⚠️ Unexpected error preparing image crop, falling back to full image:', outerErr);
+                resolve(dataUrl);
+              }
+            });
+          };
+
+          imageData = await cropFromPercentage(baseImageData, selectedStartPoint.y);
+          console.log('🎯 Cropping complete. Image length before/after:', baseImageData.length, imageData.length);
+        } catch (cropError) {
+          console.error('⚠️ Failed to crop image at visual start point, falling back to full image:', cropError);
+          imageData = baseImageData;
+        }
+      }
       
       // Find the selected instrument's details if an ID was provided
       const selectedInstrument = selectedInstrumentId !== undefined 
