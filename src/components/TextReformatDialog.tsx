@@ -261,7 +261,7 @@ const TextReformatDialog: React.FC<TextReformatDialogProps> = ({
                 </Button>
               </div>
               <Card className="p-3 mt-1 bg-green-50 border-green-200">
-                <p className="text-sm whitespace-pre-wrap">
+                <p className="text-sm whitespace-pre-wrap leading-relaxed">
                   {reformattedText}
                 </p>
               </Card>
