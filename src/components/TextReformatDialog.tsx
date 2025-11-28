@@ -43,14 +43,9 @@ const TextReformatDialog: React.FC<TextReformatDialogProps> = ({
   // Preset format examples for common legal document formatting
   const presetFormats = [
     {
-      name: "Township-Range with Sections",
-      instruction: "Convert to format: [Township][Direction]-[Range][Direction] on first line, then each section on new line as 'Sec. [Number]: [Description]'. Abbreviate quarters (NW, SE, E2W2, etc.) and use 'All' for entire section.",
-      example: "Example: Township 1 South Range 2 West Section 1 NW Section 2 All → 1S-2W\\nSec. 1: NW\\nSec. 2: All"
-    },
-    {
-      name: "Simple Township-Range Format",
-      instruction: "Convert to format: [Township]-[Range] on first line, then each section on new line as 'Section [Number]: [Description]'",
-      example: "Example: Township 1 Range 2 Section 1 All Section 2 SW → 1-2\\nSection 1: All\\nSection 2: SW"
+      name: "Township-Range Format",
+      instruction: "Convert to format: [Township]-[Range] with line break, then Sec. [Section]: [Quarter]",
+      example: "Example: Township 159 North, Range 103 West, Section 22: SE¼ → 159-103\\nSec. 22: SE"
     },
     {
       name: "Date Standardization", 
@@ -61,6 +56,11 @@ const TextReformatDialog: React.FC<TextReformatDialogProps> = ({
       name: "Name Format (Last, First)",
       instruction: "Convert to Last Name, First Name format",
       example: "Example: John Smith → Smith, John"
+    },
+    {
+      name: "Acreage Format",
+      instruction: "Convert to decimal acres with 2 decimal places",
+      example: "Example: 40 acres → 40.00"
     }
   ];
 
@@ -180,11 +180,11 @@ const TextReformatDialog: React.FC<TextReformatDialogProps> = ({
                   variant="outline"
                   size="sm"
                   onClick={() => handlePresetSelect(preset)}
-                  className="justify-start text-left h-auto p-3 w-full"
+                  className="text-left h-auto p-2"
                 >
-                  <div className="w-full overflow-hidden">
-                    <div className="font-medium text-xs whitespace-normal break-words">{preset.name}</div>
-                    <div className="text-xs text-muted-foreground mt-1 whitespace-normal break-words">
+                  <div>
+                    <div className="font-medium text-xs">{preset.name}</div>
+                    <div className="text-xs text-muted-foreground mt-1">
                       {preset.example.split('→')[0].trim()}...
                     </div>
                   </div>
@@ -261,7 +261,7 @@ const TextReformatDialog: React.FC<TextReformatDialogProps> = ({
                 </Button>
               </div>
               <Card className="p-3 mt-1 bg-green-50 border-green-200">
-                <p className="text-sm whitespace-pre-wrap leading-relaxed">
+                <p className="text-sm whitespace-pre-wrap">
                   {reformattedText}
                 </p>
               </Card>
