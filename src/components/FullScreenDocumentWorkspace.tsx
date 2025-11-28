@@ -482,7 +482,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
 
   const [abortController, setAbortController] = useState<AbortController | null>(null);
 
-  const analyzeDocumentAndPopulateRow = async (fillEmptyOnly: boolean = false, selectedInstrument?: number) => {
+  const analyzeDocumentAndPopulateRow = async (fillEmptyOnly: boolean = false, selectedInstrumentId?: number) => {
     if (!documentUrl || isAnalyzing) return;
     
     const controller = new AbortController();
@@ -511,6 +511,11 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
         reader.readAsDataURL(blob);
       });
       
+      // Find the selected instrument's details if an ID was provided
+      const selectedInstrument = selectedInstrumentId !== undefined 
+        ? detectedInstruments.find(inst => inst.id === selectedInstrumentId)
+        : undefined;
+
       const { data, error } = await supabase.functions.invoke('enhanced-document-analysis', {
         body: {
           document_data: imageData,
@@ -520,7 +525,12 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
             columns: extractionPrefs?.columns || editableFields,
             column_instructions: extractionPrefs?.column_instructions || {}
           },
-          selected_instrument: selectedInstrument
+          selected_instrument: selectedInstrument ? {
+            id: selectedInstrument.id,
+            type: selectedInstrument.type,
+            description: selectedInstrument.description,
+            snippet: selectedInstrument.snippet
+          } : undefined
         }
       });
 
@@ -1170,11 +1180,13 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
         }}
         instruments={detectedInstruments}
         onSelect={(instrumentId) => {
-          console.log('🔍 User selected instrument:', instrumentId);
+          console.log('🔍 User selected instrument ID:', instrumentId);
+          const selectedInstrument = detectedInstruments.find(inst => inst.id === instrumentId);
+          console.log('🔍 Selected instrument details:', selectedInstrument);
           setShowInstrumentSelectionDialog(false);
           
           if (pendingInstrumentAnalysis) {
-            // Re-run analysis with selected instrument
+            // Re-run analysis with selected instrument ID
             analyzeDocumentAndPopulateRow(
               pendingInstrumentAnalysis.fillEmptyOnly,
               instrumentId
