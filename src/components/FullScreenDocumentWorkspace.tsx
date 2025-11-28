@@ -5,7 +5,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
-import { X, ZoomIn, ZoomOut, RotateCcw, ExternalLink, ArrowLeft, Brain, AlertTriangle, Sparkles } from 'lucide-react';
+import { X, ZoomIn, ZoomOut, RotateCcw, ExternalLink, ArrowLeft, Brain, AlertTriangle, Sparkles, Wand2 } from 'lucide-react';
 import { DocumentService } from '@/services/documentService';
 import { ExtractionPreferencesService } from '@/services/extractionPreferences';
 import { ColumnWidthPreferencesService } from '@/services/columnWidthPreferences';
@@ -16,6 +16,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import ReExtractDialog from './ReExtractDialog';
 import InstrumentSelectionDialog from './InstrumentSelectionDialog';
+import TextReformatDialog from './TextReformatDialog';
 
 interface FullScreenDocumentWorkspaceProps {
   runsheetId: string;
@@ -85,6 +86,11 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
     currentValue: ''
   });
   const [isReExtracting, setIsReExtracting] = useState(false);
+  
+  // Text reformatting state
+  const [reformatDialogOpen, setReformatDialogOpen] = useState(false);
+  const [textToReformat, setTextToReformat] = useState('');
+  const [reformattingColumn, setReformattingColumn] = useState<string | null>(null);
   
   // Multi-instrument detection state with persistence across page refreshes
   const sessionStorageKey = `instrument_selection_${runsheetId}_${rowIndex}`;
@@ -304,6 +310,24 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
     }
     setEditingColumn(null);
     setEditingValue('');
+  };
+
+  const handleFormatClick = (column: string, currentValue: string) => {
+    setReformattingColumn(column);
+    setTextToReformat(currentValue);
+    setReformatDialogOpen(true);
+  };
+
+  const handleReformatConfirm = (formattedText: string) => {
+    if (reformattingColumn) {
+      // Place formatted version above verbatim with line break
+      const combinedText = `${formattedText}\n${textToReformat}`;
+      setEditingValue(combinedText);
+      handleFieldChange(reformattingColumn, combinedText);
+    }
+    setReformatDialogOpen(false);
+    setReformattingColumn(null);
+    setTextToReformat('');
   };
 
   const cancelEditing = () => {
@@ -1054,32 +1078,46 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                           }}
                         >
                           {isEditing ? (
-                            <Textarea
-                              data-editing={column}
-                              value={editingValue}
-                              onChange={(e) => setEditingValue(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Escape') {
-                                  e.preventDefault();
-                                  cancelEditing();
-                                } else if (e.key === 'Tab') {
-                                  e.preventDefault();
-                                  finishEditing();
-                                  const currentIndex = editableFields.indexOf(column);
-                                  const nextIndex = e.shiftKey 
-                                    ? (currentIndex - 1 + editableFields.length) % editableFields.length
-                                    : (currentIndex + 1) % editableFields.length;
-                                  const nextColumn = editableFields[nextIndex];
-                                  const hasText = localRowData[nextColumn] && localRowData[nextColumn].trim() !== '';
-                                  startEditing(nextColumn, hasText);
-                                }
-                              }}
-                              onBlur={finishEditing}
-                              className={`w-full h-full border-2 border-primary rounded-none bg-background focus:ring-0 focus:outline-none resize-none p-2 ${
-                                alignment === 'center' ? 'text-center' : 
-                                alignment === 'right' ? 'text-right' : 'text-left'
-                              }`}
-                            />
+                            <div className="flex flex-col h-full gap-2 p-2">
+                              <Textarea
+                                data-editing={column}
+                                value={editingValue}
+                                onChange={(e) => setEditingValue(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Escape') {
+                                    e.preventDefault();
+                                    cancelEditing();
+                                  } else if (e.key === 'Tab') {
+                                    e.preventDefault();
+                                    finishEditing();
+                                    const currentIndex = editableFields.indexOf(column);
+                                    const nextIndex = e.shiftKey 
+                                      ? (currentIndex - 1 + editableFields.length) % editableFields.length
+                                      : (currentIndex + 1) % editableFields.length;
+                                    const nextColumn = editableFields[nextIndex];
+                                    const hasText = localRowData[nextColumn] && localRowData[nextColumn].trim() !== '';
+                                    startEditing(nextColumn, hasText);
+                                  }
+                                }}
+                                onBlur={finishEditing}
+                                className={`flex-1 border-2 border-primary rounded-none bg-background focus:ring-0 focus:outline-none resize-none ${
+                                  alignment === 'center' ? 'text-center' : 
+                                  alignment === 'right' ? 'text-right' : 'text-left'
+                                }`}
+                              />
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleFormatClick(column, editingValue);
+                                }}
+                                className="w-full"
+                              >
+                                <Wand2 className="h-4 w-4 mr-2" />
+                                Format Text
+                              </Button>
+                            </div>
                            ) : (
                              <div
                                className={`w-full h-full transition-colors focus:outline-none relative
@@ -1200,6 +1238,17 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
           } catch (e) {
             console.error('Failed to clear instrument selection state:', e);
           }
+        }}
+      />
+
+      <TextReformatDialog
+        isOpen={reformatDialogOpen}
+        originalText={textToReformat}
+        onClose={() => setReformatDialogOpen(false)}
+        onConfirm={handleReformatConfirm}
+        cellInfo={{
+          rowIndex: rowIndex,
+          column: reformattingColumn || ''
         }}
       />
     </div>
