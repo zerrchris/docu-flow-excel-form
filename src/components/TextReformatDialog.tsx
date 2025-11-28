@@ -43,9 +43,14 @@ const TextReformatDialog: React.FC<TextReformatDialogProps> = ({
   // Preset format examples for common legal document formatting
   const presetFormats = [
     {
-      name: "Township-Range Format",
-      instruction: "Convert to format: [Township]-[Range] with line break, then Sec. [Section]: [Quarter]",
-      example: "Example: Township 159 North, Range 103 West, Section 22: SE¼ → 159-103\\nSec. 22: SE"
+      name: "Township-Range with Sections",
+      instruction: "Convert to format: [Township][Direction]-[Range][Direction] on first line, then each section on new line as 'Sec. [Number]: [Description]'. Abbreviate quarters (NW, SE, E2W2, etc.) and use 'All' for entire section.",
+      example: "Example: Township 1 South Range 2 West Section 1 NW Section 2 All → 1S-2W\\nSec. 1: NW\\nSec. 2: All"
+    },
+    {
+      name: "Simple Township-Range Format",
+      instruction: "Convert to format: [Township]-[Range] on first line, then each section on new line as 'Section [Number]: [Description]'",
+      example: "Example: Township 1 Range 2 Section 1 All Section 2 SW → 1-2\\nSection 1: All\\nSection 2: SW"
     },
     {
       name: "Date Standardization", 
@@ -56,11 +61,6 @@ const TextReformatDialog: React.FC<TextReformatDialogProps> = ({
       name: "Name Format (Last, First)",
       instruction: "Convert to Last Name, First Name format",
       example: "Example: John Smith → Smith, John"
-    },
-    {
-      name: "Acreage Format",
-      instruction: "Convert to decimal acres with 2 decimal places",
-      example: "Example: 40 acres → 40.00"
     }
   ];
 
