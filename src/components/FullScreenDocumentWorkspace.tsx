@@ -90,6 +90,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
   // Visual instrument selection state
   const [visualSelectionMode, setVisualSelectionMode] = useState(false);
   const [selectedStartPoint, setSelectedStartPoint] = useState<{page: number; y: number} | null>(null);
+  const [isDraggingLine, setIsDraggingLine] = useState(false);
   
   // Multi-instrument detection state with persistence across page refreshes
   const sessionStorageKey = `instrument_selection_${runsheetId}_${rowIndex}`;
@@ -463,23 +464,28 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
   };
 
   const handleImageMouseDown = (e: React.MouseEvent) => {
-    // If in visual selection mode, capture the click position
-    if (visualSelectionMode) {
-      const rect = e.currentTarget.getBoundingClientRect();
-      const relativeY = (e.clientY - rect.top) / rect.height;
-      
-      setSelectedStartPoint({ page: 1, y: relativeY }); // For images, page is always 1
-      setVisualSelectionMode(false);
-      
-      toast({
-        title: "Instrument Start Point Selected",
-        description: "Analysis will focus from this point forward. Click Analyze Document to extract data.",
-      });
-      return;
-    }
+    // Don't interfere with line dragging
+    if (isDraggingLine) return;
     
     setIsDraggingImage(true);
     setDragStart({ x: e.clientX - panX, y: e.clientY - panY });
+  };
+  
+  const handleLineMouseDown = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setIsDraggingLine(true);
+  };
+  
+  const handleLineMouseMove = (e: MouseEvent, containerRect: DOMRect) => {
+    if (!isDraggingLine) return;
+    
+    const relativeY = Math.max(0, Math.min(1, (e.clientY - containerRect.top) / containerRect.height));
+    setSelectedStartPoint({ page: 1, y: relativeY });
+  };
+  
+  const handleLineMouseUp = () => {
+    setIsDraggingLine(false);
   };
 
   const handleImageMouseMove = (e: React.MouseEvent) => {
@@ -717,10 +723,12 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
   };
   
   const handleStartVisualSelection = () => {
+    // Place the line at 30% down by default (typical position for second instrument)
+    setSelectedStartPoint({ page: 1, y: 0.3 });
     setVisualSelectionMode(true);
     toast({
-      title: "Visual Selection Mode Activated",
-      description: "Click on the document where your target instrument begins. The top of the instrument should be clicked.",
+      title: "Position the Blue Line",
+      description: "Drag the blue line to the start of your target instrument, then click Analyze.",
       duration: 5000,
     });
   };
@@ -728,6 +736,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
   const handleCancelVisualSelection = () => {
     setVisualSelectionMode(false);
     setSelectedStartPoint(null);
+    setIsDraggingLine(false);
   };
 
   // Re-extract functionality for individual fields
@@ -909,7 +918,20 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                   {error || 'No document available'}
                 </div>
               ) : (
-                <div className="h-full w-full relative overflow-hidden">
+                <div 
+                  className="h-full w-full relative overflow-hidden"
+                  onMouseMove={(e) => {
+                    if (isDraggingLine) {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      handleLineMouseMove(e.nativeEvent, rect);
+                    }
+                  }}
+                  onMouseUp={() => {
+                    if (isDraggingLine) {
+                      handleLineMouseUp();
+                    }
+                  }}
+                >
                   <div 
                     className="h-full w-full overflow-auto scrollbar-thin scrollbar-thumb-muted-foreground/30 scrollbar-track-transparent"
                     onWheel={(e) => {
@@ -933,7 +955,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                       alt={documentName}
                       className={`transition-all duration-200 ease-out select-none ${
                         fitToWidth ? 'w-full h-auto object-contain' : 'object-contain cursor-grab active:cursor-grabbing'
-                      } ${visualSelectionMode ? 'cursor-crosshair' : ''}`}
+                      }`}
                       style={{
                         minHeight: fitToWidth ? 'auto' : '100%',
                         minWidth: fitToWidth ? '100%' : 'auto',
@@ -942,7 +964,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                         willChange: fitToWidth ? 'auto' : 'transform'
                       }}
                       draggable={false}
-                      onMouseDown={fitToWidth ? (visualSelectionMode ? handleImageMouseDown : undefined) : handleImageMouseDown}
+                      onMouseDown={fitToWidth ? undefined : handleImageMouseDown}
                       onMouseMove={fitToWidth ? undefined : handleImageMouseMove}
                       onMouseUp={fitToWidth ? undefined : handleImageMouseUp}
                       onError={(e) => {
@@ -965,20 +987,42 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                          }, 1000);
                        }}
                      />
-                     {selectedStartPoint && !visualSelectionMode && (
-                       <div 
-                         className="absolute left-0 right-0 h-0.5 bg-primary animate-pulse pointer-events-none z-10"
-                         style={{
-                           top: `${selectedStartPoint.y * 100}%`,
-                           boxShadow: '0 0 10px hsl(var(--primary) / 0.5)'
-                         }}
-                       />
-                     )}
                    </div>
-                </div>
-              )}
-            </div>
-          </ResizablePanel>
+                   {selectedStartPoint && (
+                     <div 
+                       className="absolute left-0 right-0 pointer-events-auto z-20"
+                       style={{
+                         top: `${selectedStartPoint.y * 100}%`,
+                         transform: 'translateY(-50%)'
+                       }}
+                     >
+                       {/* Draggable handle */}
+                       <div
+                         className={`absolute left-0 right-0 flex items-center justify-center ${isDraggingLine ? 'cursor-grabbing' : 'cursor-grab'}`}
+                         onMouseDown={handleLineMouseDown}
+                       >
+                         {/* Line with glow */}
+                         <div 
+                           className="absolute left-0 right-0 h-1 bg-primary shadow-lg"
+                           style={{
+                             boxShadow: '0 0 20px hsl(var(--primary) / 0.8), 0 0 40px hsl(var(--primary) / 0.4)'
+                           }}
+                         />
+                         {/* Drag handle in center */}
+                         <div className="relative bg-primary text-primary-foreground px-4 py-2 rounded-full shadow-xl font-semibold text-sm whitespace-nowrap z-10">
+                           ⬍ Drag to Position ⬍
+                         </div>
+                       </div>
+                       {/* Position indicator */}
+                       <div className="absolute right-4 -top-8 bg-background/90 backdrop-blur px-3 py-1 rounded text-xs font-mono text-muted-foreground border border-border">
+                         {Math.round(selectedStartPoint.y * 100)}% down
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </ResizablePanel>
 
           {/* Resize handle */}
           <ResizableHandle className="bg-border hover:bg-primary/20 transition-colors" />
@@ -1027,22 +1071,33 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                           </Button>
                        ) : (
                          <>
-                           {selectedStartPoint && (
-                             <div className="flex items-center gap-2 px-3 py-1 rounded-md bg-primary/10 text-primary text-sm">
-                               <Sparkles className="h-4 w-4" />
-                               Start point selected
+                           {visualSelectionMode || selectedStartPoint ? (
+                             <div className="flex items-center gap-2">
+                               <div className="flex items-center gap-2 px-3 py-1 rounded-md bg-primary/10 text-primary text-sm">
+                                 <Sparkles className="h-4 w-4" />
+                                 Line at {Math.round((selectedStartPoint?.y || 0) * 100)}%
+                               </div>
+                               <Button
+                                 variant="ghost"
+                                 size="sm"
+                                 onClick={handleCancelVisualSelection}
+                                 className="gap-2 h-8"
+                               >
+                                 Clear
+                               </Button>
                              </div>
+                           ) : (
+                             <Button
+                               variant="outline"
+                               size="sm"
+                               onClick={handleStartVisualSelection}
+                               className="gap-2"
+                               title="Position a line at the start of your target instrument"
+                             >
+                               <Sparkles className="h-4 w-4" />
+                               Select Start
+                             </Button>
                            )}
-                           <Button
-                             variant="outline"
-                             size="sm"
-                             onClick={handleStartVisualSelection}
-                             className="gap-2"
-                             title="Click to select where the instrument starts on the document"
-                           >
-                             <Sparkles className="h-4 w-4" />
-                             Select Start
-                           </Button>
                            <Button
                              variant="outline"
                              size="sm"
