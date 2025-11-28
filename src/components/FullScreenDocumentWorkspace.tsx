@@ -540,8 +540,8 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
       
       analysisResult = data;
       
-      // Check if multiple instruments were detected
-      if (analysisResult?.analysis?.multiple_instruments && analysisResult?.analysis?.instrument_count > 1) {
+      // Check if multiple instruments were detected (only when no specific instrument has been selected yet)
+      if (!selectedInstrumentId && analysisResult?.analysis?.multiple_instruments && analysisResult?.analysis?.instrument_count > 1) {
         console.log('🔍 Multiple instruments detected:', analysisResult.analysis.instrument_count);
         console.log('🔍 Instruments:', analysisResult.analysis.instruments);
         
