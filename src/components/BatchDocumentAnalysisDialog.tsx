@@ -17,9 +17,10 @@ import { cn } from "@/lib/utils";
 interface BatchAnalysisResult {
   rowIndex: number;
   documentName: string;
-  status: 'pending' | 'analyzing' | 'success' | 'error';
+  status: 'pending' | 'analyzing' | 'success' | 'error' | 'skipped_multi_instrument';
   extractedData?: Record<string, string>;
   error?: string;
+  instrumentCount?: number;
 }
 
 interface BatchDocumentAnalysisDialogProps {
@@ -121,10 +122,17 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
           const successCount = progress.results.filter(r => r.status === 'success' && (!r.error || !r.error.includes('Skipped'))).length;
           const errorCount = progress.results.filter(r => r.status === 'error').length;
           const skippedCount = progress.results.filter(r => r.error && r.error.includes('Skipped')).length;
+          const multiInstrumentSkipped = progress.results.filter(r => r.status === 'skipped_multi_instrument').length;
+          
+          let description = `Successfully analyzed ${successCount} documents.`;
+          if (errorCount > 0) description += ` ${errorCount} failed.`;
+          if (skippedCount > 0) description += ` ${skippedCount} skipped (has data).`;
+          if (multiInstrumentSkipped > 0) description += ` ${multiInstrumentSkipped} skipped (multiple instruments - requires manual selection).`;
           
           toast({
             title: "Batch analysis completed",
-            description: `Successfully analyzed ${successCount} documents.${errorCount > 0 ? ` ${errorCount} failed.` : ''}${skippedCount > 0 ? ` ${skippedCount} skipped.` : ''}`,
+            description,
+            duration: multiInstrumentSkipped > 0 ? 8000 : 5000,
           });
           
           setCurrentJobId(null);
@@ -212,6 +220,8 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
         return <CheckCircle className="w-4 h-4 text-green-500" />;
       case 'error':
         return <XCircle className="w-4 h-4 text-destructive" />;
+      case 'skipped_multi_instrument':
+        return <AlertCircle className="w-4 h-4 text-yellow-500" />;
     }
   };
 
@@ -225,6 +235,8 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
         return 'Success';
       case 'error':
         return 'Failed';
+      case 'skipped_multi_instrument':
+        return 'Skipped - Multiple Instruments';
     }
   };
 
@@ -339,7 +351,7 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-medium">{getStatusText(result.status)}</p>
-                        {result.status === 'success' && result.extractedData && Object.keys(result.extractedData).length > 0 && (
+                         {result.status === 'success' && result.extractedData && Object.keys(result.extractedData).length > 0 && (
                           <p className="text-xs text-muted-foreground">
                             {Object.keys(result.extractedData).length} fields extracted
                           </p>
@@ -347,6 +359,11 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
                         {result.status === 'success' && result.error && (
                           <p className="text-xs text-yellow-600 max-w-[150px] truncate">
                             {result.error}
+                          </p>
+                        )}
+                        {result.status === 'skipped_multi_instrument' && (
+                          <p className="text-xs text-yellow-600 max-w-[150px] truncate">
+                            {result.instrumentCount} instruments detected
                           </p>
                         )}
                         {result.status === 'error' && result.error && (
@@ -397,7 +414,7 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
             )}
             
             {/* Show analysis complete state */}
-            {!isAnalyzing && results.length > 0 && results.every(r => r.status === 'success' || r.status === 'error') && (
+            {!isAnalyzing && results.length > 0 && results.every(r => r.status === 'success' || r.status === 'error' || r.status === 'skipped_multi_instrument') && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <CheckCircle className="w-4 h-4 text-green-500" />
                 Analysis Complete

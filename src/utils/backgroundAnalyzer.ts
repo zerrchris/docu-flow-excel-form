@@ -20,9 +20,10 @@ interface AnalysisJob {
 interface AnalysisResult {
   rowIndex: number;
   documentName: string;
-  status: 'pending' | 'analyzing' | 'success' | 'error';
+  status: 'pending' | 'analyzing' | 'success' | 'error' | 'skipped_multi_instrument';
   extractedData?: Record<string, string>;
   error?: string;
+  instrumentCount?: number;
 }
 
 export class BackgroundAnalyzer {
@@ -105,9 +106,34 @@ export class BackgroundAnalyzer {
             };
           } else {
             // Perform analysis
-            const extractedData = await this.analyzeDocument(document, job.columns, job.columnInstructions, job.documentCache);
+            const analysisResult = await this.analyzeDocument(document, job.columns, job.columnInstructions, job.documentCache);
             
-            if (extractedData && Object.keys(extractedData).length > 0) {
+            // Check if multiple instruments were detected
+            if (analysisResult.multipleInstruments) {
+              job.results[job.currentIndex] = {
+                ...job.results[job.currentIndex],
+                status: 'skipped_multi_instrument',
+                instrumentCount: analysisResult.instrumentCount,
+                error: `Skipped - ${analysisResult.instrumentCount} instruments detected, requires manual selection`
+              };
+              
+              // Mark the row data with a flag for visual indication
+              if (!job.currentData[rowIndex]) {
+                job.currentData[rowIndex] = {};
+              }
+              job.currentData[rowIndex]['_multi_instrument_flag'] = `${analysisResult.instrumentCount} instruments`;
+              
+              // Save immediately so the flag is visible
+              await this.saveProgress(job);
+              window.dispatchEvent(new CustomEvent('batchAnalysisProgress', {
+                detail: { 
+                  rowIndex, 
+                  extractedData: { '_multi_instrument_flag': `${analysisResult.instrumentCount} instruments` },
+                  currentIndex: job.currentIndex,
+                  total: job.documentMap.length
+                }
+              }));
+            } else if (analysisResult.data && Object.keys(analysisResult.data).length > 0) {
               // Update the data
               if (!job.currentData[rowIndex]) {
                 job.currentData[rowIndex] = {};
@@ -115,16 +141,16 @@ export class BackgroundAnalyzer {
               
               if (job.skipRowsWithData) {
                 // Only add data to empty fields
-                Object.keys(extractedData).forEach(key => {
+                Object.keys(analysisResult.data).forEach(key => {
                   if (!job.currentData[rowIndex][key] || job.currentData[rowIndex][key].trim() === '') {
-                    job.currentData[rowIndex][key] = extractedData[key];
+                    job.currentData[rowIndex][key] = analysisResult.data[key];
                   }
                 });
               } else {
                 // Overwrite existing data
                 job.currentData[rowIndex] = {
                   ...job.currentData[rowIndex],
-                  ...extractedData
+                  ...analysisResult.data
                 };
               }
 
@@ -137,7 +163,7 @@ export class BackgroundAnalyzer {
               window.dispatchEvent(new CustomEvent('batchAnalysisProgress', {
                 detail: { 
                   rowIndex, 
-                  extractedData,
+                  extractedData: analysisResult.data,
                   currentIndex: job.currentIndex,
                   total: job.documentMap.length
                 }
@@ -146,7 +172,7 @@ export class BackgroundAnalyzer {
               job.results[job.currentIndex] = {
                 ...job.results[job.currentIndex],
                 status: 'success',
-                extractedData
+                extractedData: analysisResult.data
               };
             } else {
               throw new Error('No data extracted from document');
@@ -172,6 +198,19 @@ export class BackgroundAnalyzer {
         job.status = 'completed';
         // Final save to ensure all data is persisted
         await this.saveProgress(job);
+        
+        // Count skipped documents for summary
+        const skippedCount = job.results.filter(r => r.status === 'skipped_multi_instrument').length;
+        if (skippedCount > 0) {
+          // Dispatch event with summary
+          window.dispatchEvent(new CustomEvent('batchAnalysisComplete', {
+            detail: { 
+              skippedCount,
+              total: job.documentMap.length,
+              successCount: job.results.filter(r => r.status === 'success').length
+            }
+          }));
+        }
       }
     } catch (error) {
       job.status = 'error';
@@ -188,11 +227,7 @@ export class BackgroundAnalyzer {
     columns: string[], 
     columnInstructions: Record<string, string>,
     documentCache: Map<string, string>
-  ): Promise<Record<string, string> | null> {
-    const extractionFields = columns.map(col => 
-      `${col}: ${columnInstructions[col] || 'Extract this field'}`
-    ).join('\n');
-
+  ): Promise<{ data: Record<string, string> | null; multipleInstruments?: boolean; instrumentCount?: number }> {
     try {
       let imageData: string;
       
@@ -216,41 +251,45 @@ export class BackgroundAnalyzer {
         documentCache.set(cacheKey, imageData);
       }
 
-      const { data, error } = await supabase.functions.invoke('analyze-document', {
+      // Use enhanced-document-analysis which handles multi-instrument detection
+      const { data, error } = await supabase.functions.invoke('enhanced-document-analysis', {
         body: {
-          prompt: `Extract information from this document for the following fields and return as valid JSON:\n${extractionFields}\n\nReturn only a JSON object with field names as keys and extracted values as values. Do not include any markdown, explanations, or additional text.`,
-          imageData,
-          fileName: document.stored_filename
+          document_data: imageData,
+          document_name: document.stored_filename,
+          extraction_preferences: {
+            columns: columns,
+            column_instructions: columnInstructions
+          }
         },
       });
       
       if (error) throw error;
-      const analysisResult = data;
+      
+      const analysisResult = data?.analysis;
+      
+      // Check for multiple instruments
+      if (analysisResult?.multiple_instruments && analysisResult?.instrument_count > 1) {
+        console.log(`⚠️ Multiple instruments detected (${analysisResult.instrument_count}) - skipping for manual review`);
+        return { 
+          data: null, 
+          multipleInstruments: true, 
+          instrumentCount: analysisResult.instrument_count 
+        };
+      }
 
-      if (analysisResult?.generatedText) {
-        let extractedData = {};
-        try {
-          extractedData = JSON.parse(analysisResult.generatedText);
-        } catch (e) {
-          const jsonMatch = analysisResult.generatedText.match(/\{[\s\S]*\}/);
-          if (jsonMatch) {
-            extractedData = JSON.parse(jsonMatch[0]);
-          } else {
-            throw new Error('Could not extract valid JSON from AI response');
-          }
-        }
-
+      // Extract data from successful analysis
+      if (analysisResult?.extracted_data) {
         const filteredData: Record<string, string> = {};
-        Object.keys(extractedData).forEach(key => {
-          if (columns.includes(key) && extractedData[key]) {
-            filteredData[key] = extractedData[key];
+        Object.keys(analysisResult.extracted_data).forEach(key => {
+          if (columns.includes(key) && analysisResult.extracted_data[key]) {
+            filteredData[key] = analysisResult.extracted_data[key];
           }
         });
 
-        return filteredData;
+        return { data: filteredData };
       }
       
-      return null;
+      return { data: null };
     } catch (error) {
       console.error('Error analyzing document:', error);
       throw error;
