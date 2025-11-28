@@ -157,6 +157,14 @@ serve(async (req) => {
             role: "system",
             content: `You are an expert document analyst specializing in real estate and legal documents. You MUST extract structured data and return ONLY valid JSON format.
 
+🚨 CRITICAL ANTI-HALLUCINATION RULES:
+- NEVER make up, infer, or fabricate information that is not explicitly visible in the document
+- If a field's information is not clearly present in the document, you MUST return "Not found" as the value
+- Do NOT use example data, placeholder data, or generic data (like "John Doe", "123 Main St", etc.)
+- Do NOT infer values based on document type - only extract what is actually written
+- Better to return "Not found" than to guess or make assumptions
+- If text is unclear or partially visible, return "Not found" rather than guessing
+
 🔍 MULTI-INSTRUMENT DETECTION:
 ${selected_instrument ? `
 - THIS IS A FOCUSED EXTRACTION: Extract data ONLY from the following specific instrument:
@@ -180,25 +188,29 @@ ${selected_instrument ? `
 - Focus on consistency - extract the same information the same way every time
 - Be deterministic - same document should produce identical results
 
-⚠️ CRITICAL RULES:
+⚠️ CRITICAL EXTRACTION RULES:
 - ALWAYS return valid JSON - never refuse or return text explanations
-- Extract information that is clearly visible in the document
-- For missing fields, use empty string "" (not null)
-- Be consistent with address formats and legal descriptions
-- Extract complete addresses including building numbers and suite details
+- ONLY extract information that is CLEARLY VISIBLE and READABLE in the document
+- For missing or not found fields, use the exact string "Not found" (not empty string, not null)
+- NEVER fabricate, infer, or make up data - if you cannot see it clearly, return "Not found"
+- If text is blurry, cut off, or unclear, return "Not found" for that field
+- Do NOT use placeholder names like "John Doe", "Jane Smith", or generic addresses
+- Read exactly what is written - do not paraphrase or interpret creatively
 
 EXTRACTION REQUIREMENTS:
-${extraction_preferences?.columns ? `- Extract these specific fields:
+${extraction_preferences?.columns ? `- Extract these specific fields, returning "Not found" if not visible:
 ${extraction_preferences.columns.map(col => {
   const instruction = extraction_preferences?.column_instructions?.[col];
-  return instruction ? `  * ${col}: ${instruction}` : `  * ${col}: Extract this field value`;
+  return instruction ? `  * ${col}: ${instruction}. Return "Not found" if this information is not clearly visible.` : `  * ${col}: Extract this field value. Return "Not found" if not present.`;
 }).join('\n')}` : '- Extract common document fields like dates, names, addresses, amounts, document types, etc.'}
 
-CONSISTENCY GUIDELINES:
-- Always extract full addresses with all visible components (street, building, suite, city, state, zip)
-- Legal descriptions should include all fractions and section details exactly as written
-- Dates should be in MM/DD/YYYY format consistently
-- Names should include all visible name variations (a/k/a, etc.)
+EXTRACTION ACCURACY GUIDELINES:
+- Copy text EXACTLY as it appears - do not modernize spelling or formatting
+- For addresses: Extract only if complete and clearly visible, otherwise "Not found"
+- For legal descriptions: Include all fractions and section details exactly as written, or "Not found"
+- For dates: Use format shown in document, convert to MM/DD/YYYY only if date is clearly visible
+- For names: Include all visible variations (a/k/a, etc.), but never invent names
+- For amounts: Include currency symbols and decimals exactly as shown, or "Not found"
 
 ${globalInstructions ? `\nGlobal Admin Instructions: ${globalInstructions}\n` : ''}
 
@@ -206,7 +218,7 @@ RESPONSE FORMAT: Return ONLY a valid JSON object with:
 ${selected_instrument ? `
 {
   "extracted_data": {
-    "field_name": "extracted_value_or_empty_string_if_not_found"
+    "field_name": "extracted_value_OR_Not_found_if_not_clearly_visible"
   },
   "confidence_scores": {
     "field_name": 0.95
@@ -229,7 +241,7 @@ ${selected_instrument ? `
     }
   ],
   "extracted_data": {
-    "field_name": "if only 1 instrument, extract data; otherwise leave empty"
+    "field_name": "if only 1 instrument, extract visible data; otherwise use Not_found"
   },
   "confidence_scores": {
     "field_name": 0.95
@@ -245,7 +257,11 @@ ${selected_instrument ? `
             content: [
               {
                 type: "text",
-                text: "Please analyze this document and extract the relevant data according to the requirements."
+                text: `Analyze this document and extract ONLY information that is clearly visible and readable. 
+
+CRITICAL: If you cannot clearly see a field's value in the document, you MUST return "Not found" for that field. Do NOT make up, infer, or fabricate any information. Do NOT use placeholder names like "John Doe" or generic addresses.
+
+Extract the requested data according to the requirements.`
               },
               {
                 type: "image_url",
