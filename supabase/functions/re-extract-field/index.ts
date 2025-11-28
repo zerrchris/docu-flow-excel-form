@@ -46,34 +46,6 @@ serve(async (req) => {
   try {
     console.log('=== STARTING FUNCTION LOGIC ===');
     
-    // Test if we have the required API keys
-    const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY');
-    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
-    console.log('Anthropic API key exists:', !!anthropicApiKey);
-    console.log('OpenAI API key exists:', !!openaiApiKey);
-    
-    if (!anthropicApiKey) {
-      console.error('❌ ANTHROPIC_API_KEY not configured');
-      await logFunction(supabase, null, 're-extract-field', null, null, 'ANTHROPIC_API_KEY not configured', 500, Date.now() - startTime);
-      return new Response(JSON.stringify({ 
-        error: 'ANTHROPIC_API_KEY not configured' 
-      }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    if (!openaiApiKey) {
-      console.error('❌ OPENAI_API_KEY not configured');
-      await logFunction(supabase, null, 're-extract-field', null, null, 'OPENAI_API_KEY not configured', 500, Date.now() - startTime);
-      return new Response(JSON.stringify({ 
-        error: 'OPENAI_API_KEY not configured' 
-      }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
     // Parse request body first for logging
     let requestBody;
     try {
@@ -83,7 +55,8 @@ serve(async (req) => {
         hasFileUrl: !!requestBody.fileUrl,
         hasFieldName: !!requestBody.fieldName,
         hasFieldInstructions: !!requestBody.fieldInstructions,
-        fieldName: requestBody.fieldName
+        fieldName: requestBody.fieldName,
+        imageDataPrefix: requestBody.imageData?.substring(0, 50)
       });
     } catch (parseError) {
       console.error('❌ Failed to parse request body:', parseError);
@@ -113,13 +86,118 @@ serve(async (req) => {
 
     console.log(`Re-extracting field "${fieldName}" with user notes:`, userNotes);
 
-    // Detect if this is a PDF or image based on the imageData or fileName
-    const isPdf = fileName?.toLowerCase().endsWith('.pdf') || imageData?.includes('application/pdf');
-    console.log('Document type detected:', isPdf ? 'PDF' : 'Image');
+    // Detect if this is actually a PDF based on the imageData content (not filename)
+    // If imageData starts with data:image/, it's an image even if filename has .pdf
+    const isPdf = imageData.includes('data:application/pdf') || imageData.includes('application/pdf');
+    const isImage = imageData.startsWith('data:image/');
+    console.log('Document type detected:', { isPdf, isImage, fileName });
+    
+    // Check which API keys we have
+    const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY');
+    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
+    console.log('Available API keys - Anthropic:', !!anthropicApiKey, 'OpenAI:', !!openaiApiKey);
+    
+    // For images, we only need OpenAI. For PDFs, we need Anthropic
+    if (isPdf && !isImage && !anthropicApiKey) {
+      console.error('❌ ANTHROPIC_API_KEY not configured for PDF');
+      await logFunction(supabase, null, 're-extract-field', requestBody, null, 'ANTHROPIC_API_KEY not configured', 500, Date.now() - startTime);
+      return new Response(JSON.stringify({ 
+        error: 'ANTHROPIC_API_KEY not configured' 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (!openaiApiKey && (isImage || !isPdf)) {
+      console.error('❌ OPENAI_API_KEY not configured for image');
+      await logFunction(supabase, null, 're-extract-field', requestBody, null, 'OPENAI_API_KEY not configured', 500, Date.now() - startTime);
+      return new Response(JSON.stringify({ 
+        error: 'OPENAI_API_KEY not configured' 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     let extractedValue: string;
 
-    if (isPdf) {
+    // Always prefer to use OpenAI for images, even if filename suggests PDF
+    if (isImage || (!isPdf && openaiApiKey)) {
+      // Use OpenAI API for images
+      console.log('Using OpenAI API for image re-extraction');
+      
+      const prompt = `Re-extract the "${fieldName}" field from this document using these instructions: ${fieldInstructions}. 
+
+Current value: ${currentValue || 'None'}
+User notes: ${userNotes || 'None'}
+
+Important guidelines:
+- Focus only on extracting the "${fieldName}" field
+- Consider the user's feedback to correct any previous extraction errors
+- If the user indicates the information is not present, respond with "Not found"
+- If the user indicates a specific location or correction, prioritize that information
+- Return only the extracted value as a string, not explanations or additional text
+- Be precise and accurate based on what you can see in the document`;
+
+      const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${openaiApiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o',
+          max_tokens: 200,
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'text',
+                  text: prompt
+                },
+                {
+                  type: 'image_url',
+                  image_url: {
+                    url: imageData
+                  }
+                }
+              ]
+            }
+          ]
+        })
+      });
+
+      console.log('OpenAI API response status:', openaiResponse.status);
+
+      if (!openaiResponse.ok) {
+        const errorText = await openaiResponse.text();
+        const errorMsg = `OpenAI API error: ${openaiResponse.status} - ${errorText}`;
+        console.error('❌ OpenAI API error:', errorMsg);
+        await logFunction(supabase, null, 're-extract-field', requestBody, null, errorMsg, 500, Date.now() - startTime);
+        return new Response(JSON.stringify({ 
+          error: errorMsg
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const openaiData = await openaiResponse.json();
+      
+      if (!openaiData.choices || !openaiData.choices[0] || !openaiData.choices[0].message) {
+        console.error('No content returned from OpenAI:', openaiData);
+        return new Response(JSON.stringify({ 
+          error: 'No content returned from OpenAI' 
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      extractedValue = openaiData.choices[0].message.content.trim();
+    } else if (isPdf && !isImage && anthropicApiKey) {
       // Use Claude API for PDFs
       console.log('Using Claude API for PDF re-extraction');
       
@@ -197,81 +275,17 @@ Important guidelines:
       }
 
       extractedValue = claudeData.content[0].text.trim();
-      
     } else {
-      // Use OpenAI API for images
-      console.log('Using OpenAI API for image re-extraction');
-      
-      const prompt = `Re-extract the "${fieldName}" field from this document using these instructions: ${fieldInstructions}. 
-
-Current value: ${currentValue || 'None'}
-User notes: ${userNotes || 'None'}
-
-Important guidelines:
-- Focus only on extracting the "${fieldName}" field
-- Consider the user's feedback to correct any previous extraction errors
-- If the user indicates the information is not present, respond with "Not found"
-- If the user indicates a specific location or correction, prioritize that information
-- Return only the extracted value as a string, not explanations or additional text
-- Be precise and accurate based on what you can see in the document`;
-
-      const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${openaiApiKey}`,
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o',
-          max_tokens: 200,
-          messages: [
-            {
-              role: 'user',
-              content: [
-                {
-                  type: 'text',
-                  text: prompt
-                },
-                {
-                  type: 'image_url',
-                  image_url: {
-                    url: imageData
-                  }
-                }
-              ]
-            }
-          ]
-        })
+      // Fallback error if no suitable API available
+      const errorMsg = 'No suitable API key configured for document type';
+      console.error('❌', errorMsg);
+      await logFunction(supabase, null, 're-extract-field', requestBody, null, errorMsg, 500, Date.now() - startTime);
+      return new Response(JSON.stringify({ 
+        error: errorMsg
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
-
-      console.log('OpenAI API response status:', openaiResponse.status);
-
-      if (!openaiResponse.ok) {
-        const errorText = await openaiResponse.text();
-        const errorMsg = `OpenAI API error: ${openaiResponse.status} - ${errorText}`;
-        console.error('❌ OpenAI API error:', errorMsg);
-        await logFunction(supabase, null, 're-extract-field', requestBody, null, errorMsg, 500, Date.now() - startTime);
-        return new Response(JSON.stringify({ 
-          error: errorMsg
-        }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-
-      const openaiData = await openaiResponse.json();
-      
-      if (!openaiData.choices || !openaiData.choices[0] || !openaiData.choices[0].message) {
-        console.error('No content returned from OpenAI:', openaiData);
-        return new Response(JSON.stringify({ 
-          error: 'No content returned from OpenAI' 
-        }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-
-      extractedValue = openaiData.choices[0].message.content.trim();
     }
     
     // Clean up markdown formatting (remove code blocks, backticks, quotes)
@@ -291,7 +305,7 @@ Important guidelines:
       fieldName,
       extractedValue: cleanedValue,
       userNotes,
-      apiUsed: isPdf ? 'Claude' : 'OpenAI'
+      apiUsed: isImage ? 'OpenAI' : (isPdf ? 'Claude' : 'OpenAI')
     };
     
     console.log('✅ Re-extraction completed successfully');
