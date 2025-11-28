@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -92,6 +92,44 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
   const [selectedStartPoint, setSelectedStartPoint] = useState<{page: number; y: number} | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
+  const [isDraggingLine, setIsDraggingLine] = useState(false);
+
+  const handleLineMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingLine(true);
+  }, []);
+
+  const handleLineMouseMove = useCallback((e: MouseEvent) => {
+    if (!isDraggingLine || !imageRef.current || !scrollContainerRef.current) return;
+
+    const image = imageRef.current;
+    const scrollContainer = scrollContainerRef.current;
+    const imageRect = image.getBoundingClientRect();
+    
+    // Get mouse Y position relative to the image
+    const mouseY = e.clientY - imageRect.top + scrollContainer.scrollTop;
+    
+    // Calculate percentage as decimal (0-1) relative to full image height
+    const relativeY = mouseY / image.clientHeight;
+    
+    setSelectedStartPoint({ page: 1, y: Math.max(0, Math.min(1, relativeY)) });
+  }, [isDraggingLine]);
+
+  const handleLineMouseUp = useCallback(() => {
+    setIsDraggingLine(false);
+  }, []);
+
+  useEffect(() => {
+    if (isDraggingLine) {
+      document.addEventListener('mousemove', handleLineMouseMove);
+      document.addEventListener('mouseup', handleLineMouseUp);
+      return () => {
+        document.removeEventListener('mousemove', handleLineMouseMove);
+        document.removeEventListener('mouseup', handleLineMouseUp);
+      };
+    }
+  }, [isDraggingLine, handleLineMouseMove, handleLineMouseUp]);
   
   // Multi-instrument detection state with persistence across page refreshes
   const sessionStorageKey = `instrument_selection_${runsheetId}_${rowIndex}`;
@@ -727,11 +765,10 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
 
   const handleStartVisualSelection = () => {
     setVisualSelectionMode(true);
-    // Line position will be calculated on first scroll/render
-    requestAnimationFrame(updateLinePosition);
+    setSelectedStartPoint({ page: 1, y: 0.5 }); // Start at center
     toast({
-      title: "Scroll to Position",
-      description: "The blue line is fixed in your view. Scroll the document until your target instrument aligns with the line, then click Analyze.",
+      title: "Position the Line",
+      description: "Drag the blue line to the start of your target instrument, then click 'Analyze from Line'. You can scroll to see different parts of the document.",
       duration: 6000,
     });
   };
@@ -981,31 +1018,29 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                        }}
                      />
                    </div>
-                   {visualSelectionMode && selectedStartPoint && (
-                     <div 
-                       className="fixed left-0 right-0 pointer-events-none z-20"
-                       style={{
-                         top: '50%',
-                         transform: 'translateY(-50%)'
-                       }}
-                     >
-                       {/* Line with glow */}
-                       <div 
-                         className="absolute left-0 right-0 h-1 bg-primary shadow-lg animate-pulse"
-                         style={{
-                           boxShadow: '0 0 20px hsl(var(--primary) / 0.8), 0 0 40px hsl(var(--primary) / 0.4)'
-                         }}
-                       />
-                       {/* Instructions in center */}
-                       <div className="relative bg-primary text-primary-foreground px-4 py-2 rounded-full shadow-xl font-semibold text-sm whitespace-nowrap z-10">
-                         Scroll to Align Document ↕
-                       </div>
-                       {/* Position indicator */}
-                       <div className="absolute right-4 -top-8 bg-background/90 backdrop-blur px-3 py-1 rounded text-xs font-mono text-foreground border border-border shadow-lg">
-                         <span className="font-bold text-primary">{Math.round(selectedStartPoint.y * 100)}%</span> of full image
-                       </div>
-                     </div>
-                    )}
+                     {(visualSelectionMode || selectedStartPoint) && selectedStartPoint && (
+                      <div 
+                        className="absolute left-0 right-0 z-20 pointer-events-auto cursor-ns-resize"
+                        style={{
+                          top: `${selectedStartPoint.y * 100}%`
+                        }}
+                        onMouseDown={handleLineMouseDown}
+                      >
+                        <div className="relative">
+                          {/* Line with glow */}
+                          <div 
+                            className="h-1 bg-primary shadow-lg"
+                            style={{
+                              boxShadow: '0 0 20px hsl(var(--primary) / 0.8), 0 0 40px hsl(var(--primary) / 0.4)'
+                            }}
+                          />
+                          {/* Position indicator in center */}
+                          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-primary text-primary-foreground px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap shadow-lg">
+                            {Math.round(selectedStartPoint.y * 100)}% of full image
+                          </div>
+                        </div>
+                      </div>
+                     )}
                   </div>
                 )}
               </div>
