@@ -90,7 +90,8 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
   // Visual instrument selection state
   const [visualSelectionMode, setVisualSelectionMode] = useState(false);
   const [selectedStartPoint, setSelectedStartPoint] = useState<{page: number; y: number} | null>(null);
-  const [isDraggingLine, setIsDraggingLine] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
   
   // Multi-instrument detection state with persistence across page refreshes
   const sessionStorageKey = `instrument_selection_${runsheetId}_${rowIndex}`;
@@ -464,42 +465,30 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
   };
 
   const handleImageMouseDown = (e: React.MouseEvent) => {
-    // Don't interfere with line dragging
-    if (isDraggingLine) return;
-    
     setIsDraggingImage(true);
     setDragStart({ x: e.clientX - panX, y: e.clientY - panY });
   };
   
-  const handleLineMouseDown = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    setIsDraggingLine(true);
-  };
-  
-  const handleLineMouseMove = (e: MouseEvent, imageElement: HTMLImageElement, scrollContainer: HTMLDivElement) => {
-    if (!isDraggingLine || !imageElement) return;
+  // Calculate where the fixed viewport line intersects with the full image
+  const updateLinePosition = () => {
+    if (!visualSelectionMode || !scrollContainerRef.current || !imageRef.current) return;
     
-    // Get the scroll position
-    const scrollTop = scrollContainer.scrollTop;
-    const scrollLeft = scrollContainer.scrollLeft;
+    const scrollContainer = scrollContainerRef.current;
+    const image = imageRef.current;
     
-    // Get mouse position relative to the scroll container
+    // Get viewport center (where the line is fixed)
     const containerRect = scrollContainer.getBoundingClientRect();
-    const mouseY = e.clientY - containerRect.top + scrollTop;
+    const viewportCenterY = containerRect.height / 2;
     
-    // Calculate position relative to the actual image height
-    const imageRect = imageElement.getBoundingClientRect();
-    const imageTop = imageElement.offsetTop;
-    const imageHeight = imageElement.offsetHeight;
+    // Get scroll position
+    const scrollTop = scrollContainer.scrollTop;
     
-    // Position relative to full image (0 to 1)
-    const relativeY = Math.max(0, Math.min(1, mouseY / imageHeight));
+    // Calculate position on full image
+    const imageHeight = image.offsetHeight;
+    const positionOnImage = scrollTop + viewportCenterY;
+    const relativeY = Math.max(0, Math.min(1, positionOnImage / imageHeight));
+    
     setSelectedStartPoint({ page: 1, y: relativeY });
-  };
-  
-  const handleLineMouseUp = () => {
-    setIsDraggingLine(false);
   };
 
   const handleImageMouseMove = (e: React.MouseEvent) => {
@@ -735,14 +724,14 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
       setAbortController(null);
     }
   };
-  
+
   const handleStartVisualSelection = () => {
-    // Place the line at 30% down by default (typical position for second instrument)
-    setSelectedStartPoint({ page: 1, y: 0.3 });
     setVisualSelectionMode(true);
+    // Line position will be calculated on first scroll/render
+    requestAnimationFrame(updateLinePosition);
     toast({
-      title: "Position the Blue Line",
-      description: "Drag the line to where your instrument starts. The % shows position in the full image. Scroll to view different parts.",
+      title: "Scroll to Position",
+      description: "The blue line is fixed in your view. Scroll the document until your target instrument aligns with the line, then click Analyze.",
       duration: 6000,
     });
   };
@@ -750,7 +739,6 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
   const handleCancelVisualSelection = () => {
     setVisualSelectionMode(false);
     setSelectedStartPoint(null);
-    setIsDraggingLine(false);
   };
 
   // Re-extract functionality for individual fields
@@ -932,25 +920,11 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                   {error || 'No document available'}
                 </div>
               ) : (
-                <div 
-                  className="h-full w-full relative overflow-hidden"
-                  onMouseMove={(e) => {
-                    if (isDraggingLine) {
-                      const scrollContainer = e.currentTarget.querySelector('.overflow-auto') as HTMLDivElement;
-                      const imageElement = scrollContainer?.querySelector('img') as HTMLImageElement;
-                      if (scrollContainer && imageElement) {
-                        handleLineMouseMove(e.nativeEvent, imageElement, scrollContainer);
-                      }
-                    }
-                  }}
-                  onMouseUp={() => {
-                    if (isDraggingLine) {
-                      handleLineMouseUp();
-                    }
-                  }}
-                >
+                <div className="h-full w-full relative overflow-hidden">
                   <div 
+                    ref={scrollContainerRef}
                     className="h-full w-full overflow-auto scrollbar-thin scrollbar-thumb-muted-foreground/30 scrollbar-track-transparent"
+                    onScroll={updateLinePosition}
                     onWheel={(e) => {
                       if (!fitToWidth) {
                         // Allow smooth wheel scrolling when not in fit-to-width mode
@@ -968,6 +942,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                     }}
                   >
                     <img
+                      ref={imageRef}
                       src={documentUrl}
                       alt={documentName}
                       className={`transition-all duration-200 ease-out select-none ${
@@ -981,6 +956,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                         willChange: fitToWidth ? 'auto' : 'transform'
                       }}
                       draggable={false}
+                      onLoad={updateLinePosition}
                       onMouseDown={fitToWidth ? undefined : handleImageMouseDown}
                       onMouseMove={fitToWidth ? undefined : handleImageMouseMove}
                       onMouseUp={fitToWidth ? undefined : handleImageMouseUp}
@@ -1005,36 +981,30 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                        }}
                      />
                    </div>
-                   {selectedStartPoint && (
+                   {visualSelectionMode && selectedStartPoint && (
                      <div 
-                       className="absolute left-0 right-0 pointer-events-auto z-20"
+                       className="fixed left-0 right-0 pointer-events-none z-20"
                        style={{
-                         top: `${selectedStartPoint.y * 100}%`,
+                         top: '50%',
                          transform: 'translateY(-50%)'
                        }}
                      >
-                       {/* Draggable handle */}
-                       <div
-                         className={`absolute left-0 right-0 flex items-center justify-center ${isDraggingLine ? 'cursor-grabbing' : 'cursor-grab'}`}
-                         onMouseDown={handleLineMouseDown}
-                       >
-                         {/* Line with glow */}
-                         <div 
-                           className="absolute left-0 right-0 h-1 bg-primary shadow-lg"
-                           style={{
-                             boxShadow: '0 0 20px hsl(var(--primary) / 0.8), 0 0 40px hsl(var(--primary) / 0.4)'
-                           }}
-                         />
-                         {/* Drag handle in center */}
-                         <div className="relative bg-primary text-primary-foreground px-4 py-2 rounded-full shadow-xl font-semibold text-sm whitespace-nowrap z-10">
-                           ⬍ Drag to Position ⬍
-                         </div>
+                       {/* Line with glow */}
+                       <div 
+                         className="absolute left-0 right-0 h-1 bg-primary shadow-lg animate-pulse"
+                         style={{
+                           boxShadow: '0 0 20px hsl(var(--primary) / 0.8), 0 0 40px hsl(var(--primary) / 0.4)'
+                         }}
+                       />
+                       {/* Instructions in center */}
+                       <div className="relative bg-primary text-primary-foreground px-4 py-2 rounded-full shadow-xl font-semibold text-sm whitespace-nowrap z-10">
+                         Scroll to Align Document ↕
                        </div>
-                        {/* Position indicator */}
-                        <div className="absolute right-4 -top-8 bg-background/90 backdrop-blur px-3 py-1 rounded text-xs font-mono text-muted-foreground border border-border">
-                          {Math.round(selectedStartPoint.y * 100)}% of full image
-                        </div>
-                      </div>
+                       {/* Position indicator */}
+                       <div className="absolute right-4 -top-8 bg-background/90 backdrop-blur px-3 py-1 rounded text-xs font-mono text-foreground border border-border shadow-lg">
+                         <span className="font-bold text-primary">{Math.round(selectedStartPoint.y * 100)}%</span> of full image
+                       </div>
+                     </div>
                     )}
                   </div>
                 )}
