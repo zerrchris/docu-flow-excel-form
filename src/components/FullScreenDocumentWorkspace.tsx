@@ -285,16 +285,17 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
     setEditingValue(localRowData[column] || '');
     setFocusedColumn(column);
     
-    // Use a timeout to ensure the textarea is rendered before focusing/selecting
-    setTimeout(() => {
+    // Use requestAnimationFrame to ensure the textarea is fully rendered
+    requestAnimationFrame(() => {
       const textarea = document.querySelector(`textarea[data-editing="${column}"]`) as HTMLTextAreaElement;
       if (textarea) {
         textarea.focus();
         if (selectAll && textarea.value.length > 0) {
-          textarea.select(); // Select all text
+          // Select all text - use setSelectionRange for better browser compatibility
+          textarea.setSelectionRange(0, textarea.value.length);
         }
       }
-    }, 0);
+    });
   };
 
   const finishEditing = () => {
@@ -1070,7 +1071,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                                     : (currentIndex + 1) % editableFields.length;
                                   const nextColumn = editableFields[nextIndex];
                                   const hasText = localRowData[nextColumn] && localRowData[nextColumn].trim() !== '';
-                                  setTimeout(() => startEditing(nextColumn, hasText), 0);
+                                  startEditing(nextColumn, hasText);
                                 }
                               }}
                               onBlur={finishEditing}
@@ -1078,7 +1079,6 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                                 alignment === 'center' ? 'text-center' : 
                                 alignment === 'right' ? 'text-right' : 'text-left'
                               }`}
-                              autoFocus
                             />
                            ) : (
                              <div
