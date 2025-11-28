@@ -1030,7 +1030,39 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                   <h4 className="font-semibold">Working Row {rowIndex + 1}</h4>
                    {documentUrl && !isLoading && !error && (
                      <>
-                       {visualSelectionMode ? (
+                       {visualSelectionMode && selectedStartPoint ? (
+                         <>
+                           <div className="flex items-center gap-2 px-3 py-1 rounded-md bg-primary/10 text-primary text-sm">
+                             <Sparkles className="h-4 w-4" />
+                             Line at {Math.round((selectedStartPoint?.y || 0) * 100)}%
+                           </div>
+                           <Button
+                             variant="ghost"
+                             size="sm"
+                             onClick={handleCancelVisualSelection}
+                             className="gap-2 h-8"
+                           >
+                             Clear
+                           </Button>
+                           <Button
+                             variant="outline"
+                             size="sm"
+                             onClick={() => {
+                               const hasExisting = editableFields.some((c) => ((localRowData[c] || '').toString().trim() !== ''));
+                               if (hasExisting) {
+                                 setShowAnalyzeWarning(true);
+                               } else {
+                                 analyzeDocumentAndPopulateRow();
+                               }
+                             }}
+                             className="gap-2 text-blue-600 hover:text-blue-700 border-blue-200 hover:border-blue-300"
+                             title="Analyze from the marked position"
+                           >
+                             <Brain className="h-4 w-4" />
+                             Analyze from Line
+                           </Button>
+                         </>
+                       ) : visualSelectionMode ? (
                          <>
                            <Button
                              variant="destructive"
@@ -1041,7 +1073,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                              Cancel Selection
                            </Button>
                            <span className="text-sm text-muted-foreground animate-pulse">
-                             Click on the document to mark instrument start...
+                             Scroll to align instrument with the line...
                            </span>
                          </>
                        ) : isAnalyzing ? (
