@@ -938,7 +938,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
           <ResizableHandle className="bg-border hover:bg-primary/20 transition-colors" />
 
           {/* Row data panel */}
-          <ResizablePanel defaultSize={30} minSize={25} maxSize={60}>
+          <ResizablePanel defaultSize={20} minSize={15} maxSize={60}>
             <Card className="h-full border-t-2 border-primary border-b flex flex-col">
               <div className="p-4 border-b bg-muted/20 flex items-center justify-between">
                 <div className="flex items-center space-x-3">
@@ -1044,9 +1044,9 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                     </div>
                   </div>
 
-                  {/* Fixed Height Row */}
-                  <div className="flex-1 min-h-0 flex hover:bg-muted/30">
-                    {editableFields.map((column) => {
+                   {/* Content-sized Row */}
+                   <div className="flex hover:bg-muted/30">
+                     {editableFields.map((column) => {
                       const isEditing = editingColumn === column;
                       const isFocused = focusedColumn === column;
                       const alignment = columnAlignments[column] || 'left';
@@ -1093,34 +1093,35 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                                  }
                                }}
                                onBlur={finishEditing}
-                               className={`w-full h-full border-2 border-primary rounded-none bg-background focus:ring-0 focus:outline-none resize-none p-2 ${
+                               className={`w-full min-h-[60px] max-h-[200px] border-2 border-primary rounded-none bg-background focus:ring-0 focus:outline-none resize-none p-2 ${
                                  alignment === 'center' ? 'text-center' : 
                                  alignment === 'right' ? 'text-right' : 'text-left'
                                }`}
+                               style={{ height: 'auto' }}
                              />
                             ) : (
-                             <div
-                               className={`w-full h-full transition-colors focus:outline-none relative
-                                 ${isFocused ? 'bg-primary/20 border-2 border-primary ring-2 ring-primary/20' : 'hover:bg-muted/50 border-2 border-transparent'}`}
-                               onKeyDown={(e) => handleKeyDown(e, column)}
-                               tabIndex={0}
-                             >
-                               {/* Always scrollable content area */}
-                               <div 
-                                 className={`h-full p-3 whitespace-pre-wrap cursor-cell overflow-y-auto overflow-x-hidden ${
-                                   alignment === 'center' ? 'text-center' : 
-                                   alignment === 'right' ? 'text-right' : 'text-left'
-                                 }`}
-                                 onClick={() => handleCellClick(column)}
-                                 onDoubleClick={() => handleCellDoubleClick(column)}
-                                 style={{ 
-                                   scrollbarWidth: 'thin',
-                                   scrollbarColor: 'rgb(156 163 175) transparent'
-                                 }}
-                               >
-                                 {localRowData[column] || ''}
-                               </div>
-                             </div>
+                              <div
+                                className={`w-full transition-colors focus:outline-none relative min-h-[60px] max-h-[200px]
+                                  ${isFocused ? 'bg-primary/20 border-2 border-primary ring-2 ring-primary/20' : 'hover:bg-muted/50 border-2 border-transparent'}`}
+                                onKeyDown={(e) => handleKeyDown(e, column)}
+                                tabIndex={0}
+                              >
+                                {/* Scrollable content area with content-based height */}
+                                <div 
+                                  className={`p-3 whitespace-pre-wrap cursor-cell overflow-y-auto overflow-x-hidden min-h-[60px] max-h-[200px] ${
+                                    alignment === 'center' ? 'text-center' : 
+                                    alignment === 'right' ? 'text-right' : 'text-left'
+                                  }`}
+                                  onClick={() => handleCellClick(column)}
+                                  onDoubleClick={() => handleCellDoubleClick(column)}
+                                  style={{ 
+                                    scrollbarWidth: 'thin',
+                                    scrollbarColor: 'rgb(156 163 175) transparent'
+                                  }}
+                                >
+                                  {localRowData[column] || ''}
+                                </div>
+                              </div>
                            )}
                         </div>
                       );
