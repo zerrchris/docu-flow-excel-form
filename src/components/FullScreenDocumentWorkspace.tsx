@@ -300,6 +300,8 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
         textarea.focus();
         // Scroll to show the top of the cell
         textarea.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+        // Also scroll the textarea content to the top
+        textarea.scrollTop = 0;
         // Text selection (if any) is handled in the onFocus handler based on autoSelectColumn
       }
     });
