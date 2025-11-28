@@ -728,8 +728,8 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
     setVisualSelectionMode(true);
     toast({
       title: "Position the Blue Line",
-      description: "Drag the blue line to the start of your target instrument, then click Analyze.",
-      duration: 5000,
+      description: "Drag the line to where your instrument starts. The % shows position in the full image. Scroll to view different parts.",
+      duration: 6000,
     });
   };
   
@@ -1013,9 +1013,9 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                            ⬍ Drag to Position ⬍
                          </div>
                        </div>
-                       {/* Position indicator */}
-                       <div className="absolute right-4 -top-8 bg-background/90 backdrop-blur px-3 py-1 rounded text-xs font-mono text-muted-foreground border border-border">
-                         {Math.round(selectedStartPoint.y * 100)}% down
+                        {/* Position indicator */}
+                        <div className="absolute right-4 -top-8 bg-background/90 backdrop-blur px-3 py-1 rounded text-xs font-mono text-muted-foreground border border-border">
+                          {Math.round(selectedStartPoint.y * 100)}% of full image
                         </div>
                       </div>
                     )}
@@ -1072,7 +1072,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                        ) : (
                          <>
                            {visualSelectionMode || selectedStartPoint ? (
-                             <div className="flex items-center gap-2">
+                             <>
                                <div className="flex items-center gap-2 px-3 py-1 rounded-md bg-primary/10 text-primary text-sm">
                                  <Sparkles className="h-4 w-4" />
                                  Line at {Math.round((selectedStartPoint?.y || 0) * 100)}%
@@ -1085,7 +1085,24 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                                >
                                  Clear
                                </Button>
-                             </div>
+                               <Button
+                                 variant="outline"
+                                 size="sm"
+                                 onClick={() => {
+                                   const hasExisting = editableFields.some((c) => ((localRowData[c] || '').toString().trim() !== ''));
+                                   if (hasExisting) {
+                                     setShowAnalyzeWarning(true);
+                                   } else {
+                                     analyzeDocumentAndPopulateRow();
+                                   }
+                                 }}
+                                 className="gap-2 text-blue-600 hover:text-blue-700 border-blue-200 hover:border-blue-300"
+                                 title="Analyze from the marked position"
+                               >
+                                 <Brain className="h-4 w-4" />
+                                 Analyze from Line
+                               </Button>
+                             </>
                            ) : (
                              <Button
                                variant="outline"
