@@ -52,7 +52,8 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
   const [localRowData, setLocalRowData] = useState(rowData);
   const [editingColumn, setEditingColumn] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState<string>('');
-
+  const [autoSelectColumn, setAutoSelectColumn] = useState<string | null>(null);
+ 
   // Keep localRowData in sync with props when parent data changes (e.g., after autosave or navigation)
   useEffect(() => {
     // Avoid clobbering in-progress edits; update when not editing or when local is empty
@@ -284,16 +285,20 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
     setEditingColumn(column);
     setEditingValue(localRowData[column] || '');
     setFocusedColumn(column);
+
+    // Mark this column for auto-select on focus if requested
+    if (selectAll) {
+      setAutoSelectColumn(column);
+    } else {
+      setAutoSelectColumn(null);
+    }
     
     // Use requestAnimationFrame to ensure the textarea is fully rendered
     requestAnimationFrame(() => {
-      const textarea = document.querySelector(`textarea[data-editing="${column}"]`) as HTMLTextAreaElement;
+      const textarea = document.querySelector(`textarea[data-editing="${column}"]`) as HTMLTextAreaElement | null;
       if (textarea) {
         textarea.focus();
-        if (selectAll && textarea.value.length > 0) {
-          // Select all text - use setSelectionRange for better browser compatibility
-          textarea.setSelectionRange(0, textarea.value.length);
-        }
+        // Text selection (if any) is handled in the onFocus handler based on autoSelectColumn
       }
     });
   };
@@ -1054,33 +1059,44 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                           }}
                         >
                           {isEditing ? (
-                            <Textarea
-                              data-editing={column}
-                              value={editingValue}
-                              onChange={(e) => setEditingValue(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Escape') {
-                                  e.preventDefault();
-                                  cancelEditing();
-                                } else if (e.key === 'Tab') {
-                                  e.preventDefault();
-                                  finishEditing();
-                                  const currentIndex = editableFields.indexOf(column);
-                                  const nextIndex = e.shiftKey 
-                                    ? (currentIndex - 1 + editableFields.length) % editableFields.length
-                                    : (currentIndex + 1) % editableFields.length;
-                                  const nextColumn = editableFields[nextIndex];
-                                  const hasText = localRowData[nextColumn] && localRowData[nextColumn].trim() !== '';
-                                  startEditing(nextColumn, hasText);
-                                }
-                              }}
-                              onBlur={finishEditing}
-                              className={`w-full h-full border-2 border-primary rounded-none bg-background focus:ring-0 focus:outline-none resize-none p-2 ${
-                                alignment === 'center' ? 'text-center' : 
-                                alignment === 'right' ? 'text-right' : 'text-left'
-                              }`}
-                            />
-                           ) : (
+                             <Textarea
+                               data-editing={column}
+                               value={editingValue}
+                               onChange={(e) => setEditingValue(e.target.value)}
+                               onFocus={(e) => {
+                                 if (autoSelectColumn === column && e.currentTarget.value.length > 0) {
+                                   e.currentTarget.setSelectionRange(0, e.currentTarget.value.length);
+                                 }
+                               }}
+                               onMouseDown={() => {
+                                 // Once the user actively clicks into the field, stop any auto-select behavior
+                                 if (autoSelectColumn === column) {
+                                   setAutoSelectColumn(null);
+                                 }
+                               }}
+                               onKeyDown={(e) => {
+                                 if (e.key === 'Escape') {
+                                   e.preventDefault();
+                                   cancelEditing();
+                                 } else if (e.key === 'Tab') {
+                                   e.preventDefault();
+                                   finishEditing();
+                                   const currentIndex = editableFields.indexOf(column);
+                                   const nextIndex = e.shiftKey 
+                                     ? (currentIndex - 1 + editableFields.length) % editableFields.length
+                                     : (currentIndex + 1) % editableFields.length;
+                                   const nextColumn = editableFields[nextIndex];
+                                   const hasText = localRowData[nextColumn] && localRowData[nextColumn].trim() !== '';
+                                   startEditing(nextColumn, hasText);
+                                 }
+                               }}
+                               onBlur={finishEditing}
+                               className={`w-full h-full border-2 border-primary rounded-none bg-background focus:ring-0 focus:outline-none resize-none p-2 ${
+                                 alignment === 'center' ? 'text-center' : 
+                                 alignment === 'right' ? 'text-right' : 'text-left'
+                               }`}
+                             />
+                            ) : (
                              <div
                                className={`w-full h-full transition-colors focus:outline-none relative
                                  ${isFocused ? 'bg-primary/20 border-2 border-primary ring-2 ring-primary/20' : 'hover:bg-muted/50 border-2 border-transparent'}`}
