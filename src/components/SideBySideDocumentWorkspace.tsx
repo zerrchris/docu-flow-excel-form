@@ -132,6 +132,11 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
     currentInstruction: ''
   });
 
+  // Visual instrument selection state
+  const [visualSelectionMode, setVisualSelectionMode] = useState(false);
+  const [selectedStartPoint, setSelectedStartPoint] = useState<{ y: number } | null>(null);
+  const documentScrollContainerRef = useRef<HTMLDivElement>(null);
+
   // Load document if not provided
   useEffect(() => {
     if (!providedDocumentRecord && runsheetId && rowIndex !== undefined) {
@@ -255,10 +260,64 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
       const response = await fetch(documentUrl);
       const blob = await response.blob();
       const reader = new FileReader();
-      const imageData: string = await new Promise((resolve) => {
+      const baseImageData: string = await new Promise((resolve) => {
         reader.onloadend = () => resolve(reader.result as string);
         reader.readAsDataURL(blob);
       });
+
+      // If the user has selected a visual start point, crop everything above that line
+      let imageData = baseImageData;
+      if (selectedStartPoint) {
+        try {
+          console.log('🎯 SideBySide: Cropping document from visual start point:', selectedStartPoint);
+
+          const cropFromPercentage = async (dataUrl: string, startRatio: number): Promise<string> => {
+            return new Promise((resolve) => {
+              try {
+                const img = new Image();
+                img.onload = () => {
+                  try {
+                    const clampedRatio = Math.max(0, Math.min(1, startRatio || 0));
+                    const startY = Math.round(clampedRatio * img.height);
+                    const height = Math.max(1, img.height - startY);
+
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    if (!ctx) {
+                      console.warn('⚠️ Unable to get 2D context for cropping, using full image instead');
+                      return resolve(dataUrl);
+                    }
+
+                    // Draw the image so that the selected line becomes the top of the canvas
+                    ctx.drawImage(img, 0, -startY);
+                    const cropped = canvas.toDataURL();
+                    resolve(cropped);
+                  } catch (innerErr) {
+                    console.error('⚠️ Error during canvas crop, falling back to full image:', innerErr);
+                    resolve(dataUrl);
+                  }
+                };
+                img.onerror = (err) => {
+                  console.error('⚠️ Failed to load image for cropping, falling back to full image:', err);
+                  resolve(dataUrl);
+                };
+                img.src = dataUrl;
+              } catch (outerErr) {
+                console.error('⚠️ Unexpected error preparing image crop, falling back to full image:', outerErr);
+                resolve(dataUrl);
+              }
+            });
+          };
+
+          imageData = await cropFromPercentage(baseImageData, selectedStartPoint.y);
+          console.log('🎯 SideBySide: Cropping complete. Image length before/after:', baseImageData.length, imageData.length);
+        } catch (cropError) {
+          console.error('⚠️ SideBySide: Failed to crop image at visual start point, falling back to full image:', cropError);
+          imageData = baseImageData;
+        }
+      }
       
       // Find the selected instrument's details if an ID was provided
       const selectedInstrumentDetails = selectedInstrument !== undefined
@@ -930,27 +989,92 @@ Return only the filename, nothing else.`,
                     </p>
                   )}
                 </div>
-                {documentRecord && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setImageFitToWidth(!imageFitToWidth)}
-                    className="flex items-center gap-2"
-                    title={imageFitToWidth ? "Fit to container" : "Fit to width"}
-                  >
-                    {imageFitToWidth ? (
+                <div className="flex items-center gap-2">
+                  {documentRecord && !visualSelectionMode && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setImageFitToWidth(!imageFitToWidth)}
+                      className="flex items-center gap-2"
+                      title={imageFitToWidth ? "Fit to container" : "Fit to width"}
+                    >
+                      {imageFitToWidth ? (
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                        </svg>
+                      ) : (
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
+                        </svg>
+                      )}
+                      Fit to Width
+                    </Button>
+                  )}
+                  {documentRecord && !visualSelectionMode && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setVisualSelectionMode(true);
+                        setSelectedStartPoint(null);
+                        setImageFitToWidth(true);
+                      }}
+                      className="flex items-center gap-2"
+                    >
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
                       </svg>
-                    ) : (
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
-                      </svg>
-                    )}
-                    Fit to Width
-                  </Button>
-                )}
+                      Select Start
+                    </Button>
+                  )}
+                  {visualSelectionMode && !selectedStartPoint && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setVisualSelectionMode(false);
+                        setSelectedStartPoint(null);
+                      }}
+                    >
+                      Cancel Selection
+                    </Button>
+                  )}
+                  {visualSelectionMode && selectedStartPoint && (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setVisualSelectionMode(false);
+                          setSelectedStartPoint(null);
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => {
+                          setVisualSelectionMode(false);
+                          handleAnalyzeDocument(false, false);
+                        }}
+                        disabled={isAnalyzing}
+                        className="flex items-center gap-2"
+                      >
+                        <Sparkles className="h-4 w-4" />
+                        Analyze from Line
+                      </Button>
+                    </>
+                  )}
+                </div>
               </div>
+              {visualSelectionMode && !selectedStartPoint && (
+                <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-md">
+                  <p className="text-sm text-blue-900 dark:text-blue-100">
+                    📍 Scroll to align the instrument start with the blue line, then click "Analyze from Line"
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="flex-1 overflow-hidden">
@@ -974,8 +1098,48 @@ Return only the filename, nothing else.`,
                 <div className="h-full w-full">
                   {/* Always use image viewer since PDFs are converted to images */}
                   <div className="h-full w-full relative overflow-hidden">
+                    {/* Fixed blue horizontal line for visual selection */}
+                    {visualSelectionMode && (
+                      <div 
+                        className="absolute left-0 right-0 h-0.5 bg-blue-500 z-50 pointer-events-none shadow-lg"
+                        style={{ 
+                          top: '35%',
+                          boxShadow: '0 0 10px rgba(59, 130, 246, 0.8)'
+                        }}
+                      />
+                    )}
                     <div 
+                      ref={documentScrollContainerRef}
                       className="h-full w-full overflow-auto scrollbar-thin scrollbar-thumb-muted-foreground/30 scrollbar-track-transparent"
+                      onScroll={(e) => {
+                        if (visualSelectionMode) {
+                          const container = e.currentTarget;
+                          const img = container.querySelector('img');
+                          if (!img) return;
+
+                          // Calculate where the fixed line intersects the image as a percentage
+                          const containerRect = container.getBoundingClientRect();
+                          const imgRect = img.getBoundingClientRect();
+                          
+                          // The line is at 35% from the top of the viewport
+                          const linePositionInViewport = containerRect.top + (containerRect.height * 0.35);
+                          
+                          // Calculate where this intersects the image
+                          const linePositionOnImage = linePositionInViewport - imgRect.top;
+                          const percentageOnImage = linePositionOnImage / imgRect.height;
+                          
+                          // Clamp and convert to percentage of the FULL image (not just visible portion)
+                          const scrollTop = container.scrollTop;
+                          const totalImageHeight = img.naturalHeight;
+                          const visibleImageHeight = imgRect.height;
+                          const scale = visibleImageHeight / totalImageHeight;
+                          
+                          const absoluteY = scrollTop + (containerRect.height * 0.35);
+                          const percentY = absoluteY / visibleImageHeight;
+                          
+                          setSelectedStartPoint({ y: Math.max(0, Math.min(1, percentY)) });
+                        }
+                      }}
                       onWheel={(e) => {
                         if (!imageFitToWidth) {
                           e.preventDefault();
