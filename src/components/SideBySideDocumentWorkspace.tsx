@@ -217,7 +217,7 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
 
   const [abortController, setAbortController] = useState<AbortController | null>(null);
 
-  const handleAnalyzeDocument = async (forceOverwrite = false, fillEmptyOnly = false, selectedInstrument?: number) => {
+  const handleAnalyzeDocument = async (forceOverwrite = false, fillEmptyOnly = false, selectedInstrument?: number, skipMultiInstrumentSelection: boolean = false) => {
     console.log('🔍 SIDE-BY-SIDE: handleAnalyzeDocument called');
     console.log('🔍 SIDE-BY-SIDE: documentRecord:', documentRecord);
     
@@ -349,7 +349,7 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
       const analysisResult = data;
       
       // Check if multiple instruments were detected (only when no specific instrument has been selected yet)
-      if (!selectedInstrument && analysisResult?.analysis?.multiple_instruments && analysisResult?.analysis?.instrument_count > 1) {
+      if (!selectedInstrument && !skipMultiInstrumentSelection && analysisResult?.analysis?.multiple_instruments && analysisResult?.analysis?.instrument_count > 1) {
         console.log('🔍 Multiple instruments detected:', analysisResult.analysis.instrument_count);
         console.log('🔍 Instruments:', analysisResult.analysis.instruments);
         
@@ -1056,7 +1056,7 @@ Return only the filename, nothing else.`,
                         size="sm"
                         onClick={() => {
                           setVisualSelectionMode(false);
-                          handleAnalyzeDocument(false, false);
+                          handleAnalyzeDocument(false, false, undefined, true);
                         }}
                         disabled={isAnalyzing}
                         className="flex items-center gap-2"
@@ -1103,7 +1103,7 @@ Return only the filename, nothing else.`,
                       <div 
                         className="absolute left-0 right-0 h-0.5 bg-blue-500 z-50 pointer-events-none shadow-lg"
                         style={{ 
-                          top: '35%',
+                          top: 0,
                           boxShadow: '0 0 10px rgba(59, 130, 246, 0.8)'
                         }}
                       />
@@ -1117,27 +1117,14 @@ Return only the filename, nothing else.`,
                           const img = container.querySelector('img');
                           if (!img) return;
 
-                          // Calculate where the fixed line intersects the image as a percentage
-                          const containerRect = container.getBoundingClientRect();
                           const imgRect = img.getBoundingClientRect();
-                          
-                          // The line is at 35% from the top of the viewport
-                          const linePositionInViewport = containerRect.top + (containerRect.height * 0.35);
-                          
-                          // Calculate where this intersects the image
-                          const linePositionOnImage = linePositionInViewport - imgRect.top;
-                          const percentageOnImage = linePositionOnImage / imgRect.height;
-                          
-                          // Clamp and convert to percentage of the FULL image (not just visible portion)
-                          const scrollTop = container.scrollTop;
-                          const totalImageHeight = img.naturalHeight;
-                          const visibleImageHeight = imgRect.height;
-                          const scale = visibleImageHeight / totalImageHeight;
-                          
-                          const absoluteY = scrollTop + (containerRect.height * 0.35);
-                          const percentY = absoluteY / visibleImageHeight;
-                          
-                          setSelectedStartPoint({ y: Math.max(0, Math.min(1, percentY)) });
+                          const renderedHeight = imgRect.height;
+                          if (!renderedHeight) return;
+
+                          // The selection line is fixed at the top of the scroll container
+                          // Map the current scrollTop to a percentage of the full image height
+                          const ratio = container.scrollTop / renderedHeight;
+                          setSelectedStartPoint({ y: Math.max(0, Math.min(1, ratio)) });
                         }
                       }}
                       onWheel={(e) => {
@@ -1397,7 +1384,8 @@ Return only the filename, nothing else.`,
             handleAnalyzeDocument(
               pendingInstrumentAnalysis.forceOverwrite,
               pendingInstrumentAnalysis.fillEmptyOnly,
-              instrumentId
+              instrumentId,
+              false
             );
           }
           
