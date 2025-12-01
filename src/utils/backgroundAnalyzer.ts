@@ -10,6 +10,7 @@ interface AnalysisJob {
   documentMap: [number, DocumentRecord][];
   currentData: Record<string, string>[];
   skipRowsWithData: boolean;
+  skipMultiInstrumentCheck: boolean;
   currentIndex: number;
   status: 'running' | 'paused' | 'completed' | 'error' | 'cancelled';
   results: AnalysisResult[];
@@ -46,7 +47,8 @@ export class BackgroundAnalyzer {
     columnInstructions: Record<string, string>,
     documentMap: Map<number, DocumentRecord>,
     currentData: Record<string, string>[],
-    skipRowsWithData: boolean = true
+    skipRowsWithData: boolean = true,
+    skipMultiInstrumentCheck: boolean = false
   ): Promise<string> {
     // Create unique job ID
     const jobId = `analysis_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -63,6 +65,7 @@ export class BackgroundAnalyzer {
       documentMap: documentArray,
       currentData: [...currentData],
       skipRowsWithData,
+      skipMultiInstrumentCheck,
       currentIndex: 0,
       status: 'running',
       results: documentArray.map(([rowIndex, doc]) => ({
@@ -106,7 +109,7 @@ export class BackgroundAnalyzer {
             };
           } else {
             // Perform analysis
-            const analysisResult = await this.analyzeDocument(document, job.columns, job.columnInstructions, job.documentCache);
+            const analysisResult = await this.analyzeDocument(document, job.columns, job.columnInstructions, job.documentCache, job.skipMultiInstrumentCheck);
             
             // Check if multiple instruments were detected
             if (analysisResult.multipleInstruments) {
@@ -226,7 +229,8 @@ export class BackgroundAnalyzer {
     document: DocumentRecord, 
     columns: string[], 
     columnInstructions: Record<string, string>,
-    documentCache: Map<string, string>
+    documentCache: Map<string, string>,
+    skipMultiInstrumentCheck: boolean = false
   ): Promise<{ data: Record<string, string> | null; multipleInstruments?: boolean; instrumentCount?: number }> {
     try {
       let imageData: string;
@@ -259,7 +263,8 @@ export class BackgroundAnalyzer {
           extraction_preferences: {
             columns: columns,
             column_instructions: columnInstructions
-          }
+          },
+          skip_multi_instrument_check: skipMultiInstrumentCheck
         },
       });
       
