@@ -364,13 +364,31 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
           const containerRect = scrollContainer.getBoundingClientRect();
           const headerHeight = stickyHeader.offsetHeight;
           
-          // Calculate where we need to scroll to position cell top just below header
+          // Calculate vertical scroll to position cell top just below header
           const cellTopRelativeToContainer = cellRect.top - containerRect.top + scrollContainer.scrollTop;
           const targetScrollTop = cellTopRelativeToContainer - headerHeight;
           
-          // Scroll to position the cell at the top (below header)
+          // Calculate horizontal scroll to ensure the entire cell is visible
+          const cellLeftRelativeToContainer = cellRect.left - containerRect.left + scrollContainer.scrollLeft;
+          const cellRightRelativeToContainer = cellLeftRelativeToContainer + cellRect.width;
+          const containerVisibleWidth = scrollContainer.clientWidth;
+          
+          let targetScrollLeft = scrollContainer.scrollLeft;
+          
+          // If cell extends beyond the right edge, scroll right to show it
+          if (cellRightRelativeToContainer > scrollContainer.scrollLeft + containerVisibleWidth) {
+            // Scroll so the cell's right edge is at the container's right edge (with some padding)
+            targetScrollLeft = cellRightRelativeToContainer - containerVisibleWidth + 20;
+          }
+          // If cell is beyond the left edge, scroll left to show it
+          else if (cellLeftRelativeToContainer < scrollContainer.scrollLeft) {
+            targetScrollLeft = cellLeftRelativeToContainer - 20;
+          }
+          
+          // Scroll to position the cell properly (both vertical and horizontal)
           scrollContainer.scrollTo({
             top: Math.max(0, targetScrollTop),
+            left: Math.max(0, targetScrollLeft),
             behavior: 'smooth'
           });
         } else {
