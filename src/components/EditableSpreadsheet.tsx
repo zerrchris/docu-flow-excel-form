@@ -7016,8 +7016,18 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
           </div>
         )}
 
-        {/* Scrollable container optimized for sticky headers */}
+        {/* Loading state when columns are not yet loaded */}
+        {columns.length === 0 ? (
+          <div className="border rounded-md bg-background relative h-[750px] mx-6 flex items-center justify-center">
+            <div className="flex flex-col items-center gap-3 text-muted-foreground">
+              <div className="animate-spin h-8 w-8 border-b-2 border-primary rounded-full"></div>
+              <span>Loading runsheet...</span>
+            </div>
+          </div>
+        ) : (
+        <>
         <div 
+          // Scrollable container optimized for sticky headers
           ref={(node) => {
             // Set both refs to the same element
             if (containerRef.current !== node) containerRef.current = node;
@@ -7815,6 +7825,8 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
             </div>
             
         </div>
+        </>
+        )}
 
         {/* Open Runsheet Dialog */}
         <Dialog open={showOpenDialog} onOpenChange={setShowOpenDialog}>
