@@ -1526,34 +1526,16 @@ Image: [base64 image data]`;
         });
       }
       
-      // If we have new columns from analyzed data, add them to our columns automatically
+      // If we have new columns from analyzed data, add them to the current runsheet columns
+      // Note: These are added to the runsheet only, not saved as default preferences
+      // User can explicitly save as defaults via Column Preferences dialog if desired
       if (newColumnsFromExtraction.length > 0) {
-        console.log('🔧 AUTO-UPDATING: Adding new columns from analysis:', newColumnsFromExtraction);
+        console.log('🔧 Adding new columns from analysis to runsheet:', newColumnsFromExtraction);
         setColumns(prev => {
           const updatedColumns = [...prev, ...newColumnsFromExtraction];
-          console.log('🔧 AUTO-UPDATING: Updated columns array:', updatedColumns);
+          console.log('🔧 Updated runsheet columns array:', updatedColumns);
           return updatedColumns;
         });
-        
-        // Also save these new columns to user preferences so they persist
-        setTimeout(async () => {
-          try {
-            const updatedColumns = [...columns, ...newColumnsFromExtraction];
-            const updatedInstructions = { ...columnInstructions };
-            
-            // Add default instructions for new columns
-            newColumnsFromExtraction.forEach(col => {
-              if (!updatedInstructions[col]) {
-                updatedInstructions[col] = `Extract the ${col.toLowerCase()} information`;
-              }
-            });
-            
-            await ExtractionPreferencesService.saveDefaultPreferences(updatedColumns, updatedInstructions);
-            console.log('🔧 AUTO-UPDATING: Saved updated preferences to database');
-          } catch (error) {
-            console.error('Error saving updated preferences:', error);
-          }
-        }, 500);
       }
       
       // Show success message with extracted fields

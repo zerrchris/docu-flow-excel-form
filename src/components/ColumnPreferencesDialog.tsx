@@ -300,9 +300,7 @@ const ColumnPreferencesDialog: React.FC<ColumnPreferencesDialogProps> = ({
   const savePreferences = async () => {
     setIsSaving(true);
     try {
-      // Clean up any invalid columns first
-      await ExtractionPreferencesService.cleanupPreferences(columns);
-      
+      // Save the user's columns directly - no cleanup needed since we're saving the full set
       const success = await ExtractionPreferencesService.saveDefaultPreferences(
         columns,
         columnInstructions
