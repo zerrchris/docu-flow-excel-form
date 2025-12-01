@@ -53,6 +53,7 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
   const [abortController, setAbortController] = useState<AbortController | null>(null);
   const [skipRowsWithData, setSkipRowsWithData] = useState(true);
   const [currentJobId, setCurrentJobId] = useState<string | null>(null);
+  const [multiInstrumentOption, setMultiInstrumentOption] = useState<'check' | 'skip' | 'unknown'>('unknown');
 
   // Helper function to check if a row has data (excluding system columns)
   const hasRowData = (rowIndex: number): boolean => {
@@ -177,7 +178,8 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
         columnInstructions,
         filteredDocumentMap, // Use filtered map instead of full documentMap
         currentData,
-        true // Always skip rows with data since we've pre-filtered
+        true, // Always skip rows with data since we've pre-filtered
+        multiInstrumentOption === 'skip' // Skip multi-instrument check if user selected "No"
       );
       
       setCurrentJobId(jobId);
@@ -311,10 +313,63 @@ export const BatchDocumentAnalysisDialog: React.FC<BatchDocumentAnalysisDialogPr
               <p className="text-sm mt-2">This prevents accidentally overwriting your existing work.</p>
             </div>
           ) : (
-            <>
+          <>
               <div className="space-y-4">
-                <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
-                  <p className="text-sm text-blue-800">
+                {/* Multi-instrument option - only show before analysis starts */}
+                {!isAnalyzing && results.every(r => r.status === 'pending') && (
+                  <div className="bg-muted/50 border rounded-md p-4 space-y-3">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm font-medium">Do your documents have multiple instruments per page?</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Checking for multiple instruments takes extra time but ensures accurate data extraction.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2 ml-6">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="multiInstrument"
+                          checked={multiInstrumentOption === 'skip'}
+                          onChange={() => setMultiInstrumentOption('skip')}
+                          className="w-4 h-4"
+                        />
+                        <span className="text-sm">
+                          <span className="font-medium">No</span> - Single instrument per page (faster)
+                        </span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="multiInstrument"
+                          checked={multiInstrumentOption === 'check'}
+                          onChange={() => setMultiInstrumentOption('check')}
+                          className="w-4 h-4"
+                        />
+                        <span className="text-sm">
+                          <span className="font-medium">Yes</span> - Check and match by legal description
+                        </span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="multiInstrument"
+                          checked={multiInstrumentOption === 'unknown'}
+                          onChange={() => setMultiInstrumentOption('unknown')}
+                          className="w-4 h-4"
+                        />
+                        <span className="text-sm">
+                          <span className="font-medium">Not sure</span> - Check but skip if multiple found (slower)
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+                )}
+                
+                <div className="bg-blue-50 border border-blue-200 rounded-md p-3 dark:bg-blue-950/30 dark:border-blue-800">
+                  <p className="text-sm text-blue-800 dark:text-blue-200">
                     Analyzing {results.length} empty row{results.length !== 1 ? 's' : ''} with documents. 
                     Rows with existing data are automatically skipped to prevent overwriting your work.
                   </p>

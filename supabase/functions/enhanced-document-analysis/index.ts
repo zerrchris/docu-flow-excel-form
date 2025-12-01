@@ -49,14 +49,15 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    const { document_data, runsheet_id, document_name, extraction_preferences, selected_instrument, visual_start_point } = await req.json();
+    const { document_data, runsheet_id, document_name, extraction_preferences, selected_instrument, visual_start_point, skip_multi_instrument_check } = await req.json();
     
     console.log('📋 Extraction preferences received:', {
       columns: extraction_preferences?.columns?.length || 0,
       hasInstructions: !!extraction_preferences?.column_instructions,
       instructionsKeys: extraction_preferences?.column_instructions ? Object.keys(extraction_preferences.column_instructions) : [],
       selectedInstrument: selected_instrument,
-      visualStartPoint: visual_start_point
+      visualStartPoint: visual_start_point,
+      skipMultiInstrumentCheck: skip_multi_instrument_check
     });
 
     // Comprehensive document format validation
@@ -191,6 +192,14 @@ ${selected_instrument ? `
   * If there are multiple instruments on the page, ignore any that appear above the line
   * Even if you detect multiple instruments, proceed with extraction from the marked position only
   * The user expects data from the instrument at this specific location, not from earlier instruments
+` : skip_multi_instrument_check ? `
+- 🚀 SKIP MULTI-INSTRUMENT CHECK: The user has indicated documents do NOT have multiple instruments per page
+  * DO NOT count instruments or detect multiple instruments
+  * DO NOT return multiple_instruments: true
+  * Always set multiple_instruments: false and instrument_count: 1
+  * Extract data from the primary/first visible instrument on the page
+  * This mode prioritizes speed over multi-instrument handling
+  * Proceed directly with data extraction
 ` : `
 - FIRST, count how many separate legal instruments appear on this page
 - Each instrument is a distinct legal document (deed, mortgage, assignment, etc.)
