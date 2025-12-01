@@ -281,6 +281,16 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
                     const startY = Math.round(clampedRatio * img.height);
                     const height = Math.max(1, img.height - startY);
 
+                    console.log('🎯 SideBySide Crop calculation:', {
+                      inputRatio: startRatio,
+                      clampedRatio,
+                      originalHeight: img.height,
+                      originalWidth: img.width,
+                      startY,
+                      croppedHeight: height,
+                      percentageCropped: Math.round((startY / img.height) * 100) + '%'
+                    });
+
                     const canvas = document.createElement('canvas');
                     canvas.width = img.width;
                     canvas.height = height;
@@ -290,9 +300,18 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
                       return resolve(dataUrl);
                     }
 
-                    // Draw the image so that the selected line becomes the top of the canvas
-                    ctx.drawImage(img, 0, -startY);
+                    // Draw the portion of the image from startY to the end
+                    // Source: (0, startY) to (img.width, img.height)
+                    // Destination: (0, 0) to (img.width, height)
+                    ctx.drawImage(
+                      img,
+                      0, startY,           // Source x, y
+                      img.width, height,   // Source width, height
+                      0, 0,                // Destination x, y
+                      img.width, height    // Destination width, height
+                    );
                     const cropped = canvas.toDataURL();
+                    console.log('🎯 SideBySide Crop complete. New dimensions:', canvas.width, 'x', canvas.height);
                     resolve(cropped);
                   } catch (innerErr) {
                     console.error('⚠️ Error during canvas crop, falling back to full image:', innerErr);
