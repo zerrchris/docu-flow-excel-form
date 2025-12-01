@@ -791,8 +791,8 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
     setVisualSelectionMode(true);
     requestAnimationFrame(updateLinePosition);
     toast({
-      title: "Scroll to Position",
-      description: "Scroll the document to align the start of your target instrument with the blue line, then click 'Analyze from Line'.",
+      title: "Multiple Instruments Detected?",
+      description: "If this page has multiple instruments, scroll to align the start of your target instrument with the blue line, then click 'Analyze from Line'.",
       duration: 6000,
     });
   };
@@ -1116,20 +1116,20 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                              Analyze from Line
                            </Button>
                          </>
-                       ) : visualSelectionMode ? (
-                         <>
-                           <Button
-                             variant="destructive"
-                             size="sm"
-                             onClick={handleCancelVisualSelection}
-                             className="gap-2"
-                           >
-                             Cancel Selection
-                           </Button>
-                           <span className="text-sm text-muted-foreground animate-pulse">
-                             Scroll to align instrument with the line...
-                           </span>
-                         </>
+                        ) : visualSelectionMode ? (
+                          <>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={handleCancelVisualSelection}
+                              className="gap-2"
+                            >
+                              Cancel Selection
+                            </Button>
+                            <span className="text-sm text-muted-foreground animate-pulse">
+                              Multiple instruments? Scroll to align your target with the line...
+                            </span>
+                          </>
                        ) : isAnalyzing ? (
                           <Button
                             variant="secondary"
@@ -1185,16 +1185,16 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                                </Button>
                              </>
                            ) : (
-                             <Button
-                               variant="outline"
-                               size="sm"
-                               onClick={handleStartVisualSelection}
-                               className="gap-2"
-                               title="Position a line at the start of your target instrument"
-                             >
-                               <Sparkles className="h-4 w-4" />
-                               Select Start
-                             </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleStartVisualSelection}
+                              className="gap-2"
+                              title="Use when multiple instruments appear on the same page - select the starting point of your target instrument"
+                            >
+                              <Sparkles className="h-4 w-4" />
+                              Multi-Instrument
+                            </Button>
                            )}
                            <Button
                              variant="outline"

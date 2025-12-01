@@ -1020,11 +1020,12 @@ Return only the filename, nothing else.`,
                         setImageFitToWidth(true);
                       }}
                       className="flex items-center gap-2"
+                      title="Use when multiple instruments appear on the same page - select the starting point of your target instrument"
                     >
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
                       </svg>
-                      Select Start
+                      Multi-Instrument
                     </Button>
                   )}
                   {visualSelectionMode && !selectedStartPoint && (
@@ -1071,7 +1072,7 @@ Return only the filename, nothing else.`,
               {visualSelectionMode && !selectedStartPoint && (
                 <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-md">
                   <p className="text-sm text-blue-900 dark:text-blue-100">
-                    📍 Scroll to align the instrument start with the blue line, then click "Analyze from Line"
+                    📍 <strong>Multiple instruments on this page?</strong> Scroll to align the start of your target instrument with the blue line, then click "Analyze from Line"
                   </p>
                 </div>
               )}
