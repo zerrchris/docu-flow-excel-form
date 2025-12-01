@@ -101,12 +101,31 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
     const image = imageRef.current;
     
     // Fixed line position from top of viewport (100px down)
-    const lineOffsetFromTop = 100;
+    const lineOffsetFromViewport = 100;
+    
+    // Get the scroll container's position in the viewport
+    const containerRect = scrollContainer.getBoundingClientRect();
+    
+    // Calculate where the fixed line (at 100px from viewport top) 
+    // intersects relative to the scroll container's visible area
+    const linePositionInContainer = lineOffsetFromViewport - containerRect.top;
     
     // Calculate where this line intersects with the full image
+    // scrollTop = how much content is scrolled up
+    // linePositionInContainer = where the line is relative to container's visible area
     const scrollTop = scrollContainer.scrollTop;
-    const positionOnImage = scrollTop + lineOffsetFromTop;
+    const positionOnImage = scrollTop + linePositionInContainer;
     const relativeY = Math.max(0, Math.min(1, positionOnImage / image.clientHeight));
+    
+    console.log('📍 Line position calc:', {
+      lineOffsetFromViewport,
+      containerTop: containerRect.top,
+      linePositionInContainer,
+      scrollTop,
+      positionOnImage,
+      imageHeight: image.clientHeight,
+      relativeY: Math.round(relativeY * 100) + '%'
+    });
     
     setSelectedStartPoint({ page: 1, y: relativeY });
   }, [visualSelectionMode]);
@@ -573,6 +592,16 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                     const startY = Math.round(clampedRatio * img.height);
                     const height = Math.max(1, img.height - startY);
 
+                    console.log('🎯 Crop calculation:', {
+                      inputRatio: startRatio,
+                      clampedRatio,
+                      originalHeight: img.height,
+                      originalWidth: img.width,
+                      startY,
+                      croppedHeight: height,
+                      percentageCropped: Math.round((startY / img.height) * 100) + '%'
+                    });
+
                     const canvas = document.createElement('canvas');
                     canvas.width = img.width;
                     canvas.height = height;
@@ -582,9 +611,18 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                       return resolve(dataUrl);
                     }
 
-                    // Draw the image so that the selected line becomes the top of the canvas
-                    ctx.drawImage(img, 0, -startY);
+                    // Draw the portion of the image from startY to the end
+                    // Source: (0, startY) to (img.width, img.height)
+                    // Destination: (0, 0) to (img.width, height)
+                    ctx.drawImage(
+                      img,
+                      0, startY,           // Source x, y
+                      img.width, height,   // Source width, height
+                      0, 0,                // Destination x, y
+                      img.width, height    // Destination width, height
+                    );
                     const cropped = canvas.toDataURL();
+                    console.log('🎯 Crop complete. New image dimensions:', canvas.width, 'x', canvas.height);
                     resolve(cropped);
                   } catch (innerErr) {
                     console.error('⚠️ Error during canvas crop, falling back to full image:', innerErr);
