@@ -353,8 +353,31 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
       const textarea = document.querySelector(`textarea[data-editing="${column}"]`) as HTMLTextAreaElement | null;
       if (textarea) {
         textarea.focus();
-        // Scroll to show the top of the cell
-        textarea.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+        
+        // Find the scroll container and sticky header to calculate proper scroll position
+        const scrollContainer = textarea.closest('.overflow-auto') as HTMLElement;
+        const stickyHeader = scrollContainer?.querySelector('.sticky') as HTMLElement;
+        
+        if (scrollContainer && stickyHeader) {
+          // Get the cell's position relative to the scroll container
+          const cellRect = textarea.getBoundingClientRect();
+          const containerRect = scrollContainer.getBoundingClientRect();
+          const headerHeight = stickyHeader.offsetHeight;
+          
+          // Calculate where we need to scroll to position cell top just below header
+          const cellTopRelativeToContainer = cellRect.top - containerRect.top + scrollContainer.scrollTop;
+          const targetScrollTop = cellTopRelativeToContainer - headerHeight;
+          
+          // Scroll to position the cell at the top (below header)
+          scrollContainer.scrollTo({
+            top: Math.max(0, targetScrollTop),
+            behavior: 'smooth'
+          });
+        } else {
+          // Fallback to scrollIntoView if we can't find the containers
+          textarea.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+        }
+        
         // Also scroll the textarea content to the top
         textarea.scrollTop = 0;
         // Text selection (if any) is handled in the onFocus handler based on autoSelectColumn
