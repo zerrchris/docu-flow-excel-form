@@ -850,6 +850,9 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       const safeInstructions: Record<string, string> = (instructions && typeof instructions === 'object') ? instructions : {};
       console.log('🔧 EDITABLE_SPREADSHEET: Using columns from preferences:', safeColumns);
       
+      // Show loading state while creating runsheet
+      setIsLoadingRunsheet(true);
+      
       // Clear any existing emergency draft when creating a new runsheet
       try {
         localStorage.removeItem('runsheet-emergency-draft');
@@ -1007,8 +1010,9 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
             });
           }
         } finally {
-          // Clear the creation flag
+          // Clear the creation flag and loading state
           sessionStorage.removeItem('creating_new_runsheet');
+          setIsLoadingRunsheet(false);
         }
       }, 100);
       
@@ -7016,8 +7020,8 @@ if (file.name.toLowerCase().endsWith('.pdf')) {
           </div>
         )}
 
-        {/* Loading state when columns are not yet loaded */}
-        {columns.length === 0 ? (
+        {/* Loading state when runsheet is loading */}
+        {isLoadingRunsheet ? (
           <div className="border rounded-md bg-background relative h-[750px] mx-6 flex items-center justify-center">
             <div className="flex flex-col items-center gap-3 text-muted-foreground">
               <div className="animate-spin h-8 w-8 border-b-2 border-primary rounded-full"></div>
