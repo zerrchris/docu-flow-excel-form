@@ -1079,6 +1079,10 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
                          }, 1000);
                        }}
                      />
+                     {/* Extra padding when in visual selection mode to allow scrolling content further up */}
+                     {visualSelectionMode && (
+                       <div style={{ height: '80vh', flexShrink: 0 }} />
+                     )}
                    </div>
                      {visualSelectionMode && selectedStartPoint && (
                       <div 

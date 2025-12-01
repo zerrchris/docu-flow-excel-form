@@ -884,6 +884,13 @@ Return only the filename, nothing else.`,
                            onChange={(e) => handleFieldChange(columnName, e.target.value)}
                            className="min-h-[160px] resize-vertical"
                            placeholder={`Enter ${columnName.toLowerCase()}...`}
+                           onFocus={(e) => {
+                             // Select all text on focus so user can immediately type to replace
+                             const target = e.target as HTMLTextAreaElement;
+                             if (target.value) {
+                               target.select();
+                             }
+                           }}
                             onClick={(e) => {
                               const target = e.target as HTMLTextAreaElement;
                               
@@ -932,6 +939,13 @@ Return only the filename, nothing else.`,
                            value={value}
                            onChange={(e) => handleFieldChange(columnName, e.target.value)}
                            placeholder={`Enter ${columnName.toLowerCase()}...`}
+                           onFocus={(e) => {
+                             // Select all text on focus so user can immediately type to replace
+                             const target = e.target as HTMLInputElement;
+                             if (target.value) {
+                               target.select();
+                             }
+                           }}
                             onClick={(e) => {
                               const target = e.target as HTMLInputElement;
                               
@@ -1224,6 +1238,10 @@ Return only the filename, nothing else.`,
                           }
                         }}
                       />
+                      {/* Extra padding when in visual selection mode to allow scrolling content further up */}
+                      {visualSelectionMode && (
+                        <div style={{ height: '80vh', flexShrink: 0 }} />
+                      )}
                     </div>
                   </div>
                 </div>
