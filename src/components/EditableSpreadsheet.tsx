@@ -5343,10 +5343,16 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
       }
     }
     
-    // Paste the data to the new location
+    // Paste the data to the new location, adding rows if needed
     for (let row = 0; row < dataToPaste.length; row++) {
       const targetRowIndex = startRow + row;
-      if (targetRowIndex >= newData.length) break;
+      
+      // Add new rows if we've exceeded the current data length
+      while (targetRowIndex >= newData.length) {
+        const emptyRow: Record<string, string> = {};
+        columns.forEach(col => emptyRow[col] = '');
+        newData.push(emptyRow);
+      }
       
       for (let col = 0; col < dataToPaste[row].length; col++) {
         const targetColIndex = startColIndex + col;
