@@ -326,45 +326,56 @@ export const FileManager: React.FC = () => {
     }
   };
 
-  // Bulk operations
+  // Bulk operations - process in smaller batches to avoid timeouts
   const handleBulkDelete = async () => {
     setIsBulkDeleting(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
+      const BATCH_SIZE = 10; // Process in smaller batches to avoid timeouts
+
       if (currentView === 'runsheets') {
-        // Optimize bulk runsheet deletion with batch operations
         const runsheetIdsToDelete = Array.from(selectedRunsheetIds);
         
         if (runsheetIdsToDelete.length === 0) return;
         
-        console.log(`🗑️ Starting bulk deletion of ${runsheetIdsToDelete.length} runsheets`);
+        console.log(`🗑️ Starting bulk deletion of ${runsheetIdsToDelete.length} runsheets in batches`);
         
-        // Step 1: Batch delete all documents for these runsheets
-        const { error: docsError } = await supabase
-          .from('documents')
-          .delete()
-          .in('runsheet_id', runsheetIdsToDelete);
+        let deletedCount = 0;
+        
+        // Process runsheets in batches
+        for (let i = 0; i < runsheetIdsToDelete.length; i += BATCH_SIZE) {
+          const batch = runsheetIdsToDelete.slice(i, i + BATCH_SIZE);
           
-        if (docsError) {
-          console.error('Error deleting documents in bulk:', docsError);
-          throw docsError;
+          // Step 1: Delete documents for this batch of runsheets
+          const { error: docsError } = await supabase
+            .from('documents')
+            .delete()
+            .in('runsheet_id', batch);
+            
+          if (docsError) {
+            console.error('Error deleting documents batch:', docsError);
+            throw docsError;
+          }
+          
+          // Step 2: Delete runsheets in this batch
+          const { error: runsheetsError } = await supabase
+            .from('runsheets')
+            .delete()
+            .in('id', batch)
+            .eq('user_id', user.id);
+            
+          if (runsheetsError) {
+            console.error('Error deleting runsheets batch:', runsheetsError);
+            throw runsheetsError;
+          }
+          
+          deletedCount += batch.length;
+          console.log(`✅ Deleted batch ${Math.ceil((i + 1) / BATCH_SIZE)} (${deletedCount}/${runsheetIdsToDelete.length})`);
         }
         
-        // Step 2: Batch delete all runsheets
-        const { error: runsheetsError } = await supabase
-          .from('runsheets')
-          .delete()
-          .in('id', runsheetIdsToDelete)
-          .eq('user_id', user.id); // Security: only delete user's own runsheets
-          
-        if (runsheetsError) {
-          console.error('Error deleting runsheets in bulk:', runsheetsError);
-          throw runsheetsError;
-        }
-        
-        // Step 3: Clear active runsheet if it's being deleted
+        // Clear active runsheet if it's being deleted
         if (activeRunsheet && runsheetIdsToDelete.includes(activeRunsheet.id)) {
           clearActiveRunsheet();
         }
@@ -393,29 +404,34 @@ export const FileManager: React.FC = () => {
           return;
         }
 
-        const fileIds = filesToDelete.map(f => f.id);
-        const filePaths = filesToDelete.map(f => f.fullPath);
+        console.log(`🗑️ Starting bulk deletion of ${filesToDelete.length} files in batches`);
         
-        console.log(`🗑️ Starting bulk deletion of ${filesToDelete.length} files`);
-
-        // Batch delete from database
-        const { error: dbError } = await supabase
-          .from('documents')
-          .delete()
-          .in('id', fileIds);
-
-        if (dbError) throw dbError;
-
-        // Batch delete from storage
-        if (filePaths.length > 0) {
-          const { error: storageError } = await supabase.storage
+        // Process files in batches
+        for (let i = 0; i < filesToDelete.length; i += BATCH_SIZE) {
+          const batch = filesToDelete.slice(i, i + BATCH_SIZE);
+          const batchIds = batch.map(f => f.id);
+          const batchPaths = batch.map(f => f.fullPath);
+          
+          // Delete from database
+          const { error: dbError } = await supabase
             .from('documents')
-            .remove(filePaths);
+            .delete()
+            .in('id', batchIds);
 
-          if (storageError) {
-            console.warn('Some storage deletions failed:', storageError);
-            // Don't throw - database cleanup succeeded which is most important
+          if (dbError) throw dbError;
+
+          // Delete from storage
+          if (batchPaths.length > 0) {
+            const { error: storageError } = await supabase.storage
+              .from('documents')
+              .remove(batchPaths);
+
+            if (storageError) {
+              console.warn('Some storage deletions failed:', storageError);
+            }
           }
+          
+          console.log(`✅ Deleted file batch ${Math.ceil((i + 1) / BATCH_SIZE)}`);
         }
         
         console.log(`✅ Successfully deleted ${filesToDelete.length} files in bulk`);
