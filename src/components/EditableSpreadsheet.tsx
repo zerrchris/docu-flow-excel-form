@@ -5697,12 +5697,36 @@ const EditableSpreadsheet = forwardRef<any, SpreadsheetProps>((props, ref) => {
     };
 
     const onPaste = (e: ClipboardEvent) => {
-      if (editingCell) return; // let textarea handle its own paste
-      if (!selectedCell) return;
       const text = e.clipboardData?.getData('text/plain') ?? '';
       if (!text) return;
+      
+      // Check if this is multi-cell Excel data (contains tabs or multiple rows)
+      const hasMultipleCells = text.includes('\t') || (text.includes('\n') && text.split('\n').filter(r => r.trim()).length > 1);
+      
+      // If editing a cell and this is multi-cell data, exit editing and do multi-cell paste
+      if (editingCell && hasMultipleCells) {
+        e.preventDefault();
+        // Exit editing mode and set selected cell to the editing cell for paste target
+        const targetCell = { rowIndex: editingCell.rowIndex, column: editingCell.column };
+        setEditingCell(null);
+        setSelectedCell(targetCell);
+        
+        const rows = text.split('\n').filter(row => row.length > 0).map(row => row.split('\t'));
+        setCopiedData(rows);
+        
+        // Defer paste to allow state updates
+        setTimeout(() => {
+          pasteSelection();
+        }, 0);
+        return;
+      }
+      
+      // If editing a cell with single-cell data, let textarea handle it normally
+      if (editingCell) return;
+      
+      if (!selectedCell) return;
       e.preventDefault();
-      const rows = text.split('\n').map(row => row.split('\t'));
+      const rows = text.split('\n').filter(row => row.length > 0).map(row => row.split('\t'));
       setCopiedData(rows);
       // Defer to existing pasteSelection which uses copiedData
       setTimeout(() => {
