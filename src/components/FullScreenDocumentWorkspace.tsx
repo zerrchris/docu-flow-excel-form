@@ -588,7 +588,7 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
 
   const [abortController, setAbortController] = useState<AbortController | null>(null);
 
-  const analyzeDocumentAndPopulateRow = async (fillEmptyOnly: boolean = false, selectedInstrumentId?: number) => {
+  const analyzeDocumentAndPopulateRow = async (fillEmptyOnly: boolean = false, selectedInstrumentId?: number, skipMultiInstrumentCheck: boolean = true) => {
     if (!documentUrl || isAnalyzing) return;
     
     const controller = new AbortController();
@@ -710,7 +710,8 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
             description: selectedInstrument.description,
             snippet: selectedInstrument.snippet
           } : undefined,
-          visual_start_point: selectedStartPoint // Pass the selected start point if available
+          visual_start_point: selectedStartPoint, // Pass the selected start point if available
+          skip_multi_instrument_check: skipMultiInstrumentCheck // Skip detection when user knows it's one instrument
         }
       });
 
@@ -721,8 +722,8 @@ const FullScreenDocumentWorkspace: React.FC<FullScreenDocumentWorkspaceProps> = 
       analysisResult = data;
       
       // Check if multiple instruments were detected
-      // Skip this check if user has visually selected a start point or already selected an instrument
-      if (!selectedInstrumentId && !selectedStartPoint && analysisResult?.analysis?.multiple_instruments && analysisResult?.analysis?.instrument_count > 1) {
+      // Skip this check if user has visually selected a start point, already selected an instrument, or explicitly skipped the check
+      if (!selectedInstrumentId && !selectedStartPoint && !skipMultiInstrumentCheck && analysisResult?.analysis?.multiple_instruments && analysisResult?.analysis?.instrument_count > 1) {
         console.log('🔍 Multiple instruments detected:', analysisResult.analysis.instrument_count);
         console.log('🔍 Instruments:', analysisResult.analysis.instruments);
         
