@@ -203,6 +203,15 @@ ${selected_instrument ? `
 ` : `
 - FIRST, count how many separate legal instruments appear on this page
 - Each instrument is a distinct legal document (deed, mortgage, assignment, etc.)
+
+⚠️ IMPORTANT - WHAT COUNTS AS ONE INSTRUMENT:
+- An acknowledgment, notarization, witness section, or signature block is PART OF the same instrument, NOT a separate instrument
+- A complete instrument includes: the document body + any acknowledgments/notarizations + signature blocks
+- Only count an instrument as separate if it has its OWN heading, its OWN parties (Grantor/Grantee), and its OWN legal description
+- Two warranty deeds to different properties = 2 instruments
+- One warranty deed + its acknowledgment section = 1 instrument (NOT 2)
+- Certificate of acknowledgment, notary public sections, jurat = PART of the preceding instrument
+
 - If multiple instruments exist, identify each one clearly
 - For each instrument, extract a brief legal description snippet (first 100-150 characters) to help users identify which instrument they need
 - Return instrument details so the user can choose which to extract
