@@ -217,7 +217,7 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
 
   const [abortController, setAbortController] = useState<AbortController | null>(null);
 
-  const handleAnalyzeDocument = async (forceOverwrite = false, fillEmptyOnly = false, selectedInstrument?: number, skipMultiInstrumentSelection: boolean = false) => {
+  const handleAnalyzeDocument = async (forceOverwrite = false, fillEmptyOnly = false, selectedInstrument?: number, skipMultiInstrumentCheck: boolean = true) => {
     console.log('🔍 SIDE-BY-SIDE: handleAnalyzeDocument called');
     console.log('🔍 SIDE-BY-SIDE: documentRecord:', documentRecord);
     
@@ -357,7 +357,8 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
             type: selectedInstrumentDetails.type,
             description: selectedInstrumentDetails.description,
             snippet: selectedInstrumentDetails.snippet
-          } : undefined
+          } : undefined,
+          skip_multi_instrument_check: skipMultiInstrumentCheck
         }
       });
 
@@ -368,7 +369,7 @@ const SideBySideDocumentWorkspace: React.FC<SideBySideDocumentWorkspaceProps> = 
       const analysisResult = data;
       
       // Check if multiple instruments were detected (only when no specific instrument has been selected yet)
-      if (!selectedInstrument && !skipMultiInstrumentSelection && analysisResult?.analysis?.multiple_instruments && analysisResult?.analysis?.instrument_count > 1) {
+      if (!selectedInstrument && !skipMultiInstrumentCheck && analysisResult?.analysis?.multiple_instruments && analysisResult?.analysis?.instrument_count > 1) {
         console.log('🔍 Multiple instruments detected:', analysisResult.analysis.instrument_count);
         console.log('🔍 Instruments:', analysisResult.analysis.instruments);
         
